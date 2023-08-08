@@ -183,46 +183,45 @@ def _get_api_key():
 def main():
     
     openai_keys = _get_api_key()
-    print(openai_keys)
-    # model_name='gpt-3.5-turbo'
-    # context_size = 4096
-    # dataset = 'dl20'
-    # prompt_mode = PromptMode.RANK_GPT
-    # agent = SafeOpenai(model=model_name, context_size=context_size, dataset=dataset, prompt_mode=prompt_mode, keys=openai_keys)
+    model_name='gpt-3.5-turbo'
+    context_size = 4096
+    dataset = 'dl20'
+    prompt_mode = PromptMode.RANK_GPT
+    agent = SafeOpenai(model=model_name, context_size=context_size, dataset=dataset, prompt_mode=prompt_mode, keys=openai_keys)
 
-    # retriever = PyseriniRetriever(dataset)
-    # from pathlib import Path
+    retriever = PyseriniRetriever(dataset)
+    from pathlib import Path
 
-    # candidates_file = Path(f'retrieve_results/retrieve_results_{dataset}.json')
-    # if not candidates_file.is_file():
-    #     print('Retrieving:')
-    #     retriever.retrieve_and_store(k=100)
-    # else:
-    #     print('Reusing existing retrieved results.')
-    # import json
-    # with open(candidates_file, 'r') as f:
-    #     retrieved_results = json.load(f)
+    candidates_file = Path(f'retrieve_results/retrieve_results_{dataset}.json')
+    if not candidates_file.is_file():
+        print('Retrieving:')
+        retriever.retrieve_and_store(k=100)
+    else:
+        print('Reusing existing retrieved results.')
+    import json
+    with open(candidates_file, 'r') as f:
+        retrieved_results = json.load(f)
 
-    # print('\nReranking:')
-    # rerank_results = []
-    # input_token_counts = []
-    # output_token_counts = []
-    # aggregated_prompts = []
-    # aggregated_responses = [] 
-    # for result in tqdm(retrieved_results):
-    #     rerank_result, in_token_count, out_token_count, prompts, responses  = agent.sliding_windows(result, rank_start=0, rank_end=100, window_size=20, step=10)
-    #     rerank_results.append(rerank_result)
-    #     input_token_counts.append(in_token_count)
-    #     output_token_counts.append(out_token_count)
-    #     aggregated_prompts.extend(prompts)
-    #     aggregated_responses.extend(responses)
-    # print(f'input_tokens_counts={input_token_counts}')
-    # print(f'total input token count={sum(input_token_counts)}')
-    # print(f'output_token_counts={output_token_counts}')
-    # print(f'total output token count={sum(output_token_counts)}')
-    # file_name = agent.write_rerank_results(rerank_results, input_token_counts, output_token_counts, aggregated_prompts, aggregated_responses)
-    # from trec_eval import EvalFunction
-    # EvalFunction.eval(['-c', '-m', 'ndcg_cut.10', TOPICS[dataset], file_name])
+    print('\nReranking:')
+    rerank_results = []
+    input_token_counts = []
+    output_token_counts = []
+    aggregated_prompts = []
+    aggregated_responses = [] 
+    for result in tqdm(retrieved_results):
+        rerank_result, in_token_count, out_token_count, prompts, responses  = agent.sliding_windows(result, rank_start=0, rank_end=100, window_size=20, step=10)
+        rerank_results.append(rerank_result)
+        input_token_counts.append(in_token_count)
+        output_token_counts.append(out_token_count)
+        aggregated_prompts.extend(prompts)
+        aggregated_responses.extend(responses)
+    print(f'input_tokens_counts={input_token_counts}')
+    print(f'total input token count={sum(input_token_counts)}')
+    print(f'output_token_counts={output_token_counts}')
+    print(f'total output token count={sum(output_token_counts)}')
+    file_name = agent.write_rerank_results(rerank_results, input_token_counts, output_token_counts, aggregated_prompts, aggregated_responses)
+    from trec_eval import EvalFunction
+    EvalFunction.eval(['-c', '-m', 'ndcg_cut.10', TOPICS[dataset], file_name])
 
 
 if __name__ == '__main__':
