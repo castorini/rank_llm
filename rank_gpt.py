@@ -141,39 +141,6 @@ class SafeOpenai(RankLLM):
         model_key = "gpt-3.5" if "gpt-3" in self.model_ else "gpt-4"
         return cost_dict[(model_key, self.context_size_)]
 
-    def _clean_response(self, response: str):
-        new_response = ''
-        for c in response:
-            if not c.isdigit():
-                new_response += ' '
-            else:
-                new_response += c
-        new_response = new_response.strip()
-        return new_response
-
-    def _remove_duplicate(self, response:list[int]):
-        new_response = []
-        for c in response:
-            if c not in new_response:
-                new_response.append(c)
-        return new_response
-
-    def receive_permutation(self, item, permutation, rank_start=0, rank_end=100):
-        response = self._clean_response(permutation)
-        response = [int(x) - 1 for x in response.split()]
-        response = self._remove_duplicate(response)
-        cut_range = copy.deepcopy(item['hits'][rank_start: rank_end])
-        original_rank = [tt for tt in range(len(cut_range))]
-        response = [ss for ss in response if ss in original_rank]
-        response = response + [tt for tt in original_rank if tt not in response]
-        for j, x in enumerate(response):
-            item['hits'][j + rank_start] = copy.deepcopy(cut_range[x])
-            if 'rank' in item['hits'][j + rank_start]:
-                item['hits'][j + rank_start]['rank'] = cut_range[j]['rank']
-            if 'score' in item['hits'][j + rank_start]:
-                item['hits'][j + rank_start]['score'] = cut_range[j]['score']
-        return item
-
 def _get_api_key():
     from dotenv import dotenv_values, load_dotenv
     import os
@@ -181,7 +148,6 @@ def _get_api_key():
     return os.getenv("OPEN_AI_API_KEY")
 
 def main():
-    
     openai_keys = _get_api_key()
     model_name='gpt-3.5-turbo'
     context_size = 4096

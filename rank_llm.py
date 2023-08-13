@@ -81,7 +81,6 @@ class RankLLM(ABC):
                  / 1000.0)
         return (cost, input_token_count + output_token_count)
     
-    
     def get_ranking_cost(self, retrieved_results, rank_start=0, rank_end=100, window_size=20, step=10):
         input_token_count = 0
         output_token_count = 0
@@ -101,6 +100,39 @@ class RankLLM(ABC):
                  + output_token_count* self.cost_per_1k_token(input_token=False))
                  / 1000.0)
         return (cost, input_token_count + output_token_count)
+
+    def _clean_response(self, response: str):
+        new_response = ''
+        for c in response:
+            if not c.isdigit():
+                new_response += ' '
+            else:
+                new_response += c
+        new_response = new_response.strip()
+        return new_response
+
+    def _remove_duplicate(self, response:list[int]):
+        new_response = []
+        for c in response:
+            if c not in new_response:
+                new_response.append(c)
+        return new_response
+
+    def receive_permutation(self, item, permutation, rank_start=0, rank_end=100):
+        response = self._clean_response(permutation)
+        response = [int(x) - 1 for x in response.split()]
+        response = self._remove_duplicate(response)
+        cut_range = copy.deepcopy(item['hits'][rank_start: rank_end])
+        original_rank = [tt for tt in range(len(cut_range))]
+        response = [ss for ss in response if ss in original_rank]
+        response = response + [tt for tt in original_rank if tt not in response]
+        for j, x in enumerate(response):
+            item['hits'][j + rank_start] = copy.deepcopy(cut_range[x])
+            if 'rank' in item['hits'][j + rank_start]:
+                item['hits'][j + rank_start]['rank'] = cut_range[j]['rank']
+            if 'score' in item['hits'][j + rank_start]:
+                item['hits'][j + rank_start]['score'] = cut_range[j]['score']
+        return item
     
     def write_rerank_results(self, rerank_results, input_token_counts, output_token_counts, prompts, responses):
         # write rerank results
