@@ -10,9 +10,11 @@ from topics_dict import TOPICS
 class RankVicuna(RankLLM):
     def __init__(self, model, context_size, dataset, prompt_mode, device):
         super().__init__(model, context_size, dataset, prompt_mode)
-        # ToDo: Make repetition_penalty and max_new_tokens configurable
-        self.llm_, self.tokenizer_ = load_model(model, device=device)
         self.device_ = device
+        if self.device_ == 'cuda':
+            assert torch.cuda.is_available()
+        # ToDo: Make repetition_penalty configurable
+        self.llm_, self.tokenizer_ = load_model(model, device=device)
 
     def run_llm(self, messages):
         inputs = self.tokenizer_([messages])
@@ -20,7 +22,8 @@ class RankVicuna(RankLLM):
         output_ids = self.llm_.generate(
             **inputs,
             do_sample=False,
-            temperature=0
+            temperature=0,
+            max_new_tokens=self.num_output_tokens()
         )
 
         if self.llm_.config.is_encoder_decoder:
@@ -30,13 +33,14 @@ class RankVicuna(RankLLM):
         outputs = self.tokenizer_.decode(
             output_ids, skip_special_tokens=True, spaces_between_special_tokens=False
         )
-        return outputs
+        return outputs, len(self.tokenizer_.encode(outputs))
 
     def num_output_tokens(self):
         return 200
     
     def _add_prefix_prompt(self, query, num, conv):
-        conv.append_message(conv.roles[0],f'You are Vicuna, an intelligent assistant that can rank passages based on their relevancy to the query. I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.')
+        conv.set_system_message('You are Vicuna, an intelligent assistant that can rank passages based on their relevancy to the query.')
+        conv.append_message(conv.roles[0],f'I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.')
         conv.append_message(conv.roles[1], 'Okay, please provide the passages.')
 
     def _add_post_prompt(self, query, num, conv):
@@ -48,7 +52,7 @@ class RankVicuna(RankLLM):
 
         max_length = 300
         while True:
-            conv = get_conversation_template(self.model)
+            conv = get_conversation_template(self.model_)
             self._add_prefix_prompt(query, num, conv)
             rank = 0
             for hit in retrieved_result['hits'][rank_start: rank_end]:
@@ -66,21 +70,21 @@ class RankVicuna(RankLLM):
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
-                max_length -= max(1, (num_tokens - self.max_tokens() + self.num_output_tokens()) // (rank_end- rank_start))    
+                max_length -= max(1, (num_tokens - self.max_tokens() + self.num_output_tokens()) // (rank_end- rank_start))   
         return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, messages):
-        return len(self.tokenizer_([messages]))
+        return len(self.tokenizer_.encode(messages))
     
     def cost_per_1k_token(self, input_token:bool):
         return 0
 
 def main():
-    model_path=''
+    model_path='lmsys/vicuna-7b-v1.5'
     context_size = 4096
     dataset = 'dl19'
     prompt_mode = PromptMode.RANK_GPT
-    device = 'cpu'
+    device = 'cuda'
     agent = RankVicuna(model_path, context_size, dataset, prompt_mode, device)
     retriever = PyseriniRetriever(dataset)
     from pathlib import Path

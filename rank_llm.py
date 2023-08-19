@@ -137,7 +137,8 @@ class RankLLM(ABC):
     def write_rerank_results(self, rerank_results, input_token_counts, output_token_counts, prompts, responses):
         # write rerank results
         Path("rerank_results/").mkdir(parents=True, exist_ok=True)
-        result_file_name = f'rerank_results/{self.model_}_{self.context_size_}_{self.prompt_mode_}_{self.dataset_}_{datetime.isoformat(datetime.now())}.txt'
+        model_name = self.model_.split("/")[-1]
+        result_file_name = f'rerank_results/{model_name}_{self.context_size_}_{self.prompt_mode_}_{self.dataset_}_{datetime.isoformat(datetime.now())}.txt'
         with open(result_file_name, 'w') as f:
             for i in range(len(rerank_results)):
                 rank = 1
@@ -147,7 +148,7 @@ class RankLLM(ABC):
                     rank += 1
         # Write token counts
         Path("token_counts/").mkdir(parents=True, exist_ok=True)
-        count_file_name = f'token_counts/{self.model_}_{self.context_size_}_{self.prompt_mode_}_{self.dataset_}_{datetime.isoformat(datetime.now())}.txt'
+        count_file_name = f'token_counts/{model_name}_{self.context_size_}_{self.prompt_mode_}_{self.dataset_}_{datetime.isoformat(datetime.now())}.txt'
         counts = {}
         for i, (in_count, out_count) in enumerate(zip(input_token_counts, output_token_counts)):
             counts[rerank_results[i]['query']] = (in_count, out_count)
@@ -155,7 +156,7 @@ class RankLLM(ABC):
             json.dump(counts, f, indent = 4)
         # Write prompts and responses
         Path("prompts_and_responses/").mkdir(parents=True, exist_ok=True)
-        with open(f'prompts_and_responses/{self.model_}_{self.context_size_}_{self.prompt_mode_}_{self.dataset_}_{datetime.isoformat(datetime.now())}.json', 'w') as f:
+        with open(f'prompts_and_responses/{model_name}_{self.context_size_}_{self.prompt_mode_}_{self.dataset_}_{datetime.isoformat(datetime.now())}.json', 'w') as f:
             for (p, r) in zip(prompts, responses):
                 json.dump({"prompt": p, "response": r}, f, indent = 4)
                 f.write(', ')
