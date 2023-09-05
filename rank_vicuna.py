@@ -5,6 +5,7 @@ from fastchat.model import load_model, get_conversation_template, add_model_args
 from tqdm import tqdm
 from pyserini_retriever import PyseriniRetriever
 from topics_dict import TOPICS
+from transformers.generation import GenerationConfig
 
 
 class RankVicuna(RankLLM):
@@ -19,11 +20,18 @@ class RankVicuna(RankLLM):
     def run_llm(self, messages):
         inputs = self.tokenizer_([messages])
         inputs = {k: torch.tensor(v).to(self.device_) for k, v in inputs.items()}
+        self.llm_.config.max_new_tokens = self.num_output_tokens()
+        self.llm_.config.min_length = 1
+        self.llm_.config.temperature = 0
+        self.llm_.config.do_sample = False
+        gen_cfg = GenerationConfig.from_model_config(self.llm_.config)
+        gen_cfg.max_new_tokens = 10
+        gen_cfg.min_length = 1
+        gen_cfg.temperature = 0
+        gen_cfg.do_sample = False
         output_ids = self.llm_.generate(
             **inputs,
-            do_sample=False,
-            temperature=0,
-            max_new_tokens=self.num_output_tokens()
+            generation_config=gen_cfg
         )
 
         if self.llm_.config.is_encoder_decoder:
@@ -33,6 +41,7 @@ class RankVicuna(RankLLM):
         outputs = self.tokenizer_.decode(
             output_ids, skip_special_tokens=True, spaces_between_special_tokens=False
         )
+        print(f'outputs: {outputs}')
         return outputs, len(self.tokenizer_.encode(outputs))
 
     def num_output_tokens(self):
@@ -44,6 +53,7 @@ class RankVicuna(RankLLM):
         conv.append_message(conv.roles[1], 'Okay, please provide the passages.')
 
     def _add_post_prompt(self, query, num, conv):
+        conv.append_message(conv.roles[1], f'Okay, {num} passages are provided.')
         conv.append_message(conv.roles[0], f'Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain.')
 
     def create_prompt(self, retrieved_result, rank_start=0, rank_end=100):
@@ -80,7 +90,7 @@ class RankVicuna(RankLLM):
         return 0
 
 def main():
-    model_path='lmsys/vicuna-7b-v1.5'
+    model_path='lmsys/vicuna-13b-v1.5'
     context_size = 4096
     dataset = 'dl19'
     prompt_mode = PromptMode.RANK_GPT

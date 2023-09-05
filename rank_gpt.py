@@ -6,7 +6,7 @@ import time
 import openai
 import tiktoken
 from tqdm import tqdm
-from pyserini_retriever import PyseriniRetriever
+from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_llm import RankLLM, PromptMode
 from topics_dict import TOPICS
 
@@ -154,11 +154,11 @@ def main():
     dataset = 'dl20'
     prompt_mode = PromptMode.RANK_GPT
     agent = SafeOpenai(model=model_name, context_size=context_size, dataset=dataset, prompt_mode=prompt_mode, keys=openai_keys)
-
+    retrieval_method = RetrievalMethod.BM25
     retriever = PyseriniRetriever(dataset)
     from pathlib import Path
 
-    candidates_file = Path(f'retrieve_results/retrieve_results_{dataset}.json')
+    candidates_file = Path(f'retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json')
     if not candidates_file.is_file():
         print('Retrieving:')
         retriever.retrieve_and_store(k=100)
