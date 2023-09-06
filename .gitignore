@@ -162,5 +162,5 @@ cython_debug/
 .vscode/
 .env.local
 
-retrieve_results/
 qrels/
+checkpoints/

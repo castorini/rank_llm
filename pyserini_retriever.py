@@ -1,11 +1,13 @@
 import json
 from enum import Enum
 from tqdm import tqdm
+from pyserini.index import IndexReader
 from pyserini.search import LuceneSearcher, LuceneImpactSearcher, FaissSearcher, QueryEncoder
 from pyserini.search import get_topics, get_qrels
 from pathlib import Path
 from indices_dict import INDICES
 from topics_dict import TOPICS
+from trec_eval import EvalFunction
 
 class RetrievalMethod(Enum):
     UNSPECIFIED = 0
@@ -33,9 +35,13 @@ class PyseriniRetriever:
             if not self._searcher:
                 raise ValueError(f"Could not create impact searcher for `{dataset}` dataset from prebuilt `{self._get_index()}` index.")
         elif retrieval_method in [RetrievalMethod.D_BERT_KD_TASB, RetrievalMethod.OPEN_AI_ADA2]:
-            query_encoders_map = {RetrievalMethod.D_BERT_KD_TASB: "tct_colbert-v2-hnp-dl19-passage", 
-                RetrievalMethod.OPEN_AI_ADA2: "openai-ada2-dl19-passage"}
-            query_encoder = QueryEncoder.load_encoded_queries(query_encoders_map[retrieval_method])
+            query_encoders_map = {
+                (RetrievalMethod.D_BERT_KD_TASB, 'dl19'): "distilbert_tas_b-dl19-passage",
+                (RetrievalMethod.D_BERT_KD_TASB, 'dl20'): "distilbert_tas_b-dl20", 
+                (RetrievalMethod.OPEN_AI_ADA2, 'dl19'): "openai-ada2-dl19-passage",
+                (RetrievalMethod.OPEN_AI_ADA2, 'dl20'): "openai-ada2-dl20"
+            }
+            query_encoder = QueryEncoder.load_encoded_queries(query_encoders_map[(retrieval_method, dataset)])
             self._searcher = FaissSearcher.from_prebuilt_index(self._get_index(), query_encoder)
             if not self._searcher:
                 raise ValueError(f"Could not create faiss searcher for `{dataset}` dataset from prebuilt `{self._get_index()}` index.")
@@ -49,13 +55,14 @@ class PyseriniRetriever:
             topics_key = TOPICS[dataset]
         self.topics = get_topics(topics_key)
         self.qrels = get_qrels(TOPICS[dataset])
+        self._index_reader = IndexReader.from_prebuilt_index(INDICES[self.dataset])
     
     def _get_index(self):
         if self.dataset not in INDICES:
             raise ValueError("dataset %s not in INDICES" % self.dataset)
         index_suffixes = {RetrievalMethod.BM25: '', RetrievalMethod.BM25_RM3: '',
-            RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL: '-splade-pp-ed',
-            RetrievalMethod.D_BERT_KD_TASB: '.tct_colbert-v2-hnp',
+            RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL: '-splade-pp-ed-text',
+            RetrievalMethod.D_BERT_KD_TASB: '.distilbert-dot-tas_b-b256',
             RetrievalMethod.OPEN_AI_ADA2: '.openai-ada2'}
         index_prefix = INDICES[self.dataset]
         index_name = index_prefix + index_suffixes[self.retrieval_method]
@@ -67,14 +74,8 @@ class PyseriniRetriever:
         rank = 0
         for hit in hits:
             rank += 1
-            print(f"\n\n\ntype(hit.docid): {type(hit.docid)}")
-            print (f"\n\n\nself._searcher.doc(hit.docid): {self._searcher.doc(hit.docid)}")
-            print(f"\n\n\nself._searcher.doc(hit.docid).raw(): {self._searcher.doc(hit.docid).raw()}")
-            print(f"\n\n\nself._searcher.doc(hit.docid).contents(): {self._searcher.doc(hit.docid).contents()}")
-            if not self._searcher.doc(hit.docid).raw():
-                print("skipped!")
-                continue
-            content = json.loads(self._searcher.doc(hit.docid).raw())
+            document = self._index_reader.doc(hit.docid)
+            content = json.loads(document.raw())
             if 'title' in content:
                 content = 'Title: ' + content['title'] + ' ' + 'Content: ' + content['text']
             else:
@@ -95,7 +96,6 @@ class PyseriniRetriever:
             if qid in self.qrels:
                 query = self.topics[qid]['title']
                 self._retrieve_query(query, ranks, k, qid)
-                break
         return ranks
     
     def num_queries(self):
@@ -103,7 +103,7 @@ class PyseriniRetriever:
             return 1
         return len(self.topics)
 
-    def retrieve_and_store(self, k=100, qid=None, store_qrels:bool=True):
+    def retrieve_and_store(self, k=100, qid=None, store_trec:bool=True, store_qrels:bool=True):
         results = self.retrieve(k, qid)
         Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
         Path(f"retrieve_results/{self.retrieval_method.name}").mkdir(parents=True, exist_ok=True)
@@ -115,16 +115,33 @@ class PyseriniRetriever:
             Path("qrels/").mkdir(parents=True, exist_ok=True)
             with open(f'qrels/qrels_{self.dataset}.json', 'w') as f:
                 json.dump(self.qrels, f, indent=2)
+        # Store TRECS if specified
+        if store_trec:
+            with open(f'retrieve_results/{self.retrieval_method.name}/trec_results_{self.dataset}.txt', 'w') as f:
+                for result in results:
+                    for hit in result['hits']:
+                        f.write(
+                            f"{hit['qid']} Q0 {int(hit['docid'])} {hit['rank']} {hit['score']} rank\n"
+                        )
+
+
+def evaluate_retrievals():
+    for dataset in ['dl19', 'dl20']:
+        for retrieval_method in RetrievalMethod:
+            if retrieval_method == RetrievalMethod.UNSPECIFIED:
+               continue
+            file_name = f'retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt'
+            EvalFunction.eval(['-c', '-m', 'ndcg_cut.10', TOPICS[dataset], file_name])
 
 
 def main():
-    dataset = 'dl19'
-    retrieval_method = RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL
-    #retrieval_method = RetrievalMethod.BM25
-    #retrieval_method = RetrievalMethod.D_BERT_KD_TASB
-    #retrieval_method = RetrievalMethod.OPEN_AI_ADA2
-    retriever = PyseriniRetriever(dataset, retrieval_method)
-    retriever.retrieve_and_store()
+    for dataset in ['dl19', 'dl20']:
+        for retrieval_method in RetrievalMethod:
+            if retrieval_method == RetrievalMethod.UNSPECIFIED:
+               continue
+            retriever = PyseriniRetriever(dataset, retrieval_method)
+            retriever.retrieve_and_store()
+    evaluate_retrievals()
 
 
 if __name__ == '__main__':
