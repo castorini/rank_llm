@@ -44,53 +44,90 @@ class RankVicuna(RankLLM):
     def num_output_tokens(self):
         return 200
 
-    def _add_prefix_prompt(self, query, num, conv):
-        conv.set_system_message(
-            "You are Vicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
-        )
-        conv.append_message(
-            conv.roles[0],
-            f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
-        )
-        conv.append_message(conv.roles[1], "Okay, please provide the passages.")
+    def _add_prefix_prompt(self, query, num):
+        return f'I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n'
 
-    def _add_post_prompt(self, query, num, conv):
-        conv.append_message(conv.roles[1], f"Okay, {num} passages are provided.")
-        conv.append_message(
-            conv.roles[0],
-            f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain.",
-        )
+    def _add_post_prompt(self, query, num):
+        return f'Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [4] > [2], Only respond with the ranking results, do not say any word or explain.'
 
     def create_prompt(self, retrieved_result, rank_start=0, rank_end=100):
-        query = retrieved_result["query"]
-        num = len(retrieved_result["hits"][rank_start:rank_end])
-
+        query = retrieved_result['query']
+        num = len(retrieved_result['hits'][rank_start: rank_end])
         max_length = 300
         while True:
             conv = get_conversation_template(self.model_)
-            self._add_prefix_prompt(query, num, conv)
+            # conv.set_system_message(
+            #     "You are Vicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
+            # )
+            prefix = self._add_prefix_prompt(query, num)
             rank = 0
-            for hit in retrieved_result["hits"][rank_start:rank_end]:
+            input_context = f"{prefix}\n"
+            for hit in retrieved_result['hits'][rank_start: rank_end]:
                 rank += 1
-                content = hit["content"]
-                content = content.replace("Title: Content: ", "")
+                content = hit['content']
+                content = content.replace('Title: Content: ', '')
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
-                content = " ".join(content.split()[: int(max_length)])
-                conv.append_message(conv.roles[0], f"[{rank}] {content}")
-                conv.append_message(conv.roles[1], f"Received passage [{rank}].")
-            self._add_post_prompt(query, num, conv)
+                content = ' '.join(content.split()[:int(max_length)])
+                input_context += f'[{rank}] {content}\n'
+            
+            input_context += (self._add_post_prompt(query, num))
+            conv.append_message(conv.roles[0], input_context)
             prompt = conv.get_prompt()
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
-                max_length -= max(
-                    1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // (rank_end - rank_start),
-                )
+                max_length -= max(1, (num_tokens - self.max_tokens() + self.num_output_tokens()) // (rank_end- rank_start))    
         return prompt, self.get_num_tokens(prompt)
+
+    # def _add_prefix_prompt(self, query, num, conv):
+    #     conv.set_system_message(
+    #         "You are Vicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
+    #     )
+    #     conv.append_message(
+    #         conv.roles[0],
+    #         f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+    #     )
+    #     conv.append_message(conv.roles[1], "Okay, please provide the passages.")
+
+    # def _add_post_prompt(self, query, num, conv):
+    #     conv.append_message(conv.roles[1], f"Okay, {num} passages are provided.")
+    #     conv.append_message(
+    #         conv.roles[0],
+    #         f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain.",
+    #     )
+
+    # def create_prompt(self, retrieved_result, rank_start=0, rank_end=100):
+    #     query = retrieved_result["query"]
+    #     num = len(retrieved_result["hits"][rank_start:rank_end])
+
+    #     max_length = 300
+    #     while True:
+    #         conv = get_conversation_template(self.model_)
+    #         self._add_prefix_prompt(query, num, conv)
+    #         rank = 0
+    #         for hit in retrieved_result["hits"][rank_start:rank_end]:
+    #             rank += 1
+    #             content = hit["content"]
+    #             content = content.replace("Title: Content: ", "")
+    #             content = content.strip()
+    #             # For Japanese should cut by character: content = content[:int(max_length)]
+    #             content = " ".join(content.split()[: int(max_length)])
+    #             conv.append_message(conv.roles[0], f"[{rank}] {content}")
+    #             conv.append_message(conv.roles[1], f"Received passage [{rank}].")
+    #         self._add_post_prompt(query, num, conv)
+    #         prompt = conv.get_prompt()
+    #         num_tokens = self.get_num_tokens(prompt)
+    #         if num_tokens <= self.max_tokens() - self.num_output_tokens():
+    #             break
+    #         else:
+    #             max_length -= max(
+    #                 1,
+    #                 (num_tokens - self.max_tokens() + self.num_output_tokens())
+    #                 // (rank_end - rank_start),
+    #             )
+    #     return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, messages):
         return len(self.tokenizer_.encode(messages))
@@ -100,7 +137,7 @@ class RankVicuna(RankLLM):
 
 
 def main():
-    # model_path='lmsys/vicuna-13b-v1.5'
+    model_path='checkpoints/vicuna/vicuna-checkpoint-800'
 
     context_size = 4096
     dataset = "dl19"
@@ -158,7 +195,8 @@ def main():
         aggregated_responses,
     )
     from trec_eval import EvalFunction
-
+    EvalFunction.eval(["-c", "-m", "ndcg_cut.0", TOPICS[dataset], file_name])
+    EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
 
 

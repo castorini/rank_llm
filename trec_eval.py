@@ -119,7 +119,9 @@ class EvalFunction:
 def main():
     from rank_llm import PromptMode
     from topics_dict import TOPICS
-    directory = "rerank_results"
+    from pyserini_retriever import RetrievalMethod
+    retrieval_method = RetrievalMethod.BM25
+    directory = f"rerank_results/{retrieval_method.name}"
     model = 'gpt-3.5-turbo'
     context_size = 4096
     prompt_mode = PromptMode.RANK_GPT
@@ -130,6 +132,8 @@ def main():
         f = os.path.join(directory, filename)
         # checking if it is a file
         if os.path.isfile(f):
+            EvalFunction.eval(['-c', '-m', 'ndcg_cut.1', TOPICS[dataset], f])
+            EvalFunction.eval(['-c', '-m', 'ndcg_cut.5', TOPICS[dataset], f])
             EvalFunction.eval(['-c', '-m', 'ndcg_cut.10', TOPICS[dataset], f])
 
 
