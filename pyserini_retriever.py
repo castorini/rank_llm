@@ -10,12 +10,15 @@ from topics_dict import TOPICS
 from trec_eval import EvalFunction
 
 class RetrievalMethod(Enum):
-    UNSPECIFIED = 0
-    BM25 = 1
-    BM25_RM3 = 2
-    SPLADE_P_P_ENSEMBLE_DISTIL = 3
-    D_BERT_KD_TASB = 4
-    OPEN_AI_ADA2 = 5
+    UNSPECIFIED = 'unspecified'
+    BM25 = 'bm25'
+    BM25_RM3 = 'bm25_rm3'
+    SPLADE_P_P_ENSEMBLE_DISTIL = 'SPLADE++_EnsembleDistil_ONNX'
+    D_BERT_KD_TASB = 'distilbert_tas_b'
+    OPEN_AI_ADA2 = 'openai-ada2'
+
+    def __str__(self):
+        return self.value
 
 
 class PyseriniRetriever:
