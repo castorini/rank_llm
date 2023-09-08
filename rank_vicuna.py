@@ -128,7 +128,7 @@ def main(args):
             prompts,
             responses,
         ) = agent.sliding_windows(
-            result, rank_start=0, rank_end=20, window_size=20, step=10
+            result, rank_start=0, rank_end=100, window_size=20, step=10
         )
         rerank_results.append(rerank_result)
         input_token_counts.append(in_token_count)
@@ -148,7 +148,6 @@ def main(args):
         aggregated_responses,
     )
     from trec_eval import EvalFunction
-
     EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
