@@ -52,9 +52,9 @@ class RankLLM(ABC):
 
     def permutation_pipeline(self, result, rank_start=0, rank_end=100):
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
-        print(f'prompt: {prompt}')
+        print(f"prompt: {prompt}")
         permutation, out_token_count = self.run_llm(prompt)
-        print(f'output: {permutation}')
+        print(f"output: {permutation}")
         rerank_result = self.receive_permutation(
             result, permutation, rank_start, rank_end
         )

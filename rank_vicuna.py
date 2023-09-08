@@ -17,7 +17,7 @@ class RankVicuna(RankLLM):
             assert torch.cuda.is_available()
         # ToDo: Make repetition_penalty configurable
         self.llm_, self.tokenizer_ = load_model(model, device=device, num_gpus=num_gpus)
-    
+
     def run_llm(self, messages):
         inputs = self.tokenizer_([messages])
         inputs = {k: torch.tensor(v).to(self.device_) for k, v in inputs.items()}
@@ -41,14 +41,14 @@ class RankVicuna(RankLLM):
         return 200
 
     def _add_prefix_prompt(self, query, num):
-        return f'I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n'
+        return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
     def _add_post_prompt(self, query, num):
-        return f'Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [4] > [2], Only respond with the ranking results, do not say any word or explain.'
+        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [4] > [2], Only respond with the ranking results, do not say any word or explain."
 
     def create_prompt(self, retrieved_result, rank_start=0, rank_end=100):
-        query = retrieved_result['query']
-        num = len(retrieved_result['hits'][rank_start: rank_end])
+        query = retrieved_result["query"]
+        num = len(retrieved_result["hits"][rank_start:rank_end])
         max_length = 300
         while True:
             conv = get_conversation_template(self.model_)
@@ -58,23 +58,27 @@ class RankVicuna(RankLLM):
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
-            for hit in retrieved_result['hits'][rank_start: rank_end]:
+            for hit in retrieved_result["hits"][rank_start:rank_end]:
                 rank += 1
-                content = hit['content']
-                content = content.replace('Title: Content: ', '')
+                content = hit["content"]
+                content = content.replace("Title: Content: ", "")
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
-                content = ' '.join(content.split()[:int(max_length)])
-                input_context += f'[{rank}] {content}\n'
-            
-            input_context += (self._add_post_prompt(query, num))
+                content = " ".join(content.split()[: int(max_length)])
+                input_context += f"[{rank}] {content}\n"
+
+            input_context += self._add_post_prompt(query, num)
             conv.append_message(conv.roles[0], input_context)
             prompt = conv.get_prompt()
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
-                max_length -= max(1, (num_tokens - self.max_tokens() + self.num_output_tokens()) // (rank_end- rank_start))    
+                max_length -= max(
+                    1,
+                    (num_tokens - self.max_tokens() + self.num_output_tokens())
+                    // (rank_end - rank_start),
+                )
         return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, messages):
@@ -83,8 +87,9 @@ class RankVicuna(RankLLM):
     def cost_per_1k_token(self, input_token: bool):
         return 0
 
+
 def main(args):
-    model_path = args.model_path 
+    model_path = args.model_path
     context_size = args.context_size
     dataset = args.dataset
     num_gpus = args.num_gpus
@@ -143,6 +148,7 @@ def main(args):
         aggregated_responses,
     )
     from trec_eval import EvalFunction
+
     EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
@@ -153,11 +159,32 @@ python rank_vicuna.py --model_path=checkpoints/vicuna/vicuna-7b-checkpoint-800 -
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', type=str, required=True, help='Path to the model')
-    parser.add_argument('--context_size', type=int, default=4096, help='context size used for model')
-    parser.add_argument('--rank_end', type=int, default=100, help='the number of top candidates to rerank')
-    parser.add_argument('--dataset', type=str, required=True, help=f'dataset name, must be in {TOPICS.keys()}')
-    parser.add_argument('--num_gpus', type=int, default=1, help='the number of GPUs to use')
-    parser.add_argument('--retrieval_method', type=RetrievalMethod, required=True, choices=list(RetrievalMethod))
+    parser.add_argument(
+        "--model_path", type=str, required=True, help="Path to the model"
+    )
+    parser.add_argument(
+        "--context_size", type=int, default=4096, help="context size used for model"
+    )
+    parser.add_argument(
+        "--rank_end",
+        type=int,
+        default=100,
+        help="the number of top candidates to rerank",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True,
+        help=f"dataset name, must be in {TOPICS.keys()}",
+    )
+    parser.add_argument(
+        "--num_gpus", type=int, default=1, help="the number of GPUs to use"
+    )
+    parser.add_argument(
+        "--retrieval_method",
+        type=RetrievalMethod,
+        required=True,
+        choices=list(RetrievalMethod),
+    )
     args = parser.parse_args()
     main(args)

@@ -34,7 +34,10 @@ for data in ["signal", "news"]:
     with open(data_folder / "queries.jsonl", "w") as f:
         for key, value in topics.items():
             f.write(
-                json.dumps({"_id": str(key), "text": value["title"]}, ensure_ascii=False) + "\n"
+                json.dumps(
+                    {"_id": str(key), "text": value["title"]}, ensure_ascii=False
+                )
+                + "\n"
             )
     # Store the QRELS of the dataset
     (data_folder / "qrels").mkdir(exist_ok=True, parents=True)
@@ -53,7 +56,6 @@ for data in ["signal", "news"]:
             doc = json.loads(searcher.object.reader.document(i).fields[1].fieldsData)
             doc["_id"] = str(doc["_id"])
             f.write(json.dumps(doc, ensure_ascii=False) + "\n")
-
 
 
 # for data in ['mrtydi-ar', 'mrtydi-bn', 'mrtydi-fi', 'mrtydi-id', 'mrtydi-ja', 'mrtydi-ko', 'mrtydi-ru', 'mrtydi-sw', 'mrtydi-te', 'mrtydi-th']:
