@@ -7,11 +7,22 @@ from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from topics_dict import TOPICS
 from transformers.generation import GenerationConfig
 import argparse
+from pathlib import Path
+from trec_eval import EvalFunction
 
 
 class RankVicuna(RankLLM):
-    def __init__(self, model, context_size, dataset, prompt_mode, device, num_gpus):
-        super().__init__(model, context_size, dataset, prompt_mode)
+    def __init__(
+        self,
+        model,
+        context_size,
+        top_k_candidates,
+        dataset,
+        prompt_mode,
+        device,
+        num_gpus,
+    ):
+        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
         self.device_ = device
         if self.device_ == "cuda":
             assert torch.cuda.is_available()
@@ -46,7 +57,7 @@ class RankVicuna(RankLLM):
     def _add_post_prompt(self, query, num):
         return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [4] > [2], Only respond with the ranking results, do not say any word or explain."
 
-    def create_prompt(self, retrieved_result, rank_start=0, rank_end=100):
+    def create_prompt(self, retrieved_result, rank_start, rank_end):
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
         max_length = 300
@@ -91,20 +102,29 @@ class RankVicuna(RankLLM):
 def main(args):
     model_path = args.model_path
     context_size = args.context_size
+    top_k_candidates = args.top_k_candidates
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
     # TODO: add ranking mode and device to args
     prompt_mode = PromptMode.RANK_GPT
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    agent = RankVicuna(model_path, context_size, dataset, prompt_mode, device, num_gpus)
-    from pathlib import Path
+    agent = RankVicuna(
+        model_path,
+        context_size,
+        top_k_candidates,
+        dataset,
+        prompt_mode,
+        device,
+        num_gpus,
+    )
     candidates_file = Path(
         f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
     )
     if not candidates_file.is_file():
         print("Retrieving:")
         retriever = PyseriniRetriever(dataset, retrieval_method)
+        # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
         retriever.retrieve_and_store(k=100)
     else:
         print("Reusing existing retrieved results.")
@@ -127,7 +147,7 @@ def main(args):
             prompts,
             responses,
         ) = agent.sliding_windows(
-            result, rank_start=0, rank_end=100, window_size=20, step=10
+            result, rank_start=0, rank_end=top_k_candidates, window_size=20, step=10
         )
         rerank_results.append(rerank_result)
         input_token_counts.append(in_token_count)
@@ -146,7 +166,6 @@ def main(args):
         aggregated_prompts,
         aggregated_responses,
     )
-    from trec_eval import EvalFunction
     EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
@@ -164,7 +183,7 @@ if __name__ == "__main__":
         "--context_size", type=int, default=4096, help="context size used for model"
     )
     parser.add_argument(
-        "--rank_end",
+        "--top_k_candidates",
         type=int,
         default=100,
         help="the number of top candidates to rerank",
