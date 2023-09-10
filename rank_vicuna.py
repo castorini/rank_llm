@@ -98,14 +98,13 @@ def main(args):
     prompt_mode = PromptMode.RANK_GPT
     device = "cuda" if torch.cuda.is_available() else "cpu"
     agent = RankVicuna(model_path, context_size, dataset, prompt_mode, device, num_gpus)
-    retriever = PyseriniRetriever(dataset, retrieval_method)
     from pathlib import Path
-
     candidates_file = Path(
         f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
     )
     if not candidates_file.is_file():
         print("Retrieving:")
+        retriever = PyseriniRetriever(dataset, retrieval_method)
         retriever.retrieve_and_store(k=100)
     else:
         print("Reusing existing retrieved results.")
