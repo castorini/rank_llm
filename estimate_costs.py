@@ -1,7 +1,7 @@
 import json
 from argparse import ArgumentParser
 from enum import Enum
-from pyserini_retriever import PyseriniRetriever
+from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_gpt import SafeOpenai
 from rank_llm import PromptMode
 from topics_dict import TOPICS
@@ -12,50 +12,46 @@ class EstimationMode(Enum):
     CREATE_PROMPTS = "create_prompts"
 
     def __str__(self):
-        return self.name
-
-    @staticmethod
-    def from_string(s):
-        try:
-            return EstimationMode[s]
-        except KeyError:
-            raise ValueError()
+        return self.value
 
 
 def main():
     parser = ArgumentParser()
     parser.add_argument(
         "--estimation_mode",
-        type=EstimationMode.from_string,
+        type=EstimationMode,
         choices=list(EstimationMode),
         required=True,
         help="""The estimation mode: 
-                                    `MAX_CONTEXT_LENGTH` for simply using the max context length for each prompt or
-                                    `CREATE_PROMPTS` for calculating cost estimates by using a sliding window to create prompts""",
+                                    `max_context_length` for simply using the max context length for each prompt or
+                                    `create_prompts` for calculating cost estimates by using a sliding window to create prompts""",
     )
     estimation_mode = parser.parse_args().estimation_mode
     costs = {}
     openai_keys = "Fake key"  # Your openai key
     model_name = "gpt-3.5-turbo"
     context_size = 4096
+    top_k_candidates = 100
+    retrieval_method = RetrievalMethod.BM25
     prompt_mode = PromptMode.RANK_GPT
     for dataset in TOPICS.keys():
         print("#" * 20)
-        retriever = PyseriniRetriever(dataset)
+        retriever = PyseriniRetriever(dataset, retrieval_method)
         num_queries = retriever.num_queries()
         agent = SafeOpenai(
             model=model_name,
             context_size=context_size,
+            top_k_candidates=top_k_candidates,
             dataset=dataset,
             prompt_mode=prompt_mode,
             keys=openai_keys,
         )
         print(
-            f'Estimating cost for "{dataset}" with {context_size} context_size and "{model_name}" model with {agent.cost_per_1k_token(input_token=True)}|{agent.cost_per_1k_token(input_token=False)} per input|output 1k tokens:'
+            f'Estimating cost for "{dataset}" with "{retrieval_method.value}" retrieval method, {top_k_candidates} top candidates, {context_size} context_size, and "{model_name}" model with {agent.cost_per_1k_token(input_token=True)}|{agent.cost_per_1k_token(input_token=False)} per input|output 1k tokens:'
         )
         if estimation_mode == EstimationMode.CREATE_PROMPTS:
             print("Reterieving candidates:")
-            retrieved_results = retriever.retrieve(k=100)
+            retrieved_results = retriever.retrieve(k=top_k_candidates)
             # For dl20 the number of retrieved results is different from the number of queries/topics.
             num_queries = len(retrieved_results)
             print("Estimating cost by prompt generation:")

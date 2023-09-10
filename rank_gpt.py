@@ -9,6 +9,8 @@ from tqdm import tqdm
 from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_llm import RankLLM, PromptMode
 from topics_dict import TOPICS
+from pathlib import Path
+from trec_eval import EvalFunction
 
 
 class SafeOpenai(RankLLM):
@@ -16,13 +18,14 @@ class SafeOpenai(RankLLM):
         self,
         model,
         context_size,
+        top_k_candidates,
         dataset,
         prompt_mode,
         keys=None,
         key_start_id=None,
         proxy=None,
     ):
-        super().__init__(model, context_size, dataset, prompt_mode)
+        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
@@ -109,7 +112,7 @@ class SafeOpenai(RankLLM):
     def num_output_tokens(self):
         return 200
 
-    def create_prompt(self, retrieved_result, rank_start=0, rank_end=100):
+    def create_prompt(self, retrieved_result, rank_start, rank_end):
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
 
@@ -197,24 +200,25 @@ def main():
     openai_keys = _get_api_key()
     model_name = "gpt-3.5-turbo"
     context_size = 4096
+    top_k_candidates = 100
     dataset = "dl20"
     prompt_mode = PromptMode.RANK_GPT
     agent = SafeOpenai(
         model=model_name,
         context_size=context_size,
+        top_k_candidates=top_k_candidates,
         dataset=dataset,
         prompt_mode=prompt_mode,
         keys=openai_keys,
     )
     retrieval_method = RetrievalMethod.BM25
-    retriever = PyseriniRetriever(dataset)
-    from pathlib import Path
-
     candidates_file = Path(
         f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
     )
     if not candidates_file.is_file():
         print("Retrieving:")
+        retriever = PyseriniRetriever(dataset, retrieval_method)
+        # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
         retriever.retrieve_and_store(k=100)
     else:
         print("Reusing existing retrieved results.")
@@ -237,7 +241,7 @@ def main():
             prompts,
             responses,
         ) = agent.sliding_windows(
-            result, rank_start=0, rank_end=100, window_size=20, step=10
+            result, rank_start=0, rank_end=top_k_candidates, window_size=20, step=10
         )
         rerank_results.append(rerank_result)
         input_token_counts.append(in_token_count)
@@ -256,8 +260,8 @@ def main():
         aggregated_prompts,
         aggregated_responses,
     )
-    from trec_eval import EvalFunction
-
+    EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
+    EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
 
 
