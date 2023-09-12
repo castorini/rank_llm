@@ -5,6 +5,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from tqdm import tqdm
+from typing import List
 
 
 class PromptMode(Enum):
@@ -141,7 +142,7 @@ class RankLLM(ABC):
         new_response = new_response.strip()
         return new_response
 
-    def _remove_duplicate(self, response: list[int]):
+    def _remove_duplicate(self, response: List[int]):
         new_response = []
         for c in response:
             if c not in new_response:
