@@ -1,0 +1,174 @@
+{
+    "how long is life cycle of flea": [
+        18834,
+        836
+    ],
+    "cost of interior concrete flooring": [
+        23803,
+        841
+    ],
+    "definition declaratory judgment": [
+        19570,
+        833
+    ],
+    "what is durable medical equipment consist of": [
+        17543,
+        833
+    ],
+    "what is wifi vs bluetooth": [
+        18471,
+        848
+    ],
+    "hydrogen is a liquid below what temperature": [
+        20908,
+        848
+    ],
+    "what are the social determinants of health": [
+        16642,
+        845
+    ],
+    "what are the three percenters?": [
+        23261,
+        856
+    ],
+    "right pelvic pain causes": [
+        26198,
+        825
+    ],
+    "definition of a sigmet": [
+        18747,
+        835
+    ],
+    "how are some sharks warm blooded": [
+        21987,
+        852
+    ],
+    "how to find the midsegment of a trapezoid": [
+        21669,
+        841
+    ],
+    "lps laws definition": [
+        18834,
+        846
+    ],
+    "difference between a mcdouble and a double cheeseburger": [
+        18565,
+        836
+    ],
+    "difference between rn and bsn": [
+        26641,
+        853
+    ],
+    "types of dysarthria from cerebral palsy": [
+        24711,
+        838
+    ],
+    "who is robert gray": [
+        20116,
+        837
+    ],
+    "rsa definition key": [
+        18070,
+        853
+    ],
+    "medicare's definition of mechanical ventilation": [
+        16863,
+        886
+    ],
+    "example of monotonic function": [
+        18358,
+        828
+    ],
+    "causes of military suicide": [
+        21892,
+        843
+    ],
+    "do goldfish grow": [
+        17624,
+        843
+    ],
+    "what types of food can you cook sous vide": [
+        19139,
+        839
+    ],
+    "anthropological definition of environment": [
+        17988,
+        836
+    ],
+    "axon terminals or synaptic knob definition": [
+        20946,
+        832
+    ],
+    "exons definition biology": [
+        21455,
+        834
+    ],
+    "causes of left ventricular hypertrophy": [
+        18538,
+        846
+    ],
+    "how is the weather in jamaica": [
+        19513,
+        838
+    ],
+    "what is theraderm used for": [
+        22198,
+        839
+    ],
+    "what is an aml surveillance analyst": [
+        20275,
+        834
+    ],
+    "tracheids are part of _____.": [
+        21151,
+        847
+    ],
+    "when was the salvation army founded": [
+        17417,
+        859
+    ],
+    "what is the most popular food in switzerland": [
+        22392,
+        850
+    ],
+    "what is famvir prescribed for": [
+        22679,
+        856
+    ],
+    "what is physical description of spruce": [
+        21631,
+        845
+    ],
+    "what is a active margin": [
+        18618,
+        847
+    ],
+    "what can contour plowing reduce": [
+        20999,
+        893
+    ],
+    "does legionella pneumophila cause pneumonia": [
+        23255,
+        833
+    ],
+    "what is the daily life of thai people": [
+        20768,
+        846
+    ],
+    "why did the us volunterilay enter ww1": [
+        21570,
+        886
+    ],
+    "is cdg airport in main paris": [
+        18536,
+        861
+    ],
+    "who formed the commonwealth of independent states": [
+        19900,
+        858
+    ],
+    "define visceral?": [
+        25575,
+        848
+    ]
+}
