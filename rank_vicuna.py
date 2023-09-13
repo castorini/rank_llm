@@ -2,14 +2,18 @@ from rank_llm import RankLLM, PromptMode
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from fastchat.model import load_model, get_conversation_template, add_model_args
+from ftfy import fix_text
 from tqdm import tqdm
 from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from topics_dict import TOPICS
 from transformers.generation import GenerationConfig
 import argparse
 from pathlib import Path
+import re
 from trec_eval import EvalFunction
 
+def replace_number(s):
+    return re.sub(r'\[(\d+)\]', r'(\1)', s)
 
 class RankVicuna(RankLLM):
     def __init__(
@@ -35,7 +39,7 @@ class RankVicuna(RankLLM):
         gen_cfg = GenerationConfig.from_model_config(self.llm_.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_length = 1
-        gen_cfg.temperature = 0
+        # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
         output_ids = self.llm_.generate(**inputs, generation_config=gen_cfg)
 
@@ -63,9 +67,9 @@ class RankVicuna(RankLLM):
         max_length = 300
         while True:
             conv = get_conversation_template(self.model_)
-            conv.set_system_message(
-                "You are RankVicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
-            )
+            # conv.set_system_message(
+            #     "You are RankVicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
+            # )
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
@@ -76,11 +80,12 @@ class RankVicuna(RankLLM):
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                input_context += f"[{rank}] {content}\n"
+                input_context += f"[{rank}] {replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)
             conv.append_message(conv.roles[0], input_context)
-            prompt = conv.get_prompt()
+            prompt = conv.get_prompt() + " ASSISTANT:"
+            prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -150,6 +155,7 @@ def main(args):
             result, rank_start=0, rank_end=top_k_candidates, window_size=20, step=10
         )
         rerank_results.append(rerank_result)
+        print(rerank_result)
         input_token_counts.append(in_token_count)
         output_token_counts.append(out_token_count)
         aggregated_prompts.extend(prompts)
