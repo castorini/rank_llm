@@ -67,9 +67,9 @@ class RankVicuna(RankLLM):
         max_length = 300
         while True:
             conv = get_conversation_template(self.model_)
-            # conv.set_system_message(
-            #     "You are RankVicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
-            # )
+            conv.set_system_message(
+                "You are RankVicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
+            )
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
