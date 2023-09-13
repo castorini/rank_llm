@@ -2,6 +2,7 @@ from rank_llm import RankLLM, PromptMode
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from fastchat.model import load_model, get_conversation_template, add_model_args
+from ftfy import fix_text
 from tqdm import tqdm
 from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from topics_dict import TOPICS
@@ -10,6 +11,8 @@ import argparse
 from pathlib import Path
 from trec_eval import EvalFunction
 
+def replace_number(s):
+    return re.sub(r'\[(\d+)\]', r'(\1)', s)
 
 class RankVicuna(RankLLM):
     def __init__(
@@ -76,11 +79,12 @@ class RankVicuna(RankLLM):
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                input_context += f"[{rank}] {content}\n"
+                input_context += f"[{rank}] {replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)
             conv.append_message(conv.roles[0], input_context)
-            prompt = conv.get_prompt()
+            prompt = conv.get_prompt() + " ASSISTANT:"
+            prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
