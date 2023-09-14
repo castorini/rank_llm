@@ -157,7 +157,6 @@ def main(args):
             shuffle_candidates=shuffle_candidates,
         )
         rerank_results.append(rerank_result)
-        print(rerank_result)
         input_token_counts.append(in_token_count)
         output_token_counts.append(out_token_count)
         aggregated_prompts.extend(prompts)
