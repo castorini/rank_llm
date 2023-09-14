@@ -5,6 +5,7 @@ import sys
 import platform
 import pandas as pd
 import tempfile
+import json
 
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
@@ -114,35 +115,89 @@ class EvalFunction:
             print(stderr.decode("utf-8"))
 
         print("Results:")
-        print(stdout.decode("utf-8").rstrip())
+        results = stdout.decode("utf-8").rstrip()
+        print(results)
 
         for judged in judged_result:
             print(judged)
 
         if temp_file:
             os.remove(temp_file)
+        return results
 
 
 def main():
     from rank_llm import PromptMode
     from topics_dict import TOPICS
     from pyserini_retriever import RetrievalMethod
-
-    retrieval_method = RetrievalMethod.BM25
-    directory = f"rerank_results/{retrieval_method.name}"
-    model = "gpt-3.5-turbo"
+    # TODO: convert this to args, make metrics configurable
+    model = "output_v2_aug_vicuna_7b"
     context_size = 4096
     prompt_mode = PromptMode.RANK_GPT
-    dataset = "dl19"
-    for filename in os.listdir(directory):
-        if not filename.startswith(f"{model}_{context_size}_{prompt_mode}_{dataset}"):
-            continue
-        f = os.path.join(directory, filename)
-        # checking if it is a file
-        if os.path.isfile(f):
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], f])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], f])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], f])
+    output_filename = "trec_eval_aggregated_results.jsonl"
+    with open(output_filename, "w") as output:
+        for dataset in ["dl19", "dl20"]:
+            for retrieval_method in RetrievalMethod:
+                if retrieval_method == RetrievalMethod.UNSPECIFIED:
+                    continue
+                for top_k_canidadates in [20, 100]:
+                    directory = f"rerank_results/{retrieval_method.name}"
+                    for filename in os.listdir(directory):
+                        if not filename.startswith(
+                            f"{model}_{context_size}_{top_k_canidadates}_{prompt_mode}_{dataset}"
+                        ):
+                            continue
+                        f = os.path.join(directory, filename)
+                        # checking if it is a file
+                        if os.path.isfile(f):
+                            json.dump(
+                                {
+                                    "file": f,
+                                    "result": [
+                                        EvalFunction.eval(
+                                            [
+                                                "-c",
+                                                "-m",
+                                                "ndcg_cut.10",
+                                                TOPICS[dataset],
+                                                f,
+                                            ]
+                                        ),
+                                        # AP@100
+                                        EvalFunction.eval(
+                                            [
+                                                "-c",
+                                                "-m",
+                                                "map_cut.100",
+                                                TOPICS[dataset],
+                                                f,
+                                            ]
+                                        ),
+                                        # R@20
+                                        EvalFunction.eval(
+                                            [
+                                                "-c",
+                                                "-m",
+                                                "recall.20",
+                                                TOPICS[dataset],
+                                                f,
+                                            ]
+                                        ),
+                                        # R@100
+                                        EvalFunction.eval(
+                                            [
+                                                "-c",
+                                                "-m",
+                                                "recall.100",
+                                                TOPICS[dataset],
+                                                f,
+                                            ]
+                                        ),
+                                    ],
+                                },
+                                output,
+                            )
+                            output.write("\n")
 
 
 if __name__ == "__main__":
