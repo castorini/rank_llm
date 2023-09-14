@@ -163,7 +163,36 @@ def main():
                                                 f,
                                             ]
                                         ),
-                                        # TODO: add recall at 100, recall at 20, mrr@10
+                                        # AP@100
+                                        EvalFunction.eval(
+                                            [
+                                                "-c",
+                                                "-m",
+                                                "map_cut.100",
+                                                TOPICS[dataset],
+                                                f,
+                                            ]
+                                        ),
+                                        # R@20
+                                        EvalFunction.eval(
+                                            [
+                                                "-c",
+                                                "-m",
+                                                "recall.20",
+                                                TOPICS[dataset],
+                                                f,
+                                            ]
+                                        ),
+                                        # R@100
+                                        EvalFunction.eval(
+                                            [
+                                                "-c",
+                                                "-m",
+                                                "recall.100",
+                                                TOPICS[dataset],
+                                                f,
+                                            ]
+                                        ),
                                     ],
                                 },
                                 output,
