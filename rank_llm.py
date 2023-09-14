@@ -85,7 +85,6 @@ class RankLLM(ABC):
             for i, hit in enumerate(rerank_result["hits"]):
                 hit["score"] = 1.0 / (i + 1)
                 hit["rank"] = i + 1
-            print(rerank_result["hits"])
         end_pos = rank_end
         start_pos = rank_end - window_size
         prompts = []
