@@ -111,6 +111,7 @@ def main(args):
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
+    shuffle_candidates = args.shuffle_candidates
     # TODO: add ranking mode and device to args
     prompt_mode = PromptMode.RANK_GPT
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -152,7 +153,8 @@ def main(args):
             prompts,
             responses,
         ) = agent.sliding_windows(
-            result, rank_start=0, rank_end=top_k_candidates, window_size=20, step=10
+            result, rank_start=0, rank_end=top_k_candidates, window_size=20, step=10,
+            shuffle_candidates=shuffle_candidates,
         )
         rerank_results.append(rerank_result)
         print(rerank_result)
@@ -171,6 +173,7 @@ def main(args):
         output_token_counts,
         aggregated_prompts,
         aggregated_responses,
+        shuffle_candidates
     )
     EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
@@ -208,6 +211,11 @@ if __name__ == "__main__":
         type=RetrievalMethod,
         required=True,
         choices=list(RetrievalMethod),
+    )
+    parser.add_argument(
+        "--shuffle_candidates",
+        action="store_true",
+        help="whether to shuffle the candidates before reranking",
     )
     args = parser.parse_args()
     main(args)

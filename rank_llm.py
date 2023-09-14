@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+import random
 from tqdm import tqdm
 from typing import List
 
@@ -68,11 +69,23 @@ class RankLLM(ABC):
         return rerank_result, in_token_count, out_token_count, prompt, permutation
 
     def sliding_windows(
-        self, retrieved_result, rank_start, rank_end, window_size, step
+        self, retrieved_result, rank_start, rank_end, window_size, step,
+        shuffle_candidates=False
     ):
         in_token_count = 0
         out_token_count = 0
         rerank_result = copy.deepcopy(retrieved_result)
+        if shuffle_candidates:
+            # First randomly shuffle rerank_result between rank_start and rank_end
+            rerank_result["hits"][rank_start:rank_end] = random.sample(
+                rerank_result["hits"][rank_start:rank_end],
+                len(rerank_result["hits"][rank_start:rank_end]),
+            )
+            # Next rescore all candidates with 1/rank
+            for i, hit in enumerate(rerank_result["hits"]):
+                hit["score"] = 1.0 / (i + 1)
+                hit["rank"] = i + 1
+            print(rerank_result["hits"])
         end_pos = rank_end
         start_pos = rank_end - window_size
         prompts = []
@@ -173,13 +186,15 @@ class RankLLM(ABC):
         output_token_counts,
         prompts,
         responses,
+        shuffle_candidates=False,
     ):
         # write rerank results
         Path(f"rerank_results/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
         model_name = self.model_.split("/")[-1]
-        name = f"{model_name}_{self.context_size_}_{self.top_k_candidates_}_{self.prompt_mode_}_{self.dataset_}_{datetime.isoformat(datetime.now())}"
+        name = f"{model_name}_{self.context_size_}_{self.top_k_candidates_}_{self.prompt_mode_}_{self.dataset_}"
+        name = f"{name}_shuffled_{datetime.isoformat(datetime.now())}" if shuffle_candidates else f"{name}_{datetime.isoformat(datetime.now())}"
         result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"
         with open(result_file_name, "w") as f:
             for i in range(len(rerank_results)):
