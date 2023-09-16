@@ -8,9 +8,10 @@ from pathlib import Path
 from trec_eval import EvalFunction
 import torch
 from tqdm import tqdm
+import json
 
 
-def _get_api_key():
+def get_api_key():
     from dotenv import dotenv_values, load_dotenv
     import os
 
@@ -29,7 +30,7 @@ def main(args):
     shuffle_candidates = args.shuffle_candidates
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if "gpt" in model_path:
-        openai_keys = _get_api_key()
+        openai_keys = get_api_key()
         agent = SafeOpenai(
             model=model_path,
             context_size=context_size,
@@ -58,7 +59,6 @@ def main(args):
         retriever.retrieve_and_store(k=100)
     else:
         print("Reusing existing retrieved results.")
-    import json
 
     with open(candidates_file, "r") as f:
         retrieved_results = json.load(f)
