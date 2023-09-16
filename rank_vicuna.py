@@ -3,17 +3,13 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
-from tqdm import tqdm
-from pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from topics_dict import TOPICS
 from transformers.generation import GenerationConfig
-import argparse
-from pathlib import Path
 import re
-from trec_eval import EvalFunction
+
 
 def replace_number(s):
-    return re.sub(r'\[(\d+)\]', r'(\1)', s)
+    return re.sub(r"\[(\d+)\]", r"(\1)", s)
+
 
 class RankVicuna(RankLLM):
     def __init__(
@@ -30,6 +26,10 @@ class RankVicuna(RankLLM):
         self.device_ = device
         if self.device_ == "cuda":
             assert torch.cuda.is_available()
+        if prompt_mode != PromptMode.RANK_GPT:
+            raise ValueError(
+                f"Unsuported prompt mode: {prompt_mode}. The only prompt mode cuurently supported by vicuna is a slight variation of Rank_GPT prompt."
+            )
         # ToDo: Make repetition_penalty configurable
         self.llm_, self.tokenizer_ = load_model(model, device=device, num_gpus=num_gpus)
 
@@ -102,119 +102,3 @@ class RankVicuna(RankLLM):
 
     def cost_per_1k_token(self, input_token: bool):
         return 0
-
-
-def main(args):
-    model_path = args.model_path
-    context_size = args.context_size
-    top_k_candidates = args.top_k_candidates
-    dataset = args.dataset
-    num_gpus = args.num_gpus
-    retrieval_method = args.retrieval_method
-    shuffle_candidates = args.shuffle_candidates
-    # TODO: add ranking mode and device to args
-    prompt_mode = PromptMode.RANK_GPT
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    agent = RankVicuna(
-        model_path,
-        context_size,
-        top_k_candidates,
-        dataset,
-        prompt_mode,
-        device,
-        num_gpus,
-    )
-    candidates_file = Path(
-        f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
-    )
-    if not candidates_file.is_file():
-        print("Retrieving:")
-        retriever = PyseriniRetriever(dataset, retrieval_method)
-        # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
-        retriever.retrieve_and_store(k=100)
-    else:
-        print("Reusing existing retrieved results.")
-    import json
-
-    with open(candidates_file, "r") as f:
-        retrieved_results = json.load(f)
-
-    print("\nReranking:")
-    rerank_results = []
-    input_token_counts = []
-    output_token_counts = []
-    aggregated_prompts = []
-    aggregated_responses = []
-    for result in tqdm(retrieved_results):
-        (
-            rerank_result,
-            in_token_count,
-            out_token_count,
-            prompts,
-            responses,
-        ) = agent.sliding_windows(
-            result, rank_start=0, rank_end=top_k_candidates, window_size=20, step=10,
-            shuffle_candidates=shuffle_candidates,
-        )
-        rerank_results.append(rerank_result)
-        input_token_counts.append(in_token_count)
-        output_token_counts.append(out_token_count)
-        aggregated_prompts.extend(prompts)
-        aggregated_responses.extend(responses)
-    print(f"input_tokens_counts={input_token_counts}")
-    print(f"total input token count={sum(input_token_counts)}")
-    print(f"output_token_counts={output_token_counts}")
-    print(f"total output token count={sum(output_token_counts)}")
-    file_name = agent.write_rerank_results(
-        retrieval_method.name,
-        rerank_results,
-        input_token_counts,
-        output_token_counts,
-        aggregated_prompts,
-        aggregated_responses,
-        shuffle_candidates
-    )
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
-
-
-""" sample run:
-python rank_vicuna.py --model_path=checkpoints/vicuna/vicuna-7b-checkpoint-800 --dataset=dl19 --retrieval_method=bm25
-"""
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model_path", type=str, required=True, help="Path to the model"
-    )
-    parser.add_argument(
-        "--context_size", type=int, default=4096, help="context size used for model"
-    )
-    parser.add_argument(
-        "--top_k_candidates",
-        type=int,
-        default=100,
-        help="the number of top candidates to rerank",
-    )
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        required=True,
-        help=f"dataset name, must be in {TOPICS.keys()}",
-    )
-    parser.add_argument(
-        "--num_gpus", type=int, default=1, help="the number of GPUs to use"
-    )
-    parser.add_argument(
-        "--retrieval_method",
-        type=RetrievalMethod,
-        required=True,
-        choices=list(RetrievalMethod),
-    )
-    parser.add_argument(
-        "--shuffle_candidates",
-        action="store_true",
-        help="whether to shuffle the candidates before reranking",
-    )
-    args = parser.parse_args()
-    main(args)

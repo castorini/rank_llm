@@ -10,11 +10,13 @@ from typing import List
 
 
 class PromptMode(Enum):
-    UNSPECIFIED = 0
-    RANK_GPT = 1
-    LRL = 2
-    PRL = 3
+    UNSPECIFIED = "unspecified"
+    RANK_GPT = "rank_GPT"
+    LRL = "LRL"
+    PRL = "PRL"
 
+    def __str__(self):
+        return self.value
 
 class RankLLM(ABC):
     def __init__(

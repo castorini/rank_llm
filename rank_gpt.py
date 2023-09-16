@@ -5,12 +5,12 @@ import json
 import time
 import openai
 import tiktoken
-from tqdm import tqdm
-from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_llm import RankLLM, PromptMode
-from topics_dict import TOPICS
-from pathlib import Path
-from trec_eval import EvalFunction
+import re
+
+
+def replace_number(s):
+    return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
 
 class SafeOpenai(RankLLM):
@@ -30,6 +30,10 @@ class SafeOpenai(RankLLM):
             keys = [keys]
         if not keys:
             raise "Please provide OpenAI Keys."
+        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
+            raise ValueError(
+                "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
+            )
 
         self.keys = keys
         self.cur_key_id = key_start_id or 0
@@ -93,7 +97,7 @@ class SafeOpenai(RankLLM):
             encoding = tiktoken.get_encoding("cl100k_base")
         return response, len(encoding.encode(response))
 
-    def _get_prefix_prompt(self, query, num):
+    def _get_prefix_for_rank_gpt_prompt(self, query, num):
         return [
             {
                 "role": "system",
@@ -106,13 +110,19 @@ class SafeOpenai(RankLLM):
             {"role": "assistant", "content": "Okay, please provide the passages."},
         ]
 
-    def _get_post_prompt(self, query, num):
+    def _get_post_for_rank_gpt_prompt(self, query, num):
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
     def num_output_tokens(self):
         return 200
 
     def create_prompt(self, retrieved_result, rank_start, rank_end):
+        if self.prompt_mode_ == PromptMode.RANK_GPT:
+            return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
+        else:
+            return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
+
+    def create_rank_gpt_prompt(self, retrieved_result, rank_start, rank_end):
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
 
@@ -127,13 +137,49 @@ class SafeOpenai(RankLLM):
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                messages.append({"role": "user", "content": f"[{rank}] {content}"})
+                messages.append(
+                    {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
+                )
                 messages.append(
                     {"role": "assistant", "content": f"Received passage [{rank}]."}
                 )
             messages.append(
                 {"role": "user", "content": self._get_post_prompt(query, num)}
             )
+            num_tokens = self.get_num_tokens(messages)
+            if num_tokens <= self.max_tokens() - self.num_output_tokens():
+                break
+            else:
+                max_length -= max(
+                    1,
+                    (num_tokens - self.max_tokens() + self.num_output_tokens())
+                    // (rank_end - rank_start),
+                )
+        return messages, self.get_num_tokens(messages)
+
+    def create_LRL_prompt(self, retrieved_result, rank_start, rank_end):
+        query = retrieved_result["query"]
+        num = len(retrieved_result["hits"][rank_start:rank_end])
+
+        max_length = 300
+        psg_ids = []
+        while True:
+            message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
+            rank = 0
+            for hit in retrieved_result["hits"][rank_start:rank_end]:
+                rank += 1
+                psg_id = f"PASSAGE{rank}"
+                content = hit["content"]
+                content = content.replace("Title: Content: ", "")
+                content = content.strip()
+                # For Japanese should cut by character: content = content[:int(max_length)]
+                content = " ".join(content.split()[: int(max_length)])
+                message += f'{psg_id} = "{replace_number(content)}"'
+                psg_ids.append(psg_id)
+            message += f'QUESTION = "{query}"'
+            message += "PASSAGES = [" + ", ".join(psg_ids) + "]"
+            message += "SORTED_PASSAGES = ["
+            messages = [{"role": "user", "content": message}]
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -186,84 +232,3 @@ class SafeOpenai(RankLLM):
         }
         model_key = "gpt-3.5" if "gpt-3" in self.model_ else "gpt-4"
         return cost_dict[(model_key, self.context_size_)]
-
-
-def _get_api_key():
-    from dotenv import dotenv_values, load_dotenv
-    import os
-
-    load_dotenv(dotenv_path=f".env.local")
-    return os.getenv("OPEN_AI_API_KEY")
-
-
-def main():
-    openai_keys = _get_api_key()
-    model_name = "gpt-3.5-turbo"
-    context_size = 4096
-    top_k_candidates = 100
-    dataset = "dl20"
-    prompt_mode = PromptMode.RANK_GPT
-    agent = SafeOpenai(
-        model=model_name,
-        context_size=context_size,
-        top_k_candidates=top_k_candidates,
-        dataset=dataset,
-        prompt_mode=prompt_mode,
-        keys=openai_keys,
-    )
-    retrieval_method = RetrievalMethod.BM25
-    candidates_file = Path(
-        f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
-    )
-    if not candidates_file.is_file():
-        print("Retrieving:")
-        retriever = PyseriniRetriever(dataset, retrieval_method)
-        # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
-        retriever.retrieve_and_store(k=100)
-    else:
-        print("Reusing existing retrieved results.")
-    import json
-
-    with open(candidates_file, "r") as f:
-        retrieved_results = json.load(f)
-
-    print("\nReranking:")
-    rerank_results = []
-    input_token_counts = []
-    output_token_counts = []
-    aggregated_prompts = []
-    aggregated_responses = []
-    for result in tqdm(retrieved_results):
-        (
-            rerank_result,
-            in_token_count,
-            out_token_count,
-            prompts,
-            responses,
-        ) = agent.sliding_windows(
-            result, rank_start=0, rank_end=top_k_candidates, window_size=20, step=10
-        )
-        rerank_results.append(rerank_result)
-        input_token_counts.append(in_token_count)
-        output_token_counts.append(out_token_count)
-        aggregated_prompts.extend(prompts)
-        aggregated_responses.extend(responses)
-    print(f"input_tokens_counts={input_token_counts}")
-    print(f"total input token count={sum(input_token_counts)}")
-    print(f"output_token_counts={output_token_counts}")
-    print(f"total output token count={sum(output_token_counts)}")
-    file_name = agent.write_rerank_results(
-        retrieval_method.name,
-        rerank_results,
-        input_token_counts,
-        output_token_counts,
-        aggregated_prompts,
-        aggregated_responses,
-    )
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
-
-
-if __name__ == "__main__":
-    main()
