@@ -102,7 +102,7 @@ class SafeOpenai(RankLLM):
             encoding = tiktoken.get_encoding("cl100k_base")
         return response, len(encoding.encode(response))
 
-    def _get_prefix_for_rank_gpt_prompt(self, query, num):
+
     def _get_prefix_for_rank_gpt_prompt(self, query, num):
         return [
             {
@@ -116,7 +116,7 @@ class SafeOpenai(RankLLM):
             {"role": "assistant", "content": "Okay, please provide the passages."},
         ]
 
-    def _get_suffix_for_rank_gpt_prompt(self, query, num):
+
     def _get_suffix_for_rank_gpt_prompt(self, query, num):
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
@@ -141,7 +141,6 @@ class SafeOpenai(RankLLM):
 
         max_length = 300
         while True:
-            messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
             for hit in retrieved_result["hits"][rank_start:rank_end]:
