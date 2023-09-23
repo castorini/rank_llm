@@ -155,16 +155,9 @@ class SafeOpenai(RankLLM):
                     {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
                 )
                 messages.append(
-                    {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
-                )
-                messages.append(
                     {"role": "assistant", "content": f"Received passage [{rank}]."}
                 )
             messages.append(
-                {
-                    "role": "user",
-                    "content": self._get_suffix_for_rank_gpt_prompt(query, num),
-                }
                 {
                     "role": "user",
                     "content": self._get_suffix_for_rank_gpt_prompt(query, num),
