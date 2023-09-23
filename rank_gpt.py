@@ -6,6 +6,7 @@ import time
 import openai
 import tiktoken
 from rank_llm import RankLLM, PromptMode
+from ftfy import fix_text
 import re
 
 
@@ -87,7 +88,7 @@ class SafeOpenai(RankLLM):
         response = self._call_completion(
             model=self.model_,
             messages=messages,
-            temperature=0,
+            temperature = 0,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
         )
@@ -135,6 +136,7 @@ class SafeOpenai(RankLLM):
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
+                content = fix_text(content)
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
                 messages.append(
@@ -175,13 +177,14 @@ class SafeOpenai(RankLLM):
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
+                content = fix_text(content)
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                message += f'{psg_id} = "{replace_number(content)}"'
+                message += f'{psg_id} = "{replace_number(content)}"\n'
                 psg_ids.append(psg_id)
-            message += f'QUESTION = "{query}"'
-            message += "PASSAGES = [" + ", ".join(psg_ids) + "]"
-            message += "SORTED_PASSAGES = ["
+            message += f'QUESTION = "{query}"\n'
+            message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
+            message += "SORTED_PASSAGES = [\n"
             messages = [{"role": "user", "content": message}]
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():

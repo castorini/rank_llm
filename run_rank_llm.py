@@ -28,6 +28,7 @@ def main(args):
     retrieval_method = args.retrieval_method
     prompt_mode = args.prompt_mode
     shuffle_candidates = args.shuffle_candidates
+    print_prompts_responses = args.print_prompts_responses
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if "gpt" in model_path:
         openai_keys = get_api_key()
@@ -83,6 +84,7 @@ def main(args):
             window_size=20,
             step=10,
             shuffle_candidates=shuffle_candidates,
+            logging=print_prompts_responses
         )
         rerank_results.append(rerank_result)
         input_token_counts.append(in_token_count)
@@ -149,6 +151,11 @@ if __name__ == "__main__":
         "--shuffle_candidates",
         action="store_true",
         help="whether to shuffle the candidates before reranking",
+    )
+    parser.add_argument(
+        "--print_prompts_responses",
+        action="store_true",
+        help="whether to print promps and responses"
     )
     args = parser.parse_args()
     main(args)
