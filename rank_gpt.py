@@ -35,6 +35,10 @@ class SafeOpenai(RankLLM):
             raise ValueError(
                 "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
             )
+        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
+            raise ValueError(
+                "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
+            )
 
         self.keys = keys
         self.cur_key_id = key_start_id or 0
@@ -99,6 +103,7 @@ class SafeOpenai(RankLLM):
         return response, len(encoding.encode(response))
 
     def _get_prefix_for_rank_gpt_prompt(self, query, num):
+    def _get_prefix_for_rank_gpt_prompt(self, query, num):
         return [
             {
                 "role": "system",
@@ -112,6 +117,7 @@ class SafeOpenai(RankLLM):
         ]
 
     def _get_suffix_for_rank_gpt_prompt(self, query, num):
+    def _get_suffix_for_rank_gpt_prompt(self, query, num):
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
     def num_output_tokens(self):
@@ -124,11 +130,18 @@ class SafeOpenai(RankLLM):
             return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
 
     def create_rank_gpt_prompt(self, retrieved_result, rank_start, rank_end):
+        if self.prompt_mode_ == PromptMode.RANK_GPT:
+            return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
+        else:
+            return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
+
+    def create_rank_gpt_prompt(self, retrieved_result, rank_start, rank_end):
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
 
         max_length = 300
         while True:
+            messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
             for hit in retrieved_result["hits"][rank_start:rank_end]:
@@ -143,9 +156,16 @@ class SafeOpenai(RankLLM):
                     {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
                 )
                 messages.append(
+                    {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
+                )
+                messages.append(
                     {"role": "assistant", "content": f"Received passage [{rank}]."}
                 )
             messages.append(
+                {
+                    "role": "user",
+                    "content": self._get_suffix_for_rank_gpt_prompt(query, num),
+                }
                 {
                     "role": "user",
                     "content": self._get_suffix_for_rank_gpt_prompt(query, num),
