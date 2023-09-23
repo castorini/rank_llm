@@ -92,7 +92,7 @@ class SafeOpenai(RankLLM):
         response = self._call_completion(
             model=self.model_,
             messages=messages,
-            temperature = 0,
+            temperature=0,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
         )
@@ -101,7 +101,6 @@ class SafeOpenai(RankLLM):
         except:
             encoding = tiktoken.get_encoding("cl100k_base")
         return response, len(encoding.encode(response))
-
 
     def _get_prefix_for_rank_gpt_prompt(self, query, num):
         return [
@@ -116,7 +115,6 @@ class SafeOpenai(RankLLM):
             {"role": "assistant", "content": "Okay, please provide the passages."},
         ]
 
-
     def _get_suffix_for_rank_gpt_prompt(self, query, num):
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
@@ -124,12 +122,6 @@ class SafeOpenai(RankLLM):
         return 200
 
     def create_prompt(self, retrieved_result, rank_start, rank_end):
-        if self.prompt_mode_ == PromptMode.RANK_GPT:
-            return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
-        else:
-            return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
-
-    def create_rank_gpt_prompt(self, retrieved_result, rank_start, rank_end):
         if self.prompt_mode_ == PromptMode.RANK_GPT:
             return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
         else:
