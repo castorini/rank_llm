@@ -74,7 +74,7 @@ class RankLLM(ABC):
 
     def sliding_windows(
         self, retrieved_result, rank_start, rank_end, window_size, step,
-        shuffle_candidates=False
+        shuffle_candidates=False, logging=False
     ):
         in_token_count = 0
         out_token_count = 0
@@ -101,7 +101,7 @@ class RankLLM(ABC):
                 out_count,
                 prompt,
                 permutation,
-            ) = self.permutation_pipeline(rerank_result, start_pos, end_pos)
+            ) = self.permutation_pipeline(rerank_result, start_pos, end_pos, logging)
             in_token_count += in_count
             out_token_count += out_count
             prompts.append(prompt)

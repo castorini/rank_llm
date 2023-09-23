@@ -6,6 +6,7 @@ import time
 import openai
 import tiktoken
 from rank_llm import RankLLM, PromptMode
+from ftfy import fix_text
 import re
 
 
@@ -30,6 +31,10 @@ class SafeOpenai(RankLLM):
             keys = [keys]
         if not keys:
             raise "Please provide OpenAI Keys."
+        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
+            raise ValueError(
+                "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
+            )
         if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
             raise ValueError(
                 "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
@@ -87,7 +92,7 @@ class SafeOpenai(RankLLM):
         response = self._call_completion(
             model=self.model_,
             messages=messages,
-            temperature=0,
+            temperature = 0,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
         )
@@ -96,6 +101,7 @@ class SafeOpenai(RankLLM):
         except:
             encoding = tiktoken.get_encoding("cl100k_base")
         return response, len(encoding.encode(response))
+
 
     def _get_prefix_for_rank_gpt_prompt(self, query, num):
         return [
@@ -110,6 +116,7 @@ class SafeOpenai(RankLLM):
             {"role": "assistant", "content": "Okay, please provide the passages."},
         ]
 
+
     def _get_suffix_for_rank_gpt_prompt(self, query, num):
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
@@ -117,6 +124,12 @@ class SafeOpenai(RankLLM):
         return 200
 
     def create_prompt(self, retrieved_result, rank_start, rank_end):
+        if self.prompt_mode_ == PromptMode.RANK_GPT:
+            return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
+        else:
+            return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
+
+    def create_rank_gpt_prompt(self, retrieved_result, rank_start, rank_end):
         if self.prompt_mode_ == PromptMode.RANK_GPT:
             return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
         else:
@@ -135,6 +148,7 @@ class SafeOpenai(RankLLM):
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
+                content = fix_text(content)
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
                 messages.append(
@@ -175,13 +189,14 @@ class SafeOpenai(RankLLM):
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
+                content = fix_text(content)
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                message += f'{psg_id} = "{replace_number(content)}"'
+                message += f'{psg_id} = "{replace_number(content)}"\n'
                 psg_ids.append(psg_id)
-            message += f'QUESTION = "{query}"'
-            message += "PASSAGES = [" + ", ".join(psg_ids) + "]"
-            message += "SORTED_PASSAGES = ["
+            message += f'QUESTION = "{query}"\n'
+            message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
+            message += "SORTED_PASSAGES = [\n"
             messages = [{"role": "user", "content": message}]
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():

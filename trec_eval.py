@@ -131,21 +131,26 @@ def main():
     from topics_dict import TOPICS
     from pyserini_retriever import RetrievalMethod
     # TODO: convert this to args, make metrics configurable
-    model = "output_v2_aug_vicuna_7b"
+    #model = "output_v2_aug_vicuna_7b"
+    model = "gpt-4"
     context_size = 4096
     prompt_mode = PromptMode.RANK_GPT
-    output_filename = "trec_eval_aggregated_results.jsonl"
+    #prompt_mode = PromptMode.LRL
+    output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
     with open(output_filename, "w") as output:
         for dataset in ["dl19", "dl20"]:
             for retrieval_method in RetrievalMethod:
                 if retrieval_method == RetrievalMethod.UNSPECIFIED:
+                #if retrieval_method != RetrievalMethod.BM25:
                     continue
                 for top_k_canidadates in [20, 100]:
+                #for top_k_canidadates in [100]:
                     directory = f"rerank_results/{retrieval_method.name}"
                     for filename in os.listdir(directory):
                         if not filename.startswith(
                             f"{model}_{context_size}_{top_k_canidadates}_{prompt_mode}_{dataset}"
                         ):
+                            print(filename)
                             continue
                         f = os.path.join(directory, filename)
                         # checking if it is a file
@@ -169,6 +174,7 @@ def main():
                                                 "-c",
                                                 "-m",
                                                 "map_cut.100",
+                                                "-l2",
                                                 TOPICS[dataset],
                                                 f,
                                             ]
