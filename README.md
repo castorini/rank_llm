@@ -25,12 +25,11 @@ Some code in this repo is borrowed from [RankGPT](https://github.com/sunnweiwei/
 If you use RankLLM, please cite the following paper: 
 
 ```
-@INPROCEEDINGS{Lin_etal_SIGIR2021_Pyserini,
-   author = "Jimmy Lin and Xueguang Ma and Sheng-Chieh Lin and Jheng-Hong Yang and Ronak Pradeep and Rodrigo Nogueira",
-   title = "{Pyserini}: A {Python} Toolkit for Reproducible Information Retrieval Research with Sparse and Dense Representations",
-   booktitle = "Proceedings of the 44th Annual International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2021)",
-   year = 2021,
-   pages = "2356--2362",
+@ARTICLE{pradeep2023rankvicuna,
+  title   = {RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models},
+  author  = {Ronak Pradeep and Sahel Sharifymoghaddam and Jimmy Lin},
+  year    = {2023},
+  journal = {arXiv preprint arXiv: 2309.15088}
 }
 ```
 
