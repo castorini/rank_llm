@@ -15,25 +15,15 @@ class EstimationMode(Enum):
         return self.value
 
 
-def main():
-    parser = ArgumentParser()
-    parser.add_argument(
-        "--estimation_mode",
-        type=EstimationMode,
-        choices=list(EstimationMode),
-        required=True,
-        help="""The estimation mode: 
-                                    `max_context_length` for simply using the max context length for each prompt or
-                                    `create_prompts` for calculating cost estimates by using a sliding window to create prompts""",
-    )
-    estimation_mode = parser.parse_args().estimation_mode
-    costs = {}
-    openai_keys = "Fake key"  # Your openai key
-    model_name = "gpt-3.5-turbo"
-    context_size = 4096
-    top_k_candidates = 100
+def main(args):
+    estimation_mode = args.estimation_mode
+    openai_keys = "Fake key, not needed for cost estimate"
+    model_name = args.model_name
+    context_size = args.context_size
+    top_k_candidates = args.top_k_candidates
     retrieval_method = RetrievalMethod.BM25
-    prompt_mode = PromptMode.RANK_GPT
+    prompt_mode = args.prompt_mode
+    costs = {}
     for dataset in TOPICS.keys():
         print("#" * 20)
         retriever = PyseriniRetriever(dataset, retrieval_method)
@@ -75,5 +65,40 @@ def main():
     print(f"The total estimated cost is {total_cost}.\n")
 
 
+"""
+python estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_mode=rank_GPT
+"""
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--estimation_mode",
+        type=EstimationMode,
+        choices=list(EstimationMode),
+        required=True,
+        help="""The estimation mode: 
+                                    `max_context_length` for simply using the max context length for each prompt or
+                                    `create_prompts` for calculating cost estimates by using a sliding window to create prompts""",
+    )
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        required=True,
+        help="name of the model used for price estimation",
+    )
+    parser.add_argument(
+        "--context_size", type=int, default=4096, help="context size used for model"
+    )
+    parser.add_argument(
+        "--top_k_candidates",
+        type=int,
+        default=100,
+        help="the number of top candidates to rerank",
+    )
+    parser.add_argument(
+        "--prompt_mode",
+        type=PromptMode,
+        required=True,
+        choices=list(PromptMode),
+    )
+    args = parser.parse_args()
+    main(args)

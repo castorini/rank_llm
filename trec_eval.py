@@ -6,9 +6,14 @@ import platform
 import pandas as pd
 import tempfile
 import json
+from argparse import ArgumentParser
 
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
+
+from rank_llm import PromptMode
+from topics_dict import TOPICS
+from pyserini_retriever import RetrievalMethod
 
 
 class EvalFunction:
@@ -126,31 +131,23 @@ class EvalFunction:
         return results
 
 
-def main():
-    from rank_llm import PromptMode
-    from topics_dict import TOPICS
-    from pyserini_retriever import RetrievalMethod
-    # TODO: convert this to args, make metrics configurable
-    #model = "output_v2_aug_vicuna_7b"
-    model = "gpt-4"
-    context_size = 4096
-    prompt_mode = PromptMode.RANK_GPT
-    #prompt_mode = PromptMode.LRL
+def main(args):
+    # TODO: make metrics configurable
+    model = args.model_name
+    context_size = args.context_size
+    prompt_mode = args.prompt_mode
     output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
     with open(output_filename, "w") as output:
         for dataset in ["dl19", "dl20"]:
             for retrieval_method in RetrievalMethod:
                 if retrieval_method == RetrievalMethod.UNSPECIFIED:
-                #if retrieval_method != RetrievalMethod.BM25:
                     continue
                 for top_k_canidadates in [20, 100]:
-                #for top_k_canidadates in [100]:
                     directory = f"rerank_results/{retrieval_method.name}"
                     for filename in os.listdir(directory):
                         if not filename.startswith(
                             f"{model}_{context_size}_{top_k_canidadates}_{prompt_mode}_{dataset}"
                         ):
-                            print(filename)
                             continue
                         f = os.path.join(directory, filename)
                         # checking if it is a file
@@ -207,4 +204,21 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        required=True,
+        help="name of the model used for price estimation",
+    )
+    parser.add_argument(
+        "--context_size", type=int, default=4096, help="context size used for model"
+    )
+    parser.add_argument(
+        "--prompt_mode",
+        type=PromptMode,
+        required=True,
+        choices=list(PromptMode),
+    )
+    args = parser.parse_args()
+    main(args)
