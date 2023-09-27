@@ -8,24 +8,25 @@ import tiktoken
 from rank_llm import RankLLM, PromptMode
 from ftfy import fix_text
 import re
+from typing import Dict, Any, Union, List, Tuple
 
 
-def replace_number(s):
+def replace_number(s: str) -> str:
     return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
 
 class SafeOpenai(RankLLM):
     def __init__(
         self,
-        model,
-        context_size,
-        top_k_candidates,
-        dataset,
-        prompt_mode,
+        model: str,
+        context_size: int,
+        top_k_candidates: int,
+        dataset: str,
+        prompt_mode: PromptMode,
         keys=None,
         key_start_id=None,
         proxy=None,
-    ):
+    ) -> None:
         super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
         if isinstance(keys, str):
             keys = [keys]
@@ -40,11 +41,11 @@ class SafeOpenai(RankLLM):
                 "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
             )
 
-        self.keys = keys
-        self.cur_key_id = key_start_id or 0
-        self.cur_key_id = self.cur_key_id % len(self.keys)
+        self._keys = keys
+        self._cur_key_id = key_start_id or 0
+        self._cur_key_id = self._cur_key_id % len(self._keys)
         openai.proxy = proxy
-        openai.api_key = self.keys[self.cur_key_id]
+        openai.api_key = self._keys[self._cur_key_id]
 
     class CompletionMode(Enum):
         UNSPECIFIED = 0
@@ -58,7 +59,7 @@ class SafeOpenai(RankLLM):
         return_text=False,
         reduce_length=False,
         **kwargs,
-    ):
+    ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
                 if completion_mode == self.CompletionMode.CHAT:
@@ -77,8 +78,8 @@ class SafeOpenai(RankLLM):
                 if "This model's maximum context length is" in str(e):
                     print("reduce_length")
                     return "ERROR::reduce_length"
-                self.cur_key_id = (self.cur_key_id + 1) % len(self.keys)
-                openai.api_key = self.keys[self.cur_key_id]
+                self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
+                openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)
         if return_text:
             completion = (
@@ -88,21 +89,23 @@ class SafeOpenai(RankLLM):
             )
         return completion
 
-    def run_llm(self, messages):
+    def run_llm(self, prompt: Union[str, List[Dict[str, str]]]) -> Tuple[str, int]:
         response = self._call_completion(
-            model=self.model_,
-            messages=messages,
+            model=self._model,
+            messages=prompt,
             temperature=0,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
         )
         try:
-            encoding = tiktoken.get_encoding(self.model_)
+            encoding = tiktoken.get_encoding(self._model)
         except:
             encoding = tiktoken.get_encoding("cl100k_base")
         return response, len(encoding.encode(response))
 
-    def _get_prefix_for_rank_gpt_prompt(self, query, num):
+    def _get_prefix_for_rank_gpt_prompt(
+        self, query: str, num: int
+    ) -> List[Dict[str, str]]:
         return [
             {
                 "role": "system",
@@ -115,19 +118,23 @@ class SafeOpenai(RankLLM):
             {"role": "assistant", "content": "Okay, please provide the passages."},
         ]
 
-    def _get_suffix_for_rank_gpt_prompt(self, query, num):
+    def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
-    def num_output_tokens(self):
+    def num_output_tokens(self) -> int:
         return 200
 
-    def create_prompt(self, retrieved_result, rank_start, rank_end):
-        if self.prompt_mode_ == PromptMode.RANK_GPT:
+    def create_prompt(
+        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+    ) -> Tuple[List[Dict[str, str]], int]:
+        if self._prompt_mode == PromptMode.RANK_GPT:
             return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
         else:
             return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
 
-    def create_rank_gpt_prompt(self, retrieved_result, rank_start, rank_end):
+    def create_rank_gpt_prompt(
+        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+    ) -> Tuple[List[Dict[str, str]], int]:
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
 
@@ -166,10 +173,11 @@ class SafeOpenai(RankLLM):
                 )
         return messages, self.get_num_tokens(messages)
 
-    def create_LRL_prompt(self, retrieved_result, rank_start, rank_end):
+    def create_LRL_prompt(
+        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+    ) -> Tuple[List[Dict[str, str]], int]:
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
-
         max_length = 300
         psg_ids = []
         while True:
@@ -201,38 +209,38 @@ class SafeOpenai(RankLLM):
                 )
         return messages, self.get_num_tokens(messages)
 
-    def get_num_tokens(self, messages):
-        """Returns the number of tokens used by a list of messages."""
-        if self.model_ in ["gpt-3.5-turbo-0301", "gpt-3.5-turbo"]:
+    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+        """Returns the number of tokens used by a list of messages in prompt."""
+        if self._model in ["gpt-3.5-turbo-0301", "gpt-3.5-turbo"]:
             tokens_per_message = (
                 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
             )
             tokens_per_name = -1  # if there's a name, the role is omitted
-        elif self.model_ in ["gpt-4-0314", "gpt-4"]:
+        elif self._model in ["gpt-4-0314", "gpt-4"]:
             tokens_per_message = 3
             tokens_per_name = 1
         else:
             tokens_per_message, tokens_per_name = 0, 0
 
         try:
-            encoding = tiktoken.get_encoding(self.model_)
+            encoding = tiktoken.get_encoding(self._model)
         except:
             encoding = tiktoken.get_encoding("cl100k_base")
 
         num_tokens = 0
-        if isinstance(messages, list):
-            for message in messages:
+        if isinstance(prompt, list):
+            for message in prompt:
                 num_tokens += tokens_per_message
                 for key, value in message.items():
                     num_tokens += len(encoding.encode(value))
                     if key == "name":
                         num_tokens += tokens_per_name
         else:
-            num_tokens += len(encoding.encode(messages))
+            num_tokens += len(encoding.encode(prompt))
         num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
         return num_tokens
 
-    def cost_per_1k_token(self, input_token: bool):
+    def cost_per_1k_token(self, input_token: bool) -> float:
         # Brought in from https://openai.com/pricing on 2023-07-30
         cost_dict = {
             ("gpt-3.5", 4096): 0.0015 if input_token else 0.002,
@@ -240,5 +248,5 @@ class SafeOpenai(RankLLM):
             ("gpt-4", 8192): 0.03 if input_token else 0.06,
             ("gpt-4", 32768): 0.06 if input_token else 0.12,
         }
-        model_key = "gpt-3.5" if "gpt-3" in self.model_ else "gpt-4"
-        return cost_dict[(model_key, self.context_size_)]
+        model_key = "gpt-3.5" if "gpt-3" in self._model else "gpt-4"
+        return cost_dict[(model_key, self._context_size)]

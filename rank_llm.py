@@ -6,17 +6,17 @@ from enum import Enum
 from pathlib import Path
 import random
 from tqdm import tqdm
-from typing import List
+from typing import List, Union, Dict, Any, Tuple
 
 
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     RANK_GPT = "rank_GPT"
     LRL = "LRL"
-    PRL = "PRL"
 
     def __str__(self):
         return self.value
+
 
 class RankLLM(ABC):
     def __init__(
@@ -26,41 +26,45 @@ class RankLLM(ABC):
         top_k_candidates: int,
         dataset: str,
         prompt_mode: PromptMode,
+    ) -> None:
+        self._model = model
+        self._context_size = context_size
+        self._top_k_candidates = top_k_candidates
+        self._dataset = dataset
+        self._prompt_mode = prompt_mode
+
+    def max_tokens(self) -> int:
+        return self._context_size
+
+    @abstractmethod
+    def run_llm(self, prompt: Union[str, List[Dict[str, str]]]) -> Tuple[str, int]:
+        pass
+
+    @abstractmethod
+    def create_prompt(
+        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+    ) -> Tuple[Union[str, List[Dict[str, str]]], int]:
+        pass
+
+    @abstractmethod
+    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+        pass
+
+    @abstractmethod
+    def cost_per_1k_token(self, input_token: bool) -> float:
+        pass
+
+    @abstractmethod
+    def num_output_tokens(self) -> int:
+        pass
+
+    def permutation_pipeline(
+        self,
+        result: Dict[str, Any],
+        rank_start: int,
+        rank_end: int,
+        logging: bool = False,
     ):
-        self.model_ = model
-        self.context_size_ = context_size
-        self.top_k_candidates_ = top_k_candidates
-        self.dataset_ = dataset
-        self.prompt_mode_ = prompt_mode
-
-    def max_tokens(self):
-        return self.context_size_
-
-    @abstractmethod
-    def run_llm(self, prompt):
-        pass
-
-    @abstractmethod
-    def create_prompt(self, retrieved_result, rank_start, rank_end):
-        pass
-
-    @abstractmethod
-    def get_num_tokens(self, prompt):
-        pass
-
-    @abstractmethod
-    def receive_permutation(self, item, permutation, rank_start, rank_end):
-        pass
-
-    @abstractmethod
-    def cost_per_1k_token(self, input_token: bool):
-        pass
-
-    @abstractmethod
-    def num_output_tokens(self):
-        pass
-
-    def permutation_pipeline(self, result, rank_start, rank_end, logging=False):
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
             print(f"prompt: {prompt}")
@@ -73,8 +77,14 @@ class RankLLM(ABC):
         return rerank_result, in_token_count, out_token_count, prompt, permutation
 
     def sliding_windows(
-        self, retrieved_result, rank_start, rank_end, window_size, step,
-        shuffle_candidates=False, logging=False
+        self,
+        retrieved_result: Dict[str, Any],
+        rank_start: int,
+        rank_end: int,
+        window_size: int,
+        step: int,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
     ):
         in_token_count = 0
         out_token_count = 0
@@ -111,12 +121,12 @@ class RankLLM(ABC):
         return rerank_result, in_token_count, out_token_count, prompts, permutations
 
     def get_ranking_cost_upperbound(
-        self, num_q, rank_start, rank_end, window_size, step
-    ):
+        self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int
+    ) -> Tuple[float, int]:
         # For every prompt generated for every query assume the max context size is used.
         num_promt = (rank_end - rank_start - window_size) / step + 1
         input_token_count = (
-            num_q * num_promt * (self.context_size - self.num_output_tokens())
+            num_q * num_promt * (self._context_size - self.num_output_tokens())
         )
         output_token_count = num_q * num_promt * self.num_output_tokens()
         cost = (
@@ -126,8 +136,13 @@ class RankLLM(ABC):
         return (cost, input_token_count + output_token_count)
 
     def get_ranking_cost(
-        self, retrieved_results, rank_start, rank_end, window_size, step
-    ):
+        self,
+        retrieved_results: List[Dict[str, Any]],
+        rank_start: int,
+        rank_end: int,
+        window_size: int,
+        step: int,
+    ) -> Tuple[float, int]:
         input_token_count = 0
         output_token_count = 0
         # Go through the retrieval result using the sliding window and count the number of tokens for generated prompts.
@@ -148,7 +163,7 @@ class RankLLM(ABC):
         ) / 1000.0
         return (cost, input_token_count + output_token_count)
 
-    def _clean_response(self, response: str):
+    def _clean_response(self, response: str) -> str:
         new_response = ""
         for c in response:
             if not c.isdigit():
@@ -158,14 +173,16 @@ class RankLLM(ABC):
         new_response = new_response.strip()
         return new_response
 
-    def _remove_duplicate(self, response: List[int]):
+    def _remove_duplicate(self, response: List[int]) -> List[int]:
         new_response = []
         for c in response:
             if c not in new_response:
                 new_response.append(c)
         return new_response
 
-    def receive_permutation(self, item, permutation, rank_start, rank_end):
+    def receive_permutation(
+        self, item: Dict[str, Any], permutation: str, rank_start: int, rank_end: int
+    ) -> Dict[str, Any]:
         response = self._clean_response(permutation)
         response = [int(x) - 1 for x in response.split()]
         response = self._remove_duplicate(response)
@@ -183,21 +200,26 @@ class RankLLM(ABC):
 
     def write_rerank_results(
         self,
-        retrieval_method_name,
-        rerank_results,
-        input_token_counts,
-        output_token_counts,
-        prompts,
-        responses,
-        shuffle_candidates=False,
-    ):
+        retrieval_method_name: str,
+        rerank_results: List[Dict[str, Any]],
+        input_token_counts: List[int],
+        output_token_counts: List[int],
+        # List[str] for Vicuna, List[List[Dict[str, str]]] for gpt models.
+        prompts: Union[List[str], List[List[Dict[str, str]]]],
+        responses: List[str],
+        shuffle_candidates: bool = False,
+    ) -> str:
         # write rerank results
         Path(f"rerank_results/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        model_name = self.model_.split("/")[-1]
-        name = f"{model_name}_{self.context_size_}_{self.top_k_candidates_}_{self.prompt_mode_}_{self.dataset_}"
-        name = f"{name}_shuffled_{datetime.isoformat(datetime.now())}" if shuffle_candidates else f"{name}_{datetime.isoformat(datetime.now())}"
+        _modelname = self._model.split("/")[-1]
+        name = f"{_modelname}_{self._context_size}_{self._top_k_candidates}_{self._prompt_mode}_{self._dataset}"
+        name = (
+            f"{name}_shuffled_{datetime.isoformat(datetime.now())}"
+            if shuffle_candidates
+            else f"{name}_{datetime.isoformat(datetime.now())}"
+        )
         result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"
         with open(result_file_name, "w") as f:
             for i in range(len(rerank_results)):

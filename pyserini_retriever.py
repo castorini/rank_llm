@@ -7,12 +7,13 @@ from pyserini.search import (
     LuceneImpactSearcher,
     FaissSearcher,
     QueryEncoder,
+    get_topics,
+    get_qrels,
 )
-from pyserini.search import get_topics, get_qrels
 from pathlib import Path
 from indices_dict import INDICES
 from topics_dict import TOPICS
-from trec_eval import EvalFunction
+from typing import Dict, List
 
 
 class RetrievalMethod(Enum):
@@ -30,9 +31,9 @@ class RetrievalMethod(Enum):
 class PyseriniRetriever:
     def __init__(
         self, dataset: str, retrieval_method: RetrievalMethod = RetrievalMethod.BM25
-    ):
-        self.dataset = dataset
-        self.retrieval_method = retrieval_method
+    ) -> None:
+        self._dataset = dataset
+        self._retrieval_method = retrieval_method
         if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             self._searcher = LuceneSearcher.from_prebuilt_index(self._get_index())
             if not self._searcher:
@@ -86,13 +87,13 @@ class PyseriniRetriever:
             topics_key = dataset
         else:
             topics_key = TOPICS[dataset]
-        self.topics = get_topics(topics_key)
-        self.qrels = get_qrels(TOPICS[dataset])
-        self._index_reader = IndexReader.from_prebuilt_index(INDICES[self.dataset])
+        self._topics = get_topics(topics_key)
+        self._qrels = get_qrels(TOPICS[dataset])
+        self._index_reader = IndexReader.from_prebuilt_index(INDICES[self._dataset])
 
-    def _get_index(self):
-        if self.dataset not in INDICES:
-            raise ValueError("dataset %s not in INDICES" % self.dataset)
+    def _get_index(self) -> str:
+        if self._dataset not in INDICES:
+            raise ValueError("dataset %s not in INDICES" % self._dataset)
         index_suffixes = {
             RetrievalMethod.BM25: "",
             RetrievalMethod.BM25_RM3: "",
@@ -100,11 +101,13 @@ class PyseriniRetriever:
             RetrievalMethod.D_BERT_KD_TASB: ".distilbert-dot-tas_b-b256",
             RetrievalMethod.OPEN_AI_ADA2: ".openai-ada2",
         }
-        index_prefix = INDICES[self.dataset]
-        index_name = index_prefix + index_suffixes[self.retrieval_method]
+        index_prefix = INDICES[self._dataset]
+        index_name = index_prefix + index_suffixes[self._retrieval_method]
         return index_name
 
-    def _retrieve_query(self, query: str, ranks, k: int, qid=None):
+    def _retrieve_query(
+        self, query: str, ranks: List[Dict[str, any]], k: int, qid=None
+    ) -> None:
         hits = self._searcher.search(query, k=k)
         ranks.append({"query": query, "hits": []})
         rank = 0
@@ -130,46 +133,46 @@ class PyseriniRetriever:
                 }
             )
 
-    def retrieve(self, k=100, qid=None):
+    def retrieve(self, k=100, qid=None) -> List[Dict[str, any]]:
         ranks = []
-        if isinstance(self.topics, str):
-            self._retrieve_query(self.topics, ranks, k, qid)
-            return ranks[-1]
+        if isinstance(self._topics, str):
+            self._retrieve_query(self._topics, ranks, k, qid)
+            return ranks
 
-        for qid in tqdm(self.topics):
-            if qid in self.qrels:
-                query = self.topics[qid]["title"]
+        for qid in tqdm(self._topics):
+            if qid in self._qrels:
+                query = self._topics[qid]["title"]
                 self._retrieve_query(query, ranks, k, qid)
         return ranks
 
-    def num_queries(self):
-        if isinstance(self.topics, str):
+    def num_queries(self) -> int:
+        if isinstance(self._topics, str):
             return 1
-        return len(self.topics)
+        return len(self._topics)
 
     def retrieve_and_store(
         self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True
     ):
         results = self.retrieve(k, qid)
         Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
-        Path(f"retrieve_results/{self.retrieval_method.name}").mkdir(
+        Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
         # Store JSON in rank_results to a file
         with open(
-            f"retrieve_results/{self.retrieval_method.name}/retrieve_results_{self.dataset}.json",
+            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json",
             "w",
         ) as f:
             json.dump(results, f, indent=2)
         # Store the QRELS of the dataset if specified
         if store_qrels:
             Path("qrels/").mkdir(parents=True, exist_ok=True)
-            with open(f"qrels/qrels_{self.dataset}.json", "w") as f:
-                json.dump(self.qrels, f, indent=2)
+            with open(f"qrels/qrels_{self._dataset}.json", "w") as f:
+                json.dump(self._qrels, f, indent=2)
         # Store TRECS if specified
         if store_trec:
             with open(
-                f"retrieve_results/{self.retrieval_method.name}/trec_results_{self.dataset}.txt",
+                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt",
                 "w",
             ) as f:
                 for result in results:
@@ -179,7 +182,7 @@ class PyseriniRetriever:
                         )
 
 
-def evaluate_retrievals():
+def evaluate_retrievals() -> None:
     for dataset in ["dl19", "dl20"]:
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
@@ -187,7 +190,12 @@ def evaluate_retrievals():
             file_name = (
                 f"retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
             )
+            from trec_eval import EvalFunction
+
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+            EvalFunction.eval(
+                ["-c", "-m", "map_cut.100", "-l2", TOPICS[dataset], file_name]
+            )
 
 
 def main():

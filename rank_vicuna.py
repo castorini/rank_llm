@@ -1,10 +1,13 @@
-from rank_llm import RankLLM, PromptMode
+import re
+from typing import Tuple, List, Union, Dict, Any
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
 from transformers.generation import GenerationConfig
-import re
+
+from rank_llm import RankLLM, PromptMode
 
 
 def replace_number(s):
@@ -14,59 +17,61 @@ def replace_number(s):
 class RankVicuna(RankLLM):
     def __init__(
         self,
-        model,
-        context_size,
-        top_k_candidates,
-        dataset,
-        prompt_mode,
-        device,
-        num_gpus,
-    ):
+        model: str,
+        context_size: int,
+        top_k_candidates: int,
+        dataset: str,
+        prompt_mode: PromptMode,
+        device: str,
+        num_gpus: int,
+    ) -> None:
         super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
-        self.device_ = device
-        if self.device_ == "cuda":
+        self._device = device
+        if self._device == "cuda":
             assert torch.cuda.is_available()
         if prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
                 f"Unsuported prompt mode: {prompt_mode}. The only prompt mode cuurently supported by vicuna is a slight variation of Rank_GPT prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        self.llm_, self.tokenizer_ = load_model(model, device=device, num_gpus=num_gpus)
+        self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
 
-    def run_llm(self, messages):
-        inputs = self.tokenizer_([messages])
-        inputs = {k: torch.tensor(v).to(self.device_) for k, v in inputs.items()}
-        gen_cfg = GenerationConfig.from_model_config(self.llm_.config)
+    def run_llm(self, prompt: str) -> Tuple[str, int]:
+        inputs = self._tokenizer([prompt])
+        inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
+        gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_length = 1
         # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
-        output_ids = self.llm_.generate(**inputs, generation_config=gen_cfg)
+        output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
 
-        if self.llm_.config.is_encoder_decoder:
+        if self._llm.config.is_encoder_decoder:
             output_ids = output_ids[0]
         else:
             output_ids = output_ids[0][len(inputs["input_ids"][0]) :]
-        outputs = self.tokenizer_.decode(
+        outputs = self._tokenizer.decode(
             output_ids, skip_special_tokens=True, spaces_between_special_tokens=False
         )
         return outputs, output_ids.size(0)
 
-    def num_output_tokens(self):
+    def num_output_tokens(self) -> int:
         return 200
 
-    def _add_prefix_prompt(self, query, num):
+    def _add_prefix_prompt(self, query: str, num: int) -> str:
         return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
-    def _add_post_prompt(self, query, num):
+    def _add_post_prompt(self, query: str, num: int) -> str:
         return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [4] > [2], Only respond with the ranking results, do not say any word or explain."
 
-    def create_prompt(self, retrieved_result, rank_start, rank_end):
+    def create_prompt(
+        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+    ) -> Tuple[str, int]:
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
         max_length = 300
         while True:
-            conv = get_conversation_template(self.model_)
+            conv = get_conversation_template(self._model)
             # conv.set_system_message(
             #     "You are RankVicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
             # )
@@ -97,8 +102,8 @@ class RankVicuna(RankLLM):
                 )
         return prompt, self.get_num_tokens(prompt)
 
-    def get_num_tokens(self, messages):
-        return len(self.tokenizer_.encode(messages))
+    def get_num_tokens(self, prompt: str) -> int:
+        return len(self._tokenizer.encode(prompt))
 
-    def cost_per_1k_token(self, input_token: bool):
+    def cost_per_1k_token(self, input_token: bool) -> float:
         return 0

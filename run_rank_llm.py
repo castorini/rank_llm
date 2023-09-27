@@ -11,7 +11,7 @@ from tqdm import tqdm
 import json
 
 
-def get_api_key():
+def get_api_key() -> str:
     from dotenv import dotenv_values, load_dotenv
     import os
 
@@ -84,7 +84,7 @@ def main(args):
             window_size=20,
             step=10,
             shuffle_candidates=shuffle_candidates,
-            logging=print_prompts_responses
+            logging=print_prompts_responses,
         )
         rerank_results.append(rerank_result)
         input_token_counts.append(in_token_count)
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--print_prompts_responses",
         action="store_true",
-        help="whether to print promps and responses"
+        help="whether to print promps and responses",
     )
     args = parser.parse_args()
     main(args)
