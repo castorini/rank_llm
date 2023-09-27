@@ -229,6 +229,6 @@ class RankLLM(ABC):
             "w",
         ) as f:
             for p, r in zip(prompts, responses):
-                json.dump({"prompt": p, "response": r}, f, indent=4)
-                f.write(", ")
+                json.dump({"prompt": p, "response": r}, f)
+                f.write("\n")
         return result_file_name
