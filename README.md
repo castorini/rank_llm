@@ -1,6 +1,7 @@
 # RankLLM (WIP)
 
-We offer a suite of prompt decoders, albeit with a current focus on RankVicuna.
+We offer a suite of prompt decoders, albeit with a current focus on RankVicuna. Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT)!
+
 
 ## 📟 Instructions
 
@@ -17,7 +18,6 @@ The following is a table of our models hosted on HuggingFace:
 | RankVicuna 7B - V1 - FP16      | [castorini/rank_vicuna_7b_v1_fp16](https://huggingface.co/castorini/rank_vicuna_7b_v1_fp16)               |
 | RankVicuna 7B - V1 - No Data Augmentation - FP16   | [castorini/rank_vicuna_7b_v1_noda_fp16](https://huggingface.co/castorini/rank_vicuna_7b_v1_noda_fp16)               |
 
-Some code in this repo is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT)!
 
 
 ## ✨ References
