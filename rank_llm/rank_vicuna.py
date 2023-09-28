@@ -1,10 +1,10 @@
 import re
 from typing import Tuple, List, Union, Dict, Any
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
 from rank_llm import RankLLM, PromptMode
