@@ -5,6 +5,7 @@ from typing import List, Dict
 
 from rank_llm import PromptMode
 
+
 class ResponseAnalyzer:
     def __init__(
         self,

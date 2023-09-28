@@ -12,6 +12,7 @@ from rank_vicuna import RankVicuna
 from topics_dict import TOPICS
 from trec_eval import EvalFunction
 
+
 def get_api_key() -> str:
     from dotenv import dotenv_values, load_dotenv
     import os
