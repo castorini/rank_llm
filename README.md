@@ -2,6 +2,8 @@
 
 We offer a suite of prompt decoders, albeit with a current focus on RankVicuna. Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT)!
 
+# Releases
+current_version = 1.0.0
 
 ## 📟 Instructions
 
