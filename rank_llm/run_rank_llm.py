@@ -1,21 +1,22 @@
 import argparse
-from rank_llm import PromptMode
-from rank_vicuna import RankVicuna
-from rank_gpt import SafeOpenai
-from pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from topics_dict import TOPICS
+import json
 from pathlib import Path
-from trec_eval import EvalFunction
+
 import torch
 from tqdm import tqdm
-import json
 
+from pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from rank_gpt import SafeOpenai
+from rank_llm import PromptMode
+from rank_vicuna import RankVicuna
+from topics_dict import TOPICS
+from trec_eval import EvalFunction
 
 def get_api_key() -> str:
     from dotenv import dotenv_values, load_dotenv
     import os
 
-    load_dotenv(dotenv_path=f".env.local")
+    load_dotenv(dotenv_path=f"../.env.local")
     return os.getenv("OPEN_AI_API_KEY")
 
 
@@ -51,7 +52,7 @@ def main(args):
             num_gpus=num_gpus,
         )
     candidates_file = Path(
-        f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
+        f"../retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
     )
     if not candidates_file.is_file():
         print("Retrieving:")
@@ -110,7 +111,7 @@ def main(args):
 
 
 """ sample run:
-python rank_vicuna.py --model_path=checkpoints/vicuna/vicuna-7b-checkpoint-800 --dataset=dl19 --retrieval_method=bm25
+python rank_vicuna.py --model_path=../checkpoints/vicuna/vicuna-7b-checkpoint-800 --dataset=dl19 --retrieval_method=bm25
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

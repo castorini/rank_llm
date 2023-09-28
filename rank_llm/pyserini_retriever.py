@@ -1,6 +1,8 @@
-import json
 from enum import Enum
-from tqdm import tqdm
+import json
+from pathlib import Path
+from typing import Dict, List
+
 from pyserini.index import IndexReader
 from pyserini.search import (
     LuceneSearcher,
@@ -10,10 +12,10 @@ from pyserini.search import (
     get_topics,
     get_qrels,
 )
-from pathlib import Path
+from tqdm import tqdm
+
 from indices_dict import INDICES
 from topics_dict import TOPICS
-from typing import Dict, List
 
 
 class RetrievalMethod(Enum):
@@ -154,25 +156,25 @@ class PyseriniRetriever:
         self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True
     ):
         results = self.retrieve(k, qid)
-        Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
-        Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
+        Path("../retrieve_results/").mkdir(parents=True, exist_ok=True)
+        Path(f"../retrieve_results/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
         # Store JSON in rank_results to a file
         with open(
-            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json",
+            f"../retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json",
             "w",
         ) as f:
             json.dump(results, f, indent=2)
         # Store the QRELS of the dataset if specified
         if store_qrels:
-            Path("qrels/").mkdir(parents=True, exist_ok=True)
-            with open(f"qrels/qrels_{self._dataset}.json", "w") as f:
+            Path("../qrels/").mkdir(parents=True, exist_ok=True)
+            with open(f"../qrels/qrels_{self._dataset}.json", "w") as f:
                 json.dump(self._qrels, f, indent=2)
         # Store TRECS if specified
         if store_trec:
             with open(
-                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt",
+                f"../retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt",
                 "w",
             ) as f:
                 for result in results:
@@ -187,9 +189,7 @@ def evaluate_retrievals() -> None:
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            file_name = (
-                f"retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
-            )
+            file_name = f"../retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
             from trec_eval import EvalFunction
 
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])

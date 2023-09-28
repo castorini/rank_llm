@@ -168,4 +168,3 @@ prompts_and_responses/
 rerank_results/
 retrieve_results/
 token_counts/
-trec_eval_aggregated_results*

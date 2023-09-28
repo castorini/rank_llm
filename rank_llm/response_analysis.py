@@ -1,9 +1,9 @@
-from rank_llm import PromptMode
-from typing import List, Dict
-import os
-import json
 import argparse
+import json
+import os
+from typing import List, Dict
 
+from rank_llm import PromptMode
 
 class ResponseAnalyzer:
     def __init__(
@@ -22,7 +22,7 @@ class ResponseAnalyzer:
         responses = []
         for dataset in ["dl19", "dl20"]:
             file_name_prefix = f"{self._model_name}_{self._context_size}_{self._top_candidates}_{self._prompt_mode}_{dataset}"
-            directory = "prompts_and_responses/BM25"
+            directory = "../prompts_and_responses/BM25"
             for filename in os.listdir(directory):
                 if not filename.startswith(file_name_prefix):
                     continue

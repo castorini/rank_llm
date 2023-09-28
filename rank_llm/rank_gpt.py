@@ -1,14 +1,13 @@
-import copy
 from enum import Enum
-from pathlib import Path
-import json
+import re
 import time
+from typing import Dict, Any, Union, List, Tuple
+
+from ftfy import fix_text
 import openai
 import tiktoken
+
 from rank_llm import RankLLM, PromptMode
-from ftfy import fix_text
-import re
-from typing import Dict, Any, Union, List, Tuple
 
 
 def replace_number(s: str) -> str:

@@ -1,19 +1,17 @@
+from argparse import ArgumentParser
+import json
 import os
-import re
-import subprocess
-import sys
 import platform
 import pandas as pd
+import subprocess
 import tempfile
-import json
-from argparse import ArgumentParser
 
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
 
+from pyserini_retriever import RetrievalMethod
 from rank_llm import PromptMode
 from topics_dict import TOPICS
-from pyserini_retriever import RetrievalMethod
 
 
 class EvalFunction:
