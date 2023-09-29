@@ -9,6 +9,7 @@ from pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_gpt import SafeOpenai
 from rank_llm import PromptMode
 from rank_vicuna import RankVicuna
+from rank_vicuna_q import RankVicunaQ
 from topics_dict import TOPICS
 from trec_eval import EvalFunction
 
@@ -41,6 +42,16 @@ def main(args):
             dataset=dataset,
             prompt_mode=prompt_mode,
             keys=openai_keys,
+        )
+    elif "q4" or "q8" in model_path:
+        agent = RankVicunaQ(
+            model=model_path,
+            context_size=context_size,
+            top_k_candidates=top_k_candidates,
+            dataset=dataset,
+            prompt_mode=prompt_mode,
+            device=device,
+            num_gpus=num_gpus,
         )
     else:
         agent = RankVicuna(
