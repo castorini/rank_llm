@@ -34,12 +34,11 @@ class RankVicunaQ(RankLLM):
             raise ValueError(
                 f"Unsuported prompt mode: {prompt_mode}. The only prompt mode cuurently supported by vicuna is a slight variation of Rank_GPT prompt."
             )
-        # ToDo: Make repetition_penalty configurable
         self._llm = Llama(
             model_path=model,
             n_ctx=context_size,
             n_gpu_layers=-1,
-            verbose=True,
+            verbose=False,
         )
         self._llm.set_cache(LlamaCache())
 
@@ -99,7 +98,7 @@ class RankVicunaQ(RankLLM):
         return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, prompt: str) -> int:
-        return len(self._tokenizer.encode(prompt))
+        return len(self._llm.tokenize(prompt.encode()))
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
