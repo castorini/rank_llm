@@ -30,9 +30,9 @@ dependencies = [
     "faiss-gpu >= 1.7.2",
     "ftfy >= 6.1.1",
     "fschat >= 0.2.28",
-    "accelerate >= 0.23.0",
+    "accelerate >= 0.22.0",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
