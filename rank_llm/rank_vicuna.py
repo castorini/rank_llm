@@ -7,7 +7,7 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
-from rank_llm import RankLLM, PromptMode
+from rank_llm.rankllm import RankLLM, PromptMode
 
 
 def replace_number(s):

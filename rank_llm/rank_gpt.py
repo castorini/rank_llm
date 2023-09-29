@@ -7,7 +7,7 @@ from ftfy import fix_text
 import openai
 import tiktoken
 
-from rank_llm import RankLLM, PromptMode
+from rank_llm.rankllm import RankLLM, PromptMode
 
 
 def replace_number(s: str) -> str:

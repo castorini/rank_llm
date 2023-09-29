@@ -5,12 +5,12 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 
-from pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_gpt import SafeOpenai
-from rank_llm import PromptMode
-from rank_vicuna import RankVicuna
-from topics_dict import TOPICS
-from trec_eval import EvalFunction
+from rank_llm.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from rank_llm.rank_gpt import SafeOpenai
+from rank_llm.rankllm import PromptMode
+from rank_llm.rank_vicuna import RankVicuna
+from rank_llm.topics_dict import TOPICS
+from rank_llm.trec_eval import EvalFunction
 
 
 def get_api_key() -> str:
