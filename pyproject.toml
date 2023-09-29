@@ -1,0 +1,59 @@
+# pyproject.toml
+
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rank-llm"
+version = "0.0.5"
+description = "A Package for running prompt decoders like RankVicuna"
+readme = "README.md"
+authors = [
+    { name = "Sahel Sharifymoghaddam", email = "sahel.sharifymoghaddam@uwaterloo.ca" },
+    { name = "Ronak Pradeep", email = "rpradeep@uwaterloo.ca" },
+    { name = "Jimmy Lin", email = "jimmylin@uwaterloo.ca" },
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["prompt-decoder", "RankVicuna", "RankLLM", "information retrieval", "neural ranking", "LLM"]
+dependencies = [
+    "tqdm >= 4.65.0",
+    "openai >= 0.27.8",
+    "tiktoken>=0.4.0",
+    "transformers >= 4.31.0",
+    "pyserini >= 0.22.0",
+    "python-dotenv >= 1.0.0",
+    "faiss-gpu >= 1.7.2",
+    "ftfy >= 6.1.1",
+    "fschat >= 0.2.28",
+    "accelerate >= 0.22.0",
+]
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/castorini/rank_llm"
+
+[tool.bumpver]
+current_version = "0.0.5"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "Bump version {old_version} -> {new_version}"
+commit = true
+tag = true
+push = false
+
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = [
+    'current_version = "{version}"', 'version = "{version}"'
+]
+"README.md" = [
+    "{version}",
+]
+
+[tool.setuptools]
+packages = ["rank_llm"]
+
