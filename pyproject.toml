@@ -5,12 +5,12 @@ requires      = ["setuptools>=61.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rank-llm"
+name = "rankllm"
 version = "0.0.1"
 description = "A Package for running prompt decoders like RankVicuna"
 readme = "README.md"
 authors = [
-    { name = "Sahel Sharifymoghaddam", email = "sahel.Sharifymoghaddam@uwaterloo.ca" },
+    { name = "Sahel Sharifymoghaddam", email = "sahel.sharifymoghaddam@uwaterloo.ca" },
     { name = "Ronak Pradeep", email = "rpradeep@uwaterloo.ca" },
     { name = "Jimmy Lin", email = "jimmylin@uwaterloo.ca" },
 ]
@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["prompt-decoder", "RankVicuna", "RankLLM"]
+keywords = ["prompt-decoder", "RankVicuna", "RankLLM", "information retrieval", "neural ranking", "LLM"]
 dependencies = [
     "tqdm >= 4.65.0",
     "openai >= 0.27.8",
