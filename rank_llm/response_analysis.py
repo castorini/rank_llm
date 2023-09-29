@@ -3,7 +3,7 @@ import json
 import os
 from typing import List, Dict
 
-from rank_llm import PromptMode
+from rank_llm.rankllm import PromptMode
 
 
 class ResponseAnalyzer:

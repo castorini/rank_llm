@@ -1,10 +1,11 @@
 import json
 from argparse import ArgumentParser
 from enum import Enum
-from pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_gpt import SafeOpenai
-from rank_llm import PromptMode
-from topics_dict import TOPICS
+
+from rank_llm.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from rank_llm.rank_gpt import SafeOpenai
+from rank_llm.rankllm import PromptMode
+from rank_llm.topics_dict import TOPICS
 
 
 class EstimationMode(Enum):

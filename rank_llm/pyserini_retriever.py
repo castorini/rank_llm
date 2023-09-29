@@ -14,8 +14,8 @@ from pyserini.search import (
 )
 from tqdm import tqdm
 
-from indices_dict import INDICES
-from topics_dict import TOPICS
+from rank_llm.indices_dict import INDICES
+from rank_llm.topics_dict import TOPICS
 
 
 class RetrievalMethod(Enum):
