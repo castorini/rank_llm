@@ -5,6 +5,11 @@ from pathlib import Path
 import torch
 from tqdm import tqdm
 
+import sys
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 from rank_llm.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_llm.rank_gpt import SafeOpenai
 from rank_llm.rankllm import PromptMode
