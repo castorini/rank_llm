@@ -1,7 +1,16 @@
-# RankLLM (WIP)
+# RankLLM
+
+[![PyPI](https://img.shields.io/pypi/v/rank-llm?color=brightgreen)](https://pypi.org/project/rank-llm/)
+[![Downloads](https://static.pepy.tech/personalized-badge/rank-llm?period=total&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads)](https://pepy.tech/project/rank-llm)
+[![Downloads](https://static.pepy.tech/personalized-badge/rank-llm?period=week&units=international_system&left_color=grey&right_color=brightgreen&left_text=downloads/week)](https://pepy.tech/project/rank-llm)
+[![Generic badge](https://img.shields.io/badge/arXiv-2309.15088-red.svg)](https://arxiv.org/abs/2309.15088)
+[![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
+
 
 We offer a suite of prompt decoders, albeit with a current focus on RankVicuna. Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT)!
 
+# Releases
+current_version = 0.0.6
 
 ## 📟 Instructions
 

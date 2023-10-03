@@ -1,6 +1,6 @@
 tqdm==4.65.0
 openai==0.27.8
-tiktoken==0.4.0
+tiktoken
 transformers==4.31.0
 pyserini==0.22.0
 python-dotenv==1.0.0
