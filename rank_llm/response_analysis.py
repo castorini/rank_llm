@@ -3,6 +3,11 @@ import json
 import os
 from typing import List, Dict
 
+import sys
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 from rank_llm.rankllm import PromptMode
 
 
