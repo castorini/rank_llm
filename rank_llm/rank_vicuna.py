@@ -110,7 +110,7 @@ class RankVicuna(RankLLM):
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
 
-    def from_pretrained_model(self, model: str):
+    def from_pretrained_model(model: str): 
         return AutoModelForCausalLM.from_pretrained(model)
 
     def rerank(
