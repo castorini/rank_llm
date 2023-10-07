@@ -4,11 +4,13 @@ from typing import Tuple, List, Union, Dict, Any
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
 import torch
+from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
 from rank_llm.rankllm import RankLLM, PromptMode
-
+from rank_llm.topics_dict import TOPICS
+from rank_llm.trec_eval import EvalFunction
 
 def replace_number(s):
     return re.sub(r"\[(\d+)\]", r"(\1)", s)
@@ -107,3 +109,60 @@ class RankVicuna(RankLLM):
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
+
+    def from_pretrained_model(self, model: str):
+        return AutoModelForCausalLM.from_pretrained(model)
+
+    def rerank(
+        self,
+        query: str,
+        documents: Union[List[str], List[Dict[str, Any]]],
+        top_k_candidates: int = 3,
+        shuffle_candidates: bool = False,
+        print_prompts_responses: bool = False,
+        retrieval_method: str = "[placeholder]",
+        dataset: str = "dl19"
+    ):
+        print("Reranking with RankVicuna:")
+        rerank_results = []
+        input_token_counts = []
+        output_token_counts = []
+        aggregated_prompts = []
+        aggregated_responses = []
+        for result in tqdm(documents):
+            (
+                rerank_result,
+                in_token_count,
+                out_token_count,
+                prompts,
+                responses,
+            ) = self.sliding_windows(
+                result,
+                rank_start=0,
+                rank_end=top_k_candidates,
+                window_size=20,
+                step=10,
+                shuffle_candidates=shuffle_candidates,
+                logging=print_prompts_responses,
+            )
+            rerank_results.append(rerank_result)
+            input_token_counts.append(in_token_count)
+            output_token_counts.append(out_token_count)
+            aggregated_prompts.extend(prompts)
+            aggregated_responses.extend(responses)
+        print(f"input_tokens_counts={input_token_counts}")
+        print(f"total input token count={sum(input_token_counts)}")
+        print(f"output_token_counts={output_token_counts}")
+        print(f"total output token count={sum(output_token_counts)}")
+        file_name = self.write_rerank_results(
+            retrieval_method,
+            rerank_results,
+            input_token_counts,
+            output_token_counts,
+            aggregated_prompts,
+            aggregated_responses,
+            shuffle_candidates,
+        )
+        EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
+        EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
+        EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
