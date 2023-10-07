@@ -1,6 +1,8 @@
 INDICES = {
     "dl19": "msmarco-v1-passage",
     "dl20": "msmarco-v1-passage",
+    "dl21": "msmarco-v2-passage",
+    "dl22": "msmarco-v2-passage",
     "covid": "beir-v1.0.0-trec-covid.flat",
     "arguana": "beir-v1.0.0-arguana.flat",
     "touche": "beir-v1.0.0-webis-touche2020.flat",

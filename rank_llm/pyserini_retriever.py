@@ -14,6 +14,11 @@ from pyserini.search import (
 )
 from tqdm import tqdm
 
+import sys
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 from rank_llm.indices_dict import INDICES
 from rank_llm.topics_dict import TOPICS
 
@@ -85,7 +90,7 @@ class PyseriniRetriever:
             )
         if dataset not in TOPICS:
             raise ValueError("dataset %s not in TOPICS" % dataset)
-        if dataset == "dl20":
+        if dataset in ["dl20", "dl21", "dl22"]:
             topics_key = dataset
         else:
             topics_key = TOPICS[dataset]
@@ -121,8 +126,10 @@ class PyseriniRetriever:
                 content = (
                     "Title: " + content["title"] + " " + "Content: " + content["text"]
                 )
-            else:
+            elif "contents" in content:
                 content = content["contents"]
+            else:
+                content = content["passage"]
             content = " ".join(content.split())
             # hit.score could be of type 'numpy.float32' which is not json serializable. Always explicitly cast it to float.
             ranks[-1]["hits"].append(
@@ -156,42 +163,43 @@ class PyseriniRetriever:
         self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True
     ):
         results = self.retrieve(k, qid)
-        Path("../retrieve_results/").mkdir(parents=True, exist_ok=True)
-        Path(f"../retrieve_results/{self._retrieval_method.name}").mkdir(
+        Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
+        Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
         # Store JSON in rank_results to a file
         with open(
-            f"../retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json",
+            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json",
             "w",
         ) as f:
             json.dump(results, f, indent=2)
         # Store the QRELS of the dataset if specified
         if store_qrels:
-            Path("../qrels/").mkdir(parents=True, exist_ok=True)
-            with open(f"../qrels/qrels_{self._dataset}.json", "w") as f:
+            Path("qrels/").mkdir(parents=True, exist_ok=True)
+            with open(f"qrels/qrels_{self._dataset}.json", "w") as f:
                 json.dump(self._qrels, f, indent=2)
         # Store TRECS if specified
         if store_trec:
             with open(
-                f"../retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt",
+                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt",
                 "w",
             ) as f:
                 for result in results:
                     for hit in result["hits"]:
                         f.write(
-                            f"{hit['qid']} Q0 {int(hit['docid'])} {hit['rank']} {hit['score']} rank\n"
+                            f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
                         )
 
 
 def evaluate_retrievals() -> None:
-    for dataset in ["dl19", "dl20"]:
+    from trec_eval import EvalFunction
+    for dataset in ["dl19", "dl20", "dl21", "dl22"]:
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            file_name = f"../retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
-            from trec_eval import EvalFunction
-
+            file_name = f"retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
+            if not os.path.isfile(file_name):
+                continue
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
             EvalFunction.eval(
                 ["-c", "-m", "map_cut.100", "-l2", TOPICS[dataset], file_name]
@@ -199,10 +207,13 @@ def evaluate_retrievals() -> None:
 
 
 def main():
-    for dataset in ["dl19", "dl20"]:
+    for dataset in ["dl19", "dl20", "dl21", "dl22"]:
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
+            if dataset in ["dl21", "dl22"]:
+                if retrieval_method not in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
+                    continue
             retriever = PyseriniRetriever(dataset, retrieval_method)
             retriever.retrieve_and_store()
     evaluate_retrievals()
