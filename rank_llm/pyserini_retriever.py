@@ -207,11 +207,11 @@ def evaluate_retrievals() -> None:
 
 
 def main():
-    for dataset in ["dl19", "dl20", "dl21", "dl22"]:
+    for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            if dataset in ["dl21", "dl22"]:
+            if dataset in ["dl21", "dl22", "news", "covid"]:
                 if retrieval_method not in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
                     continue
             retriever = PyseriniRetriever(dataset, retrieval_method)
