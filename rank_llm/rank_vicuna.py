@@ -12,6 +12,7 @@ from transformers.generation import GenerationConfig
 from rank_llm.rankllm import RankLLM, PromptMode
 from rank_llm.topics_dict import TOPICS
 from rank_llm.trec_eval import EvalFunction
+from rank_llm.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
 def replace_number(s):
     return re.sub(r"\[(\d+)\]", r"(\1)", s)
@@ -111,40 +112,77 @@ class RankVicuna(RankLLM):
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
 
-    def from_pretrained_model(model: str): 
-        return AutoModelForCausalLM.from_pretrained(model)
-
     def rerank(
-        model: str, query: str, documents: List[str],
+        self,
+        query: str,
+        documents: Union[List[str], List[Dict[str, Any]]],
     ):
-        print(f'Reranking with model: {model}.\n')
-        tokenizer = AutoTokenizer.from_pretrained(model)
+        print("Reranking with RankVicuna:")
+        rerank_results = []
+        input_token_counts = []
+        output_token_counts = []
+        aggregated_prompts = []
+        aggregated_responses = []
+        for result in tqdm(documents):
+            (
+                rerank_result,
+                in_token_count,
+                out_token_count,
+                prompts,
+                responses,
+            ) = self.sliding_windows(
+                result,
+                rank_start=0,
+                rank_end=self.top_k_candidates,
+                window_size=2,
+                step=10,
+                shuffle_candidates=False,
+                logging=False,
+            )
+            rerank_results.append(rerank_result)
+            input_token_counts.append(in_token_count)
+            output_token_counts.append(out_token_count)
+            aggregated_prompts.extend(prompts)
+            aggregated_responses.extend(responses)
+        
+        print(f"rerank_results={rerank_result}")
+        print(f"input_tokens_counts={input_token_counts}")
+        print(f"total input token count={sum(input_token_counts)}")
+        print(f"output_token_counts={output_token_counts}")
+        print(f"total output token count={sum(output_token_counts)}")
+        
 
-        pipeline = transformers.pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            torch_dtype=torch.bfloat16,
-            trust_remote_code=True,
-            device_map="auto",
-        )
+    # def rerank(
+    #     model: str, query: str, documents: List[str],
+    # ):
+    #     print(f'Reranking with model: {model}.\n')
+    #     tokenizer = AutoTokenizer.from_pretrained(model)
 
-        prompt = "Rerank the list of PASSAGES by how well each text answers the QUERY, in descending order of relevancy.\n"
-        prompt += f'QUERY = "{query}"\n'
-        list_of_passages = []
-        for idx, text in enumerate(documents):
-            list_of_passages.append(f'PASSAGE{idx+1} = {text}')
-        prompt += 'PASSAGES = [' + ", ".join(list_of_passages) + ']\n'
-        prompt += 'SORTED_PASSAGES = ['
+    #     pipeline = transformers.pipeline(
+    #         "text-generation",
+    #         model=model,
+    #         tokenizer=tokenizer,
+    #         torch_dtype=torch.bfloat16,
+    #         trust_remote_code=True,
+    #         device_map="auto",
+    #     )
 
-        sequences = pipeline(
-            prompt,
-            max_length=200,
-            do_sample=True,
-            top_k=10,
-            num_return_sequences=1,
-            eos_token_id=tokenizer.eos_token_id,
-        )
+    #     prompt = "Rerank the list of PASSAGES by how well each text answers the QUERY, in descending order of relevancy.\n"
+    #     prompt += f'QUERY = "{query}"\n'
+    #     list_of_passages = []
+    #     for idx, text in enumerate(documents):
+    #         list_of_passages.append(f'PASSAGE{idx+1} = {text}')
+    #     prompt += 'PASSAGES = [' + ", ".join(list_of_passages) + ']\n'
+    #     prompt += 'SORTED_PASSAGES = ['
 
-        for seq in sequences:
-            print(f"Result: {seq['generated_text']}")
+    #     sequences = pipeline(
+    #         prompt,
+    #         max_length=500,
+    #         do_sample=True,
+    #         top_k=10,
+    #         num_return_sequences=len(documents),
+    #         eos_token_id=tokenizer.eos_token_id,
+    #     )
+
+    #     for seq in sequences:
+    #         print(f"Result: {seq['generated_text']}")
