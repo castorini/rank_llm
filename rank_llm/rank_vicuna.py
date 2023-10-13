@@ -133,7 +133,7 @@ class RankVicuna(RankLLM):
             ) = self.sliding_windows(
                 result,
                 rank_start=0,
-                rank_end=self.top_k_candidates,
+                rank_end=self._top_k_candidates,
                 window_size=2,
                 step=10,
                 shuffle_candidates=False,
