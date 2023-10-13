@@ -123,10 +123,10 @@ class RankVicuna(RankLLM):
         output_token_counts = []
         aggregated_prompts = []
         aggregated_responses = []
-        retrieved_result = {
+        retrieved_result = [{
           "query": query,
           "hits": documents,
-        }
+        }]
         for result in tqdm(retrieved_result):
             (
                 rerank_result,
