@@ -22,7 +22,7 @@ def get_api_key() -> str:
     from dotenv import dotenv_values, load_dotenv
     import os
 
-    load_dotenv(dotenv_path=f"../.env.local")
+    load_dotenv(dotenv_path=f".env.local")
     return os.getenv("OPEN_AI_API_KEY")
 
 
@@ -58,7 +58,7 @@ def main(args):
             num_gpus=num_gpus,
         )
     candidates_file = Path(
-        f"../retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
+        f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
     )
     if not candidates_file.is_file():
         print("Retrieving:")
@@ -117,7 +117,7 @@ def main(args):
 
 
 """ sample run:
-python rank_vicuna.py --model_path=../checkpoints/vicuna/vicuna-7b-checkpoint-800 --dataset=dl19 --retrieval_method=bm25
+python rank_llm/rank_vicuna.py --model_path=checkpoints/vicuna/vicuna-7b-checkpoint-800 --dataset=dl19 --retrieval_method=bm25
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

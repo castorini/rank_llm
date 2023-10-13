@@ -211,7 +211,7 @@ class RankLLM(ABC):
         shuffle_candidates: bool = False,
     ) -> str:
         # write rerank results
-        Path(f"../rerank_results/{retrieval_method_name}/").mkdir(
+        Path(f"rerank_results/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
         _modelname = self._model.split("/")[-1]
@@ -221,7 +221,7 @@ class RankLLM(ABC):
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
-        result_file_name = f"../rerank_results/{retrieval_method_name}/{name}.txt"
+        result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"
         with open(result_file_name, "w") as f:
             for i in range(len(rerank_results)):
                 rank = 1
@@ -232,10 +232,10 @@ class RankLLM(ABC):
                     )
                     rank += 1
         # Write token counts
-        Path(f"../token_counts/{retrieval_method_name}/").mkdir(
+        Path(f"token_counts/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        count_file_name = f"../token_counts/{retrieval_method_name}/{name}.txt"
+        count_file_name = f"token_counts/{retrieval_method_name}/{name}.txt"
         counts = {}
         for i, (in_count, out_count) in enumerate(
             zip(input_token_counts, output_token_counts)
@@ -244,11 +244,11 @@ class RankLLM(ABC):
         with open(count_file_name, "w") as f:
             json.dump(counts, f, indent=4)
         # Write prompts and responses
-        Path(f"../prompts_and_responses/{retrieval_method_name}/").mkdir(
+        Path(f"prompts_and_responses/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
         with open(
-            f"../prompts_and_responses/{retrieval_method_name}/{name}.json",
+            f"prompts_and_responses/{retrieval_method_name}/{name}.json",
             "w",
         ) as f:
             for p, r in zip(prompts, responses):
