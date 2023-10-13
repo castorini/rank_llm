@@ -140,8 +140,8 @@ class RankVicuna(RankLLM):
                 rank_end=self._top_k_candidates,
                 window_size=2,
                 step=10,
-                shuffle_candidates=False,
-                logging=False,
+                shuffle_candidates=True,
+                logging=True,
             )
             rerank_results.append(rerank_result)
             input_token_counts.append(in_token_count)
