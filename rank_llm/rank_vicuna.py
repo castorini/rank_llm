@@ -96,11 +96,9 @@ class RankVicuna(RankLLM):
             prompt = conv.get_prompt() + " ASSISTANT:"
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
-
-            print(f"\nnum_tokens={num_tokens}")
-            print(f"max_tokens={self.max_tokens()}")
-            print(f"num_output_tokens={self.num_output_tokens()}")
-
+            # print(f"\nnum_tokens={num_tokens}")
+            # print(f"max_tokens={self.max_tokens()}")
+            # print(f"num_output_tokens={self.num_output_tokens()}")
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
@@ -170,39 +168,3 @@ class RankVicuna(RankLLM):
         print(f"total input token count={sum(input_token_counts)}")
         print(f"output_token_counts={output_token_counts}")
         print(f"total output token count={sum(output_token_counts)}")
-        
-
-    # def rerank(
-    #     model: str, query: str, documents: List[str],
-    # ):
-    #     print(f'Reranking with model: {model}.\n')
-    #     tokenizer = AutoTokenizer.from_pretrained(model)
-
-    #     pipeline = transformers.pipeline(
-    #         "text-generation",
-    #         model=model,
-    #         tokenizer=tokenizer,
-    #         torch_dtype=torch.bfloat16,
-    #         trust_remote_code=True,
-    #         device_map="auto",
-    #     )
-
-    #     prompt = "Rerank the list of PASSAGES by how well each text answers the QUERY, in descending order of relevancy.\n"
-    #     prompt += f'QUERY = "{query}"\n'
-    #     list_of_passages = []
-    #     for idx, text in enumerate(documents):
-    #         list_of_passages.append(f'PASSAGE{idx+1} = {text}')
-    #     prompt += 'PASSAGES = [' + ", ".join(list_of_passages) + ']\n'
-    #     prompt += 'SORTED_PASSAGES = ['
-
-    #     sequences = pipeline(
-    #         prompt,
-    #         max_length=500,
-    #         do_sample=True,
-    #         top_k=10,
-    #         num_return_sequences=len(documents),
-    #         eos_token_id=tokenizer.eos_token_id,
-    #     )
-
-    #     for seq in sequences:
-    #         print(f"Result: {seq['generated_text']}")
