@@ -128,7 +128,7 @@ class RankVicuna(RankLLM):
         output_token_counts = []
         aggregated_prompts = []
         aggregated_responses = []
-        if isinstance(documents, List[str]):
+        if isinstance(documents[0], str):
             document_hits = []
             for passage in documents:
                 document_hits.append({
@@ -138,7 +138,7 @@ class RankVicuna(RankLLM):
             "query": query,
             "hits": document_hits,
             }]
-        elif isinstance(documents, List[Dict[str, Any]]):
+        elif isinstance(documents[0], dict):
             retrieved_result = [{
             "query": query,
             "hits": documents,
