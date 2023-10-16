@@ -96,6 +96,11 @@ class RankVicuna(RankLLM):
             prompt = conv.get_prompt() + " ASSISTANT:"
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
+
+            print(f"\nnum_tokens={num_tokens}")
+            print(f"max_tokens={self.max_tokens()}")
+            print(f"num_output_tokens={self.num_output_tokens()}")
+
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
