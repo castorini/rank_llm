@@ -105,6 +105,9 @@ class RankLLM(ABC):
         prompts = []
         permutations = []
         while start_pos >= rank_start:
+            print(f"rerank_results={rerank_result}")
+            print(f"start_pos={start_pos}")
+            print(f"rank_start={rank_start}\n")
             start_pos = max(start_pos, rank_start)
             (
                 rerank_result,

@@ -138,7 +138,7 @@ class RankVicuna(RankLLM):
                 result,
                 rank_start=0,
                 rank_end=self._top_k_candidates,
-                window_size=2,
+                window_size=3,
                 step=10,
                 shuffle_candidates=True,
                 logging=True,
