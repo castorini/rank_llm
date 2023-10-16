@@ -154,7 +154,7 @@ class RankVicuna(RankLLM):
                 result,
                 rank_start=0,
                 rank_end=len(documents),
-                window_size=20,
+                window_size=min(len(documents), 20),
                 step=10,
                 shuffle_candidates=False,
                 logging=True,
