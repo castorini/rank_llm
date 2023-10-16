@@ -128,10 +128,21 @@ class RankVicuna(RankLLM):
         output_token_counts = []
         aggregated_prompts = []
         aggregated_responses = []
-        retrieved_result = [{
-          "query": query,
-          "hits": documents,
-        }]
+        if isinstance(documents, List[str]):
+            document_hits = []
+            for passage in documents:
+                document_hits.append({
+                    "content": passage
+                })
+            retrieved_result = [{
+            "query": query,
+            "hits": document_hits,
+            }]
+        elif isinstance(documents, List[Dict[str, Any]]):
+            retrieved_result = [{
+            "query": query,
+            "hits": documents,
+            }]
         for result in tqdm(retrieved_result):
             (
                 rerank_result,
@@ -145,7 +156,7 @@ class RankVicuna(RankLLM):
                 rank_end=self._top_k_candidates,
                 window_size=3,
                 step=10,
-                shuffle_candidates=True,
+                shuffle_candidates=False,
                 logging=True,
             )
             rerank_results.append(rerank_result)
