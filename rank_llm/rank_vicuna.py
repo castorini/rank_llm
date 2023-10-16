@@ -97,9 +97,9 @@ class RankVicuna(RankLLM):
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
 
-            print(f"\nnum_tokens={num_tokens}")
-            print(f"max_tokens={self.max_tokens()}")
-            print(f"num_output_tokens={self.num_output_tokens()}")
+            # print(f"\nnum_tokens={num_tokens}")
+            # print(f"max_tokens={self.max_tokens()}")
+            # print(f"num_output_tokens={self.num_output_tokens()}")
 
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -154,7 +154,7 @@ class RankVicuna(RankLLM):
                 result,
                 rank_start=0,
                 rank_end=self._top_k_candidates,
-                window_size=3,
+                window_size=20,
                 step=10,
                 shuffle_candidates=False,
                 logging=True,
