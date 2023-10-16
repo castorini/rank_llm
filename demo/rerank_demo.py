@@ -1,7 +1,6 @@
 from rank_llm.rank_vicuna import RankVicuna
-from rank_llm.rankllm import PromptMode
 
-rv = RankVicuna(model="castorini/rank_vicuna_7b_v1", context_size=2000, top_k_candidates=4, dataset="dl19", prompt_mode=PromptMode.RANK_GPT, device="cuda", num_gpus=1)
+rv = RankVicuna(model="castorini/rank_vicuna_7b_v1")
 
 query = 'What is the capital of the United States?'
 docs = ['Carson City is the capital city of the American state of Nevada.',

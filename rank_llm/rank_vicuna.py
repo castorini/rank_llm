@@ -22,14 +22,12 @@ class RankVicuna(RankLLM):
     def __init__(
         self,
         model: str,
-        context_size: int,
-        top_k_candidates: int,
-        dataset: str,
-        prompt_mode: PromptMode,
-        device: str,
-        num_gpus: int,
+        context_size: int = 4096,
+        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        device: str = "cuda",
+        num_gpus: int = 1,
     ) -> None:
-        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
+        super().__init__(model, context_size, prompt_mode)
         self._device = device
         if self._device == "cuda":
             assert torch.cuda.is_available()
@@ -120,12 +118,15 @@ class RankVicuna(RankLLM):
         query: str,
         documents: Union[List[str], List[Dict[str, Any]]],
     ):
+        assert len(documents) > 0, "'documents' should be non-empty"
+
         print("Reranking with RankVicuna:")
         rerank_results = []
         input_token_counts = []
         output_token_counts = []
         aggregated_prompts = []
         aggregated_responses = []
+
         if isinstance(documents[0], str):
             document_hits = []
             for passage in documents:
@@ -133,14 +134,15 @@ class RankVicuna(RankLLM):
                     "content": passage
                 })
             retrieved_result = [{
-            "query": query,
-            "hits": document_hits,
+                "query": query,
+                "hits": document_hits,
             }]
         elif isinstance(documents[0], dict):
             retrieved_result = [{
-            "query": query,
-            "hits": documents,
+                "query": query,
+                "hits": documents,
             }]
+
         for result in tqdm(retrieved_result):
             (
                 rerank_result,
@@ -151,8 +153,8 @@ class RankVicuna(RankLLM):
             ) = self.sliding_windows(
                 result,
                 rank_start=0,
-                rank_end=self._top_k_candidates,
-                window_size=4,
+                rank_end=len(documents),
+                window_size=20,
                 step=10,
                 shuffle_candidates=False,
                 logging=True,
