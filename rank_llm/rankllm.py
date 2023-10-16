@@ -24,14 +24,10 @@ class RankLLM(ABC):
         self,
         model: str,
         context_size: int,
-        top_k_candidates: int,
-        dataset: str,
         prompt_mode: PromptMode,
     ) -> None:
         self._model = model
         self._context_size = context_size
-        self._top_k_candidates = top_k_candidates
-        self._dataset = dataset
         self._prompt_mode = prompt_mode
 
     def max_tokens(self) -> int:
@@ -229,7 +225,7 @@ class RankLLM(ABC):
             parents=True, exist_ok=True
         )
         _modelname = self._model.split("/")[-1]
-        name = f"{_modelname}_{self._context_size}_{self._top_k_candidates}_{self._prompt_mode}_{self._dataset}"
+        name = f"{_modelname}_{self._context_size}_{self._prompt_mode}"
         name = (
             f"{name}_shuffled_{datetime.isoformat(datetime.now())}"
             if shuffle_candidates
