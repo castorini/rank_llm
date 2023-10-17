@@ -9,7 +9,6 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
 from rank_llm.rankllm import RankLLM, PromptMode
-from rank_llm.topics_dict import TOPICS
 
 def replace_number(s):
     return re.sub(r"\[(\d+)\]", r"(\1)", s)
