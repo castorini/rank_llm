@@ -166,5 +166,4 @@ qrels/
 checkpoints/
 prompts_and_responses/
 rerank_results/
-retrieve_results/
 token_counts/
