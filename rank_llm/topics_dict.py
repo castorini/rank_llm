@@ -1,6 +1,8 @@
 TOPICS = {
     "dl19": "dl19-passage",
     "dl20": "dl20-passage",
+    "dl21": "dl21-passage",
+    "dl22": "dl22-passage",
     "covid": "beir-v1.0.0-trec-covid-test",
     "arguana": "beir-v1.0.0-arguana-test",
     "touche": "beir-v1.0.0-webis-touche2020-test",
