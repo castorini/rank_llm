@@ -4,11 +4,12 @@ from typing import Tuple, List, Union, Dict, Any
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
 import torch
-from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
 from rank_llm.rankllm import RankLLM, PromptMode
+from rank_llm.retrieve_and_rerank import RetrievalMode, Retriever, Reranker
+
 
 def replace_number(s):
     return re.sub(r"\[(\d+)\]", r"(\1)", s)
@@ -109,57 +110,31 @@ class RankVicuna(RankLLM):
     def rerank(
         self,
         query: str,
-        documents: Union[List[str], List[Dict[str, Any]]],
+        documents: Union[List[str], List[Dict[str, Any]]]
     ):
         assert len(documents) > 0, "'documents' should be non-empty"
 
-        print("Reranking with RankVicuna:")
-        rerank_results = []
-        input_token_counts = []
-        output_token_counts = []
-        aggregated_prompts = []
-        aggregated_responses = []
-
+        print("Retrieving:")
         if isinstance(documents[0], str):
-            document_hits = []
-            for passage in documents:
-                document_hits.append({
-                    "content": passage
-                })
-            retrieved_result = [{
-                "query": query,
-                "hits": document_hits,
-            }]
+            retriever = Retriever(RetrievalMode.QUERY_AND_DOCUMENTS)
+            retrieved_results = retriever.retrieve(query=query, documents=documents)
         elif isinstance(documents[0], dict):
-            retrieved_result = [{
-                "query": query,
-                "hits": documents,
-            }]
+            retriever = Retriever(RetrievalMode.QUERY_AND_HITS)
+            retrieved_results = retriever.retrieve(query=query, hits=documents)
 
-        for result in tqdm(retrieved_result):
-            (
-                rerank_result,
-                in_token_count,
-                out_token_count,
-                prompts,
-                responses,
-            ) = self.sliding_windows(
-                result,
-                rank_start=0,
-                rank_end=len(documents),
-                window_size=min(len(documents), 20),
-                step=10,
-                shuffle_candidates=False,
-                logging=True,
-            )
-            rerank_results.append(rerank_result)
-            input_token_counts.append(in_token_count)
-            output_token_counts.append(out_token_count)
-            aggregated_prompts.extend(prompts)
-            aggregated_responses.extend(responses)
-        
-        print(f"rerank_results={rerank_result}")
-        print(f"input_tokens_counts={input_token_counts}")
-        print(f"total input token count={sum(input_token_counts)}")
-        print(f"output_token_counts={output_token_counts}")
-        print(f"total output token count={sum(output_token_counts)}")
+        print("Reranking:")
+        reranker = Reranker(self)
+        (
+            rerank_results,
+            input_token_counts,
+            output_token_counts,
+            aggregated_prompts,
+            aggregated_responses,
+        ) = reranker.rerank(
+            retrieved_results, 
+            rank_end=len(documents), 
+            window_size=min(20, len(documents)),
+            shuffle_candidates=False,
+            logging=True)
+
+        return rerank_results, input_token_counts, output_token_counts, aggregated_prompts, aggregated_responses
