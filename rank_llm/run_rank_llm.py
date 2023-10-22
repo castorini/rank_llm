@@ -36,8 +36,6 @@ def main(args):
         agent = SafeOpenai(
             model=model_path,
             context_size=context_size,
-            top_k_candidates=top_k_candidates,
-            dataset=dataset,
             prompt_mode=prompt_mode,
             keys=openai_keys,
         )
@@ -45,8 +43,6 @@ def main(args):
         agent = RankVicuna(
             model=model_path,
             context_size=context_size,
-            top_k_candidates=top_k_candidates,
-            dataset=dataset,
             prompt_mode=prompt_mode,
             device=device,
             num_gpus=num_gpus,
@@ -79,7 +75,7 @@ def main(args):
         shuffle_candidates=shuffle_candidates,
         logging=print_prompts_responses)
 
-    file_name = reranker._agent.write_rerank_results(
+    file_name = reranker.write_rerank_results(
         retrieval_method.name,
         rerank_results,
         input_token_counts,
