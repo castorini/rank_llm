@@ -42,7 +42,7 @@ class Retriever:
             retriever.retrieve_and_store(k=100)
             return None
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
-            query = kwargs["dataset"]
+            query = kwargs["query"]
             documents = kwargs["documents"]
             document_hits = []
             for passage in documents:
@@ -55,7 +55,7 @@ class Retriever:
             }]
             return retrieved_result
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-            query = kwargs["dataset"]
+            query = kwargs["query"]
             hits = kwargs["hits"]
             retrieved_result = [{
                 "query": query,
