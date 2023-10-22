@@ -19,14 +19,12 @@ class SafeOpenai(RankLLM):
         self,
         model: str,
         context_size: int,
-        top_k_candidates: int,
-        dataset: str,
         prompt_mode: PromptMode,
         keys=None,
         key_start_id=None,
         proxy=None,
     ) -> None:
-        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
+        super().__init__(model, context_size, prompt_mode)
         if isinstance(keys, str):
             keys = [keys]
         if not keys:

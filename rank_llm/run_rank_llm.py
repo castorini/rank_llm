@@ -1,21 +1,20 @@
 import argparse
 import json
 from pathlib import Path
-
-import torch
-from tqdm import tqdm
-
 import sys
 import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from rank_llm.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+import torch
+
+from rank_llm.pyserini_retriever import RetrievalMethod
 from rank_llm.rank_gpt import SafeOpenai
 from rank_llm.rankllm import PromptMode
 from rank_llm.rank_vicuna import RankVicuna
 from rank_llm.topics_dict import TOPICS
 from rank_llm.trec_eval import EvalFunction
+from rank_llm.retrieve_and_rerank import RetrievalMode, Retriever, Reranker
 
 
 def get_api_key() -> str:
@@ -42,8 +41,6 @@ def main(args):
         agent = SafeOpenai(
             model=model_path,
             context_size=context_size,
-            top_k_candidates=top_k_candidates,
-            dataset=dataset,
             prompt_mode=prompt_mode,
             keys=openai_keys,
         )
@@ -51,8 +48,6 @@ def main(args):
         agent = RankVicuna(
             model=model_path,
             context_size=context_size,
-            top_k_candidates=top_k_candidates,
-            dataset=dataset,
             prompt_mode=prompt_mode,
             device=device,
             num_gpus=num_gpus,
@@ -62,47 +57,30 @@ def main(args):
     )
     if not candidates_file.is_file():
         print("Retrieving:")
-        retriever = PyseriniRetriever(dataset, retrieval_method)
-        # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
-        retriever.retrieve_and_store(k=100)
+        retriever = Retriever(RetrievalMode.DATASET)
+        retriever.retrieve(dataset=dataset, retrieval_method=retrieval_method)
     else:
         print("Reusing existing retrieved results.")
 
     with open(candidates_file, "r") as f:
         retrieved_results = json.load(f)
 
-    print("\nReranking:")
-    rerank_results = []
-    input_token_counts = []
-    output_token_counts = []
-    aggregated_prompts = []
-    aggregated_responses = []
-    for result in tqdm(retrieved_results):
-        (
-            rerank_result,
-            in_token_count,
-            out_token_count,
-            prompts,
-            responses,
-        ) = agent.sliding_windows(
-            result,
-            rank_start=0,
-            rank_end=top_k_candidates,
-            window_size=20,
-            step=10,
-            shuffle_candidates=shuffle_candidates,
-            logging=print_prompts_responses,
-        )
-        rerank_results.append(rerank_result)
-        input_token_counts.append(in_token_count)
-        output_token_counts.append(out_token_count)
-        aggregated_prompts.extend(prompts)
-        aggregated_responses.extend(responses)
-    print(f"input_tokens_counts={input_token_counts}")
-    print(f"total input token count={sum(input_token_counts)}")
-    print(f"output_token_counts={output_token_counts}")
-    print(f"total output token count={sum(output_token_counts)}")
-    file_name = agent.write_rerank_results(
+    print("Reranking:")
+    reranker = Reranker(agent)
+    (
+        rerank_results,
+        input_token_counts,
+        output_token_counts,
+        aggregated_prompts,
+        aggregated_responses,
+    ) = reranker.rerank(
+        retrieved_results, 
+        rank_end=top_k_candidates, 
+        window_size=20,
+        shuffle_candidates=shuffle_candidates,
+        logging=print_prompts_responses)
+
+    file_name = reranker.write_rerank_results(
         retrieval_method.name,
         rerank_results,
         input_token_counts,
@@ -111,6 +89,8 @@ def main(args):
         aggregated_responses,
         shuffle_candidates,
     )
+
+    print("Evaluating:")
     EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
     EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])

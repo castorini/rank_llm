@@ -8,6 +8,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
 from rank_llm.rankllm import RankLLM, PromptMode
+from rank_llm.retrieve_and_rerank import RetrievalMode, Retriever, Reranker
 
 
 def replace_number(s):
@@ -18,14 +19,12 @@ class RankVicuna(RankLLM):
     def __init__(
         self,
         model: str,
-        context_size: int,
-        top_k_candidates: int,
-        dataset: str,
-        prompt_mode: PromptMode,
-        device: str,
-        num_gpus: int,
+        context_size: int = 4096,
+        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        device: str = "cuda",
+        num_gpus: int = 1,
     ) -> None:
-        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
+        super().__init__(model, context_size, prompt_mode)
         self._device = device
         if self._device == "cuda":
             assert torch.cuda.is_available()
@@ -107,3 +106,35 @@ class RankVicuna(RankLLM):
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
+
+    def rerank(
+        self,
+        query: str,
+        documents: Union[List[str], List[Dict[str, Any]]]
+    ):
+        assert len(documents) > 0, "'documents' should be non-empty"
+
+        print("Retrieving:")
+        if isinstance(documents[0], str):
+            retriever = Retriever(RetrievalMode.QUERY_AND_DOCUMENTS)
+            retrieved_results = retriever.retrieve(query=query, documents=documents)
+        elif isinstance(documents[0], dict):
+            retriever = Retriever(RetrievalMode.QUERY_AND_HITS)
+            retrieved_results = retriever.retrieve(query=query, hits=documents)
+
+        print("Reranking:")
+        reranker = Reranker(self)
+        (
+            rerank_results,
+            input_token_counts,
+            output_token_counts,
+            aggregated_prompts,
+            aggregated_responses,
+        ) = reranker.rerank(
+            retrieved_results, 
+            rank_end=len(documents), 
+            window_size=min(20, len(documents)),
+            shuffle_candidates=False,
+            logging=True)
+
+        return rerank_results, input_token_counts, output_token_counts, aggregated_prompts, aggregated_responses
