@@ -113,6 +113,8 @@ class RankVicuna(RankLLM):
         documents: Union[List[str], List[Dict[str, Any]]]
     ):
         assert len(documents) > 0, "'documents' should be non-empty"
+        top_k_candidates = len(documents)
+        dataset = "none"
 
         print("Retrieving:")
         if isinstance(documents[0], str):
@@ -123,7 +125,7 @@ class RankVicuna(RankLLM):
             retrieved_results = retriever.retrieve(query=query, hits=documents)
 
         print("Reranking:")
-        reranker = Reranker(self)
+        reranker = Reranker(self, top_k_candidates, dataset)
         (
             rerank_results,
             input_token_counts,
@@ -132,8 +134,8 @@ class RankVicuna(RankLLM):
             aggregated_responses,
         ) = reranker.rerank(
             retrieved_results, 
-            rank_end=len(documents), 
-            window_size=min(20, len(documents)),
+            rank_end=top_k_candidates, 
+            window_size=min(20, top_k_candidates),
             shuffle_candidates=False,
             logging=True)
 

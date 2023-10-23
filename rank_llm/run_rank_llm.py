@@ -66,7 +66,7 @@ def main(args):
         retrieved_results = json.load(f)
 
     print("Reranking:")
-    reranker = Reranker(agent)
+    reranker = Reranker(agent, top_k_candidates, dataset)
     (
         rerank_results,
         input_token_counts,

@@ -68,9 +68,11 @@ class Retriever:
 
 class Reranker:
     def __init__(
-        self, agent: RankLLM
+        self, agent: RankLLM, top_k_candidates: int, dataset: str
     ) -> None:
         self._agent = agent
+        self._top_k_candidates = top_k_candidates
+        self._dataset = dataset
 
     def rerank(self, retrieved_results: List[Dict[str, Any]], **kwargs):
         rerank_results = []
@@ -125,7 +127,7 @@ class Reranker:
             parents=True, exist_ok=True
         )
         _modelname = self._agent._model.split("/")[-1]
-        name = f"{_modelname}_{self._agent._context_size}_{self._agent._prompt_mode}"
+        name = f"{_modelname}_{self._agent._context_size}_{self._top_k_candidates}_{self._agent._prompt_mode}_{self._dataset}"
         name = (
             f"{name}_shuffled_{datetime.isoformat(datetime.now())}"
             if shuffle_candidates
