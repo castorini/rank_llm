@@ -1,5 +1,6 @@
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 from rank_llm.retriever import RetrievalMode
+from rank_llm.pyserini_retriever import RetrievalMethod
 
 query = 'What is the capital of the United States?'
 docs = ['Carson City is the capital city of the American state of Nevada.',
@@ -13,7 +14,7 @@ results = retrieve_and_rerank(
     top_k_candidates=len(docs),
     dataset="custum-docs",
     retrieval_mode=RetrievalMode.QUERY_AND_DOCUMENTS,
-    retrieval_method=None,
+    retrieval_method=RetrievalMethod.UNSPECIFIED,
     print_prompts_responses=True,
     query=query,
     documents=docs,

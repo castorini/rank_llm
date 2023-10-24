@@ -1,5 +1,6 @@
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 from rank_llm.retriever import RetrievalMode
+from rank_llm.pyserini_retriever import RetrievalMethod
 
 query = 'how long is life cycle of flea'
 hits = [
@@ -65,7 +66,7 @@ results = retrieve_and_rerank(
     top_k_candidates=len(hits),
     dataset="custum-hits",
     retrieval_mode=RetrievalMode.QUERY_AND_HITS,
-    retrieval_method=None,
+    retrieval_method=RetrievalMethod.UNSPECIFIED,
     print_prompts_responses=True,
     query=query,
     hits=hits,
