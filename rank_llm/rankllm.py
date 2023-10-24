@@ -59,23 +59,12 @@ class RankLLM(ABC):
         rank_end: int,
         logging: bool = False,
     ):
-        def filter_permutation(permutation, passage_count):
-            permutation = permutation.replace(" ", "")
-            permutation = permutation.translate({ord(i): None for i in '[]'})
-            permutation = permutation.split(">")
-            filtered_permutation = ['[' + idx + ']' for idx in permutation if int(idx) <= passage_count]
-            result = ""
-            divider = " > "
-            for idx in filtered_permutation:
-                result += (idx + divider)
-            return result[:-len(divider)]
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
-            print(f"prompt: {prompt}")
+            print(f"prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(prompt)
         if logging:
-            permutation = filter_permutation(permutation, len(result["hits"][rank_start:rank_end]))
-            print(f"\noutput: {permutation}")
+            print(f"output: {permutation}")
         rerank_result = self.receive_permutation(
             result, permutation, rank_start, rank_end
         )

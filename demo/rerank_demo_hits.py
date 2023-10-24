@@ -1,8 +1,8 @@
-from rank_llm.rank_vicuna import RankVicuna
+from rank_llm.retrieve_and_rerank import retrieve_and_rerank
+from rank_llm.retriever import RetrievalMode
 
-rv = RankVicuna(model="castorini/rank_vicuna_7b_v1")
 query = 'how long is life cycle of flea'
-docs = [
+hits = [
       {
         "content": "The life cycle of a flea can last anywhere from 20 days to an entire year. It depends on how long the flea remains in the dormant stage (eggs, larvae, pupa). Outside influences, such as weather, affect the flea cycle. A female flea can lay around 20 to 25 eggs in one day.",
         "qid": 264014,
@@ -59,4 +59,14 @@ docs = [
         "rank": 7,
         "score": 13.533599853515625
       }]
-results = rv.rerank(query=query, documents=docs)
+
+results = retrieve_and_rerank(
+    model_path="castorini/rank_vicuna_7b_v1",
+    top_k_candidates=len(hits),
+    dataset="custum-hits",
+    retrieval_mode=RetrievalMode.QUERY_AND_HITS,
+    retrieval_method=None,
+    print_prompts_responses=True,
+    query=query,
+    hits=hits,
+)

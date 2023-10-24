@@ -1,14 +1,12 @@
 import re
-from typing import Tuple, List, Union, Dict, Any
+from typing import Tuple, Dict, Any
 
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
 from rank_llm.rankllm import RankLLM, PromptMode
-from rank_llm.retrieve_and_rerank import RetrievalMode, Retriever, Reranker
 
 
 def replace_number(s):
@@ -106,37 +104,3 @@ class RankVicuna(RankLLM):
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
-
-    def rerank(
-        self,
-        query: str,
-        documents: Union[List[str], List[Dict[str, Any]]]
-    ):
-        assert len(documents) > 0, "'documents' should be non-empty"
-        top_k_candidates = len(documents)
-        dataset = "none"
-
-        print("Retrieving:")
-        if isinstance(documents[0], str):
-            retriever = Retriever(RetrievalMode.QUERY_AND_DOCUMENTS)
-            retrieved_results = retriever.retrieve(query=query, documents=documents)
-        elif isinstance(documents[0], dict):
-            retriever = Retriever(RetrievalMode.QUERY_AND_HITS)
-            retrieved_results = retriever.retrieve(query=query, hits=documents)
-
-        print("Reranking:")
-        reranker = Reranker(self, top_k_candidates, dataset)
-        (
-            rerank_results,
-            input_token_counts,
-            output_token_counts,
-            aggregated_prompts,
-            aggregated_responses,
-        ) = reranker.rerank(
-            retrieved_results, 
-            rank_end=top_k_candidates, 
-            window_size=min(20, top_k_candidates),
-            shuffle_candidates=False,
-            logging=True)
-
-        return rerank_results, input_token_counts, output_token_counts, aggregated_prompts, aggregated_responses
