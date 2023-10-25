@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import List, Union, Dict, Any
 
 from rank_llm.rank_gpt import SafeOpenai
 from rank_llm.rankllm import PromptMode
@@ -21,19 +22,18 @@ def get_api_key() -> str:
 
 def retrieve_and_rerank(
     model_path: str,
-    top_k_candidates: int,
-    dataset: str,
+    dataset: Union[str, List[str], List[Dict[str, Any]]],
     retrieval_mode: RetrievalMode,
     retrieval_method: RetrievalMethod,
+    top_k_candidates: int = 100,
     context_size: int = 4096,
     device: str = "cuda",
     num_gpus: int = 1,
     prompt_mode: PromptMode = PromptMode.RANK_GPT,
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
-    **kwargs
+    query: str = ""
 ):
-    
     # Construct Rerank Agent
     if "gpt" in model_path:
         openai_keys = get_api_key()
@@ -60,7 +60,7 @@ def retrieve_and_rerank(
         )
         if not candidates_file.is_file():
             retriever = Retriever(RetrievalMode.DATASET)
-            retriever.retrieve(dataset=dataset, retrieval_method=retrieval_method)
+            retriever.retrieve(dataset, retrieval_method=retrieval_method)
         else:
             print("Reusing existing retrieved results.")
 
@@ -68,16 +68,15 @@ def retrieve_and_rerank(
             retrieved_results = json.load(f)
 
     elif retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
-        query = kwargs["query"]
-        documents = kwargs["documents"]
         retriever = Retriever(RetrievalMode.QUERY_AND_DOCUMENTS)
-        retrieved_results = retriever.retrieve(query=query, documents=documents)
+        retrieved_results = retriever.retrieve(dataset, query=query)
 
     elif retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-        query = kwargs["query"]
-        hits = kwargs["hits"]
         retriever = Retriever(RetrievalMode.QUERY_AND_HITS)
-        retrieved_results = retriever.retrieve(query=query, hits=hits)
+        retrieved_results = retriever.retrieve(dataset, query=query)
+
+    else:
+        raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     
 
     print("Reranking:")
@@ -87,27 +86,30 @@ def retrieve_and_rerank(
         input_token_counts,
         output_token_counts,
         aggregated_prompts,
-        aggregated_responses,
+        aggregated_responses
     ) = reranker.rerank(
         retrieved_results, 
         rank_end=top_k_candidates, 
         window_size=min(20, top_k_candidates),
         shuffle_candidates=shuffle_candidates,
         logging=print_prompts_responses)
+    
+    # generate trec_eval file & evaluate for named datasets only
+    if isinstance(dataset, str):
 
-    file_name = reranker.write_rerank_results(
-        retrieval_method.name,
-        rerank_results,
-        input_token_counts,
-        output_token_counts,
-        aggregated_prompts,
-        aggregated_responses,
-        shuffle_candidates,
-    )
+        file_name = reranker.write_rerank_results(
+            retrieval_method.name,
+            rerank_results,
+            input_token_counts,
+            output_token_counts,
+            aggregated_prompts,
+            aggregated_responses,
+            shuffle_candidates
+        )
 
-    print("Evaluating:")
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-    EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+        print("Evaluating:")
+        EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
+        EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
+        EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
 
     return rerank_results

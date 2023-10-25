@@ -10,7 +10,7 @@ from rank_llm.rankllm import RankLLM
 
 class Reranker:
     def __init__(
-        self, agent: RankLLM, top_k_candidates: int, dataset: str
+        self, agent: RankLLM, top_k_candidates: int, dataset: Union[str, List[str], List[Dict[str, Any]]]
     ) -> None:
         self._agent = agent
         self._top_k_candidates = top_k_candidates

@@ -28,10 +28,10 @@ def main(args):
 
     rerank_results = retrieve_and_rerank(
         model_path,
-        top_k_candidates,
         dataset,
         retrieval_mode,
         retrieval_method,
+        top_k_candidates,
         context_size,
         device,
         num_gpus,

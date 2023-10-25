@@ -63,11 +63,10 @@ hits = [
 
 results = retrieve_and_rerank(
     model_path="castorini/rank_vicuna_7b_v1",
-    top_k_candidates=len(hits),
-    dataset="custum-hits",
+    dataset=hits,    
     retrieval_mode=RetrievalMode.QUERY_AND_HITS,
     retrieval_method=RetrievalMethod.UNSPECIFIED,
+    top_k_candidates=len(hits),
     print_prompts_responses=True,
-    query=query,
-    hits=hits,
+    query=query
 )
