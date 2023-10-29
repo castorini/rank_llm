@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
 import copy
-from datetime import datetime
 from enum import Enum
-import json
-from pathlib import Path
 import random
 from typing import List, Union, Dict, Any, Tuple
 
@@ -24,14 +21,10 @@ class RankLLM(ABC):
         self,
         model: str,
         context_size: int,
-        top_k_candidates: int,
-        dataset: str,
         prompt_mode: PromptMode,
     ) -> None:
         self._model = model
         self._context_size = context_size
-        self._top_k_candidates = top_k_candidates
-        self._dataset = dataset
         self._prompt_mode = prompt_mode
 
     def max_tokens(self) -> int:
@@ -68,7 +61,7 @@ class RankLLM(ABC):
     ):
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
-            print(f"prompt: {prompt}")
+            print(f"prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(prompt)
         if logging:
             print(f"output: {permutation}")
@@ -198,60 +191,4 @@ class RankLLM(ABC):
             if "score" in item["hits"][j + rank_start]:
                 item["hits"][j + rank_start]["score"] = cut_range[j]["score"]
         return item
-
-    def write_rerank_results(
-        self,
-        retrieval_method_name: str,
-        rerank_results: List[Dict[str, Any]],
-        input_token_counts: List[int],
-        output_token_counts: List[int],
-        # List[str] for Vicuna, List[List[Dict[str, str]]] for gpt models.
-        prompts: Union[List[str], List[List[Dict[str, str]]]],
-        responses: List[str],
-        shuffle_candidates: bool = False,
-    ) -> str:
-        # write rerank results
-        Path(f"../rerank_results/{retrieval_method_name}/").mkdir(
-            parents=True, exist_ok=True
-        )
-        _modelname = self._model.split("/")[-1]
-        name = f"{_modelname}_{self._context_size}_{self._top_k_candidates}_{self._prompt_mode}_{self._dataset}"
-        name = (
-            f"{name}_shuffled_{datetime.isoformat(datetime.now())}"
-            if shuffle_candidates
-            else f"{name}_{datetime.isoformat(datetime.now())}"
-        )
-        result_file_name = f"../rerank_results/{retrieval_method_name}/{name}.txt"
-        with open(result_file_name, "w") as f:
-            for i in range(len(rerank_results)):
-                rank = 1
-                hits = rerank_results[i]["hits"]
-                for hit in hits:
-                    f.write(
-                        f"{hit['qid']} Q0 {hit['docid']} {rank} {hit['score']} rank\n"
-                    )
-                    rank += 1
-        # Write token counts
-        Path(f"../token_counts/{retrieval_method_name}/").mkdir(
-            parents=True, exist_ok=True
-        )
-        count_file_name = f"../token_counts/{retrieval_method_name}/{name}.txt"
-        counts = {}
-        for i, (in_count, out_count) in enumerate(
-            zip(input_token_counts, output_token_counts)
-        ):
-            counts[rerank_results[i]["query"]] = (in_count, out_count)
-        with open(count_file_name, "w") as f:
-            json.dump(counts, f, indent=4)
-        # Write prompts and responses
-        Path(f"../prompts_and_responses/{retrieval_method_name}/").mkdir(
-            parents=True, exist_ok=True
-        )
-        with open(
-            f"../prompts_and_responses/{retrieval_method_name}/{name}.json",
-            "w",
-        ) as f:
-            for p, r in zip(prompts, responses):
-                json.dump({"prompt": p, "response": r}, f)
-                f.write("\n")
-        return result_file_name
+    

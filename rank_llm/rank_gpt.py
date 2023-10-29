@@ -19,25 +19,23 @@ class SafeOpenai(RankLLM):
         self,
         model: str,
         context_size: int,
-        top_k_candidates: int,
-        dataset: str,
         prompt_mode: PromptMode,
         keys=None,
         key_start_id=None,
         proxy=None,
     ) -> None:
-        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
+        super().__init__(model, context_size, prompt_mode)
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
             raise "Please provide OpenAI Keys."
         if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
             raise ValueError(
-                "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
+                f"unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
             )
         if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
             raise ValueError(
-                "unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
+                f"unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
             )
 
         self._keys = keys

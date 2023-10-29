@@ -1,10 +1,9 @@
 import re
-from typing import Tuple, List, Union, Dict, Any
+from typing import Tuple, Dict, Any
 
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers.generation import GenerationConfig
 
 from rank_llm.rankllm import RankLLM, PromptMode
@@ -18,20 +17,18 @@ class RankVicuna(RankLLM):
     def __init__(
         self,
         model: str,
-        context_size: int,
-        top_k_candidates: int,
-        dataset: str,
-        prompt_mode: PromptMode,
-        device: str,
-        num_gpus: int,
+        context_size: int = 4096,
+        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        device: str = "cuda",
+        num_gpus: int = 1,
     ) -> None:
-        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
+        super().__init__(model, context_size, prompt_mode)
         self._device = device
         if self._device == "cuda":
             assert torch.cuda.is_available()
         if prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
-                f"Unsuported prompt mode: {prompt_mode}. The only prompt mode cuurently supported by vicuna is a slight variation of Rank_GPT prompt."
+                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode cuurently supported by vicuna is a slight variation of Rank_GPT prompt."
             )
         # ToDo: Make repetition_penalty configurable
         self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
