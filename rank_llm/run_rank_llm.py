@@ -26,7 +26,7 @@ def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     retrieval_mode = RetrievalMode.DATASET
 
-    rerank_results = retrieve_and_rerank(
+    _ = retrieve_and_rerank(
         model_path,
         dataset,
         retrieval_mode,

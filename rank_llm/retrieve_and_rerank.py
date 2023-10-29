@@ -16,7 +16,7 @@ def get_api_key() -> str:
     from dotenv import dotenv_values, load_dotenv
     import os
 
-    load_dotenv(dotenv_path=f"../.env.local")
+    load_dotenv(dotenv_path=f".env.local")
     return os.getenv("OPEN_AI_API_KEY")
 
 

@@ -34,14 +34,35 @@ class Retriever:
         - QUERY_AND_HITS: args = (dataset, query)
         '''
         if self._retrieval_mode == RetrievalMode.DATASET:
-            print(f"Retrieving with dataset {dataset}:")
+            if not dataset:
+                raise "Please provide name of the dataset."
+            if not isinstance(dataset, str):
+                raise ValueError(
+                    f"Invalid dataset format: {dataset}. Expected a string representing name of the dataset."
+                )
+            if not retrieval_method:
+                raise "Please provide a retrieval method."
+            if retrieval_method == RetrievalMethod.UNSPECIFIED:
+                raise ValueError(
+                    f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
+                )
+            print(f"Retrieving with dataset {dataset}")
             retriever = PyseriniRetriever(dataset, retrieval_method)
             # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
             retriever.retrieve_and_store(k=100)
             return None
+        
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
+            if not dataset:
+                raise "Please provide a non-empty list of documents."
+            if not query or query == "":
+                raise "Please provide a query string."
             document_hits = []
             for document in dataset:
+                if not isinstance(document, str):
+                    raise ValueError(
+                        f"Invalid dataset format: {dataset}. Expected a list of strings where each string represents a document."
+                    )
                 document_hits.append({
                     "content": document
                 })
@@ -50,7 +71,17 @@ class Retriever:
                 "hits": document_hits,
             }]
             return retrieved_result
+        
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_HITS:
+            if not dataset:
+                raise "Please provide a non-empty list of hits."
+            for hit in dataset:
+                if not isinstance(hit, Dict):
+                    raise ValueError(
+                        f"Invalid dataset format: {dataset}. Expected a list of Dicts where each Dict represents a hit."
+                    )
+            if not query or query == "":
+                raise "Please provide a query string."
             retrieved_result = [{
                 "query": query,
                 "hits": dataset,
