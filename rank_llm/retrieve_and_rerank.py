@@ -5,6 +5,7 @@ from typing import List, Union, Dict, Any
 from rank_llm.rank_gpt import SafeOpenai
 from rank_llm.rankllm import PromptMode
 from rank_llm.rank_vicuna import RankVicuna
+from rank_llm.rank_zephyr import RankZephyr
 from rank_llm.trec_eval import EvalFunction
 from rank_llm.pyserini_retriever import RetrievalMethod
 from rank_llm.retriever import Retriever, RetrievalMode
@@ -45,8 +46,17 @@ def retrieve_and_rerank(
             num_few_shot_examples=num_few_shot_examples,
             keys=openai_keys,
         )
-    else:
+    elif "vicuna" in model_path.lower():
         agent = RankVicuna(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+            device=device,
+            num_gpus=num_gpus,
+        )
+    elif "zephyr" in model_path.lower():
+        agent = RankZephyr(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,

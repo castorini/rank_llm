@@ -31,12 +31,13 @@ class RankVicuna(RankLLM):
             assert torch.cuda.is_available()
         if prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
-                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode cuurently supported by vicuna is a slight variation of Rank_GPT prompt."
+                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of Rank_GPT prompt."
             )
         # ToDo: Make repetition_penalty configurable
         self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
-        with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
-            self._examples = list(json_file)[1:-1]
+        if num_few_shot_examples > 0:
+            with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
+                self._examples = list(json_file)[1:-1]
 
     def run_llm(self, prompt: str) -> Tuple[str, int]:
         inputs = self._tokenizer([prompt])
