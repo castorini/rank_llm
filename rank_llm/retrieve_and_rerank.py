@@ -59,7 +59,7 @@ def retrieve_and_rerank(
     print("Retrieving:")
     if retrieval_mode == RetrievalMode.DATASET:
         candidates_file = Path(
-            f"../retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
+            f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
         )
         if not candidates_file.is_file():
             retriever = Retriever(RetrievalMode.DATASET)
