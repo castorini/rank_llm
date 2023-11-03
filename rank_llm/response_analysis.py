@@ -89,8 +89,8 @@ def main(args):
     response_analyzer = ResponseAnalyzer(
         model_name, context_size, 100, PromptMode.RANK_GPT
     )
-    responses, file = response_analyzer.read_saved_responses()
-    print(response_analyzer.count_errors(file, responses))
+    responses = response_analyzer.read_saved_responses()
+    print(response_analyzer.count_errors(responses))
 
 
 if __name__ == "__main__":
