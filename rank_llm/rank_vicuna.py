@@ -1,3 +1,5 @@
+import json
+import random
 import re
 from typing import Tuple, List, Union, Dict, Any
 
@@ -22,10 +24,18 @@ class RankVicuna(RankLLM):
         top_k_candidates: int,
         dataset: str,
         prompt_mode: PromptMode,
+        num_few_shot_examples: int,
         device: str,
         num_gpus: int,
     ) -> None:
-        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
+        super().__init__(
+            model,
+            context_size,
+            top_k_candidates,
+            dataset,
+            prompt_mode,
+            num_few_shot_examples,
+        )
         self._device = device
         if self._device == "cuda":
             assert torch.cuda.is_available()
@@ -35,6 +45,8 @@ class RankVicuna(RankLLM):
             )
         # ToDo: Make repetition_penalty configurable
         self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
+        with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
+            self._examples = list(json_file)[1:-1]
 
     def run_llm(self, prompt: str) -> Tuple[str, int]:
         inputs = self._tokenizer([prompt])
@@ -56,13 +68,23 @@ class RankVicuna(RankLLM):
         return outputs, output_ids.size(0)
 
     def num_output_tokens(self) -> int:
-        return 200
+        return 100
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
         return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
     def _add_post_prompt(self, query: str, num: int) -> str:
         return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [4] > [2], Only respond with the ranking results, do not say any word or explain."
+
+    def _add_few_shot_examples(self, conv):
+        for _ in range(self._num_few_shot_examples):
+            ex = random.choice(self._examples)
+            obj = json.loads(ex)
+            prompt = obj["conversations"][0]["value"]
+            response = obj["conversations"][1]["value"]
+            conv.append_message(conv.roles[0], prompt)
+            conv.append_message(conv.roles[1], response)
+        return conv
 
     def create_prompt(
         self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
@@ -72,6 +94,7 @@ class RankVicuna(RankLLM):
         max_length = 300
         while True:
             conv = get_conversation_template(self._model)
+            conv = self._add_few_shot_examples(conv)
             # conv.set_system_message(
             #     "You are RankVicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
             # )
@@ -98,7 +121,7 @@ class RankVicuna(RankLLM):
                 max_length -= max(
                     1,
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // (rank_end - rank_start),
+                    // ((rank_end - rank_start) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)
 

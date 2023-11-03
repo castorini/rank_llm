@@ -32,6 +32,7 @@ The following is a table of our models hosted on HuggingFace:
 ## ✨ References
 
 If you use RankLLM, please cite the following paper: 
+[[2309.15088] RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models](https://arxiv.org/abs/2309.15088)
 
 ```
 @ARTICLE{pradeep2023rankvicuna,

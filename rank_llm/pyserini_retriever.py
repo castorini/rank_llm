@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 import sys
 import os
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
@@ -193,11 +194,14 @@ class PyseriniRetriever:
 
 def evaluate_retrievals() -> None:
     from trec_eval import EvalFunction
+
     for dataset in ["dl19", "dl20", "dl21", "dl22"]:
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            file_name = f"retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
+            file_name = (
+                f"retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
+            )
             if not os.path.isfile(file_name):
                 continue
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
@@ -212,7 +216,10 @@ def main():
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
             if dataset in ["dl21", "dl22", "news", "covid"]:
-                if retrieval_method not in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
+                if retrieval_method not in [
+                    RetrievalMethod.BM25,
+                    RetrievalMethod.BM25_RM3,
+                ]:
                     continue
             retriever = PyseriniRetriever(dataset, retrieval_method)
             retriever.retrieve_and_store()

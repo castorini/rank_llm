@@ -22,11 +22,19 @@ class SafeOpenai(RankLLM):
         top_k_candidates: int,
         dataset: str,
         prompt_mode: PromptMode,
+        num_few_shot_examples: int,
         keys=None,
         key_start_id=None,
         proxy=None,
     ) -> None:
-        super().__init__(model, context_size, top_k_candidates, dataset, prompt_mode)
+        super().__init__(
+            model,
+            context_size,
+            top_k_candidates,
+            dataset,
+            prompt_mode,
+            num_few_shot_examples,
+        )
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
@@ -168,7 +176,7 @@ class SafeOpenai(RankLLM):
                 max_length -= max(
                     1,
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // (rank_end - rank_start),
+                    // ((rank_end - rank_start) * 4),
                 )
         return messages, self.get_num_tokens(messages)
 
@@ -204,7 +212,7 @@ class SafeOpenai(RankLLM):
                 max_length -= max(
                     1,
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // (rank_end - rank_start),
+                    // ((rank_end - rank_start) * 4),
                 )
         return messages, self.get_num_tokens(messages)
 
