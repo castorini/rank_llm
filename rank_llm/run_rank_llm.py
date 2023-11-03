@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 import sys
 import os
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
@@ -36,6 +37,7 @@ def main(args):
     prompt_mode = args.prompt_mode
     shuffle_candidates = args.shuffle_candidates
     print_prompts_responses = args.print_prompts_responses
+    num_few_shot_examples = args.num_few_shot_examples
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if "gpt" in model_path:
         openai_keys = get_api_key()
@@ -45,6 +47,7 @@ def main(args):
             top_k_candidates=top_k_candidates,
             dataset=dataset,
             prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
             keys=openai_keys,
         )
     else:
@@ -54,6 +57,7 @@ def main(args):
             top_k_candidates=top_k_candidates,
             dataset=dataset,
             prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
             device=device,
             num_gpus=num_gpus,
         )
@@ -163,6 +167,13 @@ if __name__ == "__main__":
         "--print_prompts_responses",
         action="store_true",
         help="whether to print promps and responses",
+    )
+    parser.add_argument(
+        "--num_few_shot_examples",
+        type=int,
+        required=False,
+        default=0,
+        help="number of in context examples to provide",
     )
     args = parser.parse_args()
     main(args)

@@ -5,6 +5,7 @@ from typing import List, Dict
 
 import sys
 import os
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
@@ -59,9 +60,19 @@ class ResponseAnalyzer:
             if not self._validate_format(resp):
                 stats_dict["wrong_format"] += 1
                 continue
-            resp = resp[1:-1]
+            begin, end = 0, 0
+            raw_resp = resp
+            while not resp[begin].isdigit():
+                begin += 1
+            while not resp[len(resp) - end - 1].isdigit():
+                end += 1
+            resp = resp[begin : len(resp) - end]
             ranks = resp.split("] > [")
-            ranks = [int(rank) for rank in ranks]
+            try:
+                ranks = [int(rank) for rank in ranks]
+            except ValueError:
+                stats_dict["wrong_format"] += 1
+                continue
             if len(ranks) < 20:
                 stats_dict["missing_documents"] += 1
                 continue
@@ -74,13 +85,23 @@ class ResponseAnalyzer:
 
 def main(args):
     model_name = args.model_name
-    response_analyzer = ResponseAnalyzer(model_name, 4096, 100, PromptMode.RANK_GPT)
-    responses = response_analyzer.read_saved_responses()
-    print(response_analyzer.count_errors(responses))
+    context_size = args.context_size
+    response_analyzer = ResponseAnalyzer(
+        model_name, context_size, 100, PromptMode.RANK_GPT
+    )
+    responses, file = response_analyzer.read_saved_responses()
+    print(response_analyzer.count_errors(file, responses))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, required=True, help="Model name")
+    parser.add_argument(
+        "--context_size",
+        type=int,
+        default=4096,
+        help="context size used for model",
+        required=False,
+    )
     args = parser.parse_args()
     main(args)
