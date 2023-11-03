@@ -22,6 +22,7 @@ def main(args):
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
     prompt_mode = args.prompt_mode
+    num_few_shot_examples = args.num_few_shot_examples
     shuffle_candidates = args.shuffle_candidates
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
@@ -38,8 +39,9 @@ def main(args):
         device,
         num_gpus,
         prompt_mode,
+        num_few_shot_examples,
         shuffle_candidates,
-        print_prompts_responses
+        print_prompts_responses,
     )
 
 
