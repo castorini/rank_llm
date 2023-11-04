@@ -16,6 +16,7 @@ from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 def main(args):
     model_path = args.model_path
+    use_azure_openai = args.use_azure_openai
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
     dataset = args.dataset
@@ -42,6 +43,7 @@ def main(args):
         num_few_shot_examples,
         shuffle_candidates,
         print_prompts_responses,
+        use_azure_openai=use_azure_openai
     )
 
 
@@ -51,7 +53,13 @@ python rank_llm/rank_vicuna.py --model_path=checkpoints/vicuna/vicuna-7b-checkpo
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model_path", type=str, required=True, help="Path to the model"
+        "--model_path", type=str, required=True, help="Path to the model. If `use_azure_ai`, pass your deployment name."
+    )
+    parser.add_argument(
+        "--use_azure_openai",
+        action="store_true",
+        help="If True, use Azure OpenAI. Requires env var to be set: "
+            "`AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`"
     )
     parser.add_argument(
         "--context_size", type=int, default=4096, help="context size used for model"

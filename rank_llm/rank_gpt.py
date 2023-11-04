@@ -24,6 +24,9 @@ class SafeOpenai(RankLLM):
         keys=None,
         key_start_id=None,
         proxy=None,
+        api_type: str = None,
+        api_base: str = None,
+        api_version: str = None,
     ) -> None:
         super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
         if isinstance(keys, str):
@@ -44,6 +47,14 @@ class SafeOpenai(RankLLM):
         self._cur_key_id = self._cur_key_id % len(self._keys)
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
+        self.use_azure_ai = False
+
+        if all([api_type, api_base, api_version]):
+            # See https://learn.microsoft.com/en-US/azure/ai-services/openai/reference for list of supported versions
+            openai.api_version = api_version
+            openai.api_type = api_type
+            openai.api_base = api_base
+            self.use_azure_ai = True
 
     class CompletionMode(Enum):
         UNSPECIFIED = 0
@@ -88,12 +99,13 @@ class SafeOpenai(RankLLM):
         return completion
 
     def run_llm(self, prompt: Union[str, List[Dict[str, str]]]) -> Tuple[str, int]:
+        model_key = "engine" if self.use_azure_ai else "model"
         response = self._call_completion(
-            model=self._model,
             messages=prompt,
             temperature=0,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
+            **{model_key: self._model}
         )
         try:
             encoding = tiktoken.get_encoding(self._model)

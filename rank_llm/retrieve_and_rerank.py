@@ -1,6 +1,7 @@
 import json
+import os
 from pathlib import Path
-from typing import List, Union, Dict, Any
+from typing import List, Union, Dict, Any, TypedDict
 
 from rank_llm.rank_gpt import SafeOpenai
 from rank_llm.rankllm import PromptMode
@@ -12,12 +13,21 @@ from rank_llm.reranker import Reranker
 from rank_llm.topics_dict import TOPICS
 
 
-def get_api_key() -> str:
-    from dotenv import dotenv_values, load_dotenv
-    import os
-
-    load_dotenv(dotenv_path=f".env.local")
+def get_api_key() -> str:    
     return os.getenv("OPEN_AI_API_KEY")
+
+
+def get_azure_openai_args() -> dict[str, str]:
+    azure_args = {
+        "api_type": "azure",
+        "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
+        "api_base": os.getenv("AZURE_OPENAI_API_BASE")
+    }
+
+    # Sanity check
+    assert all(list(azure_args.values())), \
+        "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
+    return azure_args
 
 
 def retrieve_and_rerank(
@@ -34,9 +44,14 @@ def retrieve_and_rerank(
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
     query: str = "",
+    use_azure_openai: bool = False
 ):
     # Construct Rerank Agent
-    if "gpt" in model_path:
+    if "gpt" in model_path or use_azure_openai:
+        from dotenv import dotenv_values, load_dotenv
+
+        load_dotenv(dotenv_path=f".env.local")
+
         openai_keys = get_api_key()
         agent = SafeOpenai(
             model=model_path,
@@ -44,6 +59,7 @@ def retrieve_and_rerank(
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
             keys=openai_keys,
+            **(get_azure_openai_args() if use_azure_openai else {})
         )
     else:
         agent = RankVicuna(
