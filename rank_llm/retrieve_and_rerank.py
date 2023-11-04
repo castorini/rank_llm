@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import List, Union, Dict, Any, TypedDict
+from typing import List, Union, Dict, Any
 
 from rank_llm.rank_gpt import SafeOpenai
 from rank_llm.rankllm import PromptMode
