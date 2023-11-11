@@ -1,12 +1,12 @@
 # RankLLM: RankVicuna Re-rank Collections
 
-This guide provides instructions to reproduce the RankVicuana Re-rank model described in the following paper.  
+This guide provides instructions to reproduce the RankVicuna Re-rank model described in the following paper.  
 
 Note, we recommend using >24GB RAM for top-20 ranking, and >30GB RAM for top-100 ranking experiments.  
 Additionally, we recommend using A100 with high-RAM option when working on Colab.  
-The expected runtime for the experiments is around 3-4 mins for top-20 ranking, and 30-45 mins for top-100 ranking.  
+The expected runtime for the experiments is around 4 mins for top-20 dl19, 3 mins for top-20 dl20, 45 mins for top-100 dl19, and 30 mins for top-100 dl20.
 
-> Authors and Paper
+> Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin. [RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models.](https://arxiv.org/abs/2309.15088) *arXiv:2309.15088.*
 
 ## dl19/dl20 Dataset Ranking
 
@@ -62,6 +62,8 @@ $ python demo/rerank_demo_docs.py
 
 Expected output: `[3] > [1] > [13] > [10] > [11] > [15] > [4] > [14] > [16] > [2] > [12] > [17] > [18] > [5] > [6] > [7] > [8] > [9] > [19] > [20]`  
 
+Note: the outputs of the rerank_demo_docs.py is only relevant upto the first 4 indices, given that there are 4 passages in the experiment.
+
 demo/rerank_demo_hits.py Ranking:
 
 ```bash
@@ -72,3 +74,4 @@ $ python demo/rerank_demo_hits.py
 
 Expected output: `[1] > [2] > [4] > [7] > [8] > [3] > [6] > [5] > [9] > [10] > [11] > [12] > [13] > [14] > [15] > [16] > [17] > [18] > [19] > [20]`
 
+Note: the outputs of the rerank_demo_hits.py is only relevant upto the first 8 indices, given that there are 8 passages in the experiment.
