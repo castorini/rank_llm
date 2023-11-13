@@ -34,12 +34,16 @@ Output format:
 ]
 
 Usage:
-    python generate_retrieve_results_json_cache.py --trec_file <run_file_path> \
+    python3 scripts/generate_retrieve_results_json_cache.py --trec_file <run_file_path> \
         --collection_file <collection_file_path> \
         --query_file <query_file_path> \
         --output_file <output_file_path>
 Example:
-
+    python3 scripts/generate_retrieve_results_json_cache.py --trec_file retrieve_results/BM25/trec_results_train_random_n1000.txt \
+        --collection_file /store/scratch/rpradeep/msmarco-v1/collections/official/collection.tsv \
+        --query_file /store/scratch/rpradeep/msmarco-v1/collections/official/queries.train.tsv \
+        --output_file retrieve_results/BM25/retrieve_results_train_random_n1000.json \
+        --topk 20
 '''
 
 import argparse
@@ -52,11 +56,13 @@ from tqdm import tqdm
 
 sys.path.append(os.getcwd())
 
-def load_trec_file(file_path):
+def load_trec_file(file_path, topk=20):
     data = defaultdict(list)
     with open(file_path, 'r') as file:
         for line in file:
             qid, _, docid, rank, score, _ = line.strip().split()
+            if int(rank) > topk:
+                continue
             data[qid].append({
                 'qid': qid,
                 'docid': docid,
@@ -99,6 +105,7 @@ def main():
     parser.add_argument('--collection_file', required=True)
     parser.add_argument('--query_file', required=True)
     parser.add_argument('--output_file', required=True)
+    parser.add_argument('--topk', type=int, default=20)
     args = parser.parse_args()
 
     results = generate_retrieve_results(args.trec_file, args.collection_file, args.query_file)
