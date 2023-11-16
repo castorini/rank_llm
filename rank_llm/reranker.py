@@ -78,6 +78,8 @@ class Reranker:
             parents=True, exist_ok=True
         )
         _modelname = self._agent._model.split("/")[-1]
+        if _modelname.startswith("checkpoint"):
+            _modelname = self._agent._model.split("/")[-2] + "_" + _modelname
         name = f"{_modelname}_{self._agent._context_size}_{self._top_k_candidates}_{self._agent._prompt_mode}_{self._dataset}"
         if self._agent._num_few_shot_examples > 0:
             name += f"_{self._agent._num_few_shot_examples}_shot"

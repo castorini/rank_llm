@@ -31,6 +31,7 @@ class RetrievalMethod(Enum):
     SPLADE_P_P_ENSEMBLE_DISTIL = "SPLADE++_EnsembleDistil_ONNX"
     D_BERT_KD_TASB = "distilbert_tas_b"
     OPEN_AI_ADA2 = "openai-ada2"
+    REP_LLAMA = "rep-llama"
 
     def __str__(self):
         return self.value
