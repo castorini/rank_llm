@@ -134,10 +134,12 @@ def retrieve_and_rerank(
             aggregated_responses,
             shuffle_candidates,
         )
-
-        print("Evaluating:")
-        EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-        EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-        EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+        if dataset in TOPICS:
+            print("Evaluating:")
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+        else:
+            print(f"Skipping evaluation as {dataset} is not in TOPICS.")
 
     return rerank_results
