@@ -24,6 +24,7 @@ class RankVicuna(RankLLM):
         num_few_shot_examples: int = 0,
         device: str = "cuda",
         num_gpus: int = 1,
+        variable_passages: bool = False,
     ) -> None:
         super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
         self._device = device
@@ -35,6 +36,7 @@ class RankVicuna(RankLLM):
             )
         # ToDo: Make repetition_penalty configurable
         self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
+        self.variable_passages = variable_passages
         if num_few_shot_examples > 0:
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
                 self._examples = list(json_file)[1:-1]
@@ -65,7 +67,8 @@ class RankVicuna(RankLLM):
         return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
     def _add_post_prompt(self, query: str, num: int) -> str:
-        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [4] > [2], Only respond with the ranking results, do not say any word or explain."
+        example_ordering = "[2] > [1]" if self.variable_passages else "[4] > [2]"
+        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Only respond with the ranking results, do not say any word or explain."
 
     def _add_few_shot_examples(self, conv):
         for _ in range(self._num_few_shot_examples):

@@ -28,6 +28,7 @@ def main(args):
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
 
     _ = retrieve_and_rerank(
@@ -43,7 +44,8 @@ def main(args):
         num_few_shot_examples,
         shuffle_candidates,
         print_prompts_responses,
-        use_azure_openai=use_azure_openai
+        use_azure_openai=use_azure_openai,
+        variable_passages=variable_passages,
     )
 
 
@@ -107,6 +109,11 @@ if __name__ == "__main__":
         required=False,
         default=0,
         help="number of in context examples to provide",
+    )
+    parser.add_argument(
+        "--variable_passages",
+        action="store_true",
+        help="whether the model can account for variable number of passages in input",
     )
     args = parser.parse_args()
     main(args)

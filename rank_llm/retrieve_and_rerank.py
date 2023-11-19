@@ -45,7 +45,8 @@ def retrieve_and_rerank(
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
     query: str = "",
-    use_azure_openai: bool = False
+    use_azure_openai: bool = False,
+    variable_passages: bool = False
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
@@ -70,6 +71,7 @@ def retrieve_and_rerank(
             num_few_shot_examples=num_few_shot_examples,
             device=device,
             num_gpus=num_gpus,
+            variable_passages=variable_passages,
         )
     elif "zephyr" in model_path.lower():
         agent = RankZephyr(
@@ -79,6 +81,7 @@ def retrieve_and_rerank(
             num_few_shot_examples=num_few_shot_examples,
             device=device,
             num_gpus=num_gpus,
+            variable_passages=variable_passages,
         )
 
     # Retrieve
