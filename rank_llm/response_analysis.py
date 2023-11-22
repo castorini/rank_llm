@@ -26,6 +26,7 @@ class ResponseAnalyzer:
         self._prompt_mode = prompt_mode
 
     def read_saved_responses(self) -> List[str]:
+        num_passages = []
         responses = []
         for dataset in ["dl19", "dl20"]:
             file_name_prefix = f"{self._model_name}_{self._context_size}_{self._top_candidates}_{self._prompt_mode}_{dataset}"
@@ -41,7 +42,9 @@ class ResponseAnalyzer:
                     for line in f:
                         json_obj = json.loads(line)
                         responses.append(json_obj["response"])
-        return responses
+                        num_passage = json_obj["prompt"].split()[29]
+                        num_passages.append(int(num_passage))
+        return responses, num_passages
 
     def _validate_format(self, response: str) -> bool:
         for c in response:
@@ -49,14 +52,14 @@ class ResponseAnalyzer:
                 return False
         return True
 
-    def count_errors(self, responses: List[str]) -> Dict[str, int]:
+    def count_errors(self, responses: List[str], num_passages: List[int]) -> Dict[str, int]:
         stats_dict = {
             "ok": 0,
             "wrong_format": 0,
             "repetition": 0,
             "missing_documents": 0,
         }
-        for resp in responses:
+        for resp, num_passage in zip(responses, num_passages):
             if not self._validate_format(resp):
                 stats_dict["wrong_format"] += 1
                 continue
@@ -73,10 +76,10 @@ class ResponseAnalyzer:
             except ValueError:
                 stats_dict["wrong_format"] += 1
                 continue
-            if len(ranks) < 20:
+            if len(ranks) < num_passage:
                 stats_dict["missing_documents"] += 1
                 continue
-            if len(ranks) > 20 or len(set(ranks)) < 20:
+            if len(ranks) > num_passage or len(set(ranks)) < num_passage:
                 stats_dict["repetition"] += 1
                 continue
             stats_dict["ok"] += 1
@@ -89,8 +92,8 @@ def main(args):
     response_analyzer = ResponseAnalyzer(
         model_name, context_size, 100, PromptMode.RANK_GPT
     )
-    responses = response_analyzer.read_saved_responses()
-    print(response_analyzer.count_errors(responses))
+    responses, num_passages = response_analyzer.read_saved_responses()
+    print(response_analyzer.count_errors(responses, num_passages))
 
 
 if __name__ == "__main__":
