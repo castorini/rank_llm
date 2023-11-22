@@ -48,7 +48,7 @@ class Reranker:
             aggregated_prompts.extend(prompts)
             aggregated_responses.extend(responses)
 
-        print(f"rerank_results={rerank_results}")
+        # print(f"rerank_results={rerank_results}")
         print(f"input_tokens_counts={input_token_counts}")
         print(f"total input token count={sum(input_token_counts)}")
         print(f"output_token_counts={output_token_counts}")
@@ -72,6 +72,7 @@ class Reranker:
         prompts: Union[List[str], List[List[Dict[str, str]]]],
         responses: List[str],
         shuffle_candidates: bool = False,
+        pass_ct: int = None,
     ) -> str:
         # write rerank results
         Path(f"rerank_results/{retrieval_method_name}/").mkdir(
@@ -88,6 +89,8 @@ class Reranker:
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
+        if pass_ct is not None:
+            name += f"_pass_{pass_ct}"
         result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"
         with open(result_file_name, "w") as f:
             for i in range(len(rerank_results)):

@@ -46,7 +46,8 @@ def retrieve_and_rerank(
     print_prompts_responses: bool = False,
     query: str = "",
     use_azure_openai: bool = False,
-    variable_passages: bool = False
+    variable_passages: bool = False,
+    num_passes: int = 1,
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
@@ -109,40 +110,44 @@ def retrieve_and_rerank(
 
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
-
     print("Reranking:")
     reranker = Reranker(agent, top_k_candidates, dataset)
-    (
-        rerank_results,
-        input_token_counts,
-        output_token_counts,
-        aggregated_prompts,
-        aggregated_responses,
-    ) = reranker.rerank(
-        retrieved_results,
-        rank_end=top_k_candidates,
-        window_size=min(20, top_k_candidates),
-        shuffle_candidates=shuffle_candidates,
-        logging=print_prompts_responses,
-    )
-
-    # generate trec_eval file & evaluate for named datasets only
-    if isinstance(dataset, str):
-        file_name = reranker.write_rerank_results(
-            retrieval_method.name,
+    for pass_ct in range(num_passes):
+        print(f"Pass {pass_ct + 1} of {num_passes}:")
+        (
             rerank_results,
             input_token_counts,
             output_token_counts,
             aggregated_prompts,
             aggregated_responses,
-            shuffle_candidates,
+        ) = reranker.rerank(
+            retrieved_results,
+            rank_end=top_k_candidates,
+            window_size=min(20, top_k_candidates),
+            shuffle_candidates=shuffle_candidates,
+            logging=print_prompts_responses,
         )
-        if dataset in TOPICS:
-            print("Evaluating:")
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
-        else:
-            print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+
+        # generate trec_eval file & evaluate for named datasets only
+        if isinstance(dataset, str):
+            file_name = reranker.write_rerank_results(
+                retrieval_method.name,
+                rerank_results,
+                input_token_counts,
+                output_token_counts,
+                aggregated_prompts,
+                aggregated_responses,
+                shuffle_candidates,
+                pass_ct=None if num_passes == 1 else pass_ct,
+            )
+            if dataset in TOPICS:
+                print("Evaluating:")
+                EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
+                EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
+                EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+            else:
+                print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+        if num_passes > 1:
+            retrieved_results = rerank_results
 
     return rerank_results

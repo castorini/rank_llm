@@ -30,6 +30,7 @@ def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
+    num_passes = args.num_passes
 
     _ = retrieve_and_rerank(
         model_path,
@@ -46,6 +47,7 @@ def main(args):
         print_prompts_responses,
         use_azure_openai=use_azure_openai,
         variable_passages=variable_passages,
+        num_passes=num_passes,
     )
 
 
@@ -114,6 +116,13 @@ if __name__ == "__main__":
         "--variable_passages",
         action="store_true",
         help="whether the model can account for variable number of passages in input",
+    )
+    parser.add_argument(
+        "--num_passes",
+        type=int,
+        required=False,
+        default=1,
+        help="number of passes to run the model",
     )
     args = parser.parse_args()
     main(args)
