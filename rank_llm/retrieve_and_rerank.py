@@ -48,6 +48,8 @@ def retrieve_and_rerank(
     use_azure_openai: bool = False,
     variable_passages: bool = False,
     num_passes: int = 1,
+    window_size: int = 20,
+    step_size: int = 10,
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
@@ -73,6 +75,7 @@ def retrieve_and_rerank(
             device=device,
             num_gpus=num_gpus,
             variable_passages=variable_passages,
+            window_size=window_size,
         )
     elif "zephyr" in model_path.lower():
         agent = RankZephyr(
@@ -83,6 +86,7 @@ def retrieve_and_rerank(
             device=device,
             num_gpus=num_gpus,
             variable_passages=variable_passages,
+            window_size=window_size,
         )
 
     # Retrieve
@@ -123,9 +127,10 @@ def retrieve_and_rerank(
         ) = reranker.rerank(
             retrieved_results,
             rank_end=top_k_candidates,
-            window_size=min(20, top_k_candidates),
+            window_size=min(window_size, top_k_candidates),
             shuffle_candidates=shuffle_candidates,
             logging=print_prompts_responses,
+            step=step_size,
         )
 
         # generate trec_eval file & evaluate for named datasets only
@@ -139,6 +144,7 @@ def retrieve_and_rerank(
                 aggregated_responses,
                 shuffle_candidates,
                 pass_ct=None if num_passes == 1 else pass_ct,
+                window_size=window_size,
             )
             if dataset in TOPICS:
                 print("Evaluating:")

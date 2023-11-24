@@ -38,7 +38,7 @@ class Reranker:
                 rank_start=0,
                 rank_end=kwargs["rank_end"],
                 window_size=kwargs["window_size"],
-                step=10,
+                step=kwargs["step"],
                 shuffle_candidates=kwargs["shuffle_candidates"],
                 logging=kwargs["logging"],
             )
@@ -73,6 +73,7 @@ class Reranker:
         responses: List[str],
         shuffle_candidates: bool = False,
         pass_ct: int = None,
+        window_size: int = None,
     ) -> str:
         # write rerank results
         Path(f"rerank_results/{retrieval_method_name}/").mkdir(
@@ -89,6 +90,8 @@ class Reranker:
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
+        if window_size is not None:
+            name += f"_window_{window_size}"
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
         result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"

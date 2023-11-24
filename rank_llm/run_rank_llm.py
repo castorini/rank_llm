@@ -31,6 +31,8 @@ def main(args):
     variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
     num_passes = args.num_passes
+    step_size = args.step_size
+    window_size = args.window_size
 
     _ = retrieve_and_rerank(
         model_path,
@@ -48,6 +50,8 @@ def main(args):
         use_azure_openai=use_azure_openai,
         variable_passages=variable_passages,
         num_passes=num_passes,
+        window_size=window_size,
+        step_size=step_size,
     )
 
 
@@ -123,6 +127,18 @@ if __name__ == "__main__":
         required=False,
         default=1,
         help="number of passes to run the model",
+    )
+    parser.add_argument(
+        "--window_size",
+        type=int,
+        default=20,
+        help="window size for the sliding window approach",
+    )
+    parser.add_argument(
+        "--step_size",
+        type=int,
+        default=10,
+        help="step size for the sliding window approach",
     )
     args = parser.parse_args()
     main(args)

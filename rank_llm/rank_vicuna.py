@@ -25,6 +25,7 @@ class RankVicuna(RankLLM):
         device: str = "cuda",
         num_gpus: int = 1,
         variable_passages: bool = False,
+        window_size: int = 20,
     ) -> None:
         super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
         self._device = device
@@ -36,7 +37,9 @@ class RankVicuna(RankLLM):
             )
         # ToDo: Make repetition_penalty configurable
         self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
-        self.variable_passages = variable_passages
+        self._variable_passages = variable_passages
+        self._window_size = window_size
+        self._output_token_estimate = None
         if num_few_shot_examples > 0:
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
                 self._examples = list(json_file)[1:-1]
@@ -46,7 +49,7 @@ class RankVicuna(RankLLM):
         inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
-        gen_cfg.min_length = 1
+        gen_cfg.min_new_tokens = self.num_output_tokens()
         # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
         output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
@@ -61,13 +64,16 @@ class RankVicuna(RankLLM):
         return outputs, output_ids.size(0)
 
     def num_output_tokens(self) -> int:
-        return 100
+        if self._output_token_estimate is None:
+            self._output_token_estimate = len(self._tokenizer.encode(" > ".join(
+                [f"[{i+1}]" for i in range(self._window_size)]))) - 1
+        return self._output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
         return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
     def _add_post_prompt(self, query: str, num: int) -> str:
-        example_ordering = "[2] > [1]" if self.variable_passages else "[4] > [2]"
+        example_ordering = "[2] > [1]" if self._variable_passages else "[4] > [2]"
         return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Only respond with the ranking results, do not say any word or explain."
 
     def _add_few_shot_examples(self, conv):
