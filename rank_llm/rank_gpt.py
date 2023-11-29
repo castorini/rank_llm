@@ -87,6 +87,9 @@ class SafeOpenai(RankLLM):
                 if "This model's maximum context length is" in str(e):
                     print("reduce_length")
                     return "ERROR::reduce_length"
+                if "The response was filtered" in str(e):
+                    print("The response was filtered")
+                    return "ERROR::The response was filtered"
                 self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
                 openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)

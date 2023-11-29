@@ -167,3 +167,6 @@ checkpoints/
 prompts_and_responses/
 rerank_results/
 token_counts/
+
+retrieve_results/OPEN_AI_ADA2/retrieve_results_train_random_*
+retrieve_results/OPEN_AI_ADA2/trec_results_train_random_*

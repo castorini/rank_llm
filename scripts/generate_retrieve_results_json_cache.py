@@ -46,21 +46,29 @@ Example:
         --topk 20
 '''
 
+from rank_llm.topics_dict import TOPICS
 import argparse
 import json
 import os
 import sys
 from collections import defaultdict
+from pyserini.search import LuceneSearcher, get_topics, get_qrels
+
+
 
 from tqdm import tqdm
 
 sys.path.append(os.getcwd())
 
-def load_trec_file(file_path, topk=20):
+def load_trec_file(file_path, topk=100, qrels=None):
     data = defaultdict(list)
     with open(file_path, 'r') as file:
         for line in file:
             qid, _, docid, rank, score, _ = line.strip().split()
+            if type(list(qrels.items())[0][0]) is int:
+                qid = int(qid)
+            if qrels is not None and qid not in qrels:
+                continue
             if int(rank) > topk:
                 continue
             data[qid].append({
@@ -69,7 +77,9 @@ def load_trec_file(file_path, topk=20):
                 'rank': int(rank),
                 'score': float(score)
             })
+    print(f"Loaded run for {len(data)} queries from {file_path}")
     return data
+
 def load_tsv_file(file_path):
     examples = {}
     with open(file_path, 'r') as file:
@@ -78,20 +88,70 @@ def load_tsv_file(file_path):
             examples[exid] = text
     return examples
 
-def generate_retrieve_results(trec_file, collection_file, query_file):
-    trec_data = load_trec_file(trec_file)
-    collection_data = load_tsv_file(collection_file)
-    query_data = load_tsv_file(query_file)
+
+def load_pyserini_indexer(collection_file, trec_data, topk):
+    examples = {}
+    index_reader = LuceneSearcher.from_prebuilt_index(collection_file)
+    for qid, hits in tqdm(trec_data.items()):
+        rank = 0
+        for hit in hits:
+            rank += 1
+            if rank > topk:
+                break
+            document = index_reader.doc(hit["docid"])
+            content = json.loads(document.raw())
+            if "title" in content:
+                content = (
+                    "Title: " + content["title"] + " " +
+                    "Content: " + content["text"]
+                )
+            elif "contents" in content:
+                content = content["contents"]
+            else:
+                content = content["passage"]
+            examples[hit['docid']] = content
+    print(f"Loaded {len(examples)} examples from {collection_file}")
+    return examples
+
+def generate_retrieve_results(trec_file, collection_file, query_file, topk=100, output_trec_file=None):
+    if query_file in TOPICS:
+        if TOPICS[query_file] == "dl22-passage":
+            query_data = get_topics("dl22")
+        elif TOPICS[query_file] == "dl21-passage":
+            query_data = get_topics("dl21")
+        else:
+            query_data = get_topics(TOPICS[query_file])
+        for qid, query in query_data.items():
+            query_data[qid] = query['title']
+        qrels = get_qrels(TOPICS[query_file])
+        print(f"Loaded {len(query_data)} queries from {query_file}")
+        print(f"Loaded {len(qrels)} qrels from {query_file}")
+    else:
+        query_data = load_tsv_file(query_file)
+        qrels = None
+    trec_data = load_trec_file(trec_file, topk, qrels)
+    
+    if collection_file in ["msmarco-v2-passage", "beir-v1.0.0-trec-covid.flat", "beir-v1.0.0-trec-news.flat"]:
+        collection_data = load_pyserini_indexer(collection_file, trec_data, topk)
+    else:
+        collection_data = load_tsv_file(collection_file)    
 
     results = []
     for qid, hits in tqdm(trec_data.items()):
+        if qid not in query_data:
+            qid = int(qid)
         query = query_data[qid]
         for hit in hits:
             hit['content'] = collection_data[hit['docid']]
         results.append({
             'query': query,
             'hits': hits
-        })     
+        })
+    if output_trec_file is not None:
+        with open(output_trec_file, 'w') as file:
+            for result in results:
+                for hit in result['hits']:
+                    file.write(f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} run_id\n")
     return results
         
 
@@ -105,10 +165,11 @@ def main():
     parser.add_argument('--collection_file', required=True)
     parser.add_argument('--query_file', required=True)
     parser.add_argument('--output_file', required=True)
+    parser.add_argument('--output_trec_file', type=str, default=None)
     parser.add_argument('--topk', type=int, default=20)
     args = parser.parse_args()
 
-    results = generate_retrieve_results(args.trec_file, args.collection_file, args.query_file)
+    results = generate_retrieve_results(args.trec_file, args.collection_file, args.query_file, args.topk, args.output_trec_file)
     write_output_file(args.output_file, results)
 
 if __name__ == "__main__":
