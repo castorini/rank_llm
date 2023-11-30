@@ -101,9 +101,13 @@ def load_pyserini_indexer(collection_file, trec_data, topk):
             document = index_reader.doc(hit["docid"])
             content = json.loads(document.raw())
             if "title" in content:
+                # content = (
+                #     "Title: " + content["title"] + " " +
+                #     "Content: " + content["text"]
+                # )
                 content = (
-                    "Title: " + content["title"] + " " +
-                    "Content: " + content["text"]
+                    content["title"].strip() + ". " +
+                    content["text"]
                 )
             elif "contents" in content:
                 content = content["contents"]
