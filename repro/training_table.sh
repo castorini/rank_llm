@@ -5,10 +5,11 @@ export MODEL_CHECKPOINT_PAITS=(
     "/u3/rpradeep/axolotl/RankZephyrB-bm25-discriminative-s1000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-bm25-discriminative-s1000-7B-v0.2/checkpoint-68"
     "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s1000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s1000-7B-v0.2/checkpoint-60"
     "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-discriminative-s1000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-discriminative-s1000-7B-v0.2/checkpoint-56"
+    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2/checkpoint-64"
     )
 
 # Enter choice by commandline
-CHOICE=${1:-0}
+CHOICE=${1:-6}
 # Variable Passage flag is set to true if CHOICE is 0
 
 # Assign MODEL and CHECKPOINT
@@ -32,6 +33,7 @@ for topk in 100; do
                     gpu=${GPUS[$i]}
                     echo "Processing checkpoint: $checkpoint on GPU: $gpu"
                     echo $i
+                    echo $checkpoint
                     # Set the GPU to be used
                     cvd $gpu
                     i=$((i+1))
@@ -45,7 +47,7 @@ for topk in 100; do
 
                     python3 rank_llm/run_rank_llm.py --model_path $checkpoint --dataset ${SET} --prompt_mode rank_GPT --retrieval_method ${FSTAGE} --top_k_candidates ${topk} &
                     # If i is 4, wait for all the processes to finish
-                    if [ $i -eq 4 ]; then
+                    if [ $i -eq 2 ]; then
                         wait
                         i=0
                     fi
@@ -70,27 +72,34 @@ export MODEL_CHECKPOINT_PAITS=(
     "/u3/rpradeep/axolotl/RankZephyrB-bm25-discriminative-s1000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-bm25-discriminative-s1000-7B-v0.2/checkpoint-68"
     "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s1000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s1000-7B-v0.2/checkpoint-60"
     "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-discriminative-s1000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-discriminative-s1000-7B-v0.2/checkpoint-56"
+    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2/checkpoint-64"
     )
 
 # READ this in for loop
 
-for i in {0..4}; do
+for i in {0..6}; do
     IFS=',' read -r -a array <<< "${MODEL_CHECKPOINT_PAITS[$i]}" 
     MODEL=${array[0]}
     CHECKPOINT=${array[1]}
     MODEL_BASENAME=$(basename $MODEL)
     CHECKPOINT_BASENAME=$(basename $CHECKPOINT)
     for FSTAGE in BM25 OPEN_AI_ADA2; do
-    for file in rerank_results/${FSTAGE}/${MODEL_BASENAME}_${CHECKPOINT_BASENAME}*window*; do
-        echo $file;
+    for file in rerank_results/${FSTAGE}/${MODEL_BASENAME}_${CHECKPOINT_BASENAME}*100_rank*window_20*; do
         # dl19 in filename do $TEVAL_MSP_DL19 else $TEVAL_MSP_DL20
+        if [[ $file == *"shuffled"* ]]; then
+            continue
+        fi
         if [[ $file == *"dl19"* ]]; then
             echo "dl19"
             TEVAL_EX=$TEVAL_MSP_DL19
-        else
+        elif [[ $file == *"dl20"* ]]; then
             echo "dl20"
             TEVAL_EX=$TEVAL_MSP_DL20
+        else
+            continue
         fi
+        echo $file;
+
         ${TEVAL_EX} $file | egrep 'ndcg_cut_10\s';
     done
     done

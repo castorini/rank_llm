@@ -1,35 +1,47 @@
 # Pairs of MODEL AND CHECKPOINT
 export MODEL_CHECKPOINT_PAITS=(
-    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-sampled-mix-7B-v0.2/checkpoint-89"
-    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2/checkpoint-64")
+    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2/checkpoint-223"
+    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2/checkpoint-324"
+)
 
-CHOICE=${1:-0}
-# Variable Passage flag is set to true if CHOICE is 0
+# CHOICE can be either 0 or can be a list input 0,1
+CHOICE=${1:-0,1}
+
 if [ $CHOICE -eq 0 ]; then
-    VARIABLE_PASSAGE=true
+    echo "Running for 0"
+elif [ $CHOICE -eq 1 ]; then
+    echo "Running for 1"
 else
-    VARIABLE_PASSAGE=false
+    echo "Running for 0,1"
 fi
 
-# Assign MODEL and CHECKPOINT
-IFS=',' read -r -a array <<< "${MODEL_CHECKPOINT_PAITS[$CHOICE]}"
-MODEL=${array[0]}
-CHECKPOINT=${array[1]}
 
+CHOICES=(${CHOICE//,/ })
+i=0
 cd ~/rank_llm_private
 
 # Define an array of GPUs
-GPUS=(0 1 2)
+GPUS=(0 1 2 3 4 5)
+for CHOICE in ${CHOICES[@]}; do
+    echo $CHOICE
+    # Variable Passage flag is set to true if CHOICE is 0
+    if [ $CHOICE -eq 0 ]; then
+        VARIABLE_PASSAGE=true
+    else
+        VARIABLE_PASSAGE=false
+    fi
 
-i=0
+    # Assign MODEL and CHECKPOINT
+    IFS=',' read -r -a array <<< "${MODEL_CHECKPOINT_PAITS[$CHOICE]}"
+    MODEL=${array[0]}
+    CHECKPOINT=${array[1]}
 # Loop through the sets and topk values
 for SET in dl19 dl20; do
     for topk in 100; do
-        for FSTAGE in bm25 rep-llama SPLADE++_EnsembleDistil_ONNX; do
-            i=0
+        for FSTAGE in bm25 rep-llama SPLADE++_EnsembleDistil_ONNX;; do
             # Loop through the checkpoints and GPUs simultaneously
             # Loop through window size and step size together like zip over (20, 10), (10, 5), (2, 1)
-            list_pairs=(20,10 10,5 2,1)
+            list_pairs=(10,5 2,1)
             for pair in ${list_pairs[@]}; do
                 IFS=',' read -r -a array <<< "$pair"
                 window_size=${array[0]}
@@ -55,18 +67,79 @@ for SET in dl19 dl20; do
                     python3 rank_llm/run_rank_llm.py --model_path $checkpoint --dataset ${SET} --prompt_mode rank_GPT --retrieval_method ${FSTAGE} --top_k_candidates ${topk} \
                     --window_size ${window_size} --step_size ${step_size} &
                 fi
-                if [ $i -eq 3 ]; then
+                if [ $i -eq 6 ]; then
                     wait
                     i=0
                 fi
             done
         done
     done
+    done
 done
 
+# Pairs of MODEL AND CHECKPOINT
+export MODEL_CHECKPOINT_PAITS=(
+"/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2/checkpoint-223"
+"/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2/checkpoint-324"
+    )
 
-for file in rerank_results/*/*dl19*window*; do echo $file; $TEVAL_MSP_DL19 $file | egrep 'ndcg_cut_10|map_cut_100\s'; done;
-for file in rerank_results/*/*dl20*window*; do echo $file; $TEVAL_MSP_DL20 $file | egrep 'ndcg_cut_10|map_cut_100\s'; done;
+# READ this in for loop
 
-for file in rerank_results/*/*dl19*window*; do echo $file; $TEVAL_MSP_DL19 $file | egrep 'ndcg_cut_10'; done;
-for file in rerank_results/*/*dl20*window*; do echo $file; $TEVAL_MSP_DL20 $file | egrep 'ndcg_cut_10'; done;
+for i in {0..1}; do
+    IFS=',' read -r -a array <<< "${MODEL_CHECKPOINT_PAITS[$i]}" 
+    MODEL=${array[0]}
+    CHECKPOINT=${array[1]}
+    MODEL_BASENAME=$(basename $MODEL)
+    CHECKPOINT_BASENAME=$(basename $CHECKPOINT)
+    for FSTAGE in BM25 REP_LLAMA SPLADE_P_P_ENSEMBLE_DISTIL; do
+    for file in rerank_results/${FSTAGE}/${MODEL_BASENAME}_${CHECKPOINT_BASENAME}*100_rank*window_*; do
+        # dl19 in filename do $TEVAL_MSP_DL19 else $TEVAL_MSP_DL20
+        if [[ $file == *"shuffled"* ]]; then
+            continue
+        fi
+        if [[ $file == *"dl19"* ]]; then
+            echo "dl19"
+            TEVAL_EX=$TEVAL_MSP_DL19
+        elif [[ $file == *"dl20"* ]]; then
+            echo "dl20"
+            TEVAL_EX=$TEVAL_MSP_DL20
+        else
+            continue
+        fi
+        echo $file;
+
+        ${TEVAL_EX} $file | egrep 'ndcg_cut_10\s';
+    done
+    done
+done
+
+for i in {0..1}; do
+    IFS=',' read -r -a array <<< "${MODEL_CHECKPOINT_PAITS[$i]}" 
+    MODEL=${array[0]}
+    CHECKPOINT=${array[1]}
+    MODEL_BASENAME=$(basename $MODEL)
+    CHECKPOINT_BASENAME=$(basename $CHECKPOINT)
+    for FSTAGE in BM25; do
+        for window_size in 2 10 20;
+        do FILE_STR=""
+            for file in prompts_and_responses/${FSTAGE}/${MODEL_BASENAME}_${CHECKPOINT_BASENAME}*100_rank*window_${window_size}.json; do
+                # dl19 in filename do $TEVAL_MSP_DL19 else $TEVAL_MSP_DL20
+                if [[ $file == *"shuffled"* ]]; then
+                    continue
+                fi
+                # dl21/dl22/covid/news is in filename, ignore
+                if [[ $file == *"dl21"* ]] || [[ $file == *"dl22"* ]] || [[ $file == *"covid"* ]] || [[ $file == *"news"* ]]; then
+                    continue
+                fi
+                if [[ ${FILE_STR} == "" ]]; then
+                    FILE_STR="${file}"
+                else
+                    FILE_STR="${FILE_STR} ${file}"
+                fi
+            done
+            echo $FILE_STR;
+            python3 rank_llm/response_analysis_verbose.py --files $FILE_STR;
+        done
+    done
+done
+

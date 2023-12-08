@@ -1,7 +1,7 @@
 # Pairs of MODEL AND CHECKPOINT
 export MODEL_CHECKPOINT_PAITS=(
-    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-sampled-mix-7B-v0.2/checkpoint-89"
-    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2/checkpoint-64")
+   "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2/checkpoint-223"
+   "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2/checkpoint-324")
 
 # Enter choice by commandline
 CHOICE=${1:-0}
@@ -26,7 +26,7 @@ i=0
 # Loop through the sets and topk values
 for SET in dl21 dl22 news covid; do
     for topk in 100; do
-        for FSTAGE in bm25; do
+        for FSTAGE in SPLADE++_EnsembleDistil_ONNX; do
             # Loop through the checkpoints and GPUs simultaneously
                 checkpoint=${CHECKPOINT}
                 gpu=${GPUS[$i]}
@@ -48,6 +48,48 @@ for SET in dl21 dl22 news covid; do
                 else
                     python3 rank_llm/run_rank_llm.py --model_path $checkpoint --dataset ${SET} --prompt_mode rank_GPT --retrieval_method ${FSTAGE} --top_k_candidates ${topk} &
                 fi
+                if [ $i -eq 4 ]; then
+                    wait
+                    i=0
+                fi
         done
     done
 done
+
+
+export MODEL_CHECKPOINT_PAITS=(
+   "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2/checkpoint-223"
+   "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2/checkpoint-324")
+for i in {0..0}; do
+    IFS=',' read -r -a array <<< "${MODEL_CHECKPOINT_PAITS[$i]}" 
+    MODEL=${array[0]}
+    CHECKPOINT=${array[1]}
+    MODEL_BASENAME=$(basename $MODEL)
+    CHECKPOINT_BASENAME=$(basename $CHECKPOINT)
+    for FSTAGE in BM25 SPLADE_P_P_ENSEMBLE_DISTIL; do
+    for file in rerank_results/${FSTAGE}/${MODEL_BASENAME}_${CHECKPOINT_BASENAME}*100_rank*window_20*; do
+        # dl19 in filename do $TEVAL_MSP_DL19 else $TEVAL_MSP_DL20
+        if [[ $file == *"shuffled"* ]]; then
+            continue
+        fi
+        if [[ $file == *"dl21"* ]]; then
+            echo "dl19"
+            TEVAL_EX=$TEVAL_MSP_DL21
+        elif [[ $file == *"dl22"* ]]; then
+            echo "dl20"
+            TEVAL_EX=$TEVAL_MSP_DL22
+        elif [[ $file == *"news"* ]]; then
+            echo "news"
+            TEVAL_EX=$TEVAL_NEWS
+        elif [[ $file == *"covid"* ]]; then
+            echo "covid"
+            TEVAL_EX=$TEVAL_COVID
+        else
+            continue
+        fi
+        echo $file;
+
+        ${TEVAL_EX} $file | egrep 'ndcg_cut_10\s|map_cut_100\s';
+    done
+    done
+    done

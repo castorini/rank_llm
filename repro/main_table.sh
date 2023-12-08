@@ -1,12 +1,15 @@
 # Pairs of MODEL AND CHECKPOINT
 export MODEL_CHECKPOINT_PAITS=(
     "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-sampled-mix-7B-v0.2/checkpoint-89"
-    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2/checkpoint-64")
+    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-and-disc-s2000-7B-v0.2/checkpoint-64"
+    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-sampled-mix-7B-v0.2/checkpoint-223"
+    "/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2","/u3/rpradeep/axolotl/RankZephyrB-open_ai_ada2-random-s5000-7B-v0.2/checkpoint-324"
+    )
 
 # Enter choice by commandline
 CHOICE=${1:-0}
-# Variable Passage flag is set to true if CHOICE is 0
-if [ $CHOICE -eq 0 ]; then
+# Variable Passage flag is set to true if CHOICE is 0 or 2
+if [ $CHOICE -eq 0 ] || [ $CHOICE -eq 2 ]; then
     VARIABLE_PASSAGE=true
 else
     VARIABLE_PASSAGE=false

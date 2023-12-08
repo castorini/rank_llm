@@ -146,7 +146,7 @@ def retrieve_and_rerank(
                 pass_ct=None if num_passes == 1 else pass_ct,
                 window_size=window_size,
             )
-            if dataset in TOPICS:
+            if dataset in TOPICS and dataset not in ["dl22", "dl22-passage", "news"] and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]:
                 print("Evaluating:")
                 EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
                 EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
