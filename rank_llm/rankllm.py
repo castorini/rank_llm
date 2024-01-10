@@ -193,5 +193,3 @@ class RankLLM(ABC):
             if "score" in item["hits"][j + rank_start]:
                 item["hits"][j + rank_start]["score"] = cut_range[j]["score"]
         return item
-
-    
