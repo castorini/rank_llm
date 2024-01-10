@@ -42,6 +42,7 @@ class ResponseAnalyzer:
                     for line in f:
                         json_obj = json.loads(line)
                         responses.append(json_obj["response"])
+                        # TODO: use re.search for finding the num passages, split is error prune
                         num_passage = json_obj["prompt"].split()[29]
                         num_passages.append(int(num_passage))
         return responses, num_passages
