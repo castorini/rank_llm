@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 from typing import List, Dict
+import re
 
 import sys
 import os
@@ -25,6 +26,22 @@ class ResponseAnalyzer:
         self._top_candidates = top_candidates
         self._prompt_mode = prompt_mode
 
+    def _get_num_passages(self, prompt) -> int:
+        search_text = ""
+        if type(prompt) == str:
+            search_text = prompt
+        # For GPT runs, the prompt is an array of json objects with "role" and "content" as keys.
+        elif type(prompt) == list:
+            for message in prompt:
+                search_text += message["content"]
+        else:
+            raise ValueError(f"Unsupported prompt format.")
+        regex = r"(I will provide you with) (\d+) (passages)"
+        match = re.search(regex, search_text)
+        if not match:
+            raise ValueError(f"Unsupported prompt format.")
+        return int(match.group(2))
+
     def read_saved_responses(self) -> List[str]:
         num_passages = []
         responses = []
@@ -42,9 +59,7 @@ class ResponseAnalyzer:
                     for line in f:
                         json_obj = json.loads(line)
                         responses.append(json_obj["response"])
-                        # TODO: use re.search for finding the num passages, split is error prune
-                        num_passage = json_obj["prompt"].split()[29]
-                        num_passages.append(int(num_passage))
+                        num_passages.append(self._get_num_passages(json_obj["prompt"]))
         return responses, num_passages
 
     def _validate_format(self, response: str) -> bool:
@@ -53,7 +68,9 @@ class ResponseAnalyzer:
                 return False
         return True
 
-    def count_errors(self, responses: List[str], num_passages: List[int]) -> Dict[str, int]:
+    def count_errors(
+        self, responses: List[str], num_passages: List[int]
+    ) -> Dict[str, int]:
         stats_dict = {
             "ok": 0,
             "wrong_format": 0,
