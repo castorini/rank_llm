@@ -22,6 +22,7 @@ The following is a table of our models hosted on HuggingFace:
 
 | Model Name        | Hugging Face Identifier/Link                            |
 |-------------------|---------------------------------------------|
+| RankZephyr 7B V1 - Full - BF16      | [castorini/rank_zephyr_7b_v1_full](https://huggingface.co/castorini/rank_zephyr_7b_v1_full)               |
 | RankVicuna 7B - V1      | [castorini/rank_vicuna_7b_v1](https://huggingface.co/castorini/rank_vicuna_7b_v1)               |
 | RankVicuna 7B - V1 - No Data Augmentation    | [castorini/rank_vicuna_7b_v1_noda](https://huggingface.co/castorini/rank_vicuna_7b_v1_noda)               |
 | RankVicuna 7B - V1 - FP16      | [castorini/rank_vicuna_7b_v1_fp16](https://huggingface.co/castorini/rank_vicuna_7b_v1_fp16)               |
@@ -31,15 +32,27 @@ The following is a table of our models hosted on HuggingFace:
 
 ## ✨ References
 
-If you use RankLLM, please cite the following paper: 
+If you use RankLLM, please cite the following relevant papers: 
+
 [[2309.15088] RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models](https://arxiv.org/abs/2309.15088)
 
 ```
 @ARTICLE{pradeep2023rankvicuna,
-  title   = {RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models},
+  title   = {{RankVicuna}: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models},
   author  = {Ronak Pradeep and Sahel Sharifymoghaddam and Jimmy Lin},
   year    = {2023},
-  journal = {arXiv preprint arXiv: 2309.15088}
+  journal = {arXiv:2309.15088}
+}
+```
+
+[[2312.02724] RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!](https://arxiv.org/abs/2312.02724)
+
+```
+@ARTICLE{pradeep2023rankzephyr,
+  title   = {{RankZephyr}: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!},
+  author  = {Ronak Pradeep and Sahel Sharifymoghaddam and Jimmy Lin},
+  year    = {2023},
+  journal = {arXiv:2312.02724}
 }
 ```
 

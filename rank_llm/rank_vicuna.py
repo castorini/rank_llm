@@ -66,7 +66,9 @@ class RankVicuna(RankLLM):
         )
         return outputs, output_ids.size(0)
 
-    def num_output_tokens(self, current_window_size: int) -> int:
+    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+        if current_window_size is None:
+            current_window_size = self._window_size
         if self._output_token_estimate is None:
             self._output_token_estimate = len(self._tokenizer.encode(" > ".join(
                 [f"[{i+1}]" for i in range(current_window_size)]))) - 1
