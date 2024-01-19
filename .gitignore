@@ -178,3 +178,7 @@ retrieve_results/BM25/*_yo_*
 retrieve_results/BM25/*_so_*
 retrieve_results/BM25/*_ha_*
 retrieve_results/BM25/*_sw_*
+
+retrieve_results/*/*_o.json
+
+repro/
