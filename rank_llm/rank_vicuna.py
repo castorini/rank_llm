@@ -1,7 +1,7 @@
 import json
 import random
 import re
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Optional
 
 from fastchat.model import load_model, get_conversation_template, add_model_args
 from ftfy import fix_text
@@ -44,12 +44,15 @@ class RankVicuna(RankLLM):
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
                 self._examples = list(json_file)[1:-1]
 
-    def run_llm(self, prompt: str) -> Tuple[str, int]:
+    def run_llm(self, prompt: str,
+                current_window_size: Optional[int] = None) -> Tuple[str, int]:
+        if current_window_size is None:
+            current_window_size = self._window_size
         inputs = self._tokenizer([prompt])
         inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-        gen_cfg.max_new_tokens = self.num_output_tokens()
-        gen_cfg.min_new_tokens = self.num_output_tokens()
+        gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size)
+        gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
         # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
         output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
@@ -63,10 +66,10 @@ class RankVicuna(RankLLM):
         )
         return outputs, output_ids.size(0)
 
-    def num_output_tokens(self) -> int:
+    def num_output_tokens(self, current_window_size: int) -> int:
         if self._output_token_estimate is None:
             self._output_token_estimate = len(self._tokenizer.encode(" > ".join(
-                [f"[{i+1}]" for i in range(self._window_size)]))) - 1
+                [f"[{i+1}]" for i in range(current_window_size)]))) - 1
         return self._output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
