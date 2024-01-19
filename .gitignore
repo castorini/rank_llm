@@ -170,3 +170,11 @@ token_counts/
 
 retrieve_results/OPEN_AI_ADA2/retrieve_results_train_random_*
 retrieve_results/OPEN_AI_ADA2/trec_results_train_random_*
+
+retrieve_results/BM25/retrieve_results_train_random_*
+retrieve_results/BM25/trec_results_train_random_*
+
+retrieve_results/BM25/*_yo_*
+retrieve_results/BM25/*_so_*
+retrieve_results/BM25/*_ha_*
+retrieve_results/BM25/*_sw_*
