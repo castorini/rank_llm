@@ -24,13 +24,13 @@ CHECKPOINT=${array[1]}
 cd ~/rank_llm_private
 
 # Define an array of GPUs
-GPUS=(0 1 2 3 4 5)
+GPUS=(6)
 
 i=0
 # Loop through the sets and topk values
-for SET in dl19 dl20 dl21 dl22 news covid; do
+for SET in noveleval; do
     for topk in 100; do
-        for FSTAGE in SPLADE++_EnsembleDistil_ONNX; do
+        for FSTAGE in bm25; do
             # Loop through the checkpoints and GPUs simultaneously
                 checkpoint=${CHECKPOINT}
                 gpu=${GPUS[$i]}
