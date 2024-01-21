@@ -46,8 +46,9 @@ class RankListwiseOSLLM(RankLLM):
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
                 self._examples = list(json_file)[1:-1]
 
-    def run_llm(self, prompt: str,
-                current_window_size: Optional[int] = None) -> Tuple[str, int]:
+    def run_llm(
+        self, prompt: str, current_window_size: Optional[int] = None
+    ) -> Tuple[str, int]:
         if current_window_size is None:
             current_window_size = self._window_size
         inputs = self._tokenizer([prompt])
@@ -72,8 +73,14 @@ class RankListwiseOSLLM(RankLLM):
         if current_window_size is None:
             current_window_size = self._window_size
         if self._output_token_estimate is None:
-            self._output_token_estimate = len(self._tokenizer.encode(" > ".join(
-                [f"[{i+1}]" for i in range(current_window_size)]))) - 1
+            self._output_token_estimate = (
+                len(
+                    self._tokenizer.encode(
+                        " > ".join([f"[{i+1}]" for i in range(current_window_size)])
+                    )
+                )
+                - 1
+            )
         return self._output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
@@ -122,7 +129,9 @@ class RankListwiseOSLLM(RankLLM):
             prompt = conv.get_prompt()
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens(rank_end - rank_start):
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(
+                rank_end - rank_start
+            ):
                 break
             else:
                 max_length -= max(

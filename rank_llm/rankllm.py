@@ -61,12 +61,12 @@ class RankLLM(ABC):
         rank_end: int,
         logging: bool = False,
     ):
-        prompt, in_token_count = self.create_prompt(result,
-                                                    rank_start, rank_end)
+        prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
             print(f"prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(
-            prompt, current_window_size=rank_end-rank_start)
+            prompt, current_window_size=rank_end - rank_start
+        )
         if logging:
             print(f"output: {permutation}")
         rerank_result = self.receive_permutation(

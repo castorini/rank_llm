@@ -13,7 +13,7 @@ from rank_llm.reranker import Reranker
 from rank_llm.topics_dict import TOPICS
 
 
-def get_api_key() -> str:    
+def get_api_key() -> str:
     return os.getenv("OPEN_AI_API_KEY")
 
 
@@ -21,12 +21,13 @@ def get_azure_openai_args() -> Dict[str, str]:
     azure_args = {
         "api_type": "azure",
         "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
-        "api_base": os.getenv("AZURE_OPENAI_API_BASE")
+        "api_base": os.getenv("AZURE_OPENAI_API_BASE"),
     }
 
     # Sanity check
-    assert all(list(azure_args.values())), \
-        "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
+    assert all(
+        list(azure_args.values())
+    ), "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
     return azure_args
 
 
@@ -64,7 +65,7 @@ def retrieve_and_rerank(
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
             keys=openai_keys,
-            **(get_azure_openai_args() if use_azure_openai else {})
+            **(get_azure_openai_args() if use_azure_openai else {}),
         )
     elif "vicuna" in model_path.lower() or "zephyr" in model_path.lower():
         agent = RankListwiseOSLLM(
@@ -76,7 +77,7 @@ def retrieve_and_rerank(
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,
-            system_message=system_message
+            system_message=system_message,
         )
     else:
         raise ValueError(f"Unsupported model: {model_path}")
@@ -138,11 +139,21 @@ def retrieve_and_rerank(
                 pass_ct=None if num_passes == 1 else pass_ct,
                 window_size=window_size,
             )
-            if dataset in TOPICS and dataset not in ["dl22", "dl22-passage", "news"] and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]:
+            if (
+                dataset in TOPICS
+                and dataset not in ["dl22", "dl22-passage", "news"]
+                and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
+            ):
                 print("Evaluating:")
-                EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-                EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-                EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
+                )
             else:
                 print(f"Skipping evaluation as {dataset} is not in TOPICS.")
         if num_passes > 1:

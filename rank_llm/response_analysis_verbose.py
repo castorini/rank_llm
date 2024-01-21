@@ -39,7 +39,9 @@ class ResponseAnalyzer:
                 return False
         return True
 
-    def count_errors(self, responses: List[str], num_passages: List[int], verbose: bool = False) -> Dict[str, int]:
+    def count_errors(
+        self, responses: List[str], num_passages: List[int], verbose: bool = False
+    ) -> Dict[str, int]:
         stats_dict = {
             "ok": 0,
             "wrong_format": 0,
@@ -84,9 +86,7 @@ class ResponseAnalyzer:
 
 
 def main(args):
-    response_analyzer = ResponseAnalyzer(
-        args.files, 100, PromptMode.RANK_GPT
-    )
+    response_analyzer = ResponseAnalyzer(args.files, 100, PromptMode.RANK_GPT)
     responses, num_passages = response_analyzer.read_saved_responses()
     print("Normalized scores:")
 

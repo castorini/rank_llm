@@ -108,7 +108,7 @@ class SafeOpenai(RankLLM):
             temperature=0,
             completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
-            **{model_key: self._model}
+            **{model_key: self._model},
         )
         try:
             encoding = tiktoken.get_encoding(self._model)

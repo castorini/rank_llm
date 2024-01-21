@@ -63,13 +63,16 @@ python rank_llm/run_rank_llm.py  --model_path=castorini/rank_vicuna_7b_v1  --top
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--model_path", type=str, required=True, help="Path to the model. If `use_azure_ai`, pass your deployment name."
+        "--model_path",
+        type=str,
+        required=True,
+        help="Path to the model. If `use_azure_ai`, pass your deployment name.",
     )
     parser.add_argument(
         "--use_azure_openai",
         action="store_true",
         help="If True, use Azure OpenAI. Requires env var to be set: "
-            "`AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`"
+        "`AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`",
     )
     parser.add_argument(
         "--context_size", type=int, default=4096, help="context size used for model"
@@ -146,7 +149,7 @@ if __name__ == "__main__":
         "--system_message",
         type=str,
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-        help="the system message used in prompts"
+        help="the system message used in prompts",
     )
     args = parser.parse_args()
     main(args)
