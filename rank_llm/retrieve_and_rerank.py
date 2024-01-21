@@ -17,7 +17,7 @@ def get_api_key() -> str:
     return os.getenv("OPEN_AI_API_KEY")
 
 
-def get_azure_openai_args() -> dict[str, str]:
+def get_azure_openai_args() -> Dict[str, str]:
     azure_args = {
         "api_type": "azure",
         "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
