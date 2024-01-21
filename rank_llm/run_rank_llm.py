@@ -33,6 +33,7 @@ def main(args):
     num_passes = args.num_passes
     step_size = args.step_size
     window_size = args.window_size
+    system_message = args.system_message
 
     _ = retrieve_and_rerank(
         model_path,
@@ -52,11 +53,12 @@ def main(args):
         num_passes=num_passes,
         window_size=window_size,
         step_size=step_size,
+        system_message=system_message,
     )
 
 
 """ sample run:
-python rank_llm/rank_vicuna.py --model_path=checkpoints/vicuna/vicuna-7b-checkpoint-800 --dataset=dl19 --retrieval_method=bm25
+
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -139,6 +141,12 @@ if __name__ == "__main__":
         type=int,
         default=10,
         help="step size for the sliding window approach",
+    )
+    parser.add_argument(
+        "--system_message",
+        type=str,
+        default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        help="the system message used in prompts"
     )
     args = parser.parse_args()
     main(args)
