@@ -5,8 +5,7 @@ from typing import List, Union, Dict, Any
 
 from rank_llm.rank_gpt import SafeOpenai
 from rank_llm.rankllm import PromptMode
-from rank_llm.rank_vicuna import RankVicuna
-from rank_llm.rank_zephyr import RankZephyr
+from rank_llm.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.trec_eval import EvalFunction
 from rank_llm.pyserini_retriever import RetrievalMethod
 from rank_llm.retriever import Retriever, RetrievalMode
@@ -18,7 +17,7 @@ def get_api_key() -> str:
     return os.getenv("OPEN_AI_API_KEY")
 
 
-def get_azure_openai_args() -> dict[str, str]:
+def get_azure_openai_args() -> Dict[str, str]:
     azure_args = {
         "api_type": "azure",
         "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
@@ -50,6 +49,7 @@ def retrieve_and_rerank(
     num_passes: int = 1,
     window_size: int = 20,
     step_size: int = 10,
+    system_message: str = None,
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
@@ -66,8 +66,8 @@ def retrieve_and_rerank(
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {})
         )
-    elif "vicuna" in model_path.lower():
-        agent = RankVicuna(
+    elif "vicuna" in model_path.lower() or "zephyr" in model_path.lower():
+        agent = RankListwiseOSLLM(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
@@ -76,18 +76,10 @@ def retrieve_and_rerank(
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,
+            system_message=system_message
         )
-    elif "zephyr" in model_path.lower():
-        agent = RankZephyr(
-            model=model_path,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            num_few_shot_examples=num_few_shot_examples,
-            device=device,
-            num_gpus=num_gpus,
-            variable_passages=variable_passages,
-            window_size=window_size,
-        )
+    else:
+        raise ValueError(f"Unsupported model: {model_path}")
 
     # Retrieve
     print("Retrieving:")

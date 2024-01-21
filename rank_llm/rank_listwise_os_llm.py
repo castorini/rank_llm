@@ -15,7 +15,7 @@ def replace_number(s):
     return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
 
-class RankVicuna(RankLLM):
+class RankListwiseOSLLM(RankLLM):
     def __init__(
         self,
         model: str,
@@ -26,6 +26,7 @@ class RankVicuna(RankLLM):
         num_gpus: int = 1,
         variable_passages: bool = False,
         window_size: int = 20,
+        system_message: str = None,
     ) -> None:
         super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
         self._device = device
@@ -39,6 +40,7 @@ class RankVicuna(RankLLM):
         self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
         self._variable_passages = variable_passages
         self._window_size = window_size
+        self._system_message = system_message
         self._output_token_estimate = None
         if num_few_shot_examples > 0:
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
@@ -99,10 +101,9 @@ class RankVicuna(RankLLM):
         max_length = 300
         while True:
             conv = get_conversation_template(self._model)
+            if self._system_message:
+                conv.set_system_message(self._system_message)
             conv = self._add_few_shot_examples(conv)
-            # conv.set_system_message(
-            #     "You are RankVicuna, an intelligent assistant that can rank passages based on their relevancy to the query."
-            # )
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
@@ -117,10 +118,11 @@ class RankVicuna(RankLLM):
 
             input_context += self._add_post_prompt(query, num)
             conv.append_message(conv.roles[0], input_context)
-            prompt = conv.get_prompt() + " ASSISTANT:"
+            conv.append_message(conv.roles[1], None)
+            prompt = conv.get_prompt()
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens():
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(rank_end - rank_start):
                 break
             else:
                 max_length -= max(
