@@ -118,10 +118,11 @@ class RankListwiseOSLLM(RankLLM):
 
             input_context += self._add_post_prompt(query, num)
             conv.append_message(conv.roles[0], input_context)
-            prompt = conv.get_prompt() + " ASSISTANT:"
+            conv.append_message(conv.roles[1], None)
+            prompt = conv.get_prompt()
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens():
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(rank_end - rank_start):
                 break
             else:
                 max_length -= max(
