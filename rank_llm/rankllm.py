@@ -22,10 +22,12 @@ class RankLLM(ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
+        num_few_shot_examples: int,
     ) -> None:
         self._model = model
         self._context_size = context_size
         self._prompt_mode = prompt_mode
+        self._num_few_shot_examples = num_few_shot_examples
 
     def max_tokens(self) -> int:
         return self._context_size
@@ -62,7 +64,9 @@ class RankLLM(ABC):
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
             print(f"prompt: {prompt}\n")
-        permutation, out_token_count = self.run_llm(prompt)
+        permutation, out_token_count = self.run_llm(
+            prompt, current_window_size=rank_end - rank_start
+        )
         if logging:
             print(f"output: {permutation}")
         rerank_result = self.receive_permutation(
@@ -191,4 +195,3 @@ class RankLLM(ABC):
             if "score" in item["hits"][j + rank_start]:
                 item["hits"][j + rank_start]["score"] = cut_range[j]["score"]
         return item
-    

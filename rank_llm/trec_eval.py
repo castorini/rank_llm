@@ -11,6 +11,7 @@ from pyserini.util import download_evaluation_script
 
 import sys
 import os
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
@@ -141,7 +142,7 @@ def main(args):
     prompt_mode = args.prompt_mode
     output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
     with open(output_filename, "w") as output:
-        for dataset in ["dl19", "dl20"]:
+        for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
             for retrieval_method in RetrievalMethod:
                 if retrieval_method == RetrievalMethod.UNSPECIFIED:
                     continue
