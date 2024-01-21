@@ -28,7 +28,11 @@ def main(args):
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
+    num_passes = args.num_passes
+    step_size = args.step_size
+    window_size = args.window_size
 
     _ = retrieve_and_rerank(
         model_path,
@@ -43,7 +47,11 @@ def main(args):
         num_few_shot_examples,
         shuffle_candidates,
         print_prompts_responses,
-        use_azure_openai=use_azure_openai
+        use_azure_openai=use_azure_openai,
+        variable_passages=variable_passages,
+        num_passes=num_passes,
+        window_size=window_size,
+        step_size=step_size,
     )
 
 
@@ -107,6 +115,30 @@ if __name__ == "__main__":
         required=False,
         default=0,
         help="number of in context examples to provide",
+    )
+    parser.add_argument(
+        "--variable_passages",
+        action="store_true",
+        help="whether the model can account for variable number of passages in input",
+    )
+    parser.add_argument(
+        "--num_passes",
+        type=int,
+        required=False,
+        default=1,
+        help="number of passes to run the model",
+    )
+    parser.add_argument(
+        "--window_size",
+        type=int,
+        default=20,
+        help="window size for the sliding window approach",
+    )
+    parser.add_argument(
+        "--step_size",
+        type=int,
+        default=10,
+        help="step size for the sliding window approach",
     )
     args = parser.parse_args()
     main(args)

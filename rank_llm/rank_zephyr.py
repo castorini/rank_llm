@@ -45,7 +45,7 @@ class RankZephyr(RankVicuna):
             prompt = conv.get_prompt()
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens():
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(rank_end - rank_start):
                 break
             else:
                 max_length -= max(

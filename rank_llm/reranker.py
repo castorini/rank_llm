@@ -38,7 +38,7 @@ class Reranker:
                 rank_start=0,
                 rank_end=kwargs["rank_end"],
                 window_size=kwargs["window_size"],
-                step=10,
+                step=kwargs["step"],
                 shuffle_candidates=kwargs["shuffle_candidates"],
                 logging=kwargs["logging"],
             )
@@ -48,7 +48,7 @@ class Reranker:
             aggregated_prompts.extend(prompts)
             aggregated_responses.extend(responses)
 
-        print(f"rerank_results={rerank_results}")
+        # print(f"rerank_results={rerank_results}")
         print(f"input_tokens_counts={input_token_counts}")
         print(f"total input token count={sum(input_token_counts)}")
         print(f"output_token_counts={output_token_counts}")
@@ -72,12 +72,16 @@ class Reranker:
         prompts: Union[List[str], List[List[Dict[str, str]]]],
         responses: List[str],
         shuffle_candidates: bool = False,
+        pass_ct: int = None,
+        window_size: int = None,
     ) -> str:
         # write rerank results
         Path(f"rerank_results/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
         _modelname = self._agent._model.split("/")[-1]
+        if _modelname.startswith("checkpoint"):
+            _modelname = self._agent._model.split("/")[-2] + "_" + _modelname
         name = f"{_modelname}_{self._agent._context_size}_{self._top_k_candidates}_{self._agent._prompt_mode}_{self._dataset}"
         if self._agent._num_few_shot_examples > 0:
             name += f"_{self._agent._num_few_shot_examples}_shot"
@@ -86,6 +90,10 @@ class Reranker:
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
+        if window_size is not None:
+            name += f"_window_{window_size}"
+        if pass_ct is not None:
+            name += f"_pass_{pass_ct}"
         result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"
         with open(result_file_name, "w") as f:
             for i in range(len(rerank_results)):
