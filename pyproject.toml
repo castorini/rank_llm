@@ -56,5 +56,11 @@ push = false
 ]
 
 [tool.setuptools]
-packages = ["rank_llm"]
+packages = [
+    "rank_llm",
+    "rank_llm.analysis",
+    "rank_llm.evaluation",
+    "rank_llm.rerank",
+    "rank_llm.retrieve",
+]
 

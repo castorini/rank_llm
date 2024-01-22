@@ -100,7 +100,7 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="the number of top candidates to rerank",
-     )
+    )
     parser.add_argument(
         "--num_few_shot_examples",
         type=int,

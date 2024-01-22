@@ -97,7 +97,11 @@ class SafeOpenai(RankLLM):
             )
         return completion
 
-    def run_llm(self, prompt: Union[str, List[Dict[str, str]]], current_window_size: Optional[int] = None) -> Tuple[str, int]:
+    def run_llm(
+        self,
+        prompt: Union[str, List[Dict[str, str]]],
+        current_window_size: Optional[int] = None,
+    ) -> Tuple[str, int]:
         model_key = "engine" if self.use_azure_ai else "model"
         response = self._call_completion(
             messages=prompt,
