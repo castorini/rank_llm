@@ -75,7 +75,7 @@ def main(args):
 
 
 """
-python rank_llm/analysis/estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_mode=rank_GPT
+python src/rank_llm/analysis/estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_mode=rank_GPT
 """
 if __name__ == "__main__":
     parser = ArgumentParser()
