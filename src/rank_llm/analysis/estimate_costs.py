@@ -6,12 +6,14 @@ import sys
 import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
 
-from rerank.rank_gpt import SafeOpenai
-from rerank.rankllm import PromptMode
-from retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from retrieve.topics_dict import TOPICS
+from rank_llm.rerank.rank_gpt import SafeOpenai
+from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from rank_llm.retrieve.topics_dict import TOPICS
 
 
 class EstimationMode(Enum):
