@@ -8,7 +8,7 @@ from ftfy import fix_text
 import torch
 from transformers.generation import GenerationConfig
 
-from rank_llm.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import RankLLM, PromptMode
 
 
 def replace_number(s):

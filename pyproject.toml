@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rank-llm"
-version = "0.0.7"
+version = "0.1.0"
 description = "A Package for running prompt decoders like RankVicuna"
 readme = "README.md"
 authors = [
@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["prompt-decoder", "RankVicuna", "RankLLM", "information retrieval", "neural ranking", "LLM"]
+keywords = ["prompt-decoder", "RankVicuna", "RankZephyr", "RankLLM", "information retrieval", "neural ranking", "LLM"]
 dependencies = [
     "tqdm >= 4.65.0",
     "openai >= 0.27.8",
@@ -39,7 +39,7 @@ requires-python = ">=3.10"
 Homepage = "https://github.com/castorini/rank_llm"
 
 [tool.bumpver]
-current_version = "0.0.7"
+current_version = "0.1.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
@@ -55,6 +55,13 @@ push = false
     "{version}",
 ]
 
-[tool.setuptools]
-packages = ["rank_llm"]
-
+[tool.setuptools.packages.find]
+where = ["src"]
+include = [
+    "rank_llm",
+    "rank_llm.analysis",
+    "rank_llm.evaluation",
+    "rank_llm.rerank",
+    "rank_llm.retrieve",
+]
+namespaces = false

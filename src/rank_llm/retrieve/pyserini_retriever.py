@@ -20,8 +20,8 @@ import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from rank_llm.indices_dict import INDICES
-from rank_llm.topics_dict import TOPICS
+from rank_llm.retrieve.indices_dict import INDICES
+from rank_llm.retrieve.topics_dict import TOPICS
 
 
 class RetrievalMethod(Enum):
@@ -194,7 +194,7 @@ class PyseriniRetriever:
 
 
 def evaluate_retrievals() -> None:
-    from trec_eval import EvalFunction
+    from rank_llm.evaluation.trec_eval import EvalFunction
 
     for dataset in ["dl19", "dl20", "dl21", "dl22"]:
         for retrieval_method in RetrievalMethod:

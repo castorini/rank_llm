@@ -3,14 +3,16 @@ import sys
 import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
 
 import torch
 
-from rank_llm.pyserini_retriever import RetrievalMethod
-from rank_llm.rankllm import PromptMode
-from rank_llm.topics_dict import TOPICS
-from rank_llm.retriever import RetrievalMode
+from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.topics_dict import TOPICS
+from rank_llm.retrieve.retriever import RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 
@@ -58,7 +60,7 @@ def main(args):
 
 
 """ sample run:
-python rank_llm/run_rank_llm.py  --model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 --dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+python src/rank_llm/run_rank_llm.py  --model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 --dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

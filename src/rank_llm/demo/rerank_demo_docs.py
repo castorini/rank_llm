@@ -2,11 +2,13 @@ import sys
 import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
 
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
-from rank_llm.retriever import RetrievalMode
-from rank_llm.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.retriever import RetrievalMode
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 
 query = "What is the capital of the United States?"
 docs = [
