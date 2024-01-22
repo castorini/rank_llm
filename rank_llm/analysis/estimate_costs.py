@@ -8,10 +8,10 @@ import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from rank_llm.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_llm.rank_gpt import SafeOpenai
-from rank_llm.rankllm import PromptMode
-from rank_llm.topics_dict import TOPICS
+from rerank.rank_gpt import SafeOpenai
+from rerank.rankllm import PromptMode
+from retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from retrieve.topics_dict import TOPICS
 
 
 class EstimationMode(Enum):
@@ -28,6 +28,7 @@ def main(args):
     model_name = args.model_name
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
+    num_few_shot_examples = args.num_few_shot_examples
     retrieval_method = RetrievalMethod.BM25
     prompt_mode = args.prompt_mode
     costs = {}
@@ -38,9 +39,8 @@ def main(args):
         agent = SafeOpenai(
             model=model_name,
             context_size=context_size,
-            top_k_candidates=top_k_candidates,
-            dataset=dataset,
             prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
             keys=openai_keys,
         )
         print(
@@ -73,7 +73,7 @@ def main(args):
 
 
 """
-python rank_llm/estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_mode=rank_GPT
+python rank_llm/analysis/estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_mode=rank_GPT
 """
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -100,6 +100,12 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="the number of top candidates to rerank",
+     )
+    parser.add_argument(
+        "--num_few_shot_examples",
+        type=int,
+        default=0,
+        help="the number of examples provided in prompt",
     )
     parser.add_argument(
         "--prompt_mode",

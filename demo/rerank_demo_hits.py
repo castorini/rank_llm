@@ -5,8 +5,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
-from rank_llm.retriever import RetrievalMode
-from rank_llm.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.retriever import RetrievalMode
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 
 query = "how long is life cycle of flea"
 hits = [

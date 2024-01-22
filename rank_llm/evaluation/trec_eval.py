@@ -15,9 +15,9 @@ import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from rank_llm.pyserini_retriever import RetrievalMethod
-from rank_llm.rankllm import PromptMode
-from rank_llm.topics_dict import TOPICS
+from rerank.rankllm import PromptMode
+from retrieve.pyserini_retriever import RetrievalMethod
+from retrieve.topics_dict import TOPICS
 
 
 class EvalFunction:

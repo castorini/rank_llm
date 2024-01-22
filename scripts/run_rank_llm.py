@@ -7,10 +7,10 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 import torch
 
-from rank_llm.pyserini_retriever import RetrievalMethod
-from rank_llm.rankllm import PromptMode
-from rank_llm.topics_dict import TOPICS
-from rank_llm.retriever import RetrievalMode
+from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.topics_dict import TOPICS
+from rank_llm.retrieve.retriever import RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 

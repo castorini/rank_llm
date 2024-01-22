@@ -19,7 +19,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["prompt-decoder", "RankVicuna", "RankLLM", "information retrieval", "neural ranking", "LLM"]
+keywords = ["prompt-decoder", "RankVicuna", "RankZephyr", "RankLLM", "information retrieval", "neural ranking", "LLM"]
 dependencies = [
     "tqdm >= 4.65.0",
     "openai >= 0.27.8",
