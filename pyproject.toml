@@ -55,12 +55,13 @@ push = false
     "{version}",
 ]
 
-[tool.setuptools]
-packages = [
+[tool.setuptools.packages.find]
+where = ["src"]
+include = [
     "rank_llm",
     "rank_llm.analysis",
     "rank_llm.evaluation",
     "rank_llm.rerank",
     "rank_llm.retrieve",
 ]
-
+namespaces = false
