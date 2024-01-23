@@ -5,7 +5,7 @@ from typing import List, Union, Dict, Any
 
 from tqdm import tqdm
 
-from rank_llm.rankllm import RankLLM
+from rank_llm.rerank.rankllm import RankLLM
 
 
 class Reranker:

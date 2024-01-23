@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import List, Union, Dict, Any
 
-from rank_llm.pyserini_retriever import PyseriniRetriever
-from rank_llm.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 
 
 class RetrievalMode(Enum):

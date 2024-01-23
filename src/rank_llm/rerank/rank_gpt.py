@@ -1,13 +1,13 @@
 from enum import Enum
 import re
 import time
-from typing import Dict, Any, Union, List, Tuple
+from typing import Dict, Any, Union, List, Tuple, Optional
 
 from ftfy import fix_text
 import openai
 import tiktoken
 
-from rank_llm.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import RankLLM, PromptMode
 
 
 def replace_number(s: str) -> str:
@@ -33,10 +33,6 @@ class SafeOpenai(RankLLM):
             keys = [keys]
         if not keys:
             raise "Please provide OpenAI Keys."
-        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
-            raise ValueError(
-                f"unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
-            )
         if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
             raise ValueError(
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
@@ -101,7 +97,11 @@ class SafeOpenai(RankLLM):
             )
         return completion
 
-    def run_llm(self, prompt: Union[str, List[Dict[str, str]]]) -> Tuple[str, int]:
+    def run_llm(
+        self,
+        prompt: Union[str, List[Dict[str, str]]],
+        current_window_size: Optional[int] = None,
+    ) -> Tuple[str, int]:
         model_key = "engine" if self.use_azure_ai else "model"
         response = self._call_completion(
             messages=prompt,

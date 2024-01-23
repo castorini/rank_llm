@@ -3,14 +3,14 @@ import os
 from pathlib import Path
 from typing import List, Union, Dict, Any
 
-from rank_llm.rank_gpt import SafeOpenai
-from rank_llm.rankllm import PromptMode
-from rank_llm.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.trec_eval import EvalFunction
-from rank_llm.pyserini_retriever import RetrievalMethod
-from rank_llm.retriever import Retriever, RetrievalMode
-from rank_llm.reranker import Reranker
-from rank_llm.topics_dict import TOPICS
+from rank_llm.evaluation.trec_eval import EvalFunction
+from rank_llm.rerank.rank_gpt import SafeOpenai
+from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
+from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank.reranker import Reranker
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.retriever import Retriever, RetrievalMode
+from rank_llm.retrieve.topics_dict import TOPICS
 
 
 def get_api_key() -> str:
