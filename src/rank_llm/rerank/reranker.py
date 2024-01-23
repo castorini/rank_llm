@@ -9,15 +9,9 @@ from rank_llm.rerank.rankllm import RankLLM
 
 
 class Reranker:
-    def __init__(
-        self,
-        agent: RankLLM,
-        top_k_candidates: int,
-        dataset: Union[str, List[str], List[Dict[str, Any]]],
-    ) -> None:
+    def __init__(self, agent: RankLLM, top_k_candidates: int) -> None:
         self._agent = agent
         self._top_k_candidates = top_k_candidates
-        self._dataset = dataset
 
     def rerank(self, retrieved_results: List[Dict[str, Any]], **kwargs):
         rerank_results = []
@@ -74,6 +68,7 @@ class Reranker:
         shuffle_candidates: bool = False,
         pass_ct: int = None,
         window_size: int = None,
+        dataset_name: str = None,
     ) -> str:
         # write rerank results
         Path(f"rerank_results/{retrieval_method_name}/").mkdir(
@@ -82,7 +77,9 @@ class Reranker:
         _modelname = self._agent._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
             _modelname = self._agent._model.split("/")[-2] + "_" + _modelname
-        name = f"{_modelname}_{self._agent._context_size}_{self._top_k_candidates}_{self._agent._prompt_mode}_{self._dataset}"
+        name = f"{_modelname}_{self._agent._context_size}_{self._top_k_candidates}_{self._agent._prompt_mode}"
+        if dataset_name:
+            name = f"{name}_{dataset_name}"
         if self._agent._num_few_shot_examples > 0:
             name += f"_{self._agent._num_few_shot_examples}_shot"
         name = (

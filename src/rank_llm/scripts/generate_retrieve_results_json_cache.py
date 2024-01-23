@@ -1,4 +1,4 @@
-'''
+"""
 Genereate retrieve results json cache for a TREC run file.
 
 TREC run file format:
@@ -44,7 +44,7 @@ Example:
         --query_file /store/scratch/rpradeep/msmarco-v1/collections/official/queries.train.tsv \
         --output_file retrieve_results/BM25/retrieve_results_train_random_n1000.json \
         --topk 20
-'''
+"""
 
 from rank_llm.topics_dict import TOPICS
 import argparse
@@ -55,14 +55,14 @@ from collections import defaultdict
 from pyserini.search import LuceneSearcher, get_topics, get_qrels
 
 
-
 from tqdm import tqdm
 
 sys.path.append(os.getcwd())
 
+
 def load_trec_file(file_path, topk=100, qrels=None):
     data = defaultdict(list)
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         for line in file:
             qid, _, docid, rank, score, _ = line.strip().split()
             if type(list(qrels.items())[0][0]) is int:
@@ -71,20 +71,18 @@ def load_trec_file(file_path, topk=100, qrels=None):
                 continue
             if int(rank) > topk:
                 continue
-            data[qid].append({
-                'qid': qid,
-                'docid': docid,
-                'rank': int(rank),
-                'score': float(score)
-            })
+            data[qid].append(
+                {"qid": qid, "docid": docid, "rank": int(rank), "score": float(score)}
+            )
     print(f"Loaded run for {len(data)} queries from {file_path}")
     return data
 
+
 def load_tsv_file(file_path):
     examples = {}
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         for line in file:
-            exid, text = line.strip().split('\t')
+            exid, text = line.strip().split("\t")
             examples[exid] = text
     return examples
 
@@ -105,19 +103,19 @@ def load_pyserini_indexer(collection_file, trec_data, topk):
                 #     "Title: " + content["title"] + " " +
                 #     "Content: " + content["text"]
                 # )
-                content = (
-                    content["title"].strip() + ". " +
-                    content["text"]
-                )
+                content = content["title"].strip() + ". " + content["text"]
             elif "contents" in content:
                 content = content["contents"]
             else:
                 content = content["passage"]
-            examples[hit['docid']] = content
+            examples[hit["docid"]] = content
     print(f"Loaded {len(examples)} examples from {collection_file}")
     return examples
 
-def generate_retrieve_results(trec_file, collection_file, query_file, topk=100, output_trec_file=None):
+
+def generate_retrieve_results(
+    trec_file, collection_file, query_file, topk=100, output_trec_file=None
+):
     if query_file in TOPICS:
         if TOPICS[query_file] == "dl22-passage":
             query_data = get_topics("dl22")
@@ -126,7 +124,7 @@ def generate_retrieve_results(trec_file, collection_file, query_file, topk=100, 
         else:
             query_data = get_topics(TOPICS[query_file])
         for qid, query in query_data.items():
-            query_data[qid] = query['title']
+            query_data[qid] = query["title"]
         qrels = get_qrels(TOPICS[query_file])
         print(f"Loaded {len(query_data)} queries from {query_file}")
         print(f"Loaded {len(qrels)} qrels from {query_file}")
@@ -134,11 +132,15 @@ def generate_retrieve_results(trec_file, collection_file, query_file, topk=100, 
         query_data = load_tsv_file(query_file)
         qrels = None
     trec_data = load_trec_file(trec_file, topk, qrels)
-    
-    if collection_file in ["msmarco-v2-passage", "beir-v1.0.0-trec-covid.flat", "beir-v1.0.0-trec-news.flat"]:
+
+    if collection_file in [
+        "msmarco-v2-passage",
+        "beir-v1.0.0-trec-covid.flat",
+        "beir-v1.0.0-trec-news.flat",
+    ]:
         collection_data = load_pyserini_indexer(collection_file, trec_data, topk)
     else:
-        collection_data = load_tsv_file(collection_file)    
+        collection_data = load_tsv_file(collection_file)
 
     results = []
     for qid, hits in tqdm(trec_data.items()):
@@ -146,35 +148,42 @@ def generate_retrieve_results(trec_file, collection_file, query_file, topk=100, 
             qid = int(qid)
         query = query_data[qid]
         for hit in hits:
-            hit['content'] = collection_data[hit['docid']]
-        results.append({
-            'query': query,
-            'hits': hits
-        })
+            hit["content"] = collection_data[hit["docid"]]
+        results.append({"query": query, "hits": hits})
     if output_trec_file is not None:
-        with open(output_trec_file, 'w') as file:
+        with open(output_trec_file, "w") as file:
             for result in results:
-                for hit in result['hits']:
-                    file.write(f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} run_id\n")
+                for hit in result["hits"]:
+                    file.write(
+                        f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} run_id\n"
+                    )
     return results
-        
+
 
 def write_output_file(output_file_path, data):
-    with open(output_file_path, 'w') as file:
+    with open(output_file_path, "w") as file:
         json.dump(data, file)
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--trec_file', required=True)
-    parser.add_argument('--collection_file', required=True)
-    parser.add_argument('--query_file', required=True)
-    parser.add_argument('--output_file', required=True)
-    parser.add_argument('--output_trec_file', type=str, default=None)
-    parser.add_argument('--topk', type=int, default=20)
+    parser.add_argument("--trec_file", required=True)
+    parser.add_argument("--collection_file", required=True)
+    parser.add_argument("--query_file", required=True)
+    parser.add_argument("--output_file", required=True)
+    parser.add_argument("--output_trec_file", type=str, default=None)
+    parser.add_argument("--topk", type=int, default=20)
     args = parser.parse_args()
 
-    results = generate_retrieve_results(args.trec_file, args.collection_file, args.query_file, args.topk, args.output_trec_file)
+    results = generate_retrieve_results(
+        args.trec_file,
+        args.collection_file,
+        args.query_file,
+        args.topk,
+        args.output_trec_file,
+    )
     write_output_file(args.output_file, results)
+
 
 if __name__ == "__main__":
     main()
