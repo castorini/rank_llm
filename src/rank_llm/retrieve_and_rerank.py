@@ -1,6 +1,4 @@
-import json
 import os
-from pathlib import Path
 from typing import List, Union, Dict, Any
 
 from rank_llm.evaluation.trec_eval import EvalFunction
@@ -85,22 +83,11 @@ def retrieve_and_rerank(
     # Retrieve
     print("Retrieving:")
     if retrieval_mode == RetrievalMode.DATASET:
-        candidates_file = Path(
-            f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
-        )
-        if not candidates_file.is_file():
-            retriever = Retriever(RetrievalMode.DATASET)
-            retriever.retrieve(dataset, retrieval_method=retrieval_method)
-        else:
-            print("Reusing existing retrieved results.")
-
-        with open(candidates_file, "r") as f:
-            retrieved_results = json.load(f)
-
+        retriever = Retriever(RetrievalMode.DATASET)
+        retrieved_results = retriever.retrieve(dataset, retrieval_method=retrieval_method)
     elif retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
         retriever = Retriever(RetrievalMode.QUERY_AND_DOCUMENTS)
         retrieved_results = retriever.retrieve(dataset, query=query)
-
     elif retrieval_mode == RetrievalMode.QUERY_AND_HITS:
         retriever = Retriever(RetrievalMode.QUERY_AND_HITS)
         retrieved_results = retriever.retrieve(dataset, query=query)
@@ -108,7 +95,7 @@ def retrieve_and_rerank(
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print("Reranking:")
-    reranker = Reranker(agent, top_k_candidates, dataset)
+    reranker = Reranker(agent, top_k_candidates)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
         (
@@ -138,6 +125,7 @@ def retrieve_and_rerank(
                 shuffle_candidates,
                 pass_ct=None if num_passes == 1 else pass_ct,
                 window_size=window_size,
+                dataset_name=dataset,
             )
             if (
                 dataset in TOPICS

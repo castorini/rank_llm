@@ -1,4 +1,6 @@
 from enum import Enum
+import json
+from pathlib import Path
 from typing import List, Union, Dict, Any
 
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever
@@ -44,11 +46,20 @@ class Retriever:
                 raise ValueError(
                     f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
                 )
-            print(f"Retrieving with dataset {dataset}")
-            retriever = PyseriniRetriever(dataset, retrieval_method)
-            # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
-            retriever.retrieve_and_store(k=100)
-            return None
+            candidates_file = Path(
+                f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
+            )
+            if not candidates_file.is_file():
+                print(f"Retrieving with dataset {dataset}")
+                retriever = PyseriniRetriever(dataset, retrieval_method)
+                # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
+                retriever.retrieve_and_store(k=100)
+            else:
+                print("Reusing existing retrieved results.")
+
+            with open(candidates_file, "r") as f:
+                retrieved_results = json.load(f)
+            return retrieved_results
 
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
             if not dataset:
