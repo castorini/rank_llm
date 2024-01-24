@@ -19,11 +19,13 @@ docs = [
 ]
 
 results = retrieve_and_rerank(
-    model_path="castorini/rank_vicuna_7b_v1",
+    model_path="castorini/rank_zephyr_7b_v1_full",
     dataset=docs,
     retrieval_mode=RetrievalMode.QUERY_AND_DOCUMENTS,
     retrieval_method=RetrievalMethod.UNSPECIFIED,
     top_k_candidates=len(docs),
     print_prompts_responses=True,
     query=query,
+    variable_passages=True,
+    system_message="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
 )
