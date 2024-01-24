@@ -68,7 +68,7 @@ class SafeOpenai(RankLLM):
         while True:
             try:
                 if completion_mode == self.CompletionMode.CHAT:
-                    completion = openai.ChatCompletion.create(
+                    completion = openai.chat.completions.create(
                         *args, **kwargs, timeout=30
                     )
                 elif completion_mode == self.CompletionMode.TEXT:
@@ -91,9 +91,9 @@ class SafeOpenai(RankLLM):
                 time.sleep(0.1)
         if return_text:
             completion = (
-                completion["choices"][0]["message"]["content"]
+                completion.choices[0].message.content
                 if completion_mode == self.CompletionMode.CHAT
-                else completion["choices"][0]["text"]
+                else completion.choices[0].text
             )
         return completion
 
