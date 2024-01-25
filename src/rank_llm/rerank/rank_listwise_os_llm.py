@@ -72,8 +72,9 @@ class RankListwiseOSLLM(RankLLM):
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        if self._output_token_estimate is None:
-            self._output_token_estimate = (
+        _output_token_estimate = None
+        if self._output_token_estimate is None or self._window_size != current_window_size:
+            _output_token_estimate = (
                 len(
                     self._tokenizer.encode(
                         " > ".join([f"[{i+1}]" for i in range(current_window_size)])
@@ -81,7 +82,9 @@ class RankListwiseOSLLM(RankLLM):
                 )
                 - 1
             )
-        return self._output_token_estimate
+        if self._output_token_estimate is None:
+            self._output_token_estimate = _output_token_estimate
+        return _output_token_estimate if _output_token_estimate else self._output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
         return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
@@ -105,7 +108,7 @@ class RankListwiseOSLLM(RankLLM):
     ) -> Tuple[str, int]:
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
-        max_length = 300
+        max_length = 300 * (20 / (rank_end - rank_start))
         while True:
             conv = get_conversation_template(self._model)
             if self._system_message:
@@ -136,7 +139,7 @@ class RankListwiseOSLLM(RankLLM):
             else:
                 max_length -= max(
                     1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens())
+                    (num_tokens - self.max_tokens() + self.num_output_tokens(rank_end - rank_start))
                     // ((rank_end - rank_start) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)

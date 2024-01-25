@@ -101,7 +101,7 @@ class RankLLM(ABC):
         start_pos = rank_end - window_size
         prompts = []
         permutations = []
-        while start_pos >= rank_start:
+        while end_pos > rank_start and start_pos + step != rank_start:
             start_pos = max(start_pos, rank_start)
             (
                 rerank_result,
