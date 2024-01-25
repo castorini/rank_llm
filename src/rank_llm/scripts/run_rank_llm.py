@@ -89,7 +89,7 @@ if __name__ == "__main__":
         "--dataset",
         type=str,
         required=True,
-        help=f"dataset name, must be in {TOPICS.keys()}",
+        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits 4- filename containing retrieved results",
     )
     parser.add_argument(
         "--num_gpus", type=int, default=1, help="the number of GPUs to use"

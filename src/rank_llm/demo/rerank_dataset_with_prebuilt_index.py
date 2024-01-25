@@ -16,7 +16,7 @@ print(retrieved_results)
 # TODO: add rerank instead of printing retrieved results
 
 # Users can specify other retrieval methods:
-retrieved_results = Retriever.from_dataset_with_prebuit_indexes(
+retrieved_results = Retriever.from_dataset_with_prebuit_index(
     dataset_name, RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL
 )
 print(retrieved_results)

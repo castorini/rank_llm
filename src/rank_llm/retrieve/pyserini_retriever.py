@@ -191,6 +191,7 @@ class PyseriniRetriever:
                         f.write(
                             f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
                         )
+        return results
 
 
 def evaluate_retrievals() -> None:
