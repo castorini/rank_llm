@@ -101,6 +101,8 @@ class RankLLM(ABC):
         start_pos = rank_end - window_size
         prompts = []
         permutations = []
+        # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
+        # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
         while end_pos > rank_start and start_pos + step != rank_start:
             start_pos = max(start_pos, rank_start)
             (
