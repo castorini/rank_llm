@@ -5,6 +5,7 @@ from typing import List, Union, Dict, Any
 
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.result import Result
 
 
 class RetrievalMode(Enum):
@@ -110,22 +111,14 @@ class Retriever:
                 document_hits.append(
                     {"content": document, "qid": 1, "docid": i + 1, "rank": i + 1}
                 )
-            retrieved_results = [
-                {
-                    "query": self._query,
-                    "hits": document_hits,
-                }
-            ]
+            retrieved_results = [Result(self._query, document_hits)]
 
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-            retrieved_results = [
-                {
-                    "query": self._query,
-                    "hits": self._dataset,
-                }
-            ]
+            retrieved_results = [Result(self._query, self._dataset)]
         elif self._retrieval_mode == RetrievalMode.SAVED_FILE:
-            retrieved_results = self._dataset
+            retrieved_results = [
+                Result(query=r["query"], hits=r["hits"]) for r in self._dataset
+            ]
         else:
             raise ValueError(f"Invalid retrieval mode: {self._retrieval_mode}")
         for result in retrieved_results:
