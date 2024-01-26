@@ -6,9 +6,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.retrieve_and_rerank import retrieve_and_rerank
-from rank_llm.retrieve.retriever import RetrievalMode
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.retriever import Retriever
 
 query = "how long is life cycle of flea"
 hits = [
@@ -70,14 +68,6 @@ hits = [
     },
 ]
 
-results = retrieve_and_rerank(
-    model_path="castorini/rank_zephyr_7b_v1_full",
-    dataset=hits,
-    retrieval_mode=RetrievalMode.QUERY_AND_HITS,
-    retrieval_method=RetrievalMethod.UNSPECIFIED,
-    top_k_candidates=len(hits),
-    print_prompts_responses=True,
-    query=query,
-    variable_passages=True,
-    system_message="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-)
+retrieved_results = Retriever.from_inline_hits(query=query, hits=hits)
+print(retrieved_results)
+# TODO: add rerank instead of printing retrieved results
