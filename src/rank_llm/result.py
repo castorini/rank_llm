@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 class RankingExecInfo:
     def __init__(
         self, prompt, response: str, input_token_count: int, output_token_count: int
-    ) -> None:
+    ):
         self.prompt = prompt
         self.response = response
         self.input_token_count = input_token_count
@@ -22,6 +22,9 @@ class Result:
         self.query = query
         self.hits = hits
         self.ranking_exec_summary = ranking_exec_summary
+
+    def __repr__(self):
+        return str(self.__dict__)
 
 
 class ResultsWriter:
@@ -45,12 +48,12 @@ class ResultsWriter:
         for result in self._results:
             results.append({"query": result.query, "hits": result.hits})
         with open(filename, "a" if self._append else "w") as f:
-            json.dump(result, f, indent=2)
+            json.dump(results, f, indent=2)
 
     def write_in_trec_eval_format(self, filename: str):
         with open(filename, "a" if self._append else "w") as f:
             for result in self._results:
-                for hit in result["hits"]:
+                for hit in result.hits:
                     f.write(
                         f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
                     )
