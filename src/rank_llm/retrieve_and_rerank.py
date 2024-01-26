@@ -83,15 +83,17 @@ def retrieve_and_rerank(
     # Retrieve
     print("Retrieving:")
     if retrieval_mode == RetrievalMode.DATASET:
-        retriever = Retriever(RetrievalMode.DATASET)
-        retrieved_results = retriever.retrieve(dataset, retrieval_method=retrieval_method)
+        retrieved_results = Retriever.from_dataset_with_prebuit_index(
+            dataset_name=dataset, retrieval_method=retrieval_method
+        )
     elif retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
-        retriever = Retriever(RetrievalMode.QUERY_AND_DOCUMENTS)
-        retrieved_results = retriever.retrieve(dataset, query=query)
+        retrieved_results = Retriever.from_inline_documents(
+            query=query, documents=dataset
+        )
     elif retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-        retriever = Retriever(RetrievalMode.QUERY_AND_HITS)
-        retrieved_results = retriever.retrieve(dataset, query=query)
-
+        retrieved_results = Retriever.from_inline_hits(query=query, hits=dataset)
+    elif retrieval_mode == RetrievalMode.SAVED_FILE:
+        retrieved_results = Retriever.from_saved_results(file_name=dataset)
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print("Reranking:")
