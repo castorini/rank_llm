@@ -72,8 +72,9 @@ class RankListwiseOSLLM(RankLLM):
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        _output_token_estimate = None
-        if self._output_token_estimate is None or self._window_size != current_window_size:
+        if self._output_token_estimate and self._window_size == current_window_size:
+            return self._output_token_estimate
+        else:
             _output_token_estimate = (
                 len(
                     self._tokenizer.encode(
@@ -82,9 +83,9 @@ class RankListwiseOSLLM(RankLLM):
                 )
                 - 1
             )
-        if self._output_token_estimate is None:
-            self._output_token_estimate = _output_token_estimate
-        return _output_token_estimate if _output_token_estimate else self._output_token_estimate
+            if self._output_token_estimate is None:
+                self._output_token_estimate = _output_token_estimate
+            return _output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
         return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
