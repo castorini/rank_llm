@@ -151,7 +151,7 @@ class SafeOpenai(RankLLM):
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
 
-        max_length = 300
+        max_length = 300 * (20 / (rank_end - rank_start))
         while True:
             messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
@@ -191,7 +191,7 @@ class SafeOpenai(RankLLM):
     ) -> Tuple[List[Dict[str, str]], int]:
         query = retrieved_result["query"]
         num = len(retrieved_result["hits"][rank_start:rank_end])
-        max_length = 300
+        max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
             message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
