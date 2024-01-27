@@ -28,10 +28,6 @@ class Result:
 
     def __repr__(self):
         return str(self.__dict__)
-<<<<<<< HEAD
-=======
-
->>>>>>> integrated result into pyserini retriever
 
 class ResultsWriter:
     def __init__(self, results: List[Result], append: bool = False):
@@ -54,10 +50,6 @@ class ResultsWriter:
             results.append({"query": result.query, "hits": result.hits})
         with open(filename, "a" if self._append else "w") as f:
             json.dump(results, f, indent=2)
-<<<<<<< HEAD
-
-=======
->>>>>>> integrated result into pyserini retriever
 
     def write_in_trec_eval_format(self, filename: str):
         with open(filename, "a" if self._append else "w") as f:
