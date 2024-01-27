@@ -70,6 +70,6 @@ class Reranker:
             parents=True, exist_ok=True
         )
         writer.write_ranking_exec_summary(
-            f"ranking_execution_summary/{retrieval_method_name}/{name}.txt"
+            f"ranking_execution_summary/{retrieval_method_name}/{name}.json"
         )
         return result_file_name
