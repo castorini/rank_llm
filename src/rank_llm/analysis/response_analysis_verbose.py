@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 from typing import List, Dict
 
 import sys
@@ -18,8 +19,6 @@ class ResponseAnalyzer:
     def __init__(
         self,
         files: List[str],
-        top_candidates: int,
-        prompt_mode: PromptMode,
     ) -> None:
         self._files = files
 
@@ -28,10 +27,11 @@ class ResponseAnalyzer:
         responses = []
         for filename in self._files:
             with open(filename) as f:
-                for line in f:
-                    json_obj = json.loads(line)
-                    responses.append(json_obj["response"])
-                    num_passage = filename.split("window_")[1].replace(".json", "")
+                ranking_exec_summaries = json.load(f)
+            for summary in ranking_exec_summaries:
+                for exec_info in summary["ranking_exec_summary"]:
+                    responses.append(exec_info["response"])
+                    num_passage = self._get_num_passages(exec_info["prompt"])
                     num_passages.append(int(num_passage))
         return responses, num_passages
 
@@ -40,6 +40,22 @@ class ResponseAnalyzer:
             if not c.isdigit() and c != "[" and c != "]" and c != ">" and c != " ":
                 return False
         return True
+
+    def _get_num_passages(self, prompt) -> int:
+        search_text = ""
+        if type(prompt) == str:
+            search_text = prompt
+        # For GPT runs, the prompt is an array of json objects with "role" and "content" as keys.
+        elif type(prompt) == list:
+            for message in prompt:
+                search_text += message["content"]
+        else:
+            raise ValueError(f"Unsupported prompt format.")
+        regex = r"(I will provide you with) (\d+) (passages)"
+        match = re.search(regex, search_text)
+        if not match:
+            raise ValueError(f"Unsupported prompt format.")
+        return int(match.group(2))
 
     def count_errors(
         self, responses: List[str], num_passages: List[int], verbose: bool = False
@@ -57,7 +73,6 @@ class ResponseAnalyzer:
                 stats_dict["wrong_format"] += 1
                 continue
             begin, end = 0, 0
-            raw_resp = resp
             while not resp[begin].isdigit():
                 begin += 1
             while not resp[len(resp) - end - 1].isdigit():
@@ -88,7 +103,7 @@ class ResponseAnalyzer:
 
 
 def main(args):
-    response_analyzer = ResponseAnalyzer(args.files, 100, PromptMode.RANK_GPT)
+    response_analyzer = ResponseAnalyzer(args.files)
     responses, num_passages = response_analyzer.read_saved_responses()
     print("Normalized scores:")
 
