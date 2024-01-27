@@ -33,13 +33,12 @@ class ResultsWriter:
         self._append = append
 
     def write_ranking_exec_summary(self, filename: str):
-        exec_summary = {}
+        exec_summary = []
         for result in self._results:
-            key = result.query
             values = []
             for info in result.ranking_exec_summary:
                 values.append(info.__dict__)
-            exec_summary[key] = values
+            exec_summary.append({"query": result.query, "ranking_exec_summary": values})
         with open(filename, "a" if self._append else "w") as f:
             json.dump(exec_summary, f, indent=2)
 
