@@ -8,6 +8,7 @@ import openai
 import tiktoken
 
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.result import Result
 
 
 def replace_number(s: str) -> str:
@@ -138,24 +139,24 @@ class SafeOpenai(RankLLM):
         return 200
 
     def create_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
         if self._prompt_mode == PromptMode.RANK_GPT:
-            return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
+            return self.create_rank_gpt_prompt(result, rank_start, rank_end)
         else:
-            return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
+            return self.create_LRL_prompt(result, rank_start, rank_end)
 
     def create_rank_gpt_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        query = retrieved_result["query"]
-        num = len(retrieved_result["hits"][rank_start:rank_end])
+        query = result.query
+        num = len(result.hits[rank_start:rank_end])
 
         max_length = 300 * (20 / (rank_end - rank_start))
         while True:
             messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
-            for hit in retrieved_result["hits"][rank_start:rank_end]:
+            for hit in result.hits[rank_start:rank_end]:
                 rank += 1
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")
@@ -187,16 +188,16 @@ class SafeOpenai(RankLLM):
         return messages, self.get_num_tokens(messages)
 
     def create_LRL_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        query = retrieved_result["query"]
-        num = len(retrieved_result["hits"][rank_start:rank_end])
+        query = result.query
+        num = len(result.hits[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
             message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
             rank = 0
-            for hit in retrieved_result["hits"][rank_start:rank_end]:
+            for hit in result.hits[rank_start:rank_end]:
                 rank += 1
                 psg_id = f"PASSAGE{rank}"
                 content = hit["content"]

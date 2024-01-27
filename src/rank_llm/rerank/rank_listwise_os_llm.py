@@ -9,6 +9,7 @@ import torch
 from transformers.generation import GenerationConfig
 
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.result import Result
 
 
 def replace_number(s):
@@ -105,10 +106,10 @@ class RankListwiseOSLLM(RankLLM):
         return conv
 
     def create_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
-        query = retrieved_result["query"]
-        num = len(retrieved_result["hits"][rank_start:rank_end])
+        query = result.query
+        num = len(result.hits[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         while True:
             conv = get_conversation_template(self._model)
@@ -118,7 +119,7 @@ class RankListwiseOSLLM(RankLLM):
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
-            for hit in retrieved_result["hits"][rank_start:rank_end]:
+            for hit in result.hits[rank_start:rank_end]:
                 rank += 1
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")

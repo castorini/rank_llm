@@ -6,6 +6,8 @@ from typing import List, Union, Dict, Any, Tuple
 
 from tqdm import tqdm
 
+from rank_llm.result import Result, RankingExecInfo
+
 
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
@@ -38,7 +40,7 @@ class RankLLM(ABC):
 
     @abstractmethod
     def create_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[Union[str, List[Dict[str, str]]], int]:
         pass
 
@@ -56,7 +58,7 @@ class RankLLM(ABC):
 
     def permutation_pipeline(
         self,
-        result: Dict[str, Any],
+        result: Result,
         rank_start: int,
         rank_end: int,
         logging: bool = False,
@@ -69,14 +71,18 @@ class RankLLM(ABC):
         )
         if logging:
             print(f"output: {permutation}")
-        rerank_result = self.receive_permutation(
+        ranking_exec_info = RankingExecInfo(prompt, permutation, in_token_count, out_token_count)
+        if result.ranking_exec_summary == None:
+            result.ranking_exec_summary = []
+        result.ranking_exec_summary.append(ranking_exec_info)
+        result = self.receive_permutation(
             result, permutation, rank_start, rank_end
         )
-        return rerank_result, in_token_count, out_token_count, prompt, permutation
+        return result
 
     def sliding_windows(
         self,
-        retrieved_result: Dict[str, Any],
+        retrieved_result: Result,
         rank_start: int,
         rank_end: int,
         window_size: int,
@@ -84,41 +90,27 @@ class RankLLM(ABC):
         shuffle_candidates: bool = False,
         logging: bool = False,
     ):
-        in_token_count = 0
-        out_token_count = 0
         rerank_result = copy.deepcopy(retrieved_result)
         if shuffle_candidates:
             # First randomly shuffle rerank_result between rank_start and rank_end
-            rerank_result["hits"][rank_start:rank_end] = random.sample(
-                rerank_result["hits"][rank_start:rank_end],
-                len(rerank_result["hits"][rank_start:rank_end]),
+            rerank_result.hits[rank_start:rank_end] = random.sample(
+                rerank_result.hits[rank_start:rank_end],
+                len(rerank_result.hits[rank_start:rank_end]),
             )
             # Next rescore all candidates with 1/rank
-            for i, hit in enumerate(rerank_result["hits"]):
+            for i, hit in enumerate(rerank_result.hits):
                 hit["score"] = 1.0 / (i + 1)
                 hit["rank"] = i + 1
         end_pos = rank_end
         start_pos = rank_end - window_size
-        prompts = []
-        permutations = []
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
         # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
         while end_pos > rank_start and start_pos + step != rank_start:
             start_pos = max(start_pos, rank_start)
-            (
-                rerank_result,
-                in_count,
-                out_count,
-                prompt,
-                permutation,
-            ) = self.permutation_pipeline(rerank_result, start_pos, end_pos, logging)
-            in_token_count += in_count
-            out_token_count += out_count
-            prompts.append(prompt)
-            permutations.append(permutation)
+            rerank_result = self.permutation_pipeline(rerank_result, start_pos, end_pos, logging)
             end_pos = end_pos - step
             start_pos = start_pos - step
-        return rerank_result, in_token_count, out_token_count, prompts, permutations
+        return rerank_result
 
     def get_ranking_cost_upperbound(
         self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int
@@ -181,19 +173,19 @@ class RankLLM(ABC):
         return new_response
 
     def receive_permutation(
-        self, item: Dict[str, Any], permutation: str, rank_start: int, rank_end: int
-    ) -> Dict[str, Any]:
+        self, result: Result, permutation: str, rank_start: int, rank_end: int
+    ) -> Result:
         response = self._clean_response(permutation)
         response = [int(x) - 1 for x in response.split()]
         response = self._remove_duplicate(response)
-        cut_range = copy.deepcopy(item["hits"][rank_start:rank_end])
+        cut_range = copy.deepcopy(result.hits[rank_start:rank_end])
         original_rank = [tt for tt in range(len(cut_range))]
         response = [ss for ss in response if ss in original_rank]
         response = response + [tt for tt in original_rank if tt not in response]
         for j, x in enumerate(response):
-            item["hits"][j + rank_start] = copy.deepcopy(cut_range[x])
-            if "rank" in item["hits"][j + rank_start]:
-                item["hits"][j + rank_start]["rank"] = cut_range[j]["rank"]
-            if "score" in item["hits"][j + rank_start]:
-                item["hits"][j + rank_start]["score"] = cut_range[j]["score"]
-        return item
+            result.hits[j + rank_start] = copy.deepcopy(cut_range[x])
+            if "rank" in result.hits[j + rank_start]:
+                result.hits[j + rank_start]["rank"] = cut_range[j]["rank"]
+            if "score" in result.hits[j + rank_start]:
+                result.hits[j + rank_start]["score"] = cut_range[j]["score"]
+        return result

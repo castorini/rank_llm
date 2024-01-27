@@ -11,6 +11,9 @@ class RankingExecInfo:
         self.input_token_count = input_token_count
         self.output_token_count = output_token_count
 
+    def __repr__(self):
+        return str(self.__dict__)
+
 
 class Result:
     def __init__(

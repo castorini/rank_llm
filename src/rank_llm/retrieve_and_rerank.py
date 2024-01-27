@@ -100,13 +100,7 @@ def retrieve_and_rerank(
     reranker = Reranker(agent, top_k_candidates)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
-        (
-            rerank_results,
-            input_token_counts,
-            output_token_counts,
-            aggregated_prompts,
-            aggregated_responses,
-        ) = reranker.rerank(
+        rerank_results = reranker.rerank(
             retrieved_results,
             rank_end=top_k_candidates,
             window_size=min(window_size, top_k_candidates),
@@ -120,10 +114,6 @@ def retrieve_and_rerank(
             file_name = reranker.write_rerank_results(
                 retrieval_method.name,
                 rerank_results,
-                input_token_counts,
-                output_token_counts,
-                aggregated_prompts,
-                aggregated_responses,
                 shuffle_candidates,
                 pass_ct=None if num_passes == 1 else pass_ct,
                 window_size=window_size,
@@ -148,5 +138,7 @@ def retrieve_and_rerank(
                 print(f"Skipping evaluation as {dataset} is not in TOPICS.")
         if num_passes > 1:
             retrieved_results = rerank_results
+            for r in retrieved_results:
+                r.ranking_exec_summary = None
 
     return rerank_results
