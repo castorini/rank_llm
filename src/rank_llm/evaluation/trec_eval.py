@@ -26,8 +26,8 @@ class EvalFunction:
     @staticmethod
     def trunc(qrels, run):
         qrels = get_qrels_file(qrels)
-        run = pd.read_csv(run, sep='\s+', header=None)
-        qrels = pd.read_csv(qrels, sep='\s+', header=None)
+        run = pd.read_csv(run, sep="\s+", header=None)
+        qrels = pd.read_csv(qrels, sep="\s+", header=None)
         run[0] = run[0].astype(str)
         qrels[0] = qrels[0].astype(str)
 
@@ -76,7 +76,7 @@ class EvalFunction:
                     print("msmarco run detected. Converting to trec...")
                     run = pd.read_csv(
                         args[-1],
-                        sep='\s+',
+                        sep="\s+",
                         header=None,
                         names=["query_id", "doc_id", "rank"],
                     )
@@ -86,8 +86,8 @@ class EvalFunction:
                     run.to_csv(temp_file, sep="\t", header=None, index=None)
                     args[-1] = temp_file
 
-            run = pd.read_csv(args[-1], sep='\s+', header=None)
-            qrels = pd.read_csv(args[-2], sep='\s+', header=None)
+            run = pd.read_csv(args[-1], sep="\s+", header=None)
+            qrels = pd.read_csv(args[-2], sep="\s+", header=None)
 
             # cast doc_id column as string
             run[0] = run[0].astype(str)

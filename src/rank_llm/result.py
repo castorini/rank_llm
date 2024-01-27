@@ -29,6 +29,7 @@ class Result:
     def __repr__(self):
         return str(self.__dict__)
 
+
 class ResultsWriter:
     def __init__(self, results: List[Result], append: bool = False):
         self._results = results

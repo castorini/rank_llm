@@ -62,10 +62,14 @@ class Reranker:
         )
         result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"
         writer.write_in_trec_eval_format(result_file_name)
-        writer.write_in_json_format(f"rerank_results/{retrieval_method_name}/{name}.json")
+        writer.write_in_json_format(
+            f"rerank_results/{retrieval_method_name}/{name}.json"
+        )
         # Write ranking execution summary
         Path(f"ranking_execution_summary/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        writer.write_ranking_exec_summary(f"ranking_execution_summary/{retrieval_method_name}/{name}.txt")
+        writer.write_ranking_exec_summary(
+            f"ranking_execution_summary/{retrieval_method_name}/{name}.txt"
+        )
         return result_file_name

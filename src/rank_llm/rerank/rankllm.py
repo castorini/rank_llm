@@ -71,13 +71,13 @@ class RankLLM(ABC):
         )
         if logging:
             print(f"output: {permutation}")
-        ranking_exec_info = RankingExecInfo(prompt, permutation, in_token_count, out_token_count)
+        ranking_exec_info = RankingExecInfo(
+            prompt, permutation, in_token_count, out_token_count
+        )
         if result.ranking_exec_summary == None:
             result.ranking_exec_summary = []
         result.ranking_exec_summary.append(ranking_exec_info)
-        result = self.receive_permutation(
-            result, permutation, rank_start, rank_end
-        )
+        result = self.receive_permutation(result, permutation, rank_start, rank_end)
         return result
 
     def sliding_windows(
@@ -107,7 +107,9 @@ class RankLLM(ABC):
         # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
         while end_pos > rank_start and start_pos + step != rank_start:
             start_pos = max(start_pos, rank_start)
-            rerank_result = self.permutation_pipeline(rerank_result, start_pos, end_pos, logging)
+            rerank_result = self.permutation_pipeline(
+                rerank_result, start_pos, end_pos, logging
+            )
             end_pos = end_pos - step
             start_pos = start_pos - step
         return rerank_result
