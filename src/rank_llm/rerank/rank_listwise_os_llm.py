@@ -140,7 +140,11 @@ class RankListwiseOSLLM(RankLLM):
             else:
                 max_length -= max(
                     1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens(rank_end - rank_start))
+                    (
+                        num_tokens
+                        - self.max_tokens()
+                        + self.num_output_tokens(rank_end - rank_start)
+                    )
                     // ((rank_end - rank_start) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)

@@ -20,6 +20,7 @@ import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
+from rank_llm.result import Result, ResultsWriter
 from rank_llm.retrieve.indices_dict import INDICES
 from rank_llm.retrieve.topics_dict import TOPICS
 
@@ -118,7 +119,7 @@ class PyseriniRetriever:
         self, query: str, ranks: List[Dict[str, any]], k: int, qid=None
     ) -> None:
         hits = self._searcher.search(query, k=k)
-        ranks.append({"query": query, "hits": []})
+        ranks.append(Result(query=query, hits=[]))
         rank = 0
         for hit in hits:
             rank += 1
@@ -134,7 +135,7 @@ class PyseriniRetriever:
                 content = content["passage"]
             content = " ".join(content.split())
             # hit.score could be of type 'numpy.float32' which is not json serializable. Always explicitly cast it to float.
-            ranks[-1]["hits"].append(
+            ranks[-1].hits.append(
                 {
                     "content": content,
                     "qid": qid,
@@ -144,7 +145,7 @@ class PyseriniRetriever:
                 }
             )
 
-    def retrieve(self, k=100, qid=None) -> List[Dict[str, any]]:
+    def retrieve(self, k=100, qid=None) -> List[Result]:
         ranks = []
         if isinstance(self._topics, str):
             self._retrieve_query(self._topics, ranks, k, qid)
@@ -169,12 +170,11 @@ class PyseriniRetriever:
         Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
+        writer = ResultsWriter(results)
         # Store JSON in rank_results to a file
-        with open(
-            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json",
-            "w",
-        ) as f:
-            json.dump(results, f, indent=2)
+        writer.write_in_json_format(
+            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+        )
         # Store the QRELS of the dataset if specified
         if store_qrels:
             Path("qrels/").mkdir(parents=True, exist_ok=True)
@@ -182,15 +182,9 @@ class PyseriniRetriever:
                 json.dump(self._qrels, f, indent=2)
         # Store TRECS if specified
         if store_trec:
-            with open(
-                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt",
-                "w",
-            ) as f:
-                for result in results:
-                    for hit in result["hits"]:
-                        f.write(
-                            f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
-                        )
+            writer.write_in_trec_eval_format(
+                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt"
+            )
         return results
 
 

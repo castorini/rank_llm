@@ -5,6 +5,7 @@ from typing import List, Union, Dict, Any
 
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.result import Result
 
 
 class RetrievalMode(Enum):
@@ -47,7 +48,6 @@ class Retriever:
             raise "Please provide a query string."
         if not hits:
             raise "Please provide a non-empty list of hits."
-        Retriever.validate_result({"query": query, "hits": hits})
         retriever = Retriever(RetrievalMode.QUERY_AND_HITS, dataset=hits, query=query)
         return retriever.retrieve()
 
@@ -98,7 +98,10 @@ class Retriever:
             else:
                 print("Reusing existing retrieved results.")
                 with open(candidates_file, "r") as f:
-                    retrieved_results = json.load(f)
+                    loaded_results = json.load(f)
+                retrieved_results = [
+                    Result(r["query"], r["hits"]) for r in loaded_results
+                ]
 
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
             document_hits = []
@@ -110,38 +113,30 @@ class Retriever:
                 document_hits.append(
                     {"content": document, "qid": 1, "docid": i + 1, "rank": i + 1}
                 )
-            retrieved_results = [
-                {
-                    "query": self._query,
-                    "hits": document_hits,
-                }
-            ]
+            retrieved_results = [Result(self._query, document_hits)]
 
         elif self._retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-            retrieved_results = [
-                {
-                    "query": self._query,
-                    "hits": self._dataset,
-                }
-            ]
+            retrieved_results = [Result(self._query, self._dataset)]
         elif self._retrieval_mode == RetrievalMode.SAVED_FILE:
-            retrieved_results = self._dataset
+            retrieved_results = [
+                Result(query=r["query"], hits=r["hits"]) for r in self._dataset
+            ]
         else:
             raise ValueError(f"Invalid retrieval mode: {self._retrieval_mode}")
         for result in retrieved_results:
             self._validate_result(result)
         return retrieved_results
 
-    def _validate_result(self, result: Dict[str, Any]):
-        if not isinstance(result, dict):
+    def _validate_result(self, result: Result):
+        if not isinstance(result, Result):
             raise ValueError(
-                f"Invalid result format: Expected a dictionary, got {type(result)}"
+                f"Invalid result format: Expected type `Result`, got {type(result)}"
             )
-        if "query" not in result.keys():
-            raise ValueError(f"Invalid format: missing `query` key")
-        if "hits" not in result.keys():
-            raise ValueError(f"Invalid format: missing `hits` key")
-        for hit in result["hits"]:
+        if not result.query:
+            raise ValueError(f"Invalid format: missing `query`")
+        if not result.hits:
+            raise ValueError(f"Invalid format: missing `hits`")
+        for hit in result.hits:
             if not isinstance(hit, Dict):
                 raise ValueError(
                     f"Invalid hits format: Expected a list of Dicts where each Dict represents a hit."
