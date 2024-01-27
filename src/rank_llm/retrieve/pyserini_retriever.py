@@ -18,7 +18,9 @@ import sys
 import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.dirname(SCRIPT_DIR))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
 
 from rank_llm.result import Result, ResultsWriter
 from rank_llm.retrieve.indices_dict import INDICES
@@ -99,21 +101,17 @@ class PyseriniRetriever:
             topics_key = TOPICS[dataset]
         self._topics = get_topics(topics_key)
         self._qrels = get_qrels(TOPICS[dataset])
-        self._index_reader = IndexReader.from_prebuilt_index(INDICES[self._dataset])
+        self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
 
-    def _get_index(self) -> str:
-        if self._dataset not in INDICES:
-            raise ValueError("dataset %s not in INDICES" % self._dataset)
-        index_suffixes = {
-            RetrievalMethod.BM25: "",
-            RetrievalMethod.BM25_RM3: "",
-            RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL: "-splade-pp-ed-text",
-            RetrievalMethod.D_BERT_KD_TASB: ".distilbert-dot-tas_b-b256",
-            RetrievalMethod.OPEN_AI_ADA2: ".openai-ada2",
-        }
-        index_prefix = INDICES[self._dataset]
-        index_name = index_prefix + index_suffixes[self._retrieval_method]
-        return index_name
+    def _get_index(self, key: str = None) -> str:
+        if not key:
+            key = self._retrieval_method.value
+            # bm25_rm3 uses the same indices as bm25
+            if key == "bm25_rm3":
+                key = "bm25"
+        if self._dataset not in INDICES[key]:
+            raise ValueError("dataset %s not in INDICES[%s]" % self._dataset, key)
+        return INDICES[key][self._dataset]
 
     def _retrieve_query(
         self, query: str, ranks: List[Dict[str, any]], k: int, qid=None
@@ -211,12 +209,6 @@ def main():
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            if dataset in ["dl21", "dl22", "news", "covid"]:
-                if retrieval_method not in [
-                    RetrievalMethod.BM25,
-                    RetrievalMethod.BM25_RM3,
-                ]:
-                    continue
             retriever = PyseriniRetriever(dataset, retrieval_method)
             retriever.retrieve_and_store()
     evaluate_retrievals()
