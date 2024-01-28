@@ -168,4 +168,5 @@ prompts_and_responses/
 rerank_results/
 token_counts/
 retrieve_results/
+ranking_execution_summary/
 repro/
