@@ -7,6 +7,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.retrieve.retriever import Retriever
+from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
 query = "What is the capital of the United States?"
 docs = [
@@ -17,5 +18,6 @@ docs = [
 ]
 
 retrieved_results = Retriever.from_inline_documents(query, documents=docs)
-print(retrieved_results)
-# TODO: add rerank instead of printing retrieved results
+reranker = ZephyrReranker()
+rerank_results = reranker.rerank(retrieved_results)
+print(rerank_results)
