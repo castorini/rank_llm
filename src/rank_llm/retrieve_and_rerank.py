@@ -97,7 +97,7 @@ def retrieve_and_rerank(
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print("Reranking:")
-    reranker = Reranker(agent, top_k_candidates)
+    reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
         rerank_results = reranker.rerank(
@@ -115,6 +115,7 @@ def retrieve_and_rerank(
                 retrieval_method.name,
                 rerank_results,
                 shuffle_candidates,
+                top_k_candidates=top_k_candidates,
                 pass_ct=None if num_passes == 1 else pass_ct,
                 window_size=window_size,
                 dataset_name=dataset,

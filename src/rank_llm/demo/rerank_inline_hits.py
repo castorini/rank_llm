@@ -7,6 +7,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.retrieve.retriever import Retriever
+from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
 query = "how long is life cycle of flea"
 hits = [
@@ -69,5 +70,6 @@ hits = [
 ]
 
 retrieved_results = Retriever.from_inline_hits(query=query, hits=hits)
-print(retrieved_results)
-# TODO: add rerank instead of printing retrieved results
+reranker = ZephyrReranker()
+rerank_results = reranker.rerank(retrieved_results)
+print(rerank_results)

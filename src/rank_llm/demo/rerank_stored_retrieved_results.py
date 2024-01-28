@@ -7,8 +7,10 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.retrieve.retriever import Retriever
+from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
 file_name = "retrieve_results/BM25/retrieve_results_dl19.json"
 retrieved_results = Retriever.from_saved_results(file_name)
-print(retrieved_results)
-# TODO: add rerank instead of printing retrieved results
+reranker = ZephyrReranker()
+rerank_results = reranker.rerank(retrieved_results)
+print(rerank_results)
