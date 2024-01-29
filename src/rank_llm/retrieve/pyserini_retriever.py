@@ -127,6 +127,7 @@ class PyseriniRetriever:
                 "Unsupported/Invalid retrieval method: %s" % retrieval_method
             )
         if topics_path:
+            # custom topics is harder, as each might need a different TopicReader: https://github.com/castorini/pyserini/blob/2f7702f2c55cb6f43d9150d3fddd1f3b7b11b0e3/pyserini/query_iterator.py#L82
             self._topics = get_topics(topics_path)
             if topics_path in ["dl20", "dl21", "dl22"]:
                 self._qrels = get_qrels(f"{topics_path}-passage")
