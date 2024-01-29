@@ -84,7 +84,10 @@ class RankListwiseOSLLM(RankLLM):
                 )
                 - 1
             )
-            if self._output_token_estimate is None:
+            if (
+                self._output_token_estimate is None
+                and self._window_size == current_window_size
+            ):
                 self._output_token_estimate = _output_token_estimate
             return _output_token_estimate
 
