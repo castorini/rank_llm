@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from pyserini.index import IndexReader
+from pyserini.prebuilt_index_info import TF_INDEX_INFO, FAISS_INDEX_INFO, IMPACT_INDEX_INFO
 from pyserini.search import (
     LuceneSearcher,
     LuceneImpactSearcher,
@@ -42,11 +43,43 @@ class RetrievalMethod(Enum):
 
 class PyseriniRetriever:
     def __init__(
-        self, dataset: str, retrieval_method: RetrievalMethod = RetrievalMethod.BM25
+        self, dataset: str = None, retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
+        index_path: str = None, topics_path: str = None, index_type: str = None,
+        encoder: str = None, onnx: bool = False, encoded_queries: str = None,
     ) -> None:
         self._dataset = dataset
         self._retrieval_method = retrieval_method
-        if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
+        if index_path:
+            self._dataset = index_path
+            if os.path.exists(index_path):
+                self._dataset = 'custom'
+                if index_type == 'lucene':
+                    self._searcher = LuceneSearcher(index_path)
+                elif index_type == 'impact':
+                    if onnx:
+                        self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0, encoder_type='onnx')
+                    else:
+                        self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0)
+                else:
+                    # Cannot retrieve docstrings from a dense index
+                    raise ValueError(f'index_type must be specified from [lucene, impact] when using custom index')
+            elif index_path in TF_INDEX_INFO:
+                self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
+            elif index_path in IMPACT_INDEX_INFO:
+                if onnx:
+                    self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0, encoder_type='onnx')
+                else:
+                    self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0)
+            elif index_path in FAISS_INDEX_INFO:
+                if not encoded_queries:
+                    # This can be worked around if we want to add the (many) arguments needed to create a custom QueryEncoder
+                    raise ValueError("encoded_queries must be specified for dense indices")
+                query_encoder = QueryEncoder.load_encoded_queries(encoded_queries)
+                self._searcher = FaissSearcher.from_prebuilt_index(index_path, query_encoder)
+            else:
+                raise ValueError(f"Cannot build pre-built index: {index_path}")
+        
+        elif retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             self._searcher = LuceneSearcher.from_prebuilt_index(self._get_index())
             if not self._searcher:
                 raise ValueError(
@@ -93,15 +126,35 @@ class PyseriniRetriever:
             raise ValueError(
                 "Unsupported/Invalid retrieval method: %s" % retrieval_method
             )
-        if dataset not in TOPICS:
-            raise ValueError("dataset %s not in TOPICS" % dataset)
-        if dataset in ["dl20", "dl21", "dl22"]:
-            topics_key = dataset
+        if topics_path:
+            self._topics = get_topics(topics_path)
+            if topics_path in ["dl20", "dl21", "dl22"]:
+                self._qrels = get_qrels(f"{topics_path}-passage")
+            else:
+                self._qrels = get_qrels(topics_path)
+                
+            if not index_path:
+                raise ValueError('prebuilt_index must be specified with prebuilt_topics')
+            
+            if os.path.exists(index_path):
+                self._index_reader = IndexReader(index_path)
+            elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
+                self._index_reader = IndexReader.from_prebuilt_index(index_path)
+            elif index_path in FAISS_INDEX_INFO:
+                base_index = FAISS_INDEX_INFO[index_path]["texts"]
+                self._index_reader = IndexReader.from_prebuilt_index(base_index)
+            else:
+                raise ValueError(f'Could not build IndexReader from topics: {topics_path}')
         else:
-            topics_key = TOPICS[dataset]
-        self._topics = get_topics(topics_key)
-        self._qrels = get_qrels(TOPICS[dataset])
-        self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
+            if dataset not in TOPICS:
+                raise ValueError("dataset %s not in TOPICS" % dataset)
+            if dataset in ["dl20", "dl21", "dl22"]:
+                topics_key = dataset
+            else:
+                topics_key = TOPICS[dataset]
+            self._topics = get_topics(topics_key)
+            self._qrels = get_qrels(TOPICS[dataset])
+            self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
 
     def _get_index(self, key: str = None) -> str:
         if not key:
