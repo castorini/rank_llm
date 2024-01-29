@@ -144,17 +144,6 @@ class PyseriniRetriever:
             )
 
     def retrieve(self, k=100, qid=None) -> List[Result]:
-        """
-        Retrieves documents for each query, specified by query id `qid`, in the configured topics.
-        Returns list of retrieved documents with specified ranking.
-
-        Args:
-            k (int, optional): The number of documents to retrieve for each query. Defaults to 100.
-            qid (optional): Specific query ID to retrieve for. Defaults to None.
-
-        Returns:
-            List[Result]: A list of retrieval results.
-        """
         ranks = []
         if isinstance(self._topics, str):
             self._retrieve_query(self._topics, ranks, k, qid)
@@ -167,31 +156,13 @@ class PyseriniRetriever:
         return ranks
 
     def num_queries(self) -> int:
-        """
-        Returns the number of queries in the configured topics list.
-
-        Returns:
-            int: The number of queries.
-        """
         if isinstance(self._topics, str):
             return 1
         return len(self._topics)
 
     def retrieve_and_store(
         self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True
-    ) -> List[Result]:
-        """
-        Retrieves documents and stores the results in the given formats.
-
-        Args:
-            k (int, optional): The number of documents to retrieve for each query. Defaults to 100.
-            qid (optional): Specific query ID to retrieve for. Defaults to None.
-            store_trec (bool, optional): Flag to store results in TREC format. Defaults to True.
-            store_qrels (bool, optional): Flag to store QRELS of the dataset. Defaults to True.
-
-        Returns:
-            List[Result]: The retrieval results.
-        """
+    ):
         results = self.retrieve(k, qid)
         Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
         Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
