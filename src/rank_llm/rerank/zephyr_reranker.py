@@ -18,7 +18,7 @@ class ZephyrReranker:
         variable_passages: bool = True,
         window_size: int = 20,
         system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query",
-    ):
+    ) -> None:
         agent = RankListwiseOSLLM(
             model=model_path,
             context_size=context_size,
@@ -41,7 +41,25 @@ class ZephyrReranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
-    ):
+    ) -> List[Result]:
+        """
+        Reranks a list of retrieved results using the Zephyr model.
+    
+        Args:
+            retrieved_results (List[Result]): The list of results to be reranked.
+            rank_start (int, optional): The starting rank for processing. Defaults to 0.
+            rank_end (int, optional): The end rank for processing. Defaults to 100.
+            window_size (int, optional): The size of each sliding window. Defaults to 20.
+            step (int, optional): The step size for moving the window. Defaults to 10.
+            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
+            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+
+        Returns:
+            List[Result]: A list containing the reranked results.
+
+        Note:
+            check 'rerank' for implementation details of reranking process.
+        """
         return self._reranker.rerank(
             retrieved_results=retrieved_results,
             rank_start=rank_start,

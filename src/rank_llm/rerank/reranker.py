@@ -22,7 +22,25 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
-    ):
+    ) -> List[Result]:
+        """
+        Reranks a list of retrieved results using the RankLLM agent.
+
+        This function applies a sliding window algorithm to rerank the results. 
+        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+
+        Args:
+            retrieved_results (List[Result]): The list of results to be reranked.
+            rank_start (int, optional): The starting rank for processing. Defaults to 0.
+            rank_end (int, optional): The end rank for processing. Defaults to 100.
+            window_size (int, optional): The size of each sliding window. Defaults to 20.
+            step (int, optional): The step size for moving the window. Defaults to 10.
+            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
+            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+
+        Returns:
+            List[Result]: A list containing the reranked results.
+        """
         rerank_results = []
         for result in tqdm(retrieved_results):
             rerank_result = self._agent.sliding_windows(
@@ -47,6 +65,28 @@ class Reranker:
         window_size: int = None,
         dataset_name: str = None,
     ) -> str:
+        """
+        Writes the reranked results to files in specified formats.
+
+        This function saves the reranked results in both TREC Eval format and JSON format. 
+        A summary of the ranking execution is saved as well.
+
+        Args:
+            retrieval_method_name (str): The name of the retrieval method.
+            results (List[Result]): The reranked results to be written.
+            shuffle_candidates (bool, optional): Indicates if the candidates were shuffled. Defaults to False.
+            top_k_candidates (int, optional): The number of top candidates considered. Defaults to 100.
+            pass_ct (int, optional): Pass count, if applicable. Defaults to None.
+            window_size (int, optional): The window size used in reranking. Defaults to None.
+            dataset_name (str, optional): The name of the dataset used. Defaults to None.
+
+        Returns:
+            str: The file name of the saved reranked results in TREC Eval format.
+
+        Note:
+            The function creates directories and files as needed. The file names are constructed based on the 
+            provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
+        """
         _modelname = self._agent._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
             _modelname = self._agent._model.split("/")[-2] + "_" + _modelname

@@ -8,6 +8,8 @@ from tqdm import tqdm
 
 from rank_llm.result import Result, RankingExecInfo
 
+import re
+
 
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
@@ -32,28 +34,78 @@ class RankLLM(ABC):
         self._num_few_shot_examples = num_few_shot_examples
 
     def max_tokens(self) -> int:
+        """
+        Returns the maximum number of tokens for a given model
+
+        Returns:
+            int: The maximum token count.
+        """
         return self._context_size
 
     @abstractmethod
     def run_llm(self, prompt: Union[str, List[Dict[str, str]]]) -> Tuple[str, int]:
+        """
+        Abstract method to run the target language model with a passed in prompt.
+
+        Args:
+            prompt (Union[str, List[Dict[str, str]]]): The prompt to be processed by the model.
+
+        Returns:
+            Tuple[str, int]: A tuple object containing the text response and the number of tokens in the response.
+        """
         pass
 
     @abstractmethod
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[Union[str, List[Dict[str, str]]], int]:
+        """
+        Abstract method to create a prompt based on the result and given ranking range.
+
+        Args:
+            result (Result): The result object containing data for prompt generation.
+            rank_start (int): The starting rank for prompt generation.
+            rank_end (int): The ending rank for prompt generation.
+
+        Returns:
+            Tuple[Union[str, List[Dict[str, str]]], int]: A tuple object containing the generated prompt and the number of tokens in the generated prompt.
+        """
         pass
 
     @abstractmethod
     def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+        """
+        Abstract method to calculate the number of tokens contained in the given prompt.
+
+        Args:
+            prompt (Union[str, List[Dict[str, str]]]): The prompt for which to compute the token count for.
+
+        Returns:
+            int: The number of tokens in the given prompt.
+        """
         pass
 
     @abstractmethod
     def cost_per_1k_token(self, input_token: bool) -> float:
+        """
+        Abstract method to calculate the cost per 1,000 tokens for the target language model.
+
+        Args:
+            input_token (bool): Flag to indicate if the cost is for input tokens or output tokens.
+
+        Returns:
+            float: The cost per 1,000 tokens.
+        """
         pass
 
     @abstractmethod
     def num_output_tokens(self) -> int:
+        """
+        Abstract method to estimate the number of tokens in the model's output, constrained by max tokens for the target language model.
+
+        Returns:
+            int: The estimated number of output tokens.
+        """
         pass
 
     def permutation_pipeline(
@@ -62,7 +114,19 @@ class RankLLM(ABC):
         rank_start: int,
         rank_end: int,
         logging: bool = False,
-    ):
+    ) -> Result:
+        """
+        Runs the permutation pipeline on the passed in result set within the passed in rank range.
+
+        Args:
+            result (Result): The result object to process.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+
+        Returns:
+            Result: The processed result object after applying permutation.
+        """
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
             print(f"prompt: {prompt}\n")
@@ -89,7 +153,22 @@ class RankLLM(ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
-    ):
+    ) -> Result:
+        """
+        Applies the sliding window algorithm to the reranking process.
+
+        Args:
+            retrieved_result (Result): The result object to process.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            window_size (int): The size of each sliding window.
+            step (int): The step size for moving the window.
+            shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
+            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+
+        Returns:
+            Result: The result object after applying the sliding window technique.
+        """
         rerank_result = copy.deepcopy(retrieved_result)
         if shuffle_candidates:
             # First randomly shuffle rerank_result between rank_start and rank_end
@@ -117,6 +196,19 @@ class RankLLM(ABC):
     def get_ranking_cost_upperbound(
         self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int
     ) -> Tuple[float, int]:
+        """
+        Calculates the upper bound of the ranking cost for a given set of parameters.
+
+        Args:
+            num_q (int): The number of queries.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            window_size (int): The size of each sliding window.
+            step (int): The step size for moving the window.
+
+        Returns:
+            Tuple[float, int]: A tuple object containing the cost and the total number of tokens used (input tokens + output tokens).
+        """
         # For every prompt generated for every query assume the max context size is used.
         num_promt = (rank_end - rank_start - window_size) / step + 1
         input_token_count = (
@@ -137,6 +229,19 @@ class RankLLM(ABC):
         window_size: int,
         step: int,
     ) -> Tuple[float, int]:
+        """
+        Calculates the ranking cost based on actual token counts from generated prompts.
+
+        Args:
+            retrieved_results (List[Dict[str, Any]]): A list of retrieved results for processing.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            window_size (int): The size of each sliding window.
+            step (int): The step size for moving the window.
+
+        Returns:
+            Tuple[float, int]: A tuple object containing the calculated cost and the total number of tokens used (input tokens + output tokens).
+        """
         input_token_count = 0
         output_token_count = 0
         # Go through the retrieval result using the sliding window and count the number of tokens for generated prompts.
@@ -177,6 +282,31 @@ class RankLLM(ABC):
     def receive_permutation(
         self, result: Result, permutation: str, rank_start: int, rank_end: int
     ) -> Result:
+        """
+        Processes and applies a permutation to the ranking results. 
+
+        This function takes a permutation string, representing the new order of items, 
+        and applies it to a subset of the ranking results. It adjusts the ranks and scores in the 
+        'result' object based on this permutation.
+
+        Args:
+            result (Result): The result object containing the initial ranking results.
+            permutation (str): A string representing the new order of items. 
+                            Each item in the string should correspond to a rank in the results.
+            rank_start (int): The starting index of the range in the results to which the permutation is applied.
+            rank_end (int): The ending index of the range in the results to which the permutation is applied.
+
+        Returns:
+            Result: The updated result object with the new ranking order applied.
+        
+        Note:
+            This function assumes that the permutation string is a sequence of integers separated by spaces.
+            Each integer in the permutation string corresponds to a 1-based index in the ranking results. 
+            The function first normalizes these to 0-based indices, removes duplicates, and then reorders 
+            the items in the specified range of the 'result.hits' list according to the permutation.
+            Items not mentioned in the permutation string remain in their original sequence but are moved after 
+            the permuted items.
+        """
         response = self._clean_response(permutation)
         response = [int(x) - 1 for x in response.split()]
         response = self._remove_duplicate(response)
@@ -191,3 +321,6 @@ class RankLLM(ABC):
             if "score" in result.hits[j + rank_start]:
                 result.hits[j + rank_start]["score"] = cut_range[j]["score"]
         return result
+
+    def _replace_number(self, s: str) -> str:
+        return re.sub(r"\[(\d+)\]", r"(\1)", s)
