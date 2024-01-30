@@ -1,5 +1,4 @@
 from enum import Enum
-import re
 import time
 from typing import Dict, Any, Union, List, Tuple, Optional
 
@@ -9,10 +8,6 @@ import tiktoken
 
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
 from rank_llm.result import Result
-
-
-def replace_number(s: str) -> str:
-    return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
 
 class SafeOpenai(RankLLM):
@@ -191,7 +186,10 @@ class SafeOpenai(RankLLM):
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
                 messages.append(
-                    {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
+                    {
+                        "role": "user",
+                        "content": f"[{rank}] {self._replace_number(content)}",
+                    }
                 )
                 messages.append(
                     {"role": "assistant", "content": f"Received passage [{rank}]."}
@@ -232,7 +230,7 @@ class SafeOpenai(RankLLM):
                 content = fix_text(content)
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                message += f'{psg_id} = "{replace_number(content)}"\n'
+                message += f'{psg_id} = "{self._replace_number(content)}"\n'
                 psg_ids.append(psg_id)
             message += f'QUESTION = "{query}"\n'
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
