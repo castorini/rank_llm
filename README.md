@@ -14,7 +14,28 @@ current_version = 0.2.3
 
 ## 📟 Instructions
 
-More instructions to be added soon!
+### Create Conda Environment
+
+```bash
+conda create -n rankllm python=3.10
+conda activate rankllm
+```
+
+### Install Pytorch with CUDA
+```bash
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
+### Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Run end to end Test
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
+--retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+```
 
 ## 🦙🐧 Model Zoo
 
