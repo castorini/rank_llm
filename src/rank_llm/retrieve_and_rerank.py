@@ -52,7 +52,7 @@ def retrieve_and_rerank(
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
-        from dotenv import dotenv_values, load_dotenv
+        from dotenv import load_dotenv
 
         load_dotenv(dotenv_path=f".env.local")
 

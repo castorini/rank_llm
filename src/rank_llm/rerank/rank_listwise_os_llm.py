@@ -1,9 +1,9 @@
 import json
 import random
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import torch
-from fastchat.model import add_model_args, get_conversation_template, load_model
+from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from transformers.generation import GenerationConfig
 

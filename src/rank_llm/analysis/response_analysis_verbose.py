@@ -10,8 +10,6 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank.rankllm import PromptMode
-
 
 class ResponseAnalyzer:
     def __init__(
