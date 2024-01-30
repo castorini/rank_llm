@@ -33,10 +33,23 @@ class Retriever:
 
     @staticmethod
     def from_inline_documents(query: str, documents: List[str]):
+        """
+        Creates a Retriever instance for inline documents with the passed in query.
+
+        Args:
+            query (str): The search query.
+            documents (List[str]): A list of documents to search from.
+
+        Returns:
+            List[Dict[str, Any]]: The retrieval results.
+
+        Raises:
+            ValueError: If query or documents are invalid or missing.
+        """
         if not query or query == "":
-            raise "Please provide a query string."
+            raise ValueError("Please provide a query string.")
         if not documents:
-            raise "Please provide a non-empty list of documents."
+            raise ValueError("Please provide a non-empty list of documents.")
         retriever = Retriever(
             RetrievalMode.QUERY_AND_DOCUMENTS, dataset=documents, query=query
         )
@@ -44,10 +57,24 @@ class Retriever:
 
     @staticmethod
     def from_inline_hits(query: str, hits: List[Dict[str, Any]]):
+        """
+        Creates a Retriever instance for inline hits with the passed in query.
+
+        Args:
+            query (str): The search query.
+            hits (List[Dict[str, Any]]): Predefined hits relevant to the query.
+
+        Returns:
+            List[Dict[str, Any]]: The retrieval results.
+
+        Raises:
+            ValueError: If query or hits are invalid or missing.
+        """
         if not query or query == "":
-            raise "Please provide a query string."
+            raise ValueError("Please provide a query string.")
         if not hits:
-            raise "Please provide a non-empty list of hits."
+            raise ValueError("Please provide a non-empty list of hits.")
+
         retriever = Retriever(RetrievalMode.QUERY_AND_HITS, dataset=hits, query=query)
         return retriever.retrieve()
 
@@ -55,8 +82,21 @@ class Retriever:
     def from_dataset_with_prebuit_index(
         dataset_name: str, retrieval_method: RetrievalMethod = RetrievalMethod.BM25
     ):
+        """
+        Creates a Retriever instance for a dataset with a prebuilt index.
+
+        Args:
+            dataset_name (str): The name of the dataset.
+            retrieval_method (RetrievalMethod): The retrieval method to be used (e.g. BM25).
+
+        Returns:
+            List[Dict[str, Any]]: The retrieval results.
+
+        Raises:
+            ValueError: If dataset name or retrieval method is invalid or missing.
+        """
         if not dataset_name:
-            raise "Please provide name of the dataset."
+            raise ValueError("Please provide name of the dataset.")
         if not isinstance(dataset_name, str):
             raise ValueError(
                 f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
@@ -76,6 +116,18 @@ class Retriever:
 
     @staticmethod
     def from_saved_results(file_name: str):
+        """
+        Creates a Retriever instance from saved retrieval results specified by 'file_name'.
+
+        Args:
+            file_name (str): The file name containing the saved retrieval results.
+
+        Returns:
+            List[Dict[str, Any]]: The retrieval results loaded from the file.
+
+        Raises:
+            ValueError: If the file content is not in the expected format.
+        """
         with open(file_name, "r") as f:
             retrieved_results = json.load(f)
         if not isinstance(retrieved_results, list):
@@ -86,6 +138,15 @@ class Retriever:
         return retriever.retrieve()
 
     def retrieve(self) -> List[Dict[str, Any]]:
+        """
+        Executes the retrieval process based on the configation provided with the Retriever instance.
+
+        Returns:
+            List[Dict[str, Any]]: A list of retrieval results.
+
+        Raises:
+            ValueError: If the retrieval mode is invalid or the result format is not as expected.
+        """
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
                 f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
