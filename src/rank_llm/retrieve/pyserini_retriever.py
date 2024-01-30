@@ -52,34 +52,19 @@ class PyseriniRetriever:
         if index_path:
             self._dataset = index_path
             if os.path.exists(index_path):
-                self._dataset = 'custom'
-                if index_type == 'lucene':
-                    self._searcher = LuceneSearcher(index_path)
-                elif index_type == 'impact':
-                    if onnx:
-                        self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0, encoder_type='onnx')
-                    else:
-                        self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0)
-                else:
-                    # Cannot retrieve docstrings from a dense index
-                    raise ValueError(f'index_type must be specified from [lucene, impact] when using custom index')
-            elif index_path in TF_INDEX_INFO:
-                self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
-            elif index_path in IMPACT_INDEX_INFO:
-                if onnx:
-                    self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0, encoder_type='onnx')
-                else:
-                    self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0)
-            elif index_path in FAISS_INDEX_INFO:
-                if not encoded_queries:
-                    # This can be worked around if we want to add the (many) arguments needed to create a custom QueryEncoder
-                    raise ValueError("encoded_queries must be specified for dense indices")
-                query_encoder = QueryEncoder.load_encoded_queries(encoded_queries)
-                self._searcher = FaissSearcher.from_prebuilt_index(index_path, query_encoder)
+                self._init_from_custom_index(index_path, index_type, encoder, onnx)
             else:
-                raise ValueError(f"Cannot build pre-built index: {index_path}")
+                self._init_from_prebuilt_index(index_path, encoder, onnx, encoded_queries)
+        else:
+            self._init_from_retrieval_method(dataset, retrieval_method)
         
-        elif retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
+        if topics_path:
+            self._init_prebuilt_topics(topics_path, index_path)
+        else:
+            self._init_topics_from_dict(dataset)
+    
+    def _init_from_retrieval_method(self, dataset: str, retrieval_method: RetrievalMethod):
+        if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             self._searcher = LuceneSearcher.from_prebuilt_index(self._get_index())
             if not self._searcher:
                 raise ValueError(
@@ -126,37 +111,70 @@ class PyseriniRetriever:
             raise ValueError(
                 "Unsupported/Invalid retrieval method: %s" % retrieval_method
             )
-        if topics_path:
-            # custom topics is harder, as each might need a different TopicReader: https://github.com/castorini/pyserini/blob/2f7702f2c55cb6f43d9150d3fddd1f3b7b11b0e3/pyserini/query_iterator.py#L82
-            self._topics = get_topics(topics_path)
-            if topics_path in ["dl20", "dl21", "dl22"]:
-                self._qrels = get_qrels(f"{topics_path}-passage")
+       
+    def _init_from_custom_index(self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False):
+        self._dataset = 'custom'
+        if index_type == 'lucene':
+            self._searcher = LuceneSearcher(index_path)
+        elif index_type == 'impact':
+            if onnx:
+                self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0, encoder_type='onnx')
             else:
-                self._qrels = get_qrels(topics_path)
-                
-            if not index_path:
-                raise ValueError('prebuilt_index must be specified with prebuilt_topics')
-            
-            if os.path.exists(index_path):
-                self._index_reader = IndexReader(index_path)
-            elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
-                self._index_reader = IndexReader.from_prebuilt_index(index_path)
-            elif index_path in FAISS_INDEX_INFO:
-                base_index = FAISS_INDEX_INFO[index_path]["texts"]
-                self._index_reader = IndexReader.from_prebuilt_index(base_index)
-            else:
-                raise ValueError(f'Could not build IndexReader from topics: {topics_path}')
+                self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0)
         else:
-            if dataset not in TOPICS:
-                raise ValueError("dataset %s not in TOPICS" % dataset)
-            if dataset in ["dl20", "dl21", "dl22"]:
-                topics_key = dataset
+            # Cannot retrieve docstrings from a dense index
+            raise ValueError(f'index_type must be specified from [lucene, impact] when using custom index')
+        
+    def _init_from_prebuilt_index(self, index_path: str, encoder: str = None, onnx: bool = False, encoded_queries: str = None):
+        if index_path in TF_INDEX_INFO:
+            self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
+        elif index_path in IMPACT_INDEX_INFO:
+            if onnx:
+                self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0, encoder_type='onnx')
             else:
-                topics_key = TOPICS[dataset]
-            self._topics = get_topics(topics_key)
-            self._qrels = get_qrels(TOPICS[dataset])
-            self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
+                self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0)
+        elif index_path in FAISS_INDEX_INFO:
+            if not encoded_queries:
+                # This can be worked around if we want to add the (many) arguments needed to create a custom QueryEncoder
+                raise ValueError("encoded_queries must be specified for dense indices")
+            query_encoder = QueryEncoder.load_encoded_queries(encoded_queries)
+            self._searcher = FaissSearcher.from_prebuilt_index(index_path, query_encoder)
+        else:
+            raise ValueError(f"Cannot build pre-built index: {index_path}")
 
+
+    def _init_prebuilt_topics(self, topics_path: str, index_path: str):
+        # custom topics is harder, as each might need a different TopicReader: https://github.com/castorini/pyserini/blob/2f7702f2c55cb6f43d9150d3fddd1f3b7b11b0e3/pyserini/query_iterator.py#L82
+        self._topics = get_topics(topics_path)
+        if topics_path in ["dl20", "dl21", "dl22"]:
+            self._qrels = get_qrels(f"{topics_path}-passage")
+        else:
+            self._qrels = get_qrels(topics_path)
+            
+        if not index_path:
+            raise ValueError('prebuilt_index must be specified with prebuilt_topics')
+        
+        if os.path.exists(index_path):
+            self._index_reader = IndexReader(index_path)
+        elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
+            self._index_reader = IndexReader.from_prebuilt_index(index_path)
+        elif index_path in FAISS_INDEX_INFO:
+            base_index = FAISS_INDEX_INFO[index_path]["texts"]
+            self._index_reader = IndexReader.from_prebuilt_index(base_index)
+        else:
+            raise ValueError(f'Could not build IndexReader from topics: {topics_path}')
+        
+    def _init_topics_from_dict(self, dataset: str):
+        if dataset not in TOPICS:
+            raise ValueError("dataset %s not in TOPICS" % dataset)
+        if dataset in ["dl20", "dl21", "dl22"]:
+            topics_key = dataset
+        else:
+            topics_key = TOPICS[dataset]
+        self._topics = get_topics(topics_key)
+        self._qrels = get_qrels(TOPICS[dataset])
+        self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
+        
     def _get_index(self, key: str = None) -> str:
         if not key:
             key = self._retrieval_method.value
