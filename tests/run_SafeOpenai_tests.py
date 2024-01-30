@@ -8,6 +8,8 @@ from rank_llm.rerank.rankllm import RankLLM, PromptMode
 valid_inputs = [
     ("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
     ("gpt-3.5-turbo", 4096, PromptMode.LRL, 0, "OPEN_AI_API_KEY", 3),
+    ("gpt-4", 4096, PromptMode.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
+    ("gpt-4", 4096, PromptMode.LRL, 0, "OPEN_AI_API_KEY", 3),
 ]
 
 failure_inputs = [
@@ -15,6 +17,15 @@ failure_inputs = [
     ("gpt-3.5-turbo", 4096, PromptMode.LRL, 0, None),  # missing key
     (
         "gpt-3.5-turbo",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        "OPEN_AI_API_KEY",
+    ),  # unpecified prompt mode
+    ("gpt-4", 4096, PromptMode.RANK_GPT, 0, None),  # missing key
+    ("gpt-4", 4096, PromptMode.LRL, 0, None),  # missing key
+    (
+        "gpt-4",
         4096,
         PromptMode.UNSPECIFIED,
         0,
@@ -49,7 +60,7 @@ def run_valid_input_tests(inputs):
         else:
             assert obj._cur_key_id == 0
 
-    print("Valid inputs tests passed")
+    print("\033[92mValid inputs tests passed\033[0m")
 
 
 def run_failure_input_tests(inputs):
@@ -67,7 +78,10 @@ def run_failure_input_tests(inputs):
             print("Exception raised correctly")
             count += 1
 
-    print(f"{count}/{len(inputs)} exceptions raised correctly")
+    if count == len(inputs):
+        print(f"\033[92m{count}/{len(inputs)} exceptions raised correctly\033[0m")
+    else:
+        print(f"\033[91m{count}/{len(inputs)} exceptions raised correctly\033[0m")
 
 
 if __name__ == "__main__":

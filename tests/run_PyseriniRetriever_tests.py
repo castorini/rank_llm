@@ -47,7 +47,7 @@ def run_valid_input_tests(input_pairs):
             key = "bm25"
         assert retriever._get_index() == INDICES[key][dataset]
 
-    print("Valid inputs tests passed")
+    print("\033[92mValid inputs tests passed\033[0m")
 
 
 def run_failure_input_tests(input_pairs):
@@ -59,7 +59,10 @@ def run_failure_input_tests(input_pairs):
             print("Exception raised correctly")
             count += 1
 
-    print(f"{count}/{len(input_pairs)} exceptions raised correctly")
+    if count == len(input_pairs):
+        print(f"\033[92m{count}/{len(input_pairs)} exceptions raised correctly\033[0m")
+    else:
+        print(f"\033[91m{count}/{len(input_pairs)} exceptions raised correctly\033[0m")
 
 
 def run_retrieve_tests(inputs):

@@ -31,6 +31,10 @@ valid_inputs = [
         "Default Message",
     ),
     ("castorini/rank_zephyr_7b_v1_full", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
+    ("castorini/rank_vicuna_7b_v1", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
+    ("castorini/rank_vicuna_7b_v1_noda", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
+    ("castorini/rank_vicuna_7b_v1_fp16", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
+    ("castorini/rank_vicuna_7b_v1_noda_fp16", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
 ]
 
 failure_inputs = [
@@ -45,6 +49,76 @@ failure_inputs = [
     ),
     (
         "castorini/rank_zephyr_7b_v1_full",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    ( "castorini/rank_vicuna_7b_v1_noda", 4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_fp16",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_fp16",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda_fp16",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda_fp16",
         4096,
         PromptMode.LRL,
         0,
@@ -82,7 +156,7 @@ def run_valid_input_tests(inputs):
         assert obj._window_size == window_size
         assert obj._system_message == system_message
 
-    print("Valid inputs tests passed")
+    print("\033[92mValid inputs tests passed\033[0m")
 
 
 def run_failure_input_tests(inputs):
@@ -109,8 +183,11 @@ def run_failure_input_tests(inputs):
         except:
             print("Exception raised correctly")
             count += 1
-
-    print(f"{count}/{len(inputs)} exceptions raised correctly")
+    
+    if count == len(inputs):
+        print(f"\033[92m{count}/{len(inputs)} exceptions raised correctly\033[0m")
+    else:
+        print(f"\033[91m{count}/{len(inputs)} exceptions raised correctly\033[0m")
 
 
 if __name__ == "__main__":
