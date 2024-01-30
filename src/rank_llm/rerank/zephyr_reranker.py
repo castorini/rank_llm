@@ -44,7 +44,7 @@ class ZephyrReranker:
     ) -> List[Result]:
         """
         Reranks a list of retrieved results using the Zephyr model.
-    
+
         Args:
             retrieved_results (List[Result]): The list of results to be reranked.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.

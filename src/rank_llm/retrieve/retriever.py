@@ -74,7 +74,7 @@ class Retriever:
             raise ValueError("Please provide a query string.")
         if not hits:
             raise ValueError("Please provide a non-empty list of hits.")
-        
+
         retriever = Retriever(RetrievalMode.QUERY_AND_HITS, dataset=hits, query=query)
         return retriever.retrieve()
 

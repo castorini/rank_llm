@@ -283,28 +283,28 @@ class RankLLM(ABC):
         self, result: Result, permutation: str, rank_start: int, rank_end: int
     ) -> Result:
         """
-        Processes and applies a permutation to the ranking results. 
+        Processes and applies a permutation to the ranking results.
 
-        This function takes a permutation string, representing the new order of items, 
-        and applies it to a subset of the ranking results. It adjusts the ranks and scores in the 
+        This function takes a permutation string, representing the new order of items,
+        and applies it to a subset of the ranking results. It adjusts the ranks and scores in the
         'result' object based on this permutation.
 
         Args:
             result (Result): The result object containing the initial ranking results.
-            permutation (str): A string representing the new order of items. 
+            permutation (str): A string representing the new order of items.
                             Each item in the string should correspond to a rank in the results.
             rank_start (int): The starting index of the range in the results to which the permutation is applied.
             rank_end (int): The ending index of the range in the results to which the permutation is applied.
 
         Returns:
             Result: The updated result object with the new ranking order applied.
-        
+
         Note:
             This function assumes that the permutation string is a sequence of integers separated by spaces.
-            Each integer in the permutation string corresponds to a 1-based index in the ranking results. 
-            The function first normalizes these to 0-based indices, removes duplicates, and then reorders 
+            Each integer in the permutation string corresponds to a 1-based index in the ranking results.
+            The function first normalizes these to 0-based indices, removes duplicates, and then reorders
             the items in the specified range of the 'result.hits' list according to the permutation.
-            Items not mentioned in the permutation string remain in their original sequence but are moved after 
+            Items not mentioned in the permutation string remain in their original sequence but are moved after
             the permuted items.
         """
         response = self._clean_response(permutation)

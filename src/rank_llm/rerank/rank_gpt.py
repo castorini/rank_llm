@@ -186,7 +186,10 @@ class SafeOpenai(RankLLM):
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
                 messages.append(
-                    {"role": "user", "content": f"[{rank}] {self._replace_number(content)}"}
+                    {
+                        "role": "user",
+                        "content": f"[{rank}] {self._replace_number(content)}",
+                    }
                 )
                 messages.append(
                     {"role": "assistant", "content": f"Received passage [{rank}]."}

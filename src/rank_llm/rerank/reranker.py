@@ -26,7 +26,7 @@ class Reranker:
         """
         Reranks a list of retrieved results using the RankLLM agent.
 
-        This function applies a sliding window algorithm to rerank the results. 
+        This function applies a sliding window algorithm to rerank the results.
         Each window of results is processed by the RankLLM agent to obtain a new ranking.
 
         Args:
@@ -68,7 +68,7 @@ class Reranker:
         """
         Writes the reranked results to files in specified formats.
 
-        This function saves the reranked results in both TREC Eval format and JSON format. 
+        This function saves the reranked results in both TREC Eval format and JSON format.
         A summary of the ranking execution is saved as well.
 
         Args:
@@ -84,7 +84,7 @@ class Reranker:
             str: The file name of the saved reranked results in TREC Eval format.
 
         Note:
-            The function creates directories and files as needed. The file names are constructed based on the 
+            The function creates directories and files as needed. The file names are constructed based on the
             provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
         """
         _modelname = self._agent._model.split("/")[-1]
