@@ -1,21 +1,20 @@
-from enum import Enum
 import json
+import os
+import sys
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List
 
 from pyserini.index import IndexReader
 from pyserini.search import (
-    LuceneSearcher,
-    LuceneImpactSearcher,
     FaissSearcher,
+    LuceneImpactSearcher,
+    LuceneSearcher,
     QueryEncoder,
-    get_topics,
     get_qrels,
+    get_topics,
 )
 from tqdm import tqdm
-
-import sys
-import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)

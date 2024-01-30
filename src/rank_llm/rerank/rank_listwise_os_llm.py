@@ -1,13 +1,13 @@
 import json
 import random
-from typing import Tuple, Dict, Any, Optional
+from typing import Any, Dict, Optional, Tuple
 
-from fastchat.model import load_model, get_conversation_template, add_model_args
-from ftfy import fix_text
 import torch
+from fastchat.model import add_model_args, get_conversation_template, load_model
+from ftfy import fix_text
 from transformers.generation import GenerationConfig
 
-from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.result import Result
 
 

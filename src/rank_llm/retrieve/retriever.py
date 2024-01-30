@@ -1,11 +1,10 @@
-from enum import Enum
 import json
+from enum import Enum
 from pathlib import Path
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.result import Result
+from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
 
 class RetrievalMode(Enum):

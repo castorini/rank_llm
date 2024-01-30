@@ -1,16 +1,14 @@
-from argparse import ArgumentParser
 import json
 import os
 import platform
-import pandas as pd
 import subprocess
+import sys
 import tempfile
+from argparse import ArgumentParser
 
+import pandas as pd
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
-
-import sys
-import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)

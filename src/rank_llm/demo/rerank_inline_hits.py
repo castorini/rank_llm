@@ -1,13 +1,13 @@
-import sys
 import os
+import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.retrieve.retriever import Retriever
 from rank_llm.rerank.zephyr_reranker import ZephyrReranker
+from rank_llm.retrieve.retriever import Retriever
 
 query = "how long is life cycle of flea"
 hits = [

@@ -1,9 +1,8 @@
 import json
+import os
+import sys
 from argparse import ArgumentParser
 from enum import Enum
-
-import sys
-import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)

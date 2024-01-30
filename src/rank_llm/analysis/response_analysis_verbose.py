@@ -2,10 +2,8 @@ import argparse
 import json
 import os
 import re
-from typing import List, Dict
-
 import sys
-import os
+from typing import Dict, List
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
