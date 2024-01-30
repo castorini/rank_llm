@@ -39,15 +39,7 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 
 ### Contributing
 
-Run the following command in the project root to set up pre-commit hooks:
-```bash
-pre-commit install
-```
-
-To manually make sure your code is correctly formatted, the following can be run:
-```bash
-pre-commit run --all-files
-```
+Please read [contribution guidelines](CONTRIBUTING.md) for details on contribution.
 
 ## 🦙🐧 Model Zoo
 
