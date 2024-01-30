@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from pyserini.index import IndexReader
 from pyserini.prebuilt_index_info import TF_INDEX_INFO, FAISS_INDEX_INFO, IMPACT_INDEX_INFO
+from pyserini.query_iterator import DefaultQueryIterator
 from pyserini.search import (
     LuceneSearcher,
     LuceneImpactSearcher,
@@ -50,7 +51,6 @@ class PyseriniRetriever:
         self._dataset = dataset
         self._retrieval_method = retrieval_method
         if index_path:
-            self._dataset = index_path
             if os.path.exists(index_path):
                 self._init_from_custom_index(index_path, index_type, encoder, onnx)
             else:
@@ -59,7 +59,10 @@ class PyseriniRetriever:
             self._init_from_retrieval_method(dataset, retrieval_method)
         
         if topics_path:
-            self._init_prebuilt_topics(topics_path, index_path)
+            if os.path.exists(topics_path):
+                self._init_custom_topics(topics_path, index_path)
+            else: 
+                self._init_prebuilt_topics(topics_path, index_path)
         else:
             self._init_topics_from_dict(dataset)
     
@@ -113,7 +116,7 @@ class PyseriniRetriever:
             )
        
     def _init_from_custom_index(self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False):
-        self._dataset = 'custom'
+        self._dataset = os.path.basename(index_path) # there could be a better way to indicate this
         if index_type == 'lucene':
             self._searcher = LuceneSearcher(index_path)
         elif index_type == 'impact':
@@ -126,6 +129,7 @@ class PyseriniRetriever:
             raise ValueError(f'index_type must be specified from [lucene, impact] when using custom index')
         
     def _init_from_prebuilt_index(self, index_path: str, encoder: str = None, onnx: bool = False, encoded_queries: str = None):
+        self._dataset = index_path
         if index_path in TF_INDEX_INFO:
             self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
         elif index_path in IMPACT_INDEX_INFO:
@@ -142,18 +146,7 @@ class PyseriniRetriever:
         else:
             raise ValueError(f"Cannot build pre-built index: {index_path}")
 
-
-    def _init_prebuilt_topics(self, topics_path: str, index_path: str):
-        # custom topics is harder, as each might need a different TopicReader: https://github.com/castorini/pyserini/blob/2f7702f2c55cb6f43d9150d3fddd1f3b7b11b0e3/pyserini/query_iterator.py#L82
-        self._topics = get_topics(topics_path)
-        if topics_path in ["dl20", "dl21", "dl22"]:
-            self._qrels = get_qrels(f"{topics_path}-passage")
-        else:
-            self._qrels = get_qrels(topics_path)
-            
-        if not index_path:
-            raise ValueError('prebuilt_index must be specified with prebuilt_topics')
-        
+    def _init_custom_index_reader(self, index_path: str, topics_path: str):
         if os.path.exists(index_path):
             self._index_reader = IndexReader(index_path)
         elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
@@ -163,6 +156,22 @@ class PyseriniRetriever:
             self._index_reader = IndexReader.from_prebuilt_index(base_index)
         else:
             raise ValueError(f'Could not build IndexReader from topics: {topics_path}')
+
+    def _init_custom_topics(self, topics_path: str, index_path: str):
+        self._topics = DefaultQueryIterator.from_topics(topics_path).topics
+        self._init_custom_index_reader(index_path, topics_path)
+
+    def _init_prebuilt_topics(self, topics_path: str, index_path: str):
+        self._topics = get_topics(topics_path)
+        if topics_path in ["dl20", "dl21", "dl22"]:
+            self._qrels = get_qrels(f"{topics_path}-passage")
+        else:
+            self._qrels = get_qrels(topics_path)
+            
+        if not index_path:
+            raise ValueError('prebuilt_index must be specified with prebuilt_topics')
+        
+        self._init_custom_index_reader(index_path, topics_path)
         
     def _init_topics_from_dict(self, dataset: str):
         if dataset not in TOPICS:
