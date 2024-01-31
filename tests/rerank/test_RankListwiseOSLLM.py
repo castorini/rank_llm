@@ -255,20 +255,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
 
         output = agent.num_output_tokens()
         self.assertEqual(output, 19)
-        # print(output)
 
-        # Testing for a valid dataset
-        # num_output_tokens
-        # index = agent._get_index()
-        # self.assertEqual(index, "msmarco-v1-passage")
-
-        # Testing for an invalid dataset
-        # with self.assertRaises(ValueError):
-        #     agent._dataset = "invalid_dataset"
-        #     agent._model = "wrong_model_path"
-        # agent._num_output_tokens()
-
-    # @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.run_llm")
     def test_run_llm(self):
         agent = RankListwiseOSLLM(
             "castorini/rank_zephyr_7b_v1_full",
@@ -286,7 +273,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertEqual(output, expected_output)
         self.assertEqual(size, len([char for char in output if char != " "]))
 
-    # @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.")
     def test_create_prompt(
         self,
     ):
@@ -301,7 +287,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
         import re
-
         def get_first_int(s):
             match = re.search(r"\d+", s)
             return int(match.group()) if match else None
@@ -312,25 +297,22 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             expected_output = min(end, len(r.hits)) - max(0, start)
             self.assertEqual(get_first_int(prompt), max(expected_output, 0))
 
-    # def test_get_num_tokens(self):
-    #     agent = RankListwiseOSLLM(
-    #         "castorini/rank_zephyr_7b_v1_full",
-    #         4096,
-    #         PromptMode.RANK_GPT,
-    #         0,
-    #         variable_passages=True,
-    #         window_size=5,
-    #         system_message="",
-    #     )
+    def test_get_num_tokens(self):
+        agent = RankListwiseOSLLM(
+            "castorini/rank_zephyr_7b_v1_full",
+            4096,
+            PromptMode.RANK_GPT,
+            0,
+            variable_passages=True,
+            window_size=5,
+            system_message="",
+        )
 
-    #     output = agent.get_num_tokens(
-    #         "How are you doing? What is your name? What is your age? What is your favorite color?sdf"
-    #     )
-    #     print(f"length {output}")
+        output = agent.get_num_tokens(
+            "How are you doing? What is your name? What is your age? What is your favorite color?"
+        )
+        self.assertEqual(output, 22)
 
 
 if __name__ == "__main__":
-    # run_valid_input_tests(valid_inputs)
-    # run_failure_input_tests(failure_inputs)
-
     unittest.main()

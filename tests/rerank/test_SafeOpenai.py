@@ -1,6 +1,5 @@
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
-
 import unittest
 from unittest.mock import patch, MagicMock
 from rank_llm.result import Result
@@ -129,7 +128,9 @@ class TestSafeOpenai(unittest.TestCase):
                     keys=keys,
                 )
 
-    def test_run_llm(self):
+    @patch("rank_llm.rerank.rank_gpt.SafeOpenai._call_completion")
+    def test_run_llm(self, mock_call_completion):
+        mock_call_completion.return_value = "mock_response"
         agent = SafeOpenai(
             model="gpt-3.5",
             context_size=4096,
@@ -138,17 +139,9 @@ class TestSafeOpenai(unittest.TestCase):
             keys="OPEN_AI_API_KEY",
         )
 
-        # output, size = agent.run_llm("how are you?")
-        # print(output, size)
-
-        # obj._llm = MagicMock()
-        # obj._tokenizer = MagicMock()
-        # obj._llm.generate.return_value = (
-        #     [MagicMock()],
-        #     [MagicMock()],
-        # )
-        # obj._tokenizer.decode.return_value = "test"
-        # obj._tokenizer.decode.side_effect
+        output, size = agent.run_llm("how are you?")
+        self.assertEqual(output, "mock_response")
+        self.assertEqual(size, 2)
 
     def test_num_output_tokens(self):
         agent = SafeOpenai(
