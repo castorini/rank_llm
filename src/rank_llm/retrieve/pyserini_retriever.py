@@ -110,7 +110,7 @@ class PyseriniRetriever:
             if key == "bm25_rm3":
                 key = "bm25"
         if self._dataset not in INDICES[key]:
-            raise ValueError("dataset %s not in INDICES[%s]" % self._dataset, key)
+            raise ValueError("dataset %s not in INDICES[%s]" % (self._dataset, key))
         return INDICES[key][self._dataset]
 
     def _retrieve_query(
