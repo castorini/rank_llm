@@ -13,6 +13,7 @@ class RetrievalMode(Enum):
     QUERY_AND_DOCUMENTS = "query_and_documents"
     QUERY_AND_HITS = "query_and_hits"
     SAVED_FILE = "saved_file"
+    CUSTOM = "custom"
 
     def __str__(self):
         return self.value
@@ -25,11 +26,17 @@ class Retriever:
         dataset: Union[str, List[str], List[Dict[str, Any]]],
         retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
         query: str = None,
+        index_path: str = None,
+        topics_path: str = None,
+        index_type: str = None,
     ) -> None:
         self._retrieval_mode = retrieval_mode
         self._dataset = dataset
         self._retrieval_method = retrieval_method
         self._query = query
+        self._index_path = index_path
+        self._topics_path = topics_path
+        self._index_type = index_type
 
     @staticmethod
     def from_inline_documents(query: str, documents: List[str]):
@@ -84,15 +91,38 @@ class Retriever:
             )
         retriever = Retriever(RetrievalMode.SAVED_FILE, dataset=retrieved_results)
         return retriever.retrieve()
+    
+    @staticmethod
+    def from_custom_index(index_path: str, topics_path: str, index_type: str):
+        if not index_path:
+            raise ValueError("Please provide a path to the index")
+        if not topics_path:
+            raise ValueError("Please provide a path to the topics file")
+        if index_type not in ['lucene', 'impact']:
+            raise ValueError(f"index_type must be [lucene, impact], not {index_type}")
+        
+        retriever = Retriever(
+            RetrievalMode.CUSTOM, 
+            dataset=None, 
+            retrieval_method=RetrievalMethod.UNSPECIFIED, 
+            index_path=index_path, 
+            topics_path=topics_path, 
+            index_type=index_type
+        )
+        return retriever.retrieve()
 
     def retrieve(self) -> List[Dict[str, Any]]:
-        if self._retrieval_mode == RetrievalMode.DATASET:
+        if self._retrieval_mode == RetrievalMode.DATASET or self._retrieval_mode == RetrievalMode.CUSTOM:
             candidates_file = Path(
                 f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
             )
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
-                pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
+                if self._retrieval_mode == RetrievalMode.DATASET:
+                    pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
+                elif self._retrieval_mode == RetrievalMode.CUSTOM:
+                    pyserini = PyseriniRetriever(index_path=self._index_path, topics_path=self._topics_path, index_type=self._index_type)
+                
                 # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
                 retrieved_results = pyserini.retrieve_and_store(k=100)
             else:
