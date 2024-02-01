@@ -116,7 +116,7 @@ class PyseriniRetriever:
             )
        
     def _init_from_custom_index(self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False):
-        self._dataset = os.path.basename(index_path) # there could be a better way to indicate this
+        self._dataset = os.path.basename(os.path.normpath(index_path)) # there could be a better way to indicate this
         if index_type == 'lucene':
             self._searcher = LuceneSearcher(index_path)
         elif index_type == 'impact':
@@ -159,6 +159,7 @@ class PyseriniRetriever:
 
     def _init_custom_topics(self, topics_path: str, index_path: str):
         self._topics = DefaultQueryIterator.from_topics(topics_path).topics
+        self._qrels = None
         self._init_custom_index_reader(index_path, topics_path)
 
     def _init_prebuilt_topics(self, topics_path: str, index_path: str):
@@ -231,7 +232,7 @@ class PyseriniRetriever:
             return ranks
 
         for qid in tqdm(self._topics):
-            if qid in self._qrels:
+            if self._qrels is None or qid in self._qrels:
                 query = self._topics[qid]["title"]
                 self._retrieve_query(query, ranks, k, qid)
         return ranks
@@ -255,7 +256,7 @@ class PyseriniRetriever:
             f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
         )
         # Store the QRELS of the dataset if specified
-        if store_qrels:
+        if store_qrels and self._qrels:
             Path("qrels/").mkdir(parents=True, exist_ok=True)
             with open(f"qrels/qrels_{self._dataset}.json", "w") as f:
                 json.dump(self._qrels, f, indent=2)
