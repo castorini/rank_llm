@@ -23,6 +23,12 @@ class ResponseAnalyzer:
         self._files = files
 
     def read_saved_responses(self) -> List[str]:
+        """
+        Reads responses from the specified files and produces the total number of passages.
+
+        Returns:
+            Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
+        """
         num_passages = []
         responses = []
         for filename in self._files:
@@ -60,6 +66,17 @@ class ResponseAnalyzer:
     def count_errors(
         self, responses: List[str], num_passages: List[int], verbose: bool = False
     ) -> Dict[str, int]:
+        """
+        Counts an array of different types of errors in the given responses.
+
+        Args:
+            responses (List[str]): A list of response strings.
+            num_passages (List[int]): A list of the expected number of passages in each response.
+            verbose (bool, optional): If True, prints the erroneous responses. Defaults to False.
+
+        Returns:
+            Dict[str, int]: A dictionary object containing counts of different types of errors.
+        """
         stats_dict = {
             "ok": 0,
             "wrong_format": 0,
