@@ -1,5 +1,5 @@
 import os
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.rank_gpt import SafeOpenai
@@ -7,7 +7,7 @@ from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.retriever import Retriever, RetrievalMode
+from rank_llm.retrieve.retriever import RetrievalMode, Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
 
@@ -52,7 +52,7 @@ def retrieve_and_rerank(
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
-        from dotenv import dotenv_values, load_dotenv
+        from dotenv import load_dotenv
 
         load_dotenv(dotenv_path=f".env.local")
 

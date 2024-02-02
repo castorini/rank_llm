@@ -1,15 +1,15 @@
 import argparse
-
-import sys
 import os
+import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.analysis.response_analysis_verbose import ResponseAnalyzer
+from rank_llm.rerank.rankllm import PromptMode
+
 
 def main(args):
     response_analyzer = ResponseAnalyzer(args.files, 100, PromptMode.RANK_GPT)
@@ -18,6 +18,7 @@ def main(args):
 
     print(response_analyzer.count_errors(responses, num_passages, args.verbose))
     # Print normalized scores
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

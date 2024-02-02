@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from src.rank_llm.result import Result
 from src.rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod

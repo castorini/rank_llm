@@ -1,19 +1,19 @@
 import json
-from argparse import ArgumentParser
-
-import sys
 import os
+import sys
+from argparse import ArgumentParser
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
+from rank_llm.analysis.estimate_costs import EstimationMode
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_llm.retrieve.topics_dict import TOPICS
-from rank_llm.analysis.estimate_costs import EstimationMode
+
 
 def main(args):
     estimation_mode = args.estimation_mode
@@ -63,6 +63,7 @@ def main(args):
     )
     total_cost = sum(cost for cost in costs.values())
     print(f"The total estimated cost is {total_cost}.\n")
+
 
 """
 python src/rank_llm/analysis/estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_mode=rank_GPT

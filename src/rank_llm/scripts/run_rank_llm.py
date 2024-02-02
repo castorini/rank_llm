@@ -1,6 +1,6 @@
 import argparse
-import sys
 import os
+import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
@@ -11,8 +11,8 @@ import torch
 
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.topics_dict import TOPICS
 from rank_llm.retrieve.retriever import RetrievalMode
+from rank_llm.retrieve.topics_dict import TOPICS
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 

@@ -1,17 +1,14 @@
 import json
 import os
 import re
-from typing import List, Dict
-
 import sys
-import os
+from typing import Dict, List
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank.rankllm import PromptMode
 
 class ResponseAnalyzer:
     def __init__(

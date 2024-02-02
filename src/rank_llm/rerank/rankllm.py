@@ -1,14 +1,13 @@
-from abc import ABC, abstractmethod
 import copy
-from enum import Enum
 import random
-from typing import List, Union, Dict, Any, Tuple
+import re
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Any, Dict, List, Tuple, Union
 
 from tqdm import tqdm
 
-from rank_llm.result import Result, RankingExecInfo
-
-import re
+from rank_llm.result import RankingExecInfo, Result
 
 
 class PromptMode(Enum):
