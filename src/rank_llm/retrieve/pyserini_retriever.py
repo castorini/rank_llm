@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Dict, List
 
 from pyserini.index import IndexReader
+from pyserini.prebuilt_index_info import TF_INDEX_INFO, FAISS_INDEX_INFO, IMPACT_INDEX_INFO
+from pyserini.query_iterator import DefaultQueryIterator
 from pyserini.search import (
     LuceneSearcher,
     LuceneImpactSearcher,
@@ -42,10 +44,29 @@ class RetrievalMethod(Enum):
 
 class PyseriniRetriever:
     def __init__(
-        self, dataset: str, retrieval_method: RetrievalMethod = RetrievalMethod.BM25
+        self, dataset: str = None, retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
+        index_path: str = None, topics_path: str = None, index_type: str = None,
+        encoder: str = None, onnx: bool = False, encoded_queries: str = None,
     ) -> None:
         self._dataset = dataset
         self._retrieval_method = retrieval_method
+        if index_path:
+            if os.path.exists(index_path):
+                self._init_from_custom_index(index_path, index_type, encoder, onnx)
+            else:
+                self._init_from_prebuilt_index(index_path, encoder, onnx, encoded_queries)
+        else:
+            self._init_from_retrieval_method(dataset, retrieval_method)
+        
+        if topics_path:
+            if os.path.exists(topics_path):
+                self._init_custom_topics(topics_path, index_path)
+            else: 
+                self._init_prebuilt_topics(topics_path, index_path)
+        else:
+            self._init_topics_from_dict(dataset)
+    
+    def _init_from_retrieval_method(self, dataset: str, retrieval_method: RetrievalMethod):
         if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             self._searcher = LuceneSearcher.from_prebuilt_index(self._get_index())
             if not self._searcher:
@@ -93,6 +114,67 @@ class PyseriniRetriever:
             raise ValueError(
                 "Unsupported/Invalid retrieval method: %s" % retrieval_method
             )
+       
+    def _init_from_custom_index(self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False):
+        self._dataset = os.path.basename(os.path.normpath(index_path)) # there could be a better way to indicate this
+        if index_type == 'lucene':
+            self._searcher = LuceneSearcher(index_path)
+        elif index_type == 'impact':
+            if onnx:
+                self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0, encoder_type='onnx')
+            else:
+                self._searcher = LuceneImpactSearcher(index_path, encoder, min_idf=0)
+        else:
+            # Cannot retrieve docstrings from a dense index
+            raise ValueError(f'index_type must be specified from [lucene, impact] when using custom index')
+        
+    def _init_from_prebuilt_index(self, index_path: str, encoder: str = None, onnx: bool = False, encoded_queries: str = None):
+        self._dataset = index_path
+        if index_path in TF_INDEX_INFO:
+            self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
+        elif index_path in IMPACT_INDEX_INFO:
+            if onnx:
+                self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0, encoder_type='onnx')
+            else:
+                self._searcher = LuceneImpactSearcher.from_prebuilt_index(index_path, encoder, min_idf=0)
+        elif index_path in FAISS_INDEX_INFO:
+            if not encoded_queries:
+                # This can be worked around if we want to add the (many) arguments needed to create a custom QueryEncoder
+                raise ValueError("encoded_queries must be specified for dense indices")
+            query_encoder = QueryEncoder.load_encoded_queries(encoded_queries)
+            self._searcher = FaissSearcher.from_prebuilt_index(index_path, query_encoder)
+        else:
+            raise ValueError(f"Cannot build pre-built index: {index_path}")
+
+    def _init_custom_index_reader(self, index_path: str, topics_path: str):
+        if os.path.exists(index_path):
+            self._index_reader = IndexReader(index_path)
+        elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
+            self._index_reader = IndexReader.from_prebuilt_index(index_path)
+        elif index_path in FAISS_INDEX_INFO:
+            base_index = FAISS_INDEX_INFO[index_path]["texts"]
+            self._index_reader = IndexReader.from_prebuilt_index(base_index)
+        else:
+            raise ValueError(f'Could not build IndexReader from topics: {topics_path}')
+
+    def _init_custom_topics(self, topics_path: str, index_path: str):
+        self._topics = DefaultQueryIterator.from_topics(topics_path).topics
+        self._qrels = None
+        self._init_custom_index_reader(index_path, topics_path)
+
+    def _init_prebuilt_topics(self, topics_path: str, index_path: str):
+        self._topics = get_topics(topics_path)
+        if topics_path in ["dl20", "dl21", "dl22"]:
+            self._qrels = get_qrels(f"{topics_path}-passage")
+        else:
+            self._qrels = get_qrels(topics_path)
+            
+        if not index_path:
+            raise ValueError('prebuilt_index must be specified with prebuilt_topics')
+        
+        self._init_custom_index_reader(index_path, topics_path)
+        
+    def _init_topics_from_dict(self, dataset: str):
         if dataset not in TOPICS:
             raise ValueError("dataset %s not in TOPICS" % dataset)
         if dataset in ["dl20", "dl21", "dl22"]:
@@ -102,7 +184,7 @@ class PyseriniRetriever:
         self._topics = get_topics(topics_key)
         self._qrels = get_qrels(TOPICS[dataset])
         self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
-
+        
     def _get_index(self, key: str = None) -> str:
         if not key:
             key = self._retrieval_method.value
@@ -161,7 +243,7 @@ class PyseriniRetriever:
             return ranks
 
         for qid in tqdm(self._topics):
-            if qid in self._qrels:
+            if self._qrels is None or qid in self._qrels:
                 query = self._topics[qid]["title"]
                 self._retrieve_query(query, ranks, k, qid)
         return ranks
@@ -203,7 +285,7 @@ class PyseriniRetriever:
             f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
         )
         # Store the QRELS of the dataset if specified
-        if store_qrels:
+        if store_qrels and self._qrels:
             Path("qrels/").mkdir(parents=True, exist_ok=True)
             with open(f"qrels/qrels_{self._dataset}.json", "w") as f:
                 json.dump(self._qrels, f, indent=2)
