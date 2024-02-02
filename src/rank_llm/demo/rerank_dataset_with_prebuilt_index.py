@@ -25,8 +25,14 @@ reranker = VicunaReranker()
 rerank_results = reranker.rerank(retrieved_results)
 print(rerank_results)
 
+from pathlib import Path
 from rank_llm.result import ResultsWriter
-results_writer = ResultsWriter(rerank_results)
-results_writer.write_in_json_format("sorted_hits.json")
-results_writer.write_in_trec_eval_format("output.trec")
-results_writer.write_ranking_exec_summary("ranking_execution_summary.json")
+
+# write rerank results
+writer = ResultsWriter(rerank_results)
+Path(f"demo_outputs/").mkdir(
+    parents=True, exist_ok=True
+)
+writer.write_in_json_format(f"demo_outputs/rerank_results.json")
+writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.trec")
+writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")
