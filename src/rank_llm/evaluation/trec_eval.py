@@ -24,7 +24,17 @@ from rank_llm.retrieve.topics_dict import TOPICS
 
 class EvalFunction:
     @staticmethod
-    def trunc(qrels, run):
+    def trunc(qrels: str, run: str):
+        """
+        Truncates the qrels file to only include queries that are present in the given run file.
+
+        Args:
+            qrels (str): Path to the qrels file.
+            run (str): Path to the run file.
+
+        Returns:
+            str: Path to the truncated qrels file.
+        """
         qrels = get_qrels_file(qrels)
         run = pd.read_csv(run, sep="\s+", header=None)
         qrels = pd.read_csv(qrels, sep="\s+", header=None)
@@ -38,6 +48,16 @@ class EvalFunction:
 
     @staticmethod
     def eval(args, trunc=True):
+        """
+        Runs the evaluation script with the given list of arguments and options.
+
+        Args:
+            args (list): Arguments to be passed to the evaluation script.
+            trunc (bool, optional): Indicates whether to truncate qrels file. Defaults to True.
+
+        Returns:
+            str: Evaluation results as a string.
+        """
         script_path = download_evaluation_script("trec_eval")
         cmd_prefix = ["java", "-jar", script_path]
         # args = sys.argv

@@ -1,5 +1,4 @@
 from enum import Enum
-import re
 import time
 from typing import Dict, Any, Union, List, Tuple, Optional
 
@@ -11,10 +10,6 @@ from rank_llm.rerank.rankllm import RankLLM, PromptMode
 from rank_llm.result import Result
 
 
-def replace_number(s: str) -> str:
-    return re.sub(r"\[(\d+)\]", r"(\1)", s)
-
-
 class SafeOpenai(RankLLM):
     def __init__(
         self,
@@ -22,6 +17,7 @@ class SafeOpenai(RankLLM):
         context_size: int,
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
+        window_size: int = 20,
         keys=None,
         key_start_id=None,
         proxy=None,
@@ -39,6 +35,8 @@ class SafeOpenai(RankLLM):
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
             )
 
+        self._window_size = window_size
+        self._output_token_estimate = None
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
@@ -135,8 +133,31 @@ class SafeOpenai(RankLLM):
     def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
-    def num_output_tokens(self) -> int:
-        return 200
+    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+        if current_window_size is None:
+            current_window_size = self._window_size
+        if self._output_token_estimate and self._window_size == current_window_size:
+            return self._output_token_estimate
+        else:
+            try:
+                encoder = tiktoken.get_encoding(self._model)
+            except:
+                encoder = tiktoken.get_encoding("cl100k_base")
+
+            _output_token_estimate = (
+                len(
+                    encoder.encode(
+                        " > ".join([f"[{i+1}]" for i in range(current_window_size)])
+                    )
+                )
+                - 1
+            )
+            if (
+                self._output_token_estimate is None
+                and self._window_size == current_window_size
+            ):
+                self._output_token_estimate = _output_token_estimate
+            return _output_token_estimate
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
@@ -152,7 +173,7 @@ class SafeOpenai(RankLLM):
         query = result.query
         num = len(result.hits[rank_start:rank_end])
 
-        max_length = 300 * (20 / (rank_end - rank_start))
+        max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
             messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
@@ -165,7 +186,10 @@ class SafeOpenai(RankLLM):
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
                 messages.append(
-                    {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
+                    {
+                        "role": "user",
+                        "content": f"[{rank}] {self._replace_number(content)}",
+                    }
                 )
                 messages.append(
                     {"role": "assistant", "content": f"Received passage [{rank}]."}
@@ -206,7 +230,7 @@ class SafeOpenai(RankLLM):
                 content = fix_text(content)
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                message += f'{psg_id} = "{replace_number(content)}"\n'
+                message += f'{psg_id} = "{self._replace_number(content)}"\n'
                 psg_ids.append(psg_id)
             message += f'QUESTION = "{query}"\n'
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"

@@ -1,6 +1,5 @@
 import json
 import random
-import re
 from typing import Tuple, Dict, Any, Optional
 
 from fastchat.model import load_model, get_conversation_template, add_model_args
@@ -10,10 +9,6 @@ from transformers.generation import GenerationConfig
 
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
 from rank_llm.result import Result
-
-
-def replace_number(s):
-    return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
 
 class RankListwiseOSLLM(RankLLM):
@@ -129,7 +124,7 @@ class RankListwiseOSLLM(RankLLM):
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                input_context += f"[{rank}] {replace_number(content)}\n"
+                input_context += f"[{rank}] {self._replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)
             conv.append_message(conv.roles[0], input_context)
