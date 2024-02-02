@@ -19,7 +19,7 @@ wget https://raw.githubusercontent.com/castorini/anserini-tools/master/topics-an
 """
 
 retrieved_results = Retriever.from_custom_index(
-    index_path="path/to/lucene-index.beir-v1.0.0-fiqa.flat.20221116.505594.409b779e8a39813d2fbdfd1ea2f009e9",
+    index_path="path/to/lucene-index.beir-v1.0.0-fiqa.flat.20221116.505594",
     topics_path="path/to/topics.beir-v1.0.0-fiqa.test.tsv.gz",
     index_type="lucene",
 )
