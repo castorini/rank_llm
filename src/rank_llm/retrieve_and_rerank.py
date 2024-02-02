@@ -98,7 +98,9 @@ def retrieve_and_rerank(
     elif retrieval_mode == RetrievalMode.SAVED_FILE:
         retrieved_results = Retriever.from_saved_results(file_name=dataset)
     elif retrieval_mode == RetrievalMode.CUSTOM:
-        retrieved_results = Retriever.from_custom_index(index_path=index_path, topics_path=topics_path, index_type=index_type)
+        retrieved_results = Retriever.from_custom_index(
+            index_path=index_path, topics_path=topics_path, index_type=index_type
+        )
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print("Reranking:")

@@ -148,23 +148,31 @@ class Retriever:
             )
         retriever = Retriever(RetrievalMode.SAVED_FILE, dataset=retrieved_results)
         return retriever.retrieve()
-    
+
     @staticmethod
-    def from_custom_index(index_path: str, topics_path: str, index_type: str, encoder: str = None, onnx: bool = False):
+    def from_custom_index(
+        index_path: str,
+        topics_path: str,
+        index_type: str,
+        encoder: str = None,
+        onnx: bool = False,
+    ):
         if not index_path:
             raise ValueError("Please provide a path to the index")
         if not topics_path:
             raise ValueError("Please provide a path to the topics file")
-        if index_type not in ['lucene', 'impact']:
+        if index_type not in ["lucene", "impact"]:
             raise ValueError(f"index_type must be [lucene, impact], not {index_type}")
-        
-        index_name = os.path.basename(os.path.normpath(index_path)) # implied from name of index dir
+
+        index_name = os.path.basename(
+            os.path.normpath(index_path)
+        )  # implied from name of index dir
         retriever = Retriever(
-            RetrievalMode.CUSTOM, 
-            dataset=index_name, 
-            retrieval_method=RetrievalMethod.UNSPECIFIED, 
-            index_path=index_path, 
-            topics_path=topics_path, 
+            RetrievalMode.CUSTOM,
+            dataset=index_name,
+            retrieval_method=RetrievalMethod.UNSPECIFIED,
+            index_path=index_path,
+            topics_path=topics_path,
             index_type=index_type,
             encoder=encoder,
             onnx=onnx,
@@ -188,7 +196,6 @@ class Retriever:
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
                 pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
-                
                 # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
                 retrieved_results = pyserini.retrieve_and_store(k=100)
             else:
@@ -228,7 +235,7 @@ class Retriever:
                     topics_path=self._topics_path,
                     index_type=self._index_type,
                     encoder=self._encoder,
-                    onnx=self._onnx
+                    onnx=self._onnx,
                 )
                 retrieved_results = pyserini.retrieve_and_store(k=100)
             else:
