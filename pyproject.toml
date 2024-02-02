@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rank-llm"
-version = "0.2.3"
+version = "0.2.6"
 description = "A Package for running prompt decoders like RankVicuna"
 readme = "README.md"
 authors = [
@@ -20,26 +20,17 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 keywords = ["prompt-decoder", "RankVicuna", "RankZephyr", "RankLLM", "information retrieval", "neural ranking", "LLM"]
-dependencies = [
-    "tqdm == 4.66.1",
-    "openai == 1.9.0",
-    "tiktoken == 0.5.2",
-    "transformers == 4.37.0",
-    "pyserini == 0.24.0",
-    "python-dotenv == 1.0.1",
-    "faiss-cpu == 1.7.2",
-    "faiss-gpu == 1.7.2",
-    "ftfy == 6.1.3",
-    "fschat == 0.2.35",
-    "accelerate == 0.26.1",
-]
-requires-python = ">=3.10"
+dynamic = ["dependencies"]
+requires-python = ">= 3.10"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
 
 [tool.bumpver]
-current_version = "0.2.3"
+current_version = "0.2.6"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
