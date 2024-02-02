@@ -21,3 +21,9 @@ retrieved_results = Retriever.from_inline_documents(query, documents=docs)
 reranker = ZephyrReranker()
 rerank_results = reranker.rerank(retrieved_results)
 print(rerank_results)
+
+from rank_llm.result import ResultsWriter
+results_writer = ResultsWriter(rerank_results)
+results_writer.write_in_json_format("sorted_hits.json")
+results_writer.write_in_trec_eval_format("output.trec")
+results_writer.write_ranking_exec_summary("ranking_execution_summary.json")
