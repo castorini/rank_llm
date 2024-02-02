@@ -1,4 +1,3 @@
-import argparse
 import json
 import os
 from typing import List, Dict
@@ -12,7 +11,6 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.rerank.rankllm import PromptMode
-
 
 class ResponseAnalyzer:
     def __init__(
@@ -85,20 +83,3 @@ class ResponseAnalyzer:
             # Round to two decimal places
             normalized_stats_dict[key] = round(normalized_stats_dict[key], 2)
         return normalized_stats_dict
-
-
-def main(args):
-    response_analyzer = ResponseAnalyzer(args.files, 100, PromptMode.RANK_GPT)
-    responses, num_passages = response_analyzer.read_saved_responses()
-    print("Normalized scores:")
-
-    print(response_analyzer.count_errors(responses, num_passages, args.verbose))
-    # Print normalized scores
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--files", type=str, nargs="+", required=True)
-    parser.add_argument("--verbose", action="store_true")
-    args = parser.parse_args()
-    main(args)
