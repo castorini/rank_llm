@@ -1,5 +1,4 @@
 from enum import Enum
-import re
 import time
 from typing import Dict, Any, Union, List, Tuple, Optional
 
@@ -8,10 +7,7 @@ import openai
 import tiktoken
 
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
-
-
-def replace_number(s: str) -> str:
-    return re.sub(r"\[(\d+)\]", r"(\1)", s)
+from rank_llm.result import Result
 
 
 class SafeOpenai(RankLLM):
@@ -21,6 +17,7 @@ class SafeOpenai(RankLLM):
         context_size: int,
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
+        window_size: int = 20,
         keys=None,
         key_start_id=None,
         proxy=None,
@@ -38,6 +35,8 @@ class SafeOpenai(RankLLM):
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
             )
 
+        self._window_size = window_size
+        self._output_token_estimate = None
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
@@ -68,7 +67,7 @@ class SafeOpenai(RankLLM):
         while True:
             try:
                 if completion_mode == self.CompletionMode.CHAT:
-                    completion = openai.ChatCompletion.create(
+                    completion = openai.chat.completions.create(
                         *args, **kwargs, timeout=30
                     )
                 elif completion_mode == self.CompletionMode.TEXT:
@@ -91,9 +90,9 @@ class SafeOpenai(RankLLM):
                 time.sleep(0.1)
         if return_text:
             completion = (
-                completion["choices"][0]["message"]["content"]
+                completion.choices[0].message.content
                 if completion_mode == self.CompletionMode.CHAT
-                else completion["choices"][0]["text"]
+                else completion.choices[0].text
             )
         return completion
 
@@ -134,28 +133,51 @@ class SafeOpenai(RankLLM):
     def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
-    def num_output_tokens(self) -> int:
-        return 200
+    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+        if current_window_size is None:
+            current_window_size = self._window_size
+        if self._output_token_estimate and self._window_size == current_window_size:
+            return self._output_token_estimate
+        else:
+            try:
+                encoder = tiktoken.get_encoding(self._model)
+            except:
+                encoder = tiktoken.get_encoding("cl100k_base")
+
+            _output_token_estimate = (
+                len(
+                    encoder.encode(
+                        " > ".join([f"[{i+1}]" for i in range(current_window_size)])
+                    )
+                )
+                - 1
+            )
+            if (
+                self._output_token_estimate is None
+                and self._window_size == current_window_size
+            ):
+                self._output_token_estimate = _output_token_estimate
+            return _output_token_estimate
 
     def create_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
         if self._prompt_mode == PromptMode.RANK_GPT:
-            return self.create_rank_gpt_prompt(retrieved_result, rank_start, rank_end)
+            return self.create_rank_gpt_prompt(result, rank_start, rank_end)
         else:
-            return self.create_LRL_prompt(retrieved_result, rank_start, rank_end)
+            return self.create_LRL_prompt(result, rank_start, rank_end)
 
     def create_rank_gpt_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        query = retrieved_result["query"]
-        num = len(retrieved_result["hits"][rank_start:rank_end])
+        query = result.query
+        num = len(result.hits[rank_start:rank_end])
 
-        max_length = 300
+        max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
             messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
-            for hit in retrieved_result["hits"][rank_start:rank_end]:
+            for hit in result.hits[rank_start:rank_end]:
                 rank += 1
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")
@@ -164,7 +186,10 @@ class SafeOpenai(RankLLM):
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
                 messages.append(
-                    {"role": "user", "content": f"[{rank}] {replace_number(content)}"}
+                    {
+                        "role": "user",
+                        "content": f"[{rank}] {self._replace_number(content)}",
+                    }
                 )
                 messages.append(
                     {"role": "assistant", "content": f"Received passage [{rank}]."}
@@ -187,16 +212,16 @@ class SafeOpenai(RankLLM):
         return messages, self.get_num_tokens(messages)
 
     def create_LRL_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        query = retrieved_result["query"]
-        num = len(retrieved_result["hits"][rank_start:rank_end])
-        max_length = 300
+        query = result.query
+        num = len(result.hits[rank_start:rank_end])
+        max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
             message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
             rank = 0
-            for hit in retrieved_result["hits"][rank_start:rank_end]:
+            for hit in result.hits[rank_start:rank_end]:
                 rank += 1
                 psg_id = f"PASSAGE{rank}"
                 content = hit["content"]
@@ -205,7 +230,7 @@ class SafeOpenai(RankLLM):
                 content = fix_text(content)
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                message += f'{psg_id} = "{replace_number(content)}"\n'
+                message += f'{psg_id} = "{self._replace_number(content)}"\n'
                 psg_ids.append(psg_id)
             message += f'QUESTION = "{query}"\n'
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"

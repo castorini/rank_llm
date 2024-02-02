@@ -22,6 +22,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
+from rank_llm.result import Result, ResultsWriter
 from rank_llm.retrieve.indices_dict import INDICES
 from rank_llm.retrieve.topics_dict import TOPICS
 
@@ -100,27 +101,23 @@ class PyseriniRetriever:
             topics_key = TOPICS[dataset]
         self._topics = get_topics(topics_key)
         self._qrels = get_qrels(TOPICS[dataset])
-        self._index_reader = IndexReader.from_prebuilt_index(INDICES[self._dataset])
+        self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
 
-    def _get_index(self) -> str:
-        if self._dataset not in INDICES:
-            raise ValueError("dataset %s not in INDICES" % self._dataset)
-        index_suffixes = {
-            RetrievalMethod.BM25: "",
-            RetrievalMethod.BM25_RM3: "",
-            RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL: "-splade-pp-ed-text",
-            RetrievalMethod.D_BERT_KD_TASB: ".distilbert-dot-tas_b-b256",
-            RetrievalMethod.OPEN_AI_ADA2: ".openai-ada2",
-        }
-        index_prefix = INDICES[self._dataset]
-        index_name = index_prefix + index_suffixes[self._retrieval_method]
-        return index_name
+    def _get_index(self, key: str = None) -> str:
+        if not key:
+            key = self._retrieval_method.value
+            # bm25_rm3 uses the same indices as bm25
+            if key == "bm25_rm3":
+                key = "bm25"
+        if self._dataset not in INDICES[key]:
+            raise ValueError("dataset %s not in INDICES[%s]" % (self._dataset, key))
+        return INDICES[key][self._dataset]
 
     def _retrieve_query(
         self, query: str, ranks: List[Dict[str, any]], k: int, qid=None
     ) -> None:
         hits = self._searcher.search(query, k=k)
-        ranks.append({"query": query, "hits": []})
+        ranks.append(Result(query=query, hits=[]))
         rank = 0
         for hit in hits:
             rank += 1
@@ -136,7 +133,7 @@ class PyseriniRetriever:
                 content = content["passage"]
             content = " ".join(content.split())
             # hit.score could be of type 'numpy.float32' which is not json serializable. Always explicitly cast it to float.
-            ranks[-1]["hits"].append(
+            ranks[-1].hits.append(
                 {
                     "content": content,
                     "qid": qid,
@@ -146,7 +143,18 @@ class PyseriniRetriever:
                 }
             )
 
-    def retrieve(self, k=100, qid=None) -> List[Dict[str, any]]:
+    def retrieve(self, k=100, qid=None) -> List[Result]:
+        """
+        Retrieves documents for each query, specified by query id `qid`, in the configured topics.
+        Returns list of retrieved documents with specified ranking.
+
+        Args:
+            k (int, optional): The number of documents to retrieve for each query. Defaults to 100.
+            qid (optional): Specific query ID to retrieve for. Defaults to None.
+
+        Returns:
+            List[Result]: A list of retrieval results.
+        """
         ranks = []
         if isinstance(self._topics, str):
             self._retrieve_query(self._topics, ranks, k, qid)
@@ -159,24 +167,41 @@ class PyseriniRetriever:
         return ranks
 
     def num_queries(self) -> int:
+        """
+        Returns the number of queries in the configured topics list.
+
+        Returns:
+            int: The number of queries.
+        """
         if isinstance(self._topics, str):
             return 1
         return len(self._topics)
 
     def retrieve_and_store(
         self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True
-    ):
+    ) -> List[Result]:
+        """
+        Retrieves documents and stores the results in the given formats.
+
+        Args:
+            k (int, optional): The number of documents to retrieve for each query. Defaults to 100.
+            qid (optional): Specific query ID to retrieve for. Defaults to None.
+            store_trec (bool, optional): Flag to store results in TREC format. Defaults to True.
+            store_qrels (bool, optional): Flag to store QRELS of the dataset. Defaults to True.
+
+        Returns:
+            List[Result]: The retrieval results.
+        """
         results = self.retrieve(k, qid)
         Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
         Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
+        writer = ResultsWriter(results)
         # Store JSON in rank_results to a file
-        with open(
-            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json",
-            "w",
-        ) as f:
-            json.dump(results, f, indent=2)
+        writer.write_in_json_format(
+            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+        )
         # Store the QRELS of the dataset if specified
         if store_qrels:
             Path("qrels/").mkdir(parents=True, exist_ok=True)
@@ -184,15 +209,10 @@ class PyseriniRetriever:
                 json.dump(self._qrels, f, indent=2)
         # Store TRECS if specified
         if store_trec:
-            with open(
-                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt",
-                "w",
-            ) as f:
-                for result in results:
-                    for hit in result["hits"]:
-                        f.write(
-                            f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
-                        )
+            writer.write_in_trec_eval_format(
+                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt"
+            )
+        return results
 
 
 def evaluate_retrievals() -> None:

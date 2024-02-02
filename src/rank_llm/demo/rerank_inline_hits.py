@@ -6,9 +6,8 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.retrieve_and_rerank import retrieve_and_rerank
-from rank_llm.retrieve.retriever import RetrievalMode
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.retriever import Retriever
+from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
 query = "how long is life cycle of flea"
 hits = [
@@ -70,12 +69,7 @@ hits = [
     },
 ]
 
-results = retrieve_and_rerank(
-    model_path="castorini/rank_vicuna_7b_v1",
-    dataset=hits,
-    retrieval_mode=RetrievalMode.QUERY_AND_HITS,
-    retrieval_method=RetrievalMethod.UNSPECIFIED,
-    top_k_candidates=len(hits),
-    print_prompts_responses=True,
-    query=query,
-)
+retrieved_results = Retriever.from_inline_hits(query=query, hits=hits)
+reranker = ZephyrReranker()
+rerank_results = reranker.rerank(retrieved_results)
+print(rerank_results)

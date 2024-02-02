@@ -1,6 +1,4 @@
-import json
 import os
-from pathlib import Path
 from typing import List, Union, Dict, Any
 
 from rank_llm.evaluation.trec_eval import EvalFunction
@@ -85,39 +83,24 @@ def retrieve_and_rerank(
     # Retrieve
     print("Retrieving:")
     if retrieval_mode == RetrievalMode.DATASET:
-        candidates_file = Path(
-            f"retrieve_results/{retrieval_method.name}/retrieve_results_{dataset}.json"
+        retrieved_results = Retriever.from_dataset_with_prebuit_index(
+            dataset_name=dataset, retrieval_method=retrieval_method
         )
-        if not candidates_file.is_file():
-            retriever = Retriever(RetrievalMode.DATASET)
-            retriever.retrieve(dataset, retrieval_method=retrieval_method)
-        else:
-            print("Reusing existing retrieved results.")
-
-        with open(candidates_file, "r") as f:
-            retrieved_results = json.load(f)
-
     elif retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
-        retriever = Retriever(RetrievalMode.QUERY_AND_DOCUMENTS)
-        retrieved_results = retriever.retrieve(dataset, query=query)
-
+        retrieved_results = Retriever.from_inline_documents(
+            query=query, documents=dataset
+        )
     elif retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-        retriever = Retriever(RetrievalMode.QUERY_AND_HITS)
-        retrieved_results = retriever.retrieve(dataset, query=query)
-
+        retrieved_results = Retriever.from_inline_hits(query=query, hits=dataset)
+    elif retrieval_mode == RetrievalMode.SAVED_FILE:
+        retrieved_results = Retriever.from_saved_results(file_name=dataset)
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print("Reranking:")
-    reranker = Reranker(agent, top_k_candidates, dataset)
+    reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
-        (
-            rerank_results,
-            input_token_counts,
-            output_token_counts,
-            aggregated_prompts,
-            aggregated_responses,
-        ) = reranker.rerank(
+        rerank_results = reranker.rerank(
             retrieved_results,
             rank_end=top_k_candidates,
             window_size=min(window_size, top_k_candidates),
@@ -131,13 +114,11 @@ def retrieve_and_rerank(
             file_name = reranker.write_rerank_results(
                 retrieval_method.name,
                 rerank_results,
-                input_token_counts,
-                output_token_counts,
-                aggregated_prompts,
-                aggregated_responses,
                 shuffle_candidates,
+                top_k_candidates=top_k_candidates,
                 pass_ct=None if num_passes == 1 else pass_ct,
                 window_size=window_size,
+                dataset_name=dataset,
             )
             if (
                 dataset in TOPICS
@@ -158,5 +139,7 @@ def retrieve_and_rerank(
                 print(f"Skipping evaluation as {dataset} is not in TOPICS.")
         if num_passes > 1:
             retrieved_results = rerank_results
+            for r in retrieved_results:
+                r.ranking_exec_summary = None
 
     return rerank_results

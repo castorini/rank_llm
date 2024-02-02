@@ -1,6 +1,5 @@
 import json
 import random
-import re
 from typing import Tuple, Dict, Any, Optional
 
 from fastchat.model import load_model, get_conversation_template, add_model_args
@@ -9,10 +8,7 @@ import torch
 from transformers.generation import GenerationConfig
 
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
-
-
-def replace_number(s):
-    return re.sub(r"\[(\d+)\]", r"(\1)", s)
+from rank_llm.result import Result
 
 
 class RankListwiseOSLLM(RankLLM):
@@ -72,8 +68,10 @@ class RankListwiseOSLLM(RankLLM):
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        if self._output_token_estimate is None:
-            self._output_token_estimate = (
+        if self._output_token_estimate and self._window_size == current_window_size:
+            return self._output_token_estimate
+        else:
+            _output_token_estimate = (
                 len(
                     self._tokenizer.encode(
                         " > ".join([f"[{i+1}]" for i in range(current_window_size)])
@@ -81,7 +79,12 @@ class RankListwiseOSLLM(RankLLM):
                 )
                 - 1
             )
-        return self._output_token_estimate
+            if (
+                self._output_token_estimate is None
+                and self._window_size == current_window_size
+            ):
+                self._output_token_estimate = _output_token_estimate
+            return _output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
         return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
@@ -101,11 +104,11 @@ class RankListwiseOSLLM(RankLLM):
         return conv
 
     def create_prompt(
-        self, retrieved_result: Dict[str, Any], rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
-        query = retrieved_result["query"]
-        num = len(retrieved_result["hits"][rank_start:rank_end])
-        max_length = 300
+        query = result.query
+        num = len(result.hits[rank_start:rank_end])
+        max_length = 300 * (20 / (rank_end - rank_start))
         while True:
             conv = get_conversation_template(self._model)
             if self._system_message:
@@ -114,14 +117,14 @@ class RankListwiseOSLLM(RankLLM):
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
-            for hit in retrieved_result["hits"][rank_start:rank_end]:
+            for hit in result.hits[rank_start:rank_end]:
                 rank += 1
                 content = hit["content"]
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = " ".join(content.split()[: int(max_length)])
-                input_context += f"[{rank}] {replace_number(content)}\n"
+                input_context += f"[{rank}] {self._replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)
             conv.append_message(conv.roles[0], input_context)
@@ -136,7 +139,11 @@ class RankListwiseOSLLM(RankLLM):
             else:
                 max_length -= max(
                     1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens())
+                    (
+                        num_tokens
+                        - self.max_tokens()
+                        + self.num_output_tokens(rank_end - rank_start)
+                    )
                     // ((rank_end - rank_start) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)

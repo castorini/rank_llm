@@ -60,7 +60,7 @@ def main(args):
 
 
 """ sample run:
-python src/rank_llm/run_rank_llm.py  --model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 --dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 --dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         "--dataset",
         type=str,
         required=True,
-        help=f"dataset name, must be in {TOPICS.keys()}",
+        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits 4- filename containing retrieved results",
     )
     parser.add_argument(
         "--num_gpus", type=int, default=1, help="the number of GPUs to use"

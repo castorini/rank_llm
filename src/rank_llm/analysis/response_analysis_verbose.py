@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import List, Dict
 
 import sys
@@ -16,20 +17,25 @@ class ResponseAnalyzer:
     def __init__(
         self,
         files: List[str],
-        top_candidates: int,
-        prompt_mode: PromptMode,
     ) -> None:
         self._files = files
 
     def read_saved_responses(self) -> List[str]:
+        """
+        Reads responses from the specified files and produces the total number of passages.
+
+        Returns:
+            Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
+        """
         num_passages = []
         responses = []
         for filename in self._files:
             with open(filename) as f:
-                for line in f:
-                    json_obj = json.loads(line)
-                    responses.append(json_obj["response"])
-                    num_passage = filename.split("window_")[1].replace(".json", "")
+                ranking_exec_summaries = json.load(f)
+            for summary in ranking_exec_summaries:
+                for exec_info in summary["ranking_exec_summary"]:
+                    responses.append(exec_info["response"])
+                    num_passage = self._get_num_passages(exec_info["prompt"])
                     num_passages.append(int(num_passage))
         return responses, num_passages
 
@@ -39,9 +45,36 @@ class ResponseAnalyzer:
                 return False
         return True
 
+    def _get_num_passages(self, prompt) -> int:
+        search_text = ""
+        if type(prompt) == str:
+            search_text = prompt
+        # For GPT runs, the prompt is an array of json objects with "role" and "content" as keys.
+        elif type(prompt) == list:
+            for message in prompt:
+                search_text += message["content"]
+        else:
+            raise ValueError(f"Unsupported prompt format.")
+        regex = r"(I will provide you with) (\d+) (passages)"
+        match = re.search(regex, search_text)
+        if not match:
+            raise ValueError(f"Unsupported prompt format.")
+        return int(match.group(2))
+
     def count_errors(
         self, responses: List[str], num_passages: List[int], verbose: bool = False
     ) -> Dict[str, int]:
+        """
+        Counts an array of different types of errors in the given responses.
+
+        Args:
+            responses (List[str]): A list of response strings.
+            num_passages (List[int]): A list of the expected number of passages in each response.
+            verbose (bool, optional): If True, prints the erroneous responses. Defaults to False.
+
+        Returns:
+            Dict[str, int]: A dictionary object containing counts of different types of errors.
+        """
         stats_dict = {
             "ok": 0,
             "wrong_format": 0,
@@ -55,7 +88,6 @@ class ResponseAnalyzer:
                 stats_dict["wrong_format"] += 1
                 continue
             begin, end = 0, 0
-            raw_resp = resp
             while not resp[begin].isdigit():
                 begin += 1
             while not resp[len(resp) - end - 1].isdigit():

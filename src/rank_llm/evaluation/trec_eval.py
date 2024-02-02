@@ -17,10 +17,20 @@ sys.path.append(parent)
 
 class EvalFunction:
     @staticmethod
-    def trunc(qrels, run):
+    def trunc(qrels: str, run: str):
+        """
+        Truncates the qrels file to only include queries that are present in the given run file.
+
+        Args:
+            qrels (str): Path to the qrels file.
+            run (str): Path to the run file.
+
+        Returns:
+            str: Path to the truncated qrels file.
+        """
         qrels = get_qrels_file(qrels)
-        run = pd.read_csv(run, delim_whitespace=True, header=None)
-        qrels = pd.read_csv(qrels, delim_whitespace=True, header=None)
+        run = pd.read_csv(run, sep="\s+", header=None)
+        qrels = pd.read_csv(qrels, sep="\s+", header=None)
         run[0] = run[0].astype(str)
         qrels[0] = qrels[0].astype(str)
 
@@ -31,6 +41,16 @@ class EvalFunction:
 
     @staticmethod
     def eval(args, trunc=True):
+        """
+        Runs the evaluation script with the given list of arguments and options.
+
+        Args:
+            args (list): Arguments to be passed to the evaluation script.
+            trunc (bool, optional): Indicates whether to truncate qrels file. Defaults to True.
+
+        Returns:
+            str: Evaluation results as a string.
+        """
         script_path = download_evaluation_script("trec_eval")
         cmd_prefix = ["java", "-jar", script_path]
         # args = sys.argv
@@ -69,7 +89,7 @@ class EvalFunction:
                     print("msmarco run detected. Converting to trec...")
                     run = pd.read_csv(
                         args[-1],
-                        delim_whitespace=True,
+                        sep="\s+",
                         header=None,
                         names=["query_id", "doc_id", "rank"],
                     )
@@ -79,8 +99,8 @@ class EvalFunction:
                     run.to_csv(temp_file, sep="\t", header=None, index=None)
                     args[-1] = temp_file
 
-            run = pd.read_csv(args[-1], delim_whitespace=True, header=None)
-            qrels = pd.read_csv(args[-2], delim_whitespace=True, header=None)
+            run = pd.read_csv(args[-1], sep="\s+", header=None)
+            qrels = pd.read_csv(args[-2], sep="\s+", header=None)
 
             # cast doc_id column as string
             run[0] = run[0].astype(str)
