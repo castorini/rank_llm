@@ -1,5 +1,6 @@
 from enum import Enum
 import json
+import os
 from pathlib import Path
 from typing import List, Union, Dict, Any
 
@@ -29,6 +30,8 @@ class Retriever:
         index_path: str = None,
         topics_path: str = None,
         index_type: str = None,
+        encoder: str = None,
+        onnx: bool = False,
     ) -> None:
         self._retrieval_mode = retrieval_mode
         self._dataset = dataset
@@ -37,6 +40,8 @@ class Retriever:
         self._index_path = index_path
         self._topics_path = topics_path
         self._index_type = index_type
+        self._encoder = encoder
+        self._onnx = onnx
 
     @staticmethod
     def from_inline_documents(query: str, documents: List[str]):
@@ -145,7 +150,7 @@ class Retriever:
         return retriever.retrieve()
     
     @staticmethod
-    def from_custom_index(index_path: str, topics_path: str, index_type: str):
+    def from_custom_index(index_path: str, topics_path: str, index_type: str, encoder: str = None, onnx: bool = False):
         if not index_path:
             raise ValueError("Please provide a path to the index")
         if not topics_path:
@@ -153,13 +158,16 @@ class Retriever:
         if index_type not in ['lucene', 'impact']:
             raise ValueError(f"index_type must be [lucene, impact], not {index_type}")
         
+        index_name = os.path.basename(os.path.normpath(index_path)) # implied from name of index dir
         retriever = Retriever(
             RetrievalMode.CUSTOM, 
-            dataset=None, 
+            dataset=index_name, 
             retrieval_method=RetrievalMethod.UNSPECIFIED, 
             index_path=index_path, 
             topics_path=topics_path, 
-            index_type=index_type
+            index_type=index_type,
+            encoder=encoder,
+            onnx=onnx,
         )
         return retriever.retrieve()
 
@@ -173,16 +181,13 @@ class Retriever:
         Raises:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
-        if self._retrieval_mode == RetrievalMode.DATASET or self._retrieval_mode == RetrievalMode.CUSTOM:
+        if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
                 f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
             )
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
-                if self._retrieval_mode == RetrievalMode.DATASET:
-                    pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
-                elif self._retrieval_mode == RetrievalMode.CUSTOM:
-                    pyserini = PyseriniRetriever(index_path=self._index_path, topics_path=self._topics_path, index_type=self._index_type)
+                pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
                 
                 # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
                 retrieved_results = pyserini.retrieve_and_store(k=100)
@@ -212,6 +217,27 @@ class Retriever:
             retrieved_results = [
                 Result(query=r["query"], hits=r["hits"]) for r in self._dataset
             ]
+        elif self._retrieval_mode == RetrievalMode.CUSTOM:
+            candidates_file = Path(
+                f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+            )
+            if not candidates_file.is_file():
+                print(f"Retrieving with dataset {self._dataset}")
+                pyserini = PyseriniRetriever(
+                    index_path=self._index_path,
+                    topics_path=self._topics_path,
+                    index_type=self._index_type,
+                    encoder=self._encoder,
+                    onnx=self._onnx
+                )
+                retrieved_results = pyserini.retrieve_and_store(k=100)
+            else:
+                print("Reusing existing retrieved results.")
+                with open(candidates_file, "r") as f:
+                    loaded_results = json.load(f)
+                retrieved_results = [
+                    Result(r["query"], r["hits"]) for r in loaded_results
+                ]
         else:
             raise ValueError(f"Invalid retrieval mode: {self._retrieval_mode}")
         for result in retrieved_results:
