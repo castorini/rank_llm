@@ -37,6 +37,10 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 ```
 
+### Contributing 
+
+If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
+
 ## 🦙🐧 Model Zoo
 
 The following is a table of our models hosted on HuggingFace:
