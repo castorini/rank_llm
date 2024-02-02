@@ -1,11 +1,23 @@
+import json
 import os
 import platform
 import subprocess
+import sys
 import tempfile
+from argparse import ArgumentParser
 
 import pandas as pd
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
+
+from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.topics_dict import TOPICS
 
 
 class EvalFunction:

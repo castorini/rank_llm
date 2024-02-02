@@ -1,26 +1,62 @@
 import json
 import re
-from typing import Dict, List
+import sys
+from typing import Dict, List, Tuple, Union
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
+
+from rank_llm.result import Result
+
+
+# For loading in list of Results
+def load_json_input_analyzer(input_json: str) -> Union[List[str], List[Result]]:
+    """
+    Load input from a JSON file. It is assumed that the a list of dict objects are contained to transform to list of Result objects.
+    """
+    with open(input_json, "r") as f:
+        data = json.load(f)
+
+    # Assuming data is a list of Result objects
+    return [Result(**item) for item in data]
 
 
 class ResponseAnalyzer:
     def __init__(
         self,
-        files: List[str],
+        data: Union[List[str], List[Result]],
     ) -> None:
-        self._files = files
+        self._data = data
 
-    def read_saved_responses(self) -> List[str]:
+    def read_results_responses(self) -> Tuple[List[str], List[int]]:
         """
-        Reads responses from the specified files and produces the total number of passages.
+        Reads responses from the specified list of Result objects and produces the total number of passages.
 
         Returns:
             Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
         """
         num_passages = []
         responses = []
-        for filename in self._files:
-            with open(filename) as f:
+        for result in self._data:
+            for exec_info in result.ranking_exec_summary:
+                responses.append(exec_info.response)
+                num_passage = self._get_num_passages(exec_info.prompt)
+                num_passages.append(int(num_passage))
+        return responses, num_passages
+
+    def read_saved_responses(self) -> Tuple[List[str], List[int]]:
+        """
+        Reads responses from the specified list of files and produces the total number of passages.
+
+        Returns:
+            Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
+        """
+        num_passages = []
+        responses = []
+        for result in self._data:
+            with open(result) as f:
                 ranking_exec_summaries = json.load(f)
             for summary in ranking_exec_summaries:
                 for exec_info in summary["ranking_exec_summary"]:
@@ -28,6 +64,22 @@ class ResponseAnalyzer:
                     num_passage = self._get_num_passages(exec_info["prompt"])
                     num_passages.append(int(num_passage))
         return responses, num_passages
+
+    def read_responses(self) -> Tuple[List[str], List[int]]:
+        """
+        Selects what read response class method to call depending on the input type.
+
+        Returns:
+            Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
+        """
+        if all(isinstance(item, str) for item in self._data):
+            return self.read_saved_responses()
+        elif all(isinstance(item, Result) for item in self._data):
+            return self.read_results_responses()
+        else:
+            raise ValueError(
+                "Input data must be a list of file paths or a list of Result objects."
+            )
 
     def _validate_format(self, response: str) -> bool:
         for c in response:
@@ -105,3 +157,38 @@ class ResponseAnalyzer:
             # Round to two decimal places
             normalized_stats_dict[key] = round(normalized_stats_dict[key], 2)
         return normalized_stats_dict
+
+
+def main(args):
+    if args.files:
+        input_data = args.files
+    elif args.input_json_analyzer:
+        input_data = load_json_input_analyzer(args.input_json_analyzer)
+    else:
+        raise ValueError("Either --files or --input_json must be provided.")
+
+    response_analyzer = ResponseAnalyzer(input_data)
+    responses, num_passages = response_analyzer.read_responses()
+
+    # Print normalized scores
+    print("Normalized scores:")
+    print(response_analyzer.count_errors(responses, num_passages, args.verbose))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--files", type=str, nargs="+", required=False)
+    parser.add_argument(
+        "--input_json_analyzer",
+        type=str,
+        help="Path to a JSON file containing serialized Result objects.",
+        required=False,
+    )
+    parser.add_argument("--verbose", action="store_true")
+    args = parser.parse_args()
+
+    if not args.files and not args.input_json_analyzer:
+        parser.error(
+            "Either --files or --input_json_analyzer must be provided as arguments."
+        )
+    main(args)

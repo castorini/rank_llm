@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, List, Union
 
 from rank_llm.evaluation.trec_eval import EvalFunction
@@ -37,7 +38,11 @@ def retrieve_and_rerank(
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
-        openai_keys = get_openai_api_key()
+        from dotenv import load_dotenv
+
+        load_dotenv(dotenv_path=f".env.local")
+
+        openai_keys = get_api_key()
         agent = SafeOpenai(
             model=model_path,
             context_size=context_size,
