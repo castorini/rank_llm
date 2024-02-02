@@ -34,5 +34,5 @@ Path(f"demo_outputs/").mkdir(
     parents=True, exist_ok=True
 )
 writer.write_in_json_format(f"demo_outputs/rerank_results.json")
-writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.trec")
+writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
 writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")
