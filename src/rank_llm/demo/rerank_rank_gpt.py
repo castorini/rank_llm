@@ -7,11 +7,16 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.retrieve.retriever import Retriever
-from rank_llm.rerank.zephyr_reranker import ZephyrReranker
+from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank.rank_gpt import SafeOpenai
+from rank_llm.rerank.reranker import Reranker
+from rank_llm.retrieve_and_rerank import get_api_key
 
-file_name = "retrieve_results/BM25/retrieve_results_dl19.json"
-retrieved_results = Retriever.from_saved_results(file_name)
-reranker = ZephyrReranker()
+# By default uses BM25 for retrieval
+dataset_name = "dl19"
+retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset_name)
+agent = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_api_key())
+reranker = Reranker(agent)
 rerank_results = reranker.rerank(retrieved_results)
 print(rerank_results)
 
