@@ -7,16 +7,17 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.retrieve.retriever import Retriever
+from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.reranker import Reranker
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
-retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset_name)
-agent = SafeOpenai()
+#retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset_name)
+agent = SafeOpenai("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0)
 reranker = Reranker(agent)
-rerank_results = reranker.rerank(retrieved_results)
-print(rerank_results)
+#rerank_results = reranker.rerank(retrieved_results)
+#print(rerank_results)
 
 from pathlib import Path
 from rank_llm.result import ResultsWriter
