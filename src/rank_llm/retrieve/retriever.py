@@ -137,7 +137,7 @@ class Retriever:
         retriever = Retriever(RetrievalMode.SAVED_FILE, dataset=retrieved_results)
         return retriever.retrieve()
 
-    def retrieve(self) -> List[Dict[str, Any]]:
+    def retrieve(self, retrieve_results_dirname: str = "retrieve_results") -> List[Dict[str, Any]]:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance.
 
@@ -149,7 +149,7 @@ class Retriever:
         """
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
-                f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
             )
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")

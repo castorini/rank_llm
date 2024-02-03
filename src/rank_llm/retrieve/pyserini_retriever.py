@@ -178,7 +178,7 @@ class PyseriniRetriever:
         return len(self._topics)
 
     def retrieve_and_store(
-        self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True
+        self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True, retrieve_results_dirname: str = "retrieve_results"
     ) -> List[Result]:
         """
         Retrieves documents and stores the results in the given formats.
@@ -193,14 +193,14 @@ class PyseriniRetriever:
             List[Result]: The retrieval results.
         """
         results = self.retrieve(k, qid)
-        Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
-        Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
+        Path(f"{retrieve_results_dirname}/").mkdir(parents=True, exist_ok=True)
+        Path(f"{retrieve_results_dirname}/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
         writer = ResultsWriter(results)
         # Store JSON in rank_results to a file
         writer.write_in_json_format(
-            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+            f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
         )
         # Store the QRELS of the dataset if specified
         if store_qrels:
@@ -210,12 +210,12 @@ class PyseriniRetriever:
         # Store TRECS if specified
         if store_trec:
             writer.write_in_trec_eval_format(
-                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/trec_results_{self._dataset}.txt"
             )
         return results
 
 
-def evaluate_retrievals() -> None:
+def evaluate_retrievals(retrieve_results_dirname: str = "retrieve_results") -> None:
     from rank_llm.evaluation.trec_eval import EvalFunction
 
     for dataset in ["dl19", "dl20", "dl21", "dl22"]:
@@ -223,7 +223,7 @@ def evaluate_retrievals() -> None:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
             file_name = (
-                f"retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
+                f"{retrieve_results_dirname}/{retrieval_method.name}/trec_results_{dataset}.txt"
             )
             if not os.path.isfile(file_name):
                 continue

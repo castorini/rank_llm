@@ -163,12 +163,13 @@ def main(args):
     context_size = args.context_size
     prompt_mode = args.prompt_mode
     output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
+    rerank_results_dirname = "rerank_results"
     with open(output_filename, "w") as output:
         for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
             for retrieval_method in RetrievalMethod:
                 if retrieval_method == RetrievalMethod.UNSPECIFIED:
                     continue
-                directory = f"rerank_results/{retrieval_method.name}"
+                directory = f"{rerank_results_dirname}/{retrieval_method.name}"
                 if not os.path.isdir(directory):
                     continue
                 for top_k_canidadates in [20, 100]:
