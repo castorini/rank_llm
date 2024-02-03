@@ -162,8 +162,8 @@ def main(args):
     model = args.model_name
     context_size = args.context_size
     prompt_mode = args.prompt_mode
+    rerank_results_dirname = args.rerank_results_dirname
     output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
-    rerank_results_dirname = "rerank_results"
     with open(output_filename, "w") as output:
         for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
             for retrieval_method in RetrievalMethod:
@@ -243,13 +243,22 @@ if __name__ == "__main__":
         help="name of the model used for price estimation",
     )
     parser.add_argument(
-        "--context_size", type=int, default=4096, help="context size used for model"
+        "--context_size", 
+        type=int, 
+        default=4096, 
+        help="context size used for model"
     )
     parser.add_argument(
         "--prompt_mode",
         type=PromptMode,
         required=True,
         choices=list(PromptMode),
+    )
+    parser.add_argument(
+        "--rerank_results_dirname", 
+        type=str, 
+        default="rerank_results", 
+        help="name of the directory used for storing rerank results"
     )
     args = parser.parse_args()
     main(args)
