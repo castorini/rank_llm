@@ -1,6 +1,7 @@
-from dotenv import load_dotenv
 import os
 from typing import Dict
+
+from dotenv import load_dotenv
 
 
 def get_openai_api_key() -> str:

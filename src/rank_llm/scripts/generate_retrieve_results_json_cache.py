@@ -46,16 +46,16 @@ Example:
         --topk 20
 """
 
-from rank_llm.topics_dict import TOPICS
 import argparse
 import json
 import os
 import sys
 from collections import defaultdict
-from pyserini.search import LuceneSearcher, get_topics, get_qrels
 
-
+from pyserini.search import LuceneSearcher, get_qrels, get_topics
 from tqdm import tqdm
+
+from rank_llm.topics_dict import TOPICS
 
 sys.path.append(os.getcwd())
 

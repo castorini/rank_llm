@@ -1,32 +1,25 @@
-from enum import Enum
 import json
+import os
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List
 
 from pyserini.index import IndexReader
 from pyserini.prebuilt_index_info import (
-    TF_INDEX_INFO,
     FAISS_INDEX_INFO,
     IMPACT_INDEX_INFO,
+    TF_INDEX_INFO,
 )
 from pyserini.query_iterator import DefaultQueryIterator
 from pyserini.search import (
-    LuceneSearcher,
-    LuceneImpactSearcher,
     FaissSearcher,
+    LuceneImpactSearcher,
+    LuceneSearcher,
     QueryEncoder,
-    get_topics,
     get_qrels,
+    get_topics,
 )
 from tqdm import tqdm
-
-import sys
-import os
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
 
 from rank_llm.result import Result, ResultsWriter
 from rank_llm.retrieve.indices_dict import INDICES
@@ -348,20 +341,3 @@ def evaluate_retrievals(retrieve_results_dirname: str = "retrieve_results") -> N
             EvalFunction.eval(
                 ["-c", "-m", "map_cut.100", "-l2", TOPICS[dataset], file_name]
             )
-
-
-def main():
-    for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
-        for retrieval_method in RetrievalMethod:
-            if retrieval_method in [
-                RetrievalMethod.UNSPECIFIED,
-                RetrievalMethod.REP_LLAMA,
-            ]:
-                continue
-            retriever = PyseriniRetriever(dataset, retrieval_method)
-            retriever.retrieve_and_store()
-    evaluate_retrievals()
-
-
-if __name__ == "__main__":
-    main()
