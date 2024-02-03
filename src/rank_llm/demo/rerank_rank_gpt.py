@@ -10,11 +10,12 @@ from rank_llm.retrieve.retriever import Retriever
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.reranker import Reranker
+from rank_llm.retrieve_and_rerank import get_api_key
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
 #retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset_name)
-agent = SafeOpenai("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0)
+agent = SafeOpenai("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0, keys=get_api_key())
 reranker = Reranker(agent)
 #rerank_results = reranker.rerank(retrieved_results)
 #print(rerank_results)
