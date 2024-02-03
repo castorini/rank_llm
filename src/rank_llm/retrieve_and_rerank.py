@@ -1,7 +1,7 @@
 from typing import List, Union, Dict, Any
 
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank.api_keys import get_openai_api_key, get_azure_openai_args
+from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
