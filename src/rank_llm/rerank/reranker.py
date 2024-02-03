@@ -64,6 +64,8 @@ class Reranker:
         pass_ct: int = None,
         window_size: int = None,
         dataset_name: str = None,
+        rerank_results_dirname: str = "rerank_results",
+        ranking_execution_summary_dirname: str = "ranking_execution_summary",
     ) -> str:
         """
         Writes the reranked results to files in specified formats.
@@ -106,19 +108,21 @@ class Reranker:
             name += f"_pass_{pass_ct}"
         # write rerank results
         writer = ResultsWriter(results)
-        Path(f"rerank_results/{retrieval_method_name}/").mkdir(
+        Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        result_file_name = f"rerank_results/{retrieval_method_name}/{name}.txt"
+        result_file_name = (
+            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
+        )
         writer.write_in_trec_eval_format(result_file_name)
         writer.write_in_json_format(
-            f"rerank_results/{retrieval_method_name}/{name}.json"
+            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.json"
         )
         # Write ranking execution summary
-        Path(f"ranking_execution_summary/{retrieval_method_name}/").mkdir(
+        Path(f"{ranking_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
         writer.write_ranking_exec_summary(
-            f"ranking_execution_summary/{retrieval_method_name}/{name}.json"
+            f"{ranking_execution_summary_dirname}/{retrieval_method_name}/{name}.json"
         )
         return result_file_name

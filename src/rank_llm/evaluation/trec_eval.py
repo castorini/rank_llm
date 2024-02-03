@@ -162,13 +162,14 @@ def main(args):
     model = args.model_name
     context_size = args.context_size
     prompt_mode = args.prompt_mode
+    rerank_results_dirname = args.rerank_results_dirname
     output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
     with open(output_filename, "w") as output:
         for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
             for retrieval_method in RetrievalMethod:
                 if retrieval_method == RetrievalMethod.UNSPECIFIED:
                     continue
-                directory = f"rerank_results/{retrieval_method.name}"
+                directory = f"{rerank_results_dirname}/{retrieval_method.name}"
                 if not os.path.isdir(directory):
                     continue
                 for top_k_canidadates in [20, 100]:
@@ -249,6 +250,12 @@ if __name__ == "__main__":
         type=PromptMode,
         required=True,
         choices=list(PromptMode),
+    )
+    parser.add_argument(
+        "--rerank_results_dirname",
+        type=str,
+        default="rerank_results",
+        help="name of the directory used for storing rerank results",
     )
     args = parser.parse_args()
     main(args)
