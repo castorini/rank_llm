@@ -1,8 +1,7 @@
 from rank_llm.rerank.rank_gpt import SafeOpenai
-from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import PromptMode
 import unittest
-from unittest.mock import patch, MagicMock
-from rank_llm.result import Result
+from unittest.mock import patch
 
 # model, context_size, prompt_mode, num_few_shot_examples, keys, key_start_id
 valid_inputs = [
@@ -32,56 +31,6 @@ failure_inputs = [
         "OPEN_AI_API_KEY",
     ),  # unpecified prompt mode
 ]
-
-
-def run_valid_input_tests(inputs):
-    for (
-        model,
-        context_size,
-        prompt_mode,
-        num_few_shot_examples,
-        keys,
-        key_start_id,
-    ) in inputs:
-        obj = SafeOpenai(
-            model=model,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            num_few_shot_examples=num_few_shot_examples,
-            keys=keys,
-        )
-        assert obj._model == model
-        assert obj._context_size == context_size
-        assert obj._prompt_mode == prompt_mode
-        assert obj._num_few_shot_examples == num_few_shot_examples
-        assert obj._keys[0] == keys
-        if key_start_id is not None:
-            assert obj._cur_key_id == key_start_id % 1
-        else:
-            assert obj._cur_key_id == 0
-
-    print("\033[92mValid inputs tests passed\033[0m")
-
-
-def run_failure_input_tests(inputs):
-    count = 0
-    for model, context_size, prompt_mode, num_few_shot_examples, keys in inputs:
-        try:
-            obj = SafeOpenai(
-                model=model,
-                context_size=context_size,
-                prompt_mode=prompt_mode,
-                num_few_shot_examples=num_few_shot_examples,
-                keys=keys,
-            )
-        except:
-            print("Exception raised correctly")
-            count += 1
-
-    if count == len(inputs):
-        print(f"\033[92m{count}/{len(inputs)} exceptions raised correctly\033[0m")
-    else:
-        print(f"\033[91m{count}/{len(inputs)} exceptions raised correctly\033[0m")
 
 
 class TestSafeOpenai(unittest.TestCase):

@@ -1,5 +1,8 @@
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_llm.retrieve.indices_dict import INDICES
+from rank_llm.result import Result
+import unittest
+from unittest.mock import patch, MagicMock
 
 valid_inputs = [
     ("dl19", RetrievalMethod.BM25),
@@ -18,12 +21,6 @@ failure_inputs = [
     ("dl21", RetrievalMethod.D_BERT_KD_TASB),
     ("covid", RetrievalMethod.OPEN_AI_ADA2),
 ]
-
-import unittest
-from unittest.mock import patch, MagicMock
-
-from rank_llm.result import Result
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
 
 # Mocking Hits object
