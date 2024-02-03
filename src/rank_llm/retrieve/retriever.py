@@ -172,7 +172,7 @@ class Retriever:
                         f"Invalid dataset format: {self._dataset}. Expected a list of strings where each string represents a document."
                     )
                 document_hits.append(
-                    {"content": document, "qid": 1, "docid": i + 1, "rank": i + 1}
+                    {"content": document, "qid": 1, "docid": i + 1, "rank": i + 1, "score": 0}
                 )
             retrieved_results = [Result(self._query, document_hits)]
 
