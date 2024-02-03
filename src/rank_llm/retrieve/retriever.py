@@ -164,13 +164,14 @@ class Retriever:
         if index_type not in ["lucene", "impact"]:
             raise ValueError(f"index_type must be [lucene, impact], not {index_type}")
 
-        index_name = os.path.basename(
-            os.path.normpath(index_path)
-        )  # implied from name of index dir
+        # implied from name of index and topic dir
+        index_name = os.path.basename(os.path.normpath(index_path))
+        topics_name = os.path.basename(os.path.normpath(topics_path))
+        dataset_name = f"index-{index_name}_topic-{topics_name}_type-{index_type}_encoder-{encoder}_onnx-{onnx}"
         retriever = Retriever(
-            RetrievalMode.CUSTOM,
-            dataset=index_name,
-            retrieval_method=RetrievalMethod.UNSPECIFIED,
+            retrieval_mode=RetrievalMode.CUSTOM,
+            dataset=dataset_name,
+            retrieval_method=RetrievalMethod.CUSTOM_INDEX,
             index_path=index_path,
             topics_path=topics_path,
             index_type=index_type,
@@ -231,6 +232,8 @@ class Retriever:
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
                 pyserini = PyseriniRetriever(
+                    dataset=self._dataset,
+                    retrieval_method=self._retrieval_method,
                     index_path=self._index_path,
                     topics_path=self._topics_path,
                     index_type=self._index_type,

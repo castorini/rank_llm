@@ -41,6 +41,7 @@ class RetrievalMethod(Enum):
     D_BERT_KD_TASB = "distilbert_tas_b"
     OPEN_AI_ADA2 = "openai-ada2"
     REP_LLAMA = "rep-llama"
+    CUSTOM_INDEX = "custom_index"
 
     def __str__(self):
         return self.value
@@ -132,9 +133,6 @@ class PyseriniRetriever:
     def _init_from_custom_index(
         self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False
     ):
-        self._dataset = os.path.basename(
-            os.path.normpath(index_path)
-        )  # there could be a better way to indicate this
         if index_type == "lucene":
             self._searcher = LuceneSearcher(index_path)
         elif index_type == "impact":
