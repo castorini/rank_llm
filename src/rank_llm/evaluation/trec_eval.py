@@ -1,17 +1,11 @@
 import os
 import platform
 import subprocess
-import sys
 import tempfile
 
 import pandas as pd
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
 
 
 class EvalFunction:

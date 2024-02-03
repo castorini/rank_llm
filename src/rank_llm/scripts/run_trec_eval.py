@@ -1,13 +1,9 @@
 import json
 import os
-import sys
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
+from argparse import ArgumentParser
 
 from rank_llm.evaluation.trec_eval import EvalFunction
+from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.topics_dict import TOPICS
 
@@ -17,18 +13,23 @@ def main(args):
     model = args.model_name
     context_size = args.context_size
     prompt_mode = args.prompt_mode
+    rerank_results_dirname = args.rerank_results_dirname
     output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
     with open(output_filename, "w") as output:
         for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
             for retrieval_method in RetrievalMethod:
                 if retrieval_method == RetrievalMethod.UNSPECIFIED:
                     continue
+                directory = f"{rerank_results_dirname}/{retrieval_method.name}"
+                if not os.path.isdir(directory):
+                    continue
                 for top_k_canidadates in [20, 100]:
-                    directory = f"rerank_results/{retrieval_method.name}"
                     for filename in os.listdir(directory):
                         if not filename.startswith(
                             f"{model}_{context_size}_{top_k_canidadates}_{prompt_mode}_{dataset}"
                         ):
+                            continue
+                        if filename.endswith(".json"):
                             continue
                         f = os.path.join(directory, filename)
                         # checking if it is a file
@@ -82,3 +83,30 @@ def main(args):
                                 output,
                             )
                             output.write("\n")
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        required=True,
+        help="name of the model used for price estimation",
+    )
+    parser.add_argument(
+        "--context_size", type=int, default=4096, help="context size used for model"
+    )
+    parser.add_argument(
+        "--prompt_mode",
+        type=PromptMode,
+        required=True,
+        choices=list(PromptMode),
+    )
+    parser.add_argument(
+        "--rerank_results_dirname",
+        type=str,
+        default="rerank_results",
+        help="name of the directory used for storing rerank results",
+    )
+    args = parser.parse_args()
+    main(args)

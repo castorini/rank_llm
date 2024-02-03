@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List
@@ -21,11 +20,6 @@ from pyserini.search import (
     get_topics,
 )
 from tqdm import tqdm
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
 
 from rank_llm.result import Result, ResultsWriter
 from rank_llm.retrieve.indices_dict import INDICES

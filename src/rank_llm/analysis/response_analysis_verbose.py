@@ -1,13 +1,6 @@
 import json
-import os
 import re
-import sys
 from typing import Dict, List
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
 
 
 class ResponseAnalyzer:
