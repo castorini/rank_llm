@@ -49,6 +49,9 @@ def retrieve_and_rerank(
     window_size: int = 20,
     step_size: int = 10,
     system_message: str = None,
+    index_path: str = None,
+    topics_path: str = None,
+    index_type: str = None,
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
@@ -94,6 +97,10 @@ def retrieve_and_rerank(
         retrieved_results = Retriever.from_inline_hits(query=query, hits=dataset)
     elif retrieval_mode == RetrievalMode.SAVED_FILE:
         retrieved_results = Retriever.from_saved_results(file_name=dataset)
+    elif retrieval_mode == RetrievalMode.CUSTOM:
+        retrieved_results = Retriever.from_custom_index(
+            index_path=index_path, topics_path=topics_path, index_type=index_type
+        )
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print("Reranking:")
