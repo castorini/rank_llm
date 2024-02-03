@@ -1,7 +1,7 @@
-import os
 from typing import List, Union, Dict, Any
 
 from rank_llm.evaluation.trec_eval import EvalFunction
+from rank_llm.rerank.api_keys import get_openai_api_key, get_azure_openai_args
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
@@ -9,24 +9,6 @@ from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import Retriever, RetrievalMode
 from rank_llm.retrieve.topics_dict import TOPICS
-
-
-def get_api_key() -> str:
-    return os.getenv("OPEN_AI_API_KEY")
-
-
-def get_azure_openai_args() -> Dict[str, str]:
-    azure_args = {
-        "api_type": "azure",
-        "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
-        "api_base": os.getenv("AZURE_OPENAI_API_BASE"),
-    }
-
-    # Sanity check
-    assert all(
-        list(azure_args.values())
-    ), "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
-    return azure_args
 
 
 def retrieve_and_rerank(
@@ -55,11 +37,7 @@ def retrieve_and_rerank(
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
-        from dotenv import dotenv_values, load_dotenv
-
-        load_dotenv(dotenv_path=f".env.local")
-
-        openai_keys = get_api_key()
+        openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=model_path,
             context_size=context_size,
