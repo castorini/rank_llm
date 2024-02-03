@@ -111,7 +111,9 @@ class Reranker:
         Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        result_file_name = f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
+        result_file_name = (
+            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
+        )
         writer.write_in_trec_eval_format(result_file_name)
         writer.write_in_json_format(
             f"{rerank_results_dirname}/{retrieval_method_name}/{name}.json"

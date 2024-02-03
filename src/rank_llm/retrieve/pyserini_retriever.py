@@ -292,7 +292,12 @@ class PyseriniRetriever:
         return len(self._topics)
 
     def retrieve_and_store(
-        self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True, retrieve_results_dirname: str = "retrieve_results"
+        self,
+        k=100,
+        qid=None,
+        store_trec: bool = True,
+        store_qrels: bool = True,
+        retrieve_results_dirname: str = "retrieve_results",
     ) -> List[Result]:
         """
         Retrieves documents and stores the results in the given formats.
@@ -336,9 +341,7 @@ def evaluate_retrievals(retrieve_results_dirname: str = "retrieve_results") -> N
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            file_name = (
-                f"{retrieve_results_dirname}/{retrieval_method.name}/trec_results_{dataset}.txt"
-            )
+            file_name = f"{retrieve_results_dirname}/{retrieval_method.name}/trec_results_{dataset}.txt"
             if not os.path.isfile(file_name):
                 continue
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
