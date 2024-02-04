@@ -33,5 +33,5 @@ for dataset in "dl19", "dl20":
         rerank_ndcg_10 = EvalFunction.from_results(rerank_results, topics)
         analyzer = ResponseAnalyzer.from_inline_results(rerank_results)
         error_counts = analyzer.count_errors()
-        results[key] = (ret_ndcg_10, rerank_ndcg_10, error_counts)
+        results[key] = (ret_ndcg_10, rerank_ndcg_10, error_counts.__repr__())
 print(results)
