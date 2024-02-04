@@ -91,7 +91,9 @@ class Retriever:
 
     @staticmethod
     def from_dataset_with_prebuit_index(
-        dataset_name: str, retrieval_method: RetrievalMethod = RetrievalMethod.BM25, k: int = 100,
+        dataset_name: str,
+        retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
+        k: int = 100,
     ):
         """
         Creates a Retriever instance for a dataset with a prebuilt index.
@@ -99,6 +101,7 @@ class Retriever:
         Args:
             dataset_name (str): The name of the dataset.
             retrieval_method (RetrievalMethod): The retrieval method to be used (e.g. BM25).
+            k (int): The top k hits to retrieve.
 
         Returns:
             List[Dict[str, Any]]: The retrieval results.
@@ -157,6 +160,23 @@ class Retriever:
         onnx: bool = False,
         k: int = 100,
     ):
+        """
+        Creates a Retriever instance for a dataset with a prebuilt index.
+
+        Args:
+            index_path (str): The path to the lucene or impact index.
+            topics_path (str): The path to the topics file.
+            index_type (str): Index type; choices: [lucene, impact].
+            encoder (str): The encoder used in impact indexes.
+            onnx (bool): Flag for using onnx in impact indexes.
+            k (int): The top k hits to retrieve.
+
+        Returns:
+            List[Dict[str, Any]]: The retrieval results.
+
+        Raises:
+            ValueError: If index_path or topics_path are invalid paths and if index_type is not lucene or impact
+        """
         if not index_path:
             raise ValueError("Please provide a path to the index")
         if not topics_path:
