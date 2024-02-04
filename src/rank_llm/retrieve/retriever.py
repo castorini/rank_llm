@@ -100,7 +100,7 @@ class Retriever:
 
         Args:
             dataset_name (str): The name of the dataset.
-            retrieval_method (RetrievalMethod): The retrieval method to be used (e.g. BM25).
+            retrieval_method (RetrievalMethod): The retrieval method to be used. Defaults to BM25.
             k (int, optional): The top k hits to retrieve. Defaults to 100.
 
         Returns:
