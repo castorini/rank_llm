@@ -1,6 +1,12 @@
 import json
 import os
+import sys
 from argparse import ArgumentParser
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
 
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.rankllm import PromptMode
