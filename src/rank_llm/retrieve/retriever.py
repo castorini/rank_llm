@@ -91,14 +91,17 @@ class Retriever:
 
     @staticmethod
     def from_dataset_with_prebuit_index(
-        dataset_name: str, retrieval_method: RetrievalMethod = RetrievalMethod.BM25
+        dataset_name: str,
+        retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
+        k: int = 100,
     ):
         """
         Creates a Retriever instance for a dataset with a prebuilt index.
 
         Args:
             dataset_name (str): The name of the dataset.
-            retrieval_method (RetrievalMethod): The retrieval method to be used (e.g. BM25).
+            retrieval_method (RetrievalMethod): The retrieval method to be used. Defaults to BM25.
+            k (int, optional): The top k hits to retrieve. Defaults to 100.
 
         Returns:
             List[Dict[str, Any]]: The retrieval results.
@@ -123,7 +126,7 @@ class Retriever:
             dataset=dataset_name,
             retrieval_method=retrieval_method,
         )
-        return retriever.retrieve()
+        return retriever.retrieve(k=k)
 
     @staticmethod
     def from_saved_results(file_name: str):
@@ -155,7 +158,25 @@ class Retriever:
         index_type: str,
         encoder: str = None,
         onnx: bool = False,
+        k: int = 100,
     ):
+        """
+        Creates a Retriever instance for a dataset with a prebuilt index.
+
+        Args:
+            index_path (str): The path to the lucene or impact index.
+            topics_path (str): The path to the topics file.
+            index_type (str): Index type; choices: [lucene, impact].
+            encoder (str, optional): The encoder used in impact indexes. Defaults to None.
+            onnx (bool, optional): Flag for using onnx in impact indexes. Defaults to False.
+            k (int, optional): The top k hits to retrieve. Defaults to 100.
+
+        Returns:
+            List[Dict[str, Any]]: The retrieval results.
+
+        Raises:
+            ValueError: If index_path or topics_path are invalid paths and if index_type is not lucene or impact
+        """
         if not index_path:
             raise ValueError("Please provide a path to the index")
         if not topics_path:
@@ -177,10 +198,10 @@ class Retriever:
             encoder=encoder,
             onnx=onnx,
         )
-        return retriever.retrieve()
+        return retriever.retrieve(k=k)
 
     def retrieve(
-        self, retrieve_results_dirname: str = "retrieve_results"
+        self, retrieve_results_dirname: str = "retrieve_results", k: int = 100
     ) -> List[Dict[str, Any]]:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance.
@@ -193,13 +214,12 @@ class Retriever:
         """
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
-                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
             )
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
                 pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
-                # Always retrieve top 100 so that results are reusable for all top_k_candidates values.
-                retrieved_results = pyserini.retrieve_and_store(k=100)
+                retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
                 with open(candidates_file, "r") as f:
@@ -234,7 +254,7 @@ class Retriever:
             ]
         elif self._retrieval_mode == RetrievalMode.CUSTOM:
             candidates_file = Path(
-                f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
             )
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
@@ -247,7 +267,7 @@ class Retriever:
                     encoder=self._encoder,
                     onnx=self._onnx,
                 )
-                retrieved_results = pyserini.retrieve_and_store(k=100)
+                retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
                 with open(candidates_file, "r") as f:
