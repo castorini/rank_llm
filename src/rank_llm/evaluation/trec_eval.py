@@ -8,12 +8,16 @@ import pandas as pd
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
 
-from src.rank_llm.result import Result
+from rank_llm.result import Result
 
 
 class EvalFunction:
     @staticmethod
-    def from_results(results: List[Result], qrels: str) -> str:
+    def from_results(
+        results: List[Result],
+        qrels: str,
+        eval_args: list[str] = ["-c", "-m", "ndcg_cut.10"],
+    ) -> str:
         """
         This method processes a list of Result objects and immediately evaluates them,
         returning the evaluation result as a string.
@@ -33,10 +37,12 @@ class EvalFunction:
             for result in results:
                 for hit in result.hits:
                     file.write(
-                        f"{result.query} Q0 {hit['doc_id']} {hit['rank']} {hit['score']} RUN\n"
+                        f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
                     )
-
-        eval_result = EvalFunction.eval(temp_run_file, qrels, trunc=True)
+        args = eval_args
+        args.append(qrels)
+        args.append(temp_run_file)
+        eval_result = EvalFunction.eval(args, trunc=True)
         os.remove(temp_run_file)
 
         return eval_result

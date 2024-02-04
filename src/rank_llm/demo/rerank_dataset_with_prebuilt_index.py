@@ -6,16 +6,28 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
+from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.vicuna_reranker import VicunaReranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import Retriever
+from rank_llm.retrieve.topics_dict import TOPICS
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
 retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset_name)
+
+# Evaluate retrieved results.
+eval_result = EvalFunction.from_results(retrieved_results, TOPICS[dataset_name])
+print(eval_result)
+
+# Rerank
 reranker = VicunaReranker()
 rerank_results = reranker.rerank(retrieved_results)
-print(rerank_results)
+
+# Evaluate rerank results.
+eval_result = EvalFunction.from_results(rerank_results, TOPICS[dataset_name])
+print(eval_result)
+
 
 # Users can specify other retrieval methods:
 retrieved_results = Retriever.from_dataset_with_prebuit_index(
@@ -23,7 +35,6 @@ retrieved_results = Retriever.from_dataset_with_prebuit_index(
 )
 reranker = VicunaReranker()
 rerank_results = reranker.rerank(retrieved_results)
-print(rerank_results)
 
 from pathlib import Path
 

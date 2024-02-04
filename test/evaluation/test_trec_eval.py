@@ -11,11 +11,14 @@ class TestEvalFunction(unittest.TestCase):
             Result(
                 query="Query1",
                 hits=[
-                    {"doc_id": "D1", "rank": 1, "score": 0.9},
-                    {"doc_id": "D2", "rank": 2, "score": 0.8},
+                    {"qid": "q1", "docid": "D1", "rank": 1, "score": 0.9},
+                    {"qid": "q1", "docid": "D2", "rank": 2, "score": 0.8},
                 ],
             ),
-            Result(query="Query2", hits=[{"doc_id": "D3", "rank": 1, "score": 0.85}]),
+            Result(
+                query="Query2",
+                hits=[{"qid": "q2", "docid": "D3", "rank": 1, "score": 0.85}],
+            ),
         ]
         self.qrels_path = "path/to/qrels"
 
