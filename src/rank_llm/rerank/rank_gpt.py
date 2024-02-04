@@ -32,8 +32,11 @@ class SafeOpenai(RankLLM):
         Parameters:
         - model (str): The model identifier for the LLM (model identifier information can be found via OpenAI's model lists).
         - context_size (int): The maximum number of tokens that the model can handle in a single request.
-        - prompt_mode (PromptMode): The mode of prompt generation, restricted to RANK_GPT or LRL (Listwise Ranking Learning).
-        - num_few_shot_examples (int): The number of few-shot learning examples to include in the prompt.
+        - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
+         indicating that this class is designed primarily for listwise ranking tasks following the RANK_GPT methodology.
+        - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
+        the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
+        by default.
         - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
         - keys (Union[List[str], str], optional): A list of OpenAI API keys or a single OpenAI API key.
         - key_start_id (int, optional): The starting index for the OpenAI API key cycle.
