@@ -4,8 +4,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
-from rank_llm.result import Result
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from src.rank_llm.result import Result
+from src.rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
 
 class RetrievalMode(Enum):
@@ -23,7 +23,7 @@ class Retriever:
     def __init__(
         self,
         retrieval_mode: RetrievalMode,
-        dataset: Union[str, List[str], List[Dict[str, Any]]],
+        dataset: Union[str, List[str], List[Dict[str, Any]], List[Result]],
         retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
         query: str = None,
         index_path: str = None,
@@ -43,7 +43,20 @@ class Retriever:
         self._onnx = onnx
 
     @staticmethod
-    def from_inline_documents(query: str, documents: List[str]):
+    def from_results(results: List[Result]) -> "Retriever":
+        """
+        Creates a Retriever instance with a specified list of Result objects.
+
+        Args:
+            results (List[Result]): A list of Result objects.
+
+        Returns:
+            Retriever: An instance of the Retriever with its dataset set to the provided Result objects.
+        """
+        return Retriever(RetrievalMode.CUSTOM, dataset=results)
+
+    @staticmethod
+    def from_inline_documents(query: str, documents: List[str]) -> "Retriever":
         """
         Creates a Retriever instance for inline documents with the passed in query.
 
@@ -67,7 +80,7 @@ class Retriever:
         return retriever.retrieve()
 
     @staticmethod
-    def from_inline_hits(query: str, hits: List[Dict[str, Any]]):
+    def from_inline_hits(query: str, hits: List[Dict[str, Any]]) -> "Retriever":
         """
         Creates a Retriever instance for inline hits with the passed in query.
 
@@ -129,7 +142,7 @@ class Retriever:
         return retriever.retrieve(k=k)
 
     @staticmethod
-    def from_saved_results(file_name: str):
+    def from_saved_results(file_name: str) -> "Retriever":
         """
         Creates a Retriever instance from saved retrieval results specified by 'file_name'.
 
@@ -212,6 +225,11 @@ class Retriever:
         Raises:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
+        if self._retrieval_mode == RetrievalMode.CUSTOM and all(
+            isinstance(d, Result) for d in self._dataset
+        ):
+            return self._dataset
+
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
