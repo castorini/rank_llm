@@ -2,13 +2,45 @@ import os
 import platform
 import subprocess
 import tempfile
+from typing import List
 
 import pandas as pd
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
 
+from src.rank_llm.result import Result
+
 
 class EvalFunction:
+    @staticmethod
+    def from_results(results: List[Result], qrels: str) -> str:
+        """
+        This method processes a list of Result objects and immediately evaluates them,
+        returning the evaluation result as a string.
+
+        Args:
+            results (List[Result]): A list of Result objects.
+            qrels (str): Path to the qrels file.
+
+        Returns:
+            str: Evaluation results as a string.
+        """
+        # Convert the list of Result objects to a temporary run file format
+        temp_run_file = tempfile.NamedTemporaryFile(
+            delete=False, mode="w", suffix=".txt"
+        ).name
+        with open(temp_run_file, "w") as file:
+            for result in results:
+                for hit in result.hits:
+                    file.write(
+                        f"{result.query} Q0 {hit['doc_id']} {hit['rank']} {hit['score']} RUN\n"
+                    )
+
+        eval_result = EvalFunction.eval(temp_run_file, qrels, trunc=True)
+        os.remove(temp_run_file)
+
+        return eval_result
+
     @staticmethod
     def trunc(qrels: str, run: str):
         """
