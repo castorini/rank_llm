@@ -1,26 +1,83 @@
+import argparse
 import json
+import os
 import re
-from typing import Dict, List
+import sys
+from typing import Dict, List, Tuple, Union
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+parent = os.path.dirname(SCRIPT_DIR)
+parent = os.path.dirname(parent)
+sys.path.append(parent)
+
+from rank_llm.result import Result
 
 
 class ResponseAnalyzer:
     def __init__(
         self,
-        files: List[str],
+        data: Union[List[str], List[Result]],
     ) -> None:
-        self._files = files
+        self._data = data
 
-    def read_saved_responses(self) -> List[str]:
+    @staticmethod
+    def from_inline_results(results: List[Result]) -> "ResponseAnalyzer":
         """
-        Reads responses from the specified files and produces the total number of passages.
+        Method to create a ResponseAnalyzer instance from a list of Result objects.
+
+        Args:
+            results (List[Result]): A list of Result objects.
+
+        Returns:
+            ResponseAnalyzer: An instance of the ResponseAnalyzer.
+        """
+        return ResponseAnalyzer(data=results)
+
+    @staticmethod
+    def from_stored_files(filenames: List[str]) -> "ResponseAnalyzer":
+        """
+        Method to create to create a ResponseAnalyzer instance from a list of filenames.
+
+        Args:
+            filenames (List[str]): A list of filenames where each file contains data to be analyzed.
+
+        Returns:
+            ResponseAnalyzer: An instance of the ResponseAnalyzer.
+        """
+        data = []
+        for filename in filenames:
+            with open(filename, "r") as file:
+                file_data = json.load(file)
+                data.extend(file_data)
+        return ResponseAnalyzer(data=data)
+
+    def read_results_responses(self) -> Tuple[List[str], List[int]]:
+        """
+        Reads responses from the specified list of Result objects and produces the total number of passages.
 
         Returns:
             Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
         """
         num_passages = []
         responses = []
-        for filename in self._files:
-            with open(filename) as f:
+        for result in self._data:
+            for exec_info in result.ranking_exec_summary:
+                responses.append(exec_info.response)
+                num_passage = self._get_num_passages(exec_info.prompt)
+                num_passages.append(int(num_passage))
+        return responses, num_passages
+
+    def read_saved_responses(self) -> Tuple[List[str], List[int]]:
+        """
+        Reads responses from the specified list of files and produces the total number of passages.
+
+        Returns:
+            Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
+        """
+        num_passages = []
+        responses = []
+        for result in self._data:
+            with open(result) as f:
                 ranking_exec_summaries = json.load(f)
             for summary in ranking_exec_summaries:
                 for exec_info in summary["ranking_exec_summary"]:
@@ -28,6 +85,22 @@ class ResponseAnalyzer:
                     num_passage = self._get_num_passages(exec_info["prompt"])
                     num_passages.append(int(num_passage))
         return responses, num_passages
+
+    def read_responses(self) -> Tuple[List[str], List[int]]:
+        """
+        Selects what read response class method to call depending on the input type.
+
+        Returns:
+            Tuple[List[str], List[int]]: A tuple object containing a list of responses and a list of corresponding numbers of passages.
+        """
+        if all(isinstance(item, str) for item in self._data):
+            return self.read_saved_responses()
+        elif all(isinstance(item, Result) for item in self._data):
+            return self.read_results_responses()
+        else:
+            raise ValueError(
+                "Input data must be a list of file paths or a list of Result objects."
+            )
 
     def _validate_format(self, response: str) -> bool:
         for c in response:
@@ -51,20 +124,18 @@ class ResponseAnalyzer:
             raise ValueError(f"Unsupported prompt format.")
         return int(match.group(2))
 
-    def count_errors(
-        self, responses: List[str], num_passages: List[int], verbose: bool = False
-    ) -> Dict[str, int]:
+    def count_errors(self, verbose: bool = False) -> Dict[str, int]:
         """
         Counts an array of different types of errors in the given responses.
 
         Args:
             responses (List[str]): A list of response strings.
-            num_passages (List[int]): A list of the expected number of passages in each response.
-            verbose (bool, optional): If True, prints the erroneous responses. Defaults to False.
 
         Returns:
             Dict[str, int]: A dictionary object containing counts of different types of errors.
         """
+        responses, num_passages = self.read_responses()
+
         stats_dict = {
             "ok": 0,
             "wrong_format": 0,
@@ -105,3 +176,27 @@ class ResponseAnalyzer:
             # Round to two decimal places
             normalized_stats_dict[key] = round(normalized_stats_dict[key], 2)
         return normalized_stats_dict
+
+
+def main(args):
+    if args.files:
+        response_analyzer = ResponseAnalyzer.from_stored_files(args.files)
+    else:
+        print("Error: Please specify the files containing ranking summaries.")
+        sys.exit(1)
+
+    error_counts = response_analyzer.count_errors(args.verbose)
+    print("Normalized scores:", error_counts)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--files", nargs="+", help="Filenames of ranking summaries", required=False
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Verbose output of errors"
+    )
+    args = parser.parse_args()
+
+    main(args)
