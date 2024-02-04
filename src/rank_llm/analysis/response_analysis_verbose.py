@@ -1,4 +1,6 @@
+import argparse
 import json
+import os
 import re
 import sys
 from typing import Dict, List, Tuple, Union
@@ -11,24 +13,43 @@ sys.path.append(parent)
 from rank_llm.result import Result
 
 
-# For loading in list of Results
-def load_json_input_analyzer(input_json: str) -> Union[List[str], List[Result]]:
-    """
-    Load input from a JSON file. It is assumed that the a list of dict objects are contained to transform to list of Result objects.
-    """
-    with open(input_json, "r") as f:
-        data = json.load(f)
-
-    # Assuming data is a list of Result objects
-    return [Result(**item) for item in data]
-
-
 class ResponseAnalyzer:
     def __init__(
         self,
         data: Union[List[str], List[Result]],
     ) -> None:
         self._data = data
+
+    @staticmethod
+    def from_inline_results(results: List[Result]) -> "ResponseAnalyzer":
+        """
+        Method to create a ResponseAnalyzer instance from a list of Result objects.
+
+        Args:
+            results (List[Result]): A list of Result objects.
+
+        Returns:
+            ResponseAnalyzer: An instance of the ResponseAnalyzer.
+        """
+        return ResponseAnalyzer(data=results)
+
+    @staticmethod
+    def from_stored_files(filenames: List[str]) -> "ResponseAnalyzer":
+        """
+        Method to create to create a ResponseAnalyzer instance from a list of filenames.
+
+        Args:
+            filenames (List[str]): A list of filenames where each file contains data to be analyzed.
+
+        Returns:
+            ResponseAnalyzer: An instance of the ResponseAnalyzer.
+        """
+        data = []
+        for filename in filenames:
+            with open(filename, "r") as file:
+                file_data = json.load(file)
+                data.extend(file_data)
+        return ResponseAnalyzer(data=data)
 
     def read_results_responses(self) -> Tuple[List[str], List[int]]:
         """
@@ -103,20 +124,18 @@ class ResponseAnalyzer:
             raise ValueError(f"Unsupported prompt format.")
         return int(match.group(2))
 
-    def count_errors(
-        self, responses: List[str], num_passages: List[int], verbose: bool = False
-    ) -> Dict[str, int]:
+    def count_errors(self, verbose: bool = False) -> Dict[str, int]:
         """
         Counts an array of different types of errors in the given responses.
 
         Args:
             responses (List[str]): A list of response strings.
-            num_passages (List[int]): A list of the expected number of passages in each response.
-            verbose (bool, optional): If True, prints the erroneous responses. Defaults to False.
 
         Returns:
             Dict[str, int]: A dictionary object containing counts of different types of errors.
         """
+        responses, num_passages = self.read_responses()
+
         stats_dict = {
             "ok": 0,
             "wrong_format": 0,
@@ -161,34 +180,23 @@ class ResponseAnalyzer:
 
 def main(args):
     if args.files:
-        input_data = args.files
-    elif args.input_json_analyzer:
-        input_data = load_json_input_analyzer(args.input_json_analyzer)
+        response_analyzer = ResponseAnalyzer.from_stored_files(args.files)
     else:
-        raise ValueError("Either --files or --input_json must be provided.")
+        print("Error: Please specify the files containing ranking summaries.")
+        sys.exit(1)
 
-    response_analyzer = ResponseAnalyzer(input_data)
-    responses, num_passages = response_analyzer.read_responses()
-
-    # Print normalized scores
-    print("Normalized scores:")
-    print(response_analyzer.count_errors(responses, num_passages, args.verbose))
+    error_counts = response_analyzer.count_errors(args.verbose)
+    print("Normalized scores:", error_counts)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--files", type=str, nargs="+", required=False)
     parser.add_argument(
-        "--input_json_analyzer",
-        type=str,
-        help="Path to a JSON file containing serialized Result objects.",
-        required=False,
+        "--files", nargs="+", help="Filenames of ranking summaries", required=False
     )
-    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument(
+        "--verbose", action="store_true", help="Verbose output of errors"
+    )
     args = parser.parse_args()
 
-    if not args.files and not args.input_json_analyzer:
-        parser.error(
-            "Either --files or --input_json_analyzer must be provided as arguments."
-        )
     main(args)

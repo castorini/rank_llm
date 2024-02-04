@@ -27,7 +27,7 @@ class TestResponseAnalyzer(unittest.TestCase):
                 ],
             ),
             Result(
-                query="Query 1",
+                query="Query 2",
                 hits=[],
                 ranking_exec_summary=[
                     RankingExecInfo(
@@ -41,7 +41,7 @@ class TestResponseAnalyzer(unittest.TestCase):
         ]
 
     def test_read_results_responses(self):
-        analyzer = ResponseAnalyzer(data=self.mock_results)
+        analyzer = ResponseAnalyzer.from_inline_results(self.mock_results)
         responses, num_passages = analyzer.read_results_responses()
 
         self.assertEqual(len(responses), 3, "Should have 3 responses")

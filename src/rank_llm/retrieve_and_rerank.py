@@ -1,4 +1,3 @@
-import os
 from typing import Any, Dict, List, Union
 
 from rank_llm.evaluation.trec_eval import EvalFunction
@@ -42,7 +41,7 @@ def retrieve_and_rerank(
 
         load_dotenv(dotenv_path=f".env.local")
 
-        openai_keys = get_api_key()
+        openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=model_path,
             context_size=context_size,
