@@ -10,7 +10,7 @@
 We offer a suite of prompt decoders, albeit with a current focus on RankVicuna. Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT)!
 
 # Releases
-current_version = 0.2.3
+current_version = 0.2.6
 
 ## 📟 Instructions
 
@@ -36,6 +36,10 @@ pip install -r requirements.txt
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 ```
+
+### Contributing 
+
+If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 
 ## 🦙🐧 Model Zoo
 
