@@ -101,7 +101,7 @@ class Retriever:
         Args:
             dataset_name (str): The name of the dataset.
             retrieval_method (RetrievalMethod): The retrieval method to be used (e.g. BM25).
-            k (int): The top k hits to retrieve.
+            k (int, optional): The top k hits to retrieve. Defaults to 100.
 
         Returns:
             List[Dict[str, Any]]: The retrieval results.
@@ -167,9 +167,9 @@ class Retriever:
             index_path (str): The path to the lucene or impact index.
             topics_path (str): The path to the topics file.
             index_type (str): Index type; choices: [lucene, impact].
-            encoder (str): The encoder used in impact indexes.
-            onnx (bool): Flag for using onnx in impact indexes.
-            k (int): The top k hits to retrieve.
+            encoder (str, optional): The encoder used in impact indexes. Defaults to None.
+            onnx (bool, optional): Flag for using onnx in impact indexes. Defaults to False.
+            k (int, optional): The top k hits to retrieve. Defaults to 100.
 
         Returns:
             List[Dict[str, Any]]: The retrieval results.
