@@ -1,8 +1,26 @@
+from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from rank_llm.retrieve.indices_dict import INDICES
+from rank_llm.result import Result
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.rank_llm.result import Result
-from src.rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+valid_inputs = [
+    ("dl19", RetrievalMethod.BM25),
+    ("dl19", RetrievalMethod.BM25_RM3),
+    ("dl20", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),
+    ("dl20", RetrievalMethod.D_BERT_KD_TASB),
+    ("dl20", RetrievalMethod.OPEN_AI_ADA2),
+]
+
+failure_inputs = [
+    ("dl23", RetrievalMethod.BM25),  # dataset error
+    ("dl23", RetrievalMethod.BM25_RM3),  # dataset error
+    ("dl18", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),  # dataset error
+    ("dl19", RetrievalMethod.UNSPECIFIED),  # retrieval method error
+    ("dl16", RetrievalMethod.UNSPECIFIED),  # dataset and retrieval method error
+    ("dl21", RetrievalMethod.D_BERT_KD_TASB),
+    ("covid", RetrievalMethod.OPEN_AI_ADA2),
+]
 
 
 # Mocking Hits object
@@ -14,6 +32,22 @@ class MockHit:
 
 
 class TestPyseriniRetriever(unittest.TestCase):
+    def test_valid_inputs(self):
+        for dataset, retrieval_method in valid_inputs:
+            retriever = PyseriniRetriever(dataset, retrieval_method)
+            self.assertEqual(retriever._dataset, dataset)
+            self.assertEqual(retriever._retrieval_method, retrieval_method)
+            self.assertIsNotNone(retriever._searcher)
+            key = retrieval_method.value
+            if key == "bm25_rm3":
+                key = "bm25"
+            self.assertEqual(retriever._get_index(), INDICES[key][dataset])
+
+    def test_failure_inputs(self):
+        with self.assertRaises(ValueError):
+            for dataset, retrieval_method in failure_inputs:
+                PyseriniRetriever(dataset, retrieval_method)
+
     def test_get_index(self):
         # Creating PyseriniRetriever instance
         retriever = PyseriniRetriever("dl19", RetrievalMethod.BM25)
@@ -28,8 +62,8 @@ class TestPyseriniRetriever(unittest.TestCase):
             retriever._retrieval_method = RetrievalMethod.BM25_RM3
             retriever._get_index()
 
-    @patch("src.rank_llm.retrieve.pyserini_retriever.IndexReader")
-    @patch("src.rank_llm.retrieve.pyserini_retriever.json.loads")
+    @patch("rank_llm.retrieve.pyserini_retriever.IndexReader")
+    @patch("rank_llm.retrieve.pyserini_retriever.json.loads")
     def test_retrieve_query(self, mock_json_loads, mock_index_reader):
         # Mocking json.loads to return a predefined content
         mock_json_loads.return_value = {"title": "Sample Title", "text": "Sample Text"}
@@ -84,7 +118,7 @@ class TestPyseriniRetriever(unittest.TestCase):
         mock_json_loads.reset_mock()
         retriever._searcher.search.reset_mock()
 
-    @patch("src.rank_llm.retrieve.pyserini_retriever.get_topics")
+    @patch("rank_llm.retrieve.pyserini_retriever.get_topics")
     def test_num_queries(self, mock_get_topics):
         # Mocking get_topics method to return a predefined number of queries
         mock_get_topics.return_value = {
