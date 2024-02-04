@@ -1,12 +1,11 @@
-from enum import Enum
 import json
 import os
+from enum import Enum
 from pathlib import Path
-from typing import List, Union, Dict, Any
+from typing import Any, Dict, List, Union
 
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.result import Result
+from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
 
 class RetrievalMode(Enum):
@@ -180,7 +179,9 @@ class Retriever:
         )
         return retriever.retrieve()
 
-    def retrieve(self) -> List[Dict[str, Any]]:
+    def retrieve(
+        self, retrieve_results_dirname: str = "retrieve_results"
+    ) -> List[Dict[str, Any]]:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance.
 
@@ -192,7 +193,7 @@ class Retriever:
         """
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
-                f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
             )
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
@@ -215,7 +216,13 @@ class Retriever:
                         f"Invalid dataset format: {self._dataset}. Expected a list of strings where each string represents a document."
                     )
                 document_hits.append(
-                    {"content": document, "qid": 1, "docid": i + 1, "rank": i + 1, "score": i + 1}
+                    {
+                        "content": document,
+                        "qid": 1,
+                        "docid": i + 1,
+                        "rank": i + 1,
+                        "score": i + 1,
+                    }
                 )
             retrieved_results = [Result(self._query, document_hits)]
 

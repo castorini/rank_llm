@@ -1,12 +1,12 @@
-from enum import Enum
 import time
-from typing import Dict, Any, Union, List, Tuple, Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ftfy import fix_text
 import openai
 import tiktoken
+from ftfy import fix_text
 
-from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.result import Result
 
 
@@ -18,9 +18,9 @@ class SafeOpenai(RankLLM):
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
         window_size: int = 20,
-        keys = None,
-        key_start_id = None,
-        proxy = None,
+        keys=None,
+        key_start_id=None,
+        proxy=None,
         api_type: str = None,
         api_base: str = None,
         api_version: str = None,

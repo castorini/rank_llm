@@ -1,32 +1,25 @@
-from enum import Enum
 import json
+import os
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List
 
 from pyserini.index import IndexReader
 from pyserini.prebuilt_index_info import (
-    TF_INDEX_INFO,
     FAISS_INDEX_INFO,
     IMPACT_INDEX_INFO,
+    TF_INDEX_INFO,
 )
 from pyserini.query_iterator import DefaultQueryIterator
 from pyserini.search import (
-    LuceneSearcher,
-    LuceneImpactSearcher,
     FaissSearcher,
+    LuceneImpactSearcher,
+    LuceneSearcher,
     QueryEncoder,
-    get_topics,
     get_qrels,
+    get_topics,
 )
 from tqdm import tqdm
-
-import sys
-import os
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
 
 from rank_llm.result import Result, ResultsWriter
 from rank_llm.retrieve.indices_dict import INDICES
@@ -292,7 +285,12 @@ class PyseriniRetriever:
         return len(self._topics)
 
     def retrieve_and_store(
-        self, k=100, qid=None, store_trec: bool = True, store_qrels: bool = True
+        self,
+        k=100,
+        qid=None,
+        store_trec: bool = True,
+        store_qrels: bool = True,
+        retrieve_results_dirname: str = "retrieve_results",
     ) -> List[Result]:
         """
         Retrieves documents and stores the results in the given formats.
@@ -307,14 +305,14 @@ class PyseriniRetriever:
             List[Result]: The retrieval results.
         """
         results = self.retrieve(k, qid)
-        Path("retrieve_results/").mkdir(parents=True, exist_ok=True)
-        Path(f"retrieve_results/{self._retrieval_method.name}").mkdir(
+        Path(f"{retrieve_results_dirname}/").mkdir(parents=True, exist_ok=True)
+        Path(f"{retrieve_results_dirname}/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
         writer = ResultsWriter(results)
         # Store JSON in rank_results to a file
         writer.write_in_json_format(
-            f"retrieve_results/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+            f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
         )
         # Store the QRELS of the dataset if specified
         if store_qrels and self._qrels:
@@ -324,41 +322,22 @@ class PyseriniRetriever:
         # Store TRECS if specified
         if store_trec:
             writer.write_in_trec_eval_format(
-                f"retrieve_results/{self._retrieval_method.name}/trec_results_{self._dataset}.txt"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/trec_results_{self._dataset}.txt"
             )
         return results
 
 
-def evaluate_retrievals() -> None:
+def evaluate_retrievals(retrieve_results_dirname: str = "retrieve_results") -> None:
     from rank_llm.evaluation.trec_eval import EvalFunction
 
     for dataset in ["dl19", "dl20", "dl21", "dl22"]:
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            file_name = (
-                f"retrieve_results/{retrieval_method.name}/trec_results_{dataset}.txt"
-            )
+            file_name = f"{retrieve_results_dirname}/{retrieval_method.name}/trec_results_{dataset}.txt"
             if not os.path.isfile(file_name):
                 continue
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
             EvalFunction.eval(
                 ["-c", "-m", "map_cut.100", "-l2", TOPICS[dataset], file_name]
             )
-
-
-def main():
-    for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
-        for retrieval_method in RetrievalMethod:
-            if retrieval_method in [
-                RetrievalMethod.UNSPECIFIED,
-                RetrievalMethod.REP_LLAMA,
-            ]:
-                continue
-            retriever = PyseriniRetriever(dataset, retrieval_method)
-            retriever.retrieve_and_store()
-    evaluate_retrievals()
-
-
-if __name__ == "__main__":
-    main()
