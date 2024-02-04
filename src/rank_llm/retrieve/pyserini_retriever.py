@@ -312,7 +312,7 @@ class PyseriniRetriever:
         writer = ResultsWriter(results)
         # Store JSON in rank_results to a file
         writer.write_in_json_format(
-            f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}.json"
+            f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
         )
         # Store the QRELS of the dataset if specified
         if store_qrels and self._qrels:
@@ -322,7 +322,7 @@ class PyseriniRetriever:
         # Store TRECS if specified
         if store_trec:
             writer.write_in_trec_eval_format(
-                f"{retrieve_results_dirname}/{self._retrieval_method.name}/trec_results_{self._dataset}.txt"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/trec_results_{self._dataset}_top{k}.txt"
             )
         return results
 
