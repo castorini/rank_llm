@@ -24,6 +24,33 @@ class RankListwiseOSLLM(RankLLM):
         window_size: int = 20,
         system_message: str = None,
     ) -> None:
+        """
+        Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using
+        a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage
+        handling, and custom system messages for generating prompts.
+
+        Parameters:
+        - model (str): Identifier for the language model to be used for ranking tasks.
+        - context_size (int, optional): Maximum number of tokens that can be handled in a single prompt. Defaults to 4096.
+        - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, limited to RANK_GPT for this class.
+        Defaults to PromptMode.RANK_GPT.
+        - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt. Defaults to 0.
+        - device (str, optional): Specifies the device for model computation ('cuda' for GPU or 'cpu'). Defaults to 'cuda'.
+        - num_gpus (int, optional): Number of GPUs to use for model loading and inference. Defaults to 1.
+        - variable_passages (bool, optional): Indicates whether the number of passages to rank can vary. Defaults to False.
+        - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
+        - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
+        instructions or context. Defaults to None.
+
+        Raises:
+        - AssertionError: If CUDA is specified as the device but is not available on the system.
+        - ValueError: If an unsupported prompt mode is provided.
+
+        Note:
+        - This class is operates given scenarios where listwise ranking is required, with support for dynamic
+        passage handling and customization of prompts through system messages and few-shot examples.
+        - GPU acceleration is supported and recommended for faster computations.
+        """
         super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
         self._device = device
         if self._device == "cuda":

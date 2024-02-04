@@ -25,6 +25,30 @@ class SafeOpenai(RankLLM):
         api_base: str = None,
         api_version: str = None,
     ) -> None:
+        """
+        Creates instance of the SafeOpenai class, a specialized version of RankLLM designed for safely handling OpenAI API calls with
+        support for key cycling, proxy configuration, and Azure AI conditional integration.
+
+        Parameters:
+        - model (str): The model identifier for the LLM (model identifier information can be found via OpenAI's model lists).
+        - context_size (int): The maximum number of tokens that the model can handle in a single request.
+        - prompt_mode (PromptMode): The mode of prompt generation, restricted to RANK_GPT or LRL (Listwise Ranking Learning).
+        - num_few_shot_examples (int): The number of few-shot learning examples to include in the prompt.
+        - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
+        - keys (Union[List[str], str], optional): A list of OpenAI API keys or a single OpenAI API key.
+        - key_start_id (int, optional): The starting index for the OpenAI API key cycle.
+        - proxy (str, optional): The proxy configuration for OpenAI API calls.
+        - api_type (str, optional): The type of API service, if using Azure AI as the backend.
+        - api_base (str, optional): The base URL for the API, applicable when using Azure AI.
+        - api_version (str, optional): The API version, necessary for Azure AI integration.
+
+        Raises:
+        - ValueError: If an unsupported prompt mode is provided or if no OpenAI API keys / invalid OpenAI API keys are supplied.
+
+        Note:
+        - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
+        - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
+        """
         super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
         if isinstance(keys, str):
             keys = [keys]
