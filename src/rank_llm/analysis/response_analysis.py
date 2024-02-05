@@ -124,15 +124,18 @@ class ResponseAnalyzer:
             raise ValueError(f"Unsupported prompt format.")
         return int(match.group(2))
 
-    def count_errors(self, verbose: bool = False) -> Dict[str, int]:
+    def count_errors(
+        self, verbose: bool = False, normalize: bool = False
+    ) -> Dict[str, Union[int, float]]:
         """
         Counts an array of different types of errors in the given responses.
 
         Args:
-            responses (List[str]): A list of response strings.
+        verbose (bool, optional): When enabled, the analyzer will print out the malformed responses. Defaults to False.
+        normalize (bool, optional): When enabled, the returned dictionary will be normalized. Defaults to False.
 
         Returns:
-            Dict[str, int]: A dictionary object containing counts of different types of errors.
+            Dict[str, Union[int, float]]: A dictionary object containing (normalized) counts of different types of errors.
         """
         responses, num_passages = self.read_responses()
 
@@ -169,6 +172,10 @@ class ResponseAnalyzer:
                 stats_dict["repetition"] += 1
                 continue
             stats_dict["ok"] += 1
+
+        if not normalize:
+            return stats_dict
+
         # Create normalized dicts
         normalized_stats_dict = {}
         for key in stats_dict:
