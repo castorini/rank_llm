@@ -1,6 +1,6 @@
 import unittest
 
-from src.rank_llm.analysis.response_analysis_verbose import ResponseAnalyzer
+from src.rank_llm.analysis.response_analysis import ResponseAnalyzer
 from src.rank_llm.result import RankingExecInfo, Result
 
 

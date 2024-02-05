@@ -39,7 +39,9 @@ class EvalFunction:
                     file.write(
                         f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
                     )
-        args = eval_args
+        # make a deep copy of eval_args to preserve its default value for the next
+        args = []
+        args.extend(eval_args)
         args.append(qrels)
         args.append(temp_run_file)
         eval_result = EvalFunction.eval(args, trunc=True)

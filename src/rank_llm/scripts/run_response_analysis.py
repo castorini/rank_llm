@@ -7,7 +7,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.analysis.response_analysis_verbose import ResponseAnalyzer
+from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.rerank.rankllm import PromptMode
 
 
