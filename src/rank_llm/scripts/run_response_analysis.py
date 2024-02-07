@@ -12,11 +12,11 @@ from rank_llm.rerank.rankllm import PromptMode
 
 
 def main(args):
-    response_analyzer = ResponseAnalyzer(args.files, 100, PromptMode.RANK_GPT)
+    response_analyzer = ResponseAnalyzer(args.files)
     responses, num_passages = response_analyzer.read_saved_responses()
     print("Normalized scores:")
 
-    print(response_analyzer.count_errors(responses, num_passages, args.verbose))
+    print(response_analyzer.count_errors(verbose=args.verbose))
     # Print normalized scores
 
 
