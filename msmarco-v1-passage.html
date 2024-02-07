@@ -219,9 +219,9 @@ Command to generate run on TREC 2019 queries:
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -m pyserini.eval.trec_eval -c -l 2 -m map dl19-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19_2024-02-07T03:58:54.460984_window_20.txt
-python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19_2024-02-07T03:58:54.460984_window_20.txt
-python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19_2024-02-07T03:58:54.460984_window_20.txt
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -235,9 +235,9 @@ python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage /home/c596
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -m pyserini.eval.trec_eval -c -l 2 -m map dl20-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20_2024-02-07T03:34:22.448535_window_20.txt
-python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20_2024-02-07T03:34:22.448535_window_20.txt
-python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20_2024-02-07T03:34:22.448535_window_20.txt
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -295,9 +295,9 @@ Command to generate run on TREC 2019 queries:
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -m pyserini.eval.trec_eval -c -l 2 -m map dl19-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19_2024-02-02T21:04:09.155524_window_20_pass_2.txt
-python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19_2024-02-02T21:04:09.155524_window_20_pass_2.txt
-python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19_2024-02-02T21:04:09.155524_window_20_pass_2.txt
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -311,9 +311,9 @@ python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage /home/c596
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -m pyserini.eval.trec_eval -c -l 2 -m map dl20-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20_2024-02-07T00:11:09.977741_window_20.txt
-python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20_2024-02-07T00:11:09.977741_window_20.txt
-python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage /home/c596liu/rank_llm/rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20_2024-02-07T00:11:09.977741_window_20.txt
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -332,9 +332,13 @@ python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage /home/c596
 
 <ul style="list-style-type:none; padding-top: 25px">
 
-<li><p>[1] Xueguang Ma, Ronak Pradeep, Rodrigo Nogueira, and Jimmy Lin.
-<a href="https://cs.uwaterloo.ca/~jimmylin/publications/Ma_etal_SIGIR2022.pdf">Document Expansions and Learned Sparse Lexical Representations for MS MARCO V1 and V2.</a>
-<i>Proceedings of the 45th Annual International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2022)</i>, July 2022.</p>
+<li><p>[1] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
+<a href="https://arxiv.org/pdf/2309.15088.pdf">RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models.</a>
+<i>arXiv:2309.15088</i>, September 2023.</p>
+
+<li><p>[1] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
+<a href="https://arxiv.org/pdf/2312.02724.pdf">RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!</a>
+<i>arXiv:2312.02724</i>, December 2023.</p>
 
 </ul>
 
@@ -342,11 +346,21 @@ python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage /home/c596
 
 <h4>Programmatic Execution</h4>
 
+
+<p>Activate Conda Environment:</p>
+
+<blockquote class="mycode2"><tt>
+conda create -n rz python=3.10
+conda activate rz
+</tt></blockquote>
+
 <p>All experimental runs shown in the above table can be programmatically executed based on the instructions below.
 To list all the experimental conditions:</p>
 
+
+
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --list-conditions
+python -m 2cr.2cr.msmarco --collection v1-passage --list-conditions
 </tt></blockquote>
 
 <p>These conditions correspond to the table rows above.</p>
@@ -354,13 +368,13 @@ python -m pyserini.2cr.msmarco --collection v1-passage --list-conditions
 <p>For all conditions, just show the commands in a "dry run":</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --all --display-commands --dry-run
+python -m 2cr.2cr.msmarco --collection v1-passage --all --display-commands --dry-run
 </tt></blockquote>
 
 <p>To actually run all the experimental conditions:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --all --display-commands
+python -m 2cr.2cr.msmarco --collection v1-passage --all --display-commands
 </tt></blockquote>
 
 <p>With the above command, run files will be placed in the current directory.
@@ -369,7 +383,7 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>To show the commands for a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands --dry-run
+python -m 2cr.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands --dry-run
 </tt></blockquote>
 
 <p>This will generate exactly the commands for a specific condition above (corresponding to a row in the table).</p>
@@ -377,7 +391,7 @@ python -m pyserini.2cr.msmarco --collection v1-passage --condition bm25-default 
 <p>To actually run a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands
+python -m 2cr.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands
 </tt></blockquote>
 
 <p>Again, with the above command, run files will be placed in the current directory.
@@ -386,7 +400,7 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>Finally, to generate this page:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --generate-report --output msmarco-v1-passage.html
+python -m 2cr.2cr.msmarco --collection v1-passage --generate-report --output msmarco-v1-passage.html
 </tt></blockquote>
 
 <p>The output file <tt>msmarco-v1-passage.html</tt> should be identical to this page.</p>

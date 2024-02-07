@@ -192,10 +192,8 @@ def generate_report(args):
                 else:
                     short_topic_key = find_msmarco_table_topic_set_key_v2(topic_key)
                 #most recent rerank result files
-                # print(max(glob.glob(os.path.join(os.path.abspath('rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/'), f'{name}_4096_100_rank_GPT_{short_topic_key}*')), key=os.path.getctime, default=None))
-                # print(os.path.join(os.path.abspath('rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/'), f'{name}_4096_100_rank_GPT_{short_topic_key}*'))
-                latest_file = max(glob.glob(os.path.join(os.path.abspath('rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/'), f'{name}_4096_100_rank_GPT_{short_topic_key}*.txt')), key=os.path.getctime, default=None)
-                runfile = latest_file
+                latest_file = max(glob.glob(os.path.join('rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/', f'{name}_4096_100_rank_GPT_{short_topic_key}*.txt')), key=os.path.getctime, default=None)
+                runfile = f"\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/{name}_4096_100_rank_GPT_{short_topic_key}*.txt\\\")"
                 cmd = Template(cmd_template).substitute(topics=topic_key, output=runfile,
                                                         sparse_threads=sparse_threads, sparse_batch_size=sparse_batch_size,
                                                         dense_threads=dense_threads, dense_batch_size=dense_batch_size)
@@ -203,8 +201,8 @@ def generate_report(args):
 
                 for expected in topic_set['scores']:
                     for metric in expected:
-                        eval_cmd = f'python -m pyserini.eval.trec_eval ' + \
-                                   f'{trec_eval_metric_definitions[args.collection][eval_key][metric]} {eval_key} {runfile}'
+                        eval_cmd = 'python -c "import os, subprocess, glob; subprocess.run(' + ' f\'python -m pyserini.eval.trec_eval ' + \
+                                   f'{trec_eval_metric_definitions[args.collection][eval_key][metric]} {eval_key}  {{max(glob.glob (\{runfile}' + ', key=os.path.getmtime)}\', shell=True)\"'
                         eval_commands[name][short_topic_key] += eval_cmd + '\n'
                         table[name][short_topic_key][metric] = expected[metric]
 

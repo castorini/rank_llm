@@ -181,9 +181,13 @@ $rows
 
 <ul style="list-style-type:none; padding-top: 25px">
 
-<li><p>[1] Xueguang Ma, Ronak Pradeep, Rodrigo Nogueira, and Jimmy Lin.
-<a href="https://cs.uwaterloo.ca/~jimmylin/publications/Ma_etal_SIGIR2022.pdf">Document Expansions and Learned Sparse Lexical Representations for MS MARCO V1 and V2.</a>
-<i>Proceedings of the 45th Annual International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2022)</i>, July 2022.</p>
+<li><p>[1] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
+<a href="https://arxiv.org/pdf/2309.15088.pdf">RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models.</a>
+<i>arXiv:2309.15088</i>, September 2023.</p>
+
+<li><p>[1] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
+<a href="https://arxiv.org/pdf/2312.02724.pdf">RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!</a>
+<i>arXiv:2312.02724</i>, December 2023.</p>
 
 </ul>
 
@@ -205,7 +209,7 @@ To list all the experimental conditions:</p>
 
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --list-conditions
+python -m 2cr.2cr.msmarco --collection v1-passage --list-conditions
 </tt></blockquote>
 
 <p>These conditions correspond to the table rows above.</p>
@@ -213,13 +217,13 @@ python -m pyserini.2cr.msmarco --collection v1-passage --list-conditions
 <p>For all conditions, just show the commands in a "dry run":</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --all --display-commands --dry-run
+python -m 2cr.2cr.msmarco --collection v1-passage --all --display-commands --dry-run
 </tt></blockquote>
 
 <p>To actually run all the experimental conditions:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --all --display-commands
+python -m 2cr.2cr.msmarco --collection v1-passage --all --display-commands
 </tt></blockquote>
 
 <p>With the above command, run files will be placed in the current directory.
@@ -228,7 +232,7 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>To show the commands for a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands --dry-run
+python -m 2cr.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands --dry-run
 </tt></blockquote>
 
 <p>This will generate exactly the commands for a specific condition above (corresponding to a row in the table).</p>
@@ -236,7 +240,7 @@ python -m pyserini.2cr.msmarco --collection v1-passage --condition bm25-default 
 <p>To actually run a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands
+python -m 2cr.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands
 </tt></blockquote>
 
 <p>Again, with the above command, run files will be placed in the current directory.
@@ -245,7 +249,7 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>Finally, to generate this page:</p>
 
 <blockquote class="mycode2"><tt>
-python -m pyserini.2cr.msmarco --collection v1-passage --generate-report --output msmarco-v1-passage.html
+python -m 2cr.2cr.msmarco --collection v1-passage --generate-report --output msmarco-v1-passage.html
 </tt></blockquote>
 
 <p>The output file <tt>msmarco-v1-passage.html</tt> should be identical to this page.</p>
