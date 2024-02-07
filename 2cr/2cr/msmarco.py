@@ -67,14 +67,14 @@ trec_eval_metric_definitions = {
             'R@1K': '-c -m recall.1000'
         },
         'dl19-passage': {
-            'MAP': '-c -l 2 -m map',
+            # 'MAP': '-c -l 2 -m map',
             'nDCG@10': '-c -m ndcg_cut.10',
-            'R@1K': '-c -l 2 -m recall.1000'
+            # 'R@1K': '-c -l 2 -m recall.1000'
         },
         'dl20-passage': {
-            'MAP': '-c -l 2 -m map',
+            # 'MAP': '-c -l 2 -m map',
             'nDCG@10': '-c -m ndcg_cut.10',
-            'R@1K': '-c -l 2 -m recall.1000'
+            # 'R@1K': '-c -l 2 -m recall.1000'
         }
     }
 }
@@ -220,9 +220,9 @@ def generate_report(args):
                              condition_name=table_keys[name],
                              row=row_ids[name],
                              s1=f'{table[name]["dl19"]["MAP"]:.4f}' if table[name]['dl19']['MAP'] != 0 else '-',
-                             s2=f'{table[name]["dl19"]["nDCG@10"]:.4f}' if table[name]['dl19']['nDCG@10'] != 0 else '-',
-                             s3=f'{table[name]["dl19"]["R@1K"]:.4f}' if table[name]['dl19']['R@1K'] != 0 else '-',
-                             s4=f'{table[name]["dl20"]["MAP"]:.4f}' if table[name]['dl20']['MAP'] != 0 else '-',
+                             s2=f'{table[name]["dl20"]["MAP"]:.4f}' if table[name]['dl20']['MAP'] != 0 else 'SPLADE++ EnsembleDistil',
+                             s3=f'{table[name]["dl19"]["R@1K"]:.4f}' if table[name]['dl19']['R@1K'] != 0 else '100',
+                             s4=f'{table[name]["dl19"]["nDCG@10"]:.4f}' if table[name]['dl19']['nDCG@10'] != 0 else '-',
                              s5=f'{table[name]["dl20"]["nDCG@10"]:.4f}' if table[name]['dl20']['nDCG@10'] != 0 else '-',
                              s6=f'{table[name]["dl20"]["R@1K"]:.4f}' if table[name]['dl20']['R@1K'] != 0 else '-',
                              s7=f'{table[name]["dev"]["MRR@10"]:.4f}' if table[name]['dev']['MRR@10'] != 0 else '-',
@@ -235,18 +235,19 @@ def generate_report(args):
                              eval_cmd3=format_eval_command(eval_commands[name]['dev']))
 
             # If we don't have scores, we want to remove the commands also. Use simple regexp substitution.
-            if table[name]['dl19']['MAP'] == 0:
-                s = re.sub(re.compile('Command to generate run on TREC 2019 queries:.*?</div>',
-                                      re.MULTILINE | re.DOTALL),
-                           'Not available.</div>', s)
-            if table[name]['dl20']['MAP'] == 0:
-                s = re.sub(re.compile('Command to generate run on TREC 2020 queries:.*?</div>',
-                                      re.MULTILINE | re.DOTALL),
-                           'Not available.</div>', s)
-            if table[name]['dev']['MRR@10'] == 0:
-                s = re.sub(re.compile('Command to generate run on dev queries:.*?</div>',
-                                      re.MULTILINE | re.DOTALL),
-                           'Not available.</div>', s)
+            
+            # if table[name]['dl19']['MAP'] == 0:
+            #     s = re.sub(re.compile('Command to generate run on TREC 2019 queries:.*?</div>',
+            #                           re.MULTILINE | re.DOTALL),
+            #                'Not available.</div>', s)
+            # if table[name]['dl20']['MAP'] == 0:
+            #     s = re.sub(re.compile('Command to generate run on TREC 2020 queries:.*?</div>',
+            #                           re.MULTILINE | re.DOTALL),
+            #                'Not available.</div>', s)
+            # if table[name]['dev']['MRR@10'] == 0:
+            #     s = re.sub(re.compile('Command to generate run on dev queries:.*?</div>',
+            #                           re.MULTILINE | re.DOTALL),
+            #                'Not available.</div>', s)
 
             html_rows.append(s)
             row_cnt += 1

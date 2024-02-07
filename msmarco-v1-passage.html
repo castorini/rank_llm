@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-    <title>Pyserini Reproductions: MS MARCO V1 Passage</title>
+    <title>RankLLM Reproductions: MS MARCO V1 Passage</title>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css" />
     <!-- Google Fonts Roboto -->
@@ -150,24 +150,23 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
         <th class="headertop"></th>
         <th class="headertop"></th>
         <th class="headertop"></th>
-        <th class="headertop" colspan="4"><b>TREC 2019</b></th>
-        <th class="headertop" colspan="4"><b>TREC 2020</b></th>
-        <th class="headertop" colspan="3"><b>dev</b></th>
+        <th class="headertop" colspan="1"><b>Progressive Reranking</b></th>
+        <th class="headertop" colspan="1"><b>First-Stage Method</b></th>
+        <th class="headertop" colspan="1"><b>Top-k</b></th>
+        <th class="headertop"></th>
+        <th class="headertop" colspan="1"><b>TREC 2019</b></th>
+        <th class="headertop" colspan="1"><b>TREC 2020</b></th>
       </tr>
       <tr>
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
-        <th class="headerbottom" scope="col"><br/>AP</th>
-        <th class="headerbottom" scope="col">nDCG@10</th>
-        <th class="headerbottom" scope="col">R@1K</th>
         <th class="headerbottom" scope="col"></th>
-        <th class="headerbottom" scope="col"><br/>AP</th>
-        <th class="headerbottom" scope="col">nDCG@10</th>
-        <th class="headerbottom" scope="col">R@1K</th>
         <th class="headerbottom" scope="col"></th>
-        <th class="headerbottom" scope="col">RR@10</th>
-        <th class="headerbottom" scope="col">R@1K</th>
+        <th class="headerbottom" scope="col"></th>
+        <th class="headerbottom" scope="col"></th>
+        <th class="headerbottom" scope="col">nDCG@10</th>
+        <th class="headerbottom" scope="col">nDCG@10</th>
 
       </tr>
     </thead>
@@ -178,13 +177,13 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
 <td class="expand-button"></td>
 <td style="min-width: 85px">[13]</td>
 <td style="min-width: 400px">RankVicuna 7B V1</td>
-<td>0.4414</td>
-<td>0.7360</td>
-<td>0.6390</td>
+<td>-</td>
+<td>SPLADE++ EnsembleDistil</td>
+<td>100</td>
 <td></td>
-<td>0.5086</td>
+<td>0.7360</td>
 <td>0.7358</td>
-<td>0.7653</td>
+<td>-</td>
 <td></td>
 <td>-</td>
 <td>-</td>
@@ -219,9 +218,7 @@ Command to generate run on TREC 2019 queries:
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -235,15 +232,24 @@ python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eva
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
   </div>
   <div class="tab-pane fade" id="row1-tab3" role="tabpanel" aria-labelledby="row1-tab3">
-    Not available.</div>
+    Command to generate run on dev queries:
+
+  <blockquote class="mycode">
+<pre><code>
+</code></pre></blockquote>
+Evaluation commands:
+
+  <blockquote class="mycode">
+<pre><code></code></pre>
+  </blockquote>
+
+  </div>
 </div>
 <!-- Tabs content -->
 
@@ -254,13 +260,13 @@ python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eva
 <td class="expand-button"></td>
 <td style="min-width: 85px">[14]</td>
 <td style="min-width: 400px">RankZephyr 7B V1 - Full</td>
-<td>0.4906</td>
-<td>0.7817</td>
-<td>0.6390</td>
+<td>-</td>
+<td>SPLADE++ EnsembleDistil</td>
+<td>100</td>
 <td></td>
-<td>0.5752</td>
+<td>0.7817</td>
 <td>0.8195</td>
-<td>0.7653</td>
+<td>-</td>
 <td></td>
 <td>-</td>
 <td>-</td>
@@ -295,9 +301,7 @@ Command to generate run on TREC 2019 queries:
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -311,15 +315,24 @@ python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eva
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m map dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
-python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -l 2 -m recall.1000 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
   </div>
   <div class="tab-pane fade" id="row2-tab3" role="tabpanel" aria-labelledby="row2-tab3">
-    Not available.</div>
+    Command to generate run on dev queries:
+
+  <blockquote class="mycode">
+<pre><code>
+</code></pre></blockquote>
+Evaluation commands:
+
+  <blockquote class="mycode">
+<pre><code></code></pre>
+  </blockquote>
+
+  </div>
 </div>
 <!-- Tabs content -->
 
@@ -336,9 +349,14 @@ python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eva
 <a href="https://arxiv.org/pdf/2309.15088.pdf">RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models.</a>
 <i>arXiv:2309.15088</i>, September 2023.</p>
 
-<li><p>[1] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
+<li><p>[2] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
 <a href="https://arxiv.org/pdf/2312.02724.pdf">RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!</a>
 <i>arXiv:2312.02724</i>, December 2023.</p>
+
+<li><p>[3] Thibault Formal, Carlos Lassance, Benjamin Piwowarski, and Stéphane Clinchant
+<a href="https://arxiv.org/abs/2205.04733">From Distillation to Hard Negative Sampling: Making Sparse Neural IR Models More Effective.</a>
+<i>Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2022), May 2022.</i></p></li>
+
 
 </ul>
 

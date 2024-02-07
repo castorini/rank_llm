@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-    <title>Pyserini Reproductions: MS MARCO V1 Passage</title>
+    <title>RankLLM Reproductions: MS MARCO V1 Passage</title>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css" />
     <!-- Google Fonts Roboto -->
@@ -150,24 +150,23 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
         <th class="headertop"></th>
         <th class="headertop"></th>
         <th class="headertop"></th>
-        <th class="headertop" colspan="4"><b>TREC 2019</b></th>
-        <th class="headertop" colspan="4"><b>TREC 2020</b></th>
-        <th class="headertop" colspan="3"><b>dev</b></th>
+        <th class="headertop" colspan="1"><b>Progressive Reranking</b></th>
+        <th class="headertop" colspan="1"><b>First-Stage Method</b></th>
+        <th class="headertop" colspan="1"><b>Top-k</b></th>
+        <th class="headertop"></th>
+        <th class="headertop" colspan="1"><b>TREC 2019</b></th>
+        <th class="headertop" colspan="1"><b>TREC 2020</b></th>
       </tr>
       <tr>
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
-        <th class="headerbottom" scope="col"><br/>AP</th>
-        <th class="headerbottom" scope="col">nDCG@10</th>
-        <th class="headerbottom" scope="col">R@1K</th>
         <th class="headerbottom" scope="col"></th>
-        <th class="headerbottom" scope="col"><br/>AP</th>
-        <th class="headerbottom" scope="col">nDCG@10</th>
-        <th class="headerbottom" scope="col">R@1K</th>
         <th class="headerbottom" scope="col"></th>
-        <th class="headerbottom" scope="col">RR@10</th>
-        <th class="headerbottom" scope="col">R@1K</th>
+        <th class="headerbottom" scope="col"></th>
+        <th class="headerbottom" scope="col"></th>
+        <th class="headerbottom" scope="col">nDCG@10</th>
+        <th class="headerbottom" scope="col">nDCG@10</th>
 
       </tr>
     </thead>
@@ -185,9 +184,14 @@ $rows
 <a href="https://arxiv.org/pdf/2309.15088.pdf">RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models.</a>
 <i>arXiv:2309.15088</i>, September 2023.</p>
 
-<li><p>[1] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
+<li><p>[2] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
 <a href="https://arxiv.org/pdf/2312.02724.pdf">RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!</a>
 <i>arXiv:2312.02724</i>, December 2023.</p>
+
+<li><p>[3] Thibault Formal, Carlos Lassance, Benjamin Piwowarski, and Stéphane Clinchant
+<a href="https://arxiv.org/abs/2205.04733">From Distillation to Hard Negative Sampling: Making Sparse Neural IR Models More Effective.</a>
+<i>Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2022), May 2022.</i></p></li>
+
 
 </ul>
 
