@@ -213,12 +213,21 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
 Command to generate run on TREC 2019 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 dataset=dl19-passage  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
+  -\
+  -m odel_path=castorini/rank_vicuna_7b_v1  \
+  --top_k_candidates=100 dataset=dl19-passage  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096
 </code></pre></blockquote>
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python \
+  -m  pyserini.eval.trec_eval -c \
+  -m  ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl19*.txt\"), \
+  key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -227,12 +236,21 @@ Evaluation commands:
     Command to generate run on TREC 2020 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
+  -\
+  -m odel_path=castorini/rank_vicuna_7b_v1  \
+  --top_k_candidates=100 dataset=dl20  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096
 </code></pre></blockquote>
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python \
+  -m  pyserini.eval.trec_eval -c \
+  -m  ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_vicuna_7b_v1_4096_100_rank_GPT_dl20*.txt\"), \
+  key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -296,12 +314,21 @@ Evaluation commands:
 Command to generate run on TREC 2019 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_zephyr_7b_v1_full  --top_k_candidates=100 --dataset=dl19-passage  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
+  -\
+  -m odel_path=castorini/rank_zephyr_7b_v1_full  \
+  --top_k_candidates=100 --dataset=dl19-passage  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 --variable_passages
 </code></pre></blockquote>
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python \
+  -m  pyserini.eval.trec_eval -c \
+  -m  ndcg_cut.10 dl19-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl19*.txt\"), \
+  key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -310,12 +337,21 @@ Evaluation commands:
     Command to generate run on TREC 2020 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_zephyr_7b_v1_full  --top_k_candidates=100 --dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
+  -\
+  -m odel_path=castorini/rank_zephyr_7b_v1_full  \
+  --top_k_candidates=100 --dataset=dl20  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 --variable_passages
 </code></pre></blockquote>
 Evaluation commands:
 
   <blockquote class="mycode">
-<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python -m pyserini.eval.trec_eval -c -m ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), key=os.path.getmtime)}', shell=True)"
+<pre><code>python -c "import os, subprocess, glob; subprocess.run( f'python \
+  -m  pyserini.eval.trec_eval -c \
+  -m  ndcg_cut.10 dl20-passage  {max(glob.glob (\"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/rank_zephyr_7b_v1_full_4096_100_rank_GPT_dl20*.txt\"), \
+  key=os.path.getmtime)}', shell=True)"
 </code></pre>
   </blockquote>
 
@@ -378,7 +414,7 @@ To list all the experimental conditions:</p>
 
 
 <blockquote class="mycode2"><tt>
-python -m 2cr.2cr.msmarco --collection v1-passage --list-conditions
+python -m src.rank_llm.2cr.msmarco --collection v1-passage --list-conditions
 </tt></blockquote>
 
 <p>These conditions correspond to the table rows above.</p>
@@ -386,13 +422,13 @@ python -m 2cr.2cr.msmarco --collection v1-passage --list-conditions
 <p>For all conditions, just show the commands in a "dry run":</p>
 
 <blockquote class="mycode2"><tt>
-python -m 2cr.2cr.msmarco --collection v1-passage --all --display-commands --dry-run
+python -m src.rank_llm.2cr.msmarco --collection v1-passage --all --display-commands --dry-run
 </tt></blockquote>
 
 <p>To actually run all the experimental conditions:</p>
 
 <blockquote class="mycode2"><tt>
-python -m 2cr.2cr.msmarco --collection v1-passage --all --display-commands
+python -m src.rank_llm.2cr.msmarco --collection v1-passage --all --display-commands
 </tt></blockquote>
 
 <p>With the above command, run files will be placed in the current directory.
@@ -401,7 +437,7 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>To show the commands for a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m 2cr.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands --dry-run
+python -m src.rank_llm.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands --dry-run
 </tt></blockquote>
 
 <p>This will generate exactly the commands for a specific condition above (corresponding to a row in the table).</p>
@@ -409,7 +445,7 @@ python -m 2cr.2cr.msmarco --collection v1-passage --condition bm25-default --dis
 <p>To actually run a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m 2cr.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands
+python -m src.rank_llm.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands
 </tt></blockquote>
 
 <p>Again, with the above command, run files will be placed in the current directory.
@@ -418,7 +454,7 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>Finally, to generate this page:</p>
 
 <blockquote class="mycode2"><tt>
-python -m 2cr.2cr.msmarco --collection v1-passage --generate-report --output msmarco-v1-passage.html
+python -m src.rank_llm.2cr.msmarco --collection v1-passage --generate-report --output msmarco-v1-passage.html
 </tt></blockquote>
 
 <p>The output file <tt>msmarco-v1-passage.html</tt> should be identical to this page.</p>
