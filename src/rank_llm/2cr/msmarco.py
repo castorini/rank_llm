@@ -209,9 +209,9 @@ def generate_report(args):
 
                 for expected in topic_set['scores']:
                     for metric in expected:
-                        eval_cmd = 'python -c "import os, subprocess, glob; subprocess.run(' + ' f\'python -m pyserini.eval.trec_eval ' + \
-                                   f'{trec_eval_metric_definitions[args.collection][eval_key][metric]} {eval_key}  {{max(glob.glob (\{runfile}' + ', key=os.path.getmtime)}\', shell=True)\"'
-                        eval_commands[name][short_topic_key] += eval_cmd + '\n'
+                        # eval_cmd = 'python -c "import os, subprocess, glob; subprocess.run(' + ' f\'python -m pyserini.eval.trec_eval ' + \
+                        #            f'{trec_eval_metric_definitions[args.collection][eval_key][metric]} {eval_key}  {{max(glob.glob (\{runfile}' + ', key=os.path.getmtime)}\', shell=True)\"'
+                        # eval_commands[name][short_topic_key] += eval_cmd + '\n'
                         table[name][short_topic_key][metric] = expected[metric]
 
     if args.collection == 'msmarco-v1-passage' or args.collection == 'msmarco-v1-doc':
@@ -232,9 +232,9 @@ def generate_report(args):
                              s3=f'{table[name]["dl19"]["R@1K"]:.4f}' if table[name]['dl19']['R@1K'] != 0 else '100',
                              s4=f'{table[name]["dl19"]["nDCG@10"]:.4f}' if table[name]['dl19']['nDCG@10'] != 0 else '-',
                              s5=f'{table[name]["dl20"]["nDCG@10"]:.4f}' if table[name]['dl20']['nDCG@10'] != 0 else '-',
-                             s6=f'{table[name]["dl20"]["R@1K"]:.4f}' if table[name]['dl20']['R@1K'] != 0 else '-',
-                             s7=f'{table[name]["dev"]["MRR@10"]:.4f}' if table[name]['dev']['MRR@10'] != 0 else '-',
-                             s8=f'{table[name]["dev"]["R@1K"]:.4f}' if table[name]['dev']['R@1K'] != 0 else '-',
+                             s6=f'{table[name]["dl20"]["R@1K"]:.4f}' if table[name]['dl20']['R@1K'] != 0 else '',
+                             s7=f'{table[name]["dev"]["MRR@10"]:.4f}' if table[name]['dev']['MRR@10'] != 0 else '',
+                             s8=f'{table[name]["dev"]["R@1K"]:.4f}' if table[name]['dev']['R@1K'] != 0 else '',
                              cmd1=format_command(commands[name]['dl19']),
                              cmd2=format_command(commands[name]['dl20']),
                              cmd3=format_command(commands[name]['dev']),
@@ -286,10 +286,10 @@ def generate_report(args):
                              s3=f'{table[name]["dl21"]["MRR@100"]:.4f}',
                              s4=f'{table[name]["dl21"]["R@100"]:.4f}',
                              s5=f'{table[name]["dl21"]["R@1K"]:.4f}',
-                             s6=f'{table[name]["dev"]["MRR@100"]:.4f}',
-                             s7=f'{table[name]["dev"]["R@1K"]:.4f}',
-                             s8=f'{table[name]["dev2"]["MRR@100"]:.4f}',
-                             s9=f'{table[name]["dev2"]["R@1K"]:.4f}',
+                            #  s6=f'{table[name]["dev"]["MRR@100"]:.4f}',
+                            #  s7=f'{table[name]["dev"]["R@1K"]:.4f}',
+                            #  s8=f'{table[name]["dev2"]["MRR@100"]:.4f}',
+                            #  s9=f'{table[name]["dev2"]["R@1K"]:.4f}',
                              cmd1=format_command(commands[name]['dl21']),
                              cmd2=format_command(commands[name]['dev']),
                              cmd3=format_command(commands[name]['dev2']),

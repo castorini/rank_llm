@@ -27,9 +27,6 @@
   <li class="nav-item" role="presentation">
     <a class="nav-link" id="row${row_cnt}-tab2-header" data-mdb-toggle="tab" href="#row${row_cnt}-tab2" role="tab" aria-controls="row${row_cnt}-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
   </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row${row_cnt}-tab3-header" data-mdb-toggle="tab" href="#row${row_cnt}-tab3" role="tab" aria-controls="row${row_cnt}-tab3" aria-selected="false" style="text-transform:none">dev</a>
-  </li>
 </ul>
 <!-- Tabs navs -->
 
@@ -41,7 +38,6 @@ Command to generate run on TREC 2019 queries:
   <blockquote class="mycode">
 <pre><code>$cmd1
 </code></pre></blockquote>
-Evaluation commands:
 
   <blockquote class="mycode">
 <pre><code>${eval_cmd1}</code></pre>
@@ -54,7 +50,6 @@ Evaluation commands:
   <blockquote class="mycode">
 <pre><code>$cmd2
 </code></pre></blockquote>
-Evaluation commands:
 
   <blockquote class="mycode">
 <pre><code>${eval_cmd2}</code></pre>
@@ -67,7 +62,6 @@ Evaluation commands:
   <blockquote class="mycode">
 <pre><code>$cmd3
 </code></pre></blockquote>
-Evaluation commands:
 
   <blockquote class="mycode">
 <pre><code>${eval_cmd3}</code></pre>

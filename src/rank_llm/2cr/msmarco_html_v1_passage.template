@@ -150,7 +150,7 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
         <th class="headertop"></th>
         <th class="headertop"></th>
         <th class="headertop"></th>
-        <th class="headertop" colspan="1"><b>Progressive Reranking</b></th>
+        <th class="headertop" colspan="1"><b>Multi-Pass</b></th>
         <th class="headertop" colspan="1"><b>First-Stage Method</b></th>
         <th class="headertop" colspan="1"><b>Top-k</b></th>
         <th class="headertop"></th>
