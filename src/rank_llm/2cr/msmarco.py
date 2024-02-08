@@ -107,7 +107,6 @@ def find_msmarco_table_topic_set_key_v2(topic_key):
 
 def format_eval_command(raw):
     return raw.replace('run.', '\\\n  run.') \
-        .replace('-m', '\\\n  -m ') \
         .replace('key', '\\\n  key') \
 
 
@@ -137,7 +136,6 @@ def format_command(raw):
         .replace('--top_k_candidates', '\\\n  --top_k_candidates') \
         .replace('--retrieval_method', '\\\n  --retrieval_method') \
         .replace('--model_path', '\\\n  --model_path') \
-        .replace('-m', '\\\n  -m ') \
         .replace('.txt ', '.txt \\\n  ')
 
 

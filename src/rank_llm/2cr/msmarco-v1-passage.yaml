@@ -5,7 +5,7 @@ conditions:
     display-row: "[1]"
     command: python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 --dataset=$topics  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096
     topics:
-      - topic_key: dl19-passage
+      - topic_key: dl19
         eval_key: dl19-passage
         scores:
           - nDCG@10: 0.7360
