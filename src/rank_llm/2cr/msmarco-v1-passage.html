@@ -150,11 +150,10 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
         <th class="headertop"></th>
         <th class="headertop"></th>
         <th class="headertop"></th>
-        <th class="headertop" colspan="1"><b>Multi-Pass TREC 2019</b></th>
-        <th class="headertop" colspan="1"><b>Multi-Pass TREC 2020</b></th>
+        <th class="headertop" colspan="1"><b>Multi-Pass</b></th>
         <th class="headertop" colspan="1"><b>First-Stage Method</b></th>
-        <th class="headerbottom" scope="col"></th>
         <th class="headertop" colspan="1"><b>Top-k</b></th>
+        <th class="headertop"></th>
         <th class="headertop" colspan="1"><b>TREC 2019</b></th>
         <th class="headertop" colspan="1"><b>TREC 2020</b></th>
       </tr>
@@ -162,8 +161,7 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
-        <th class="headerbottom" scope="col">nDCG@10</th>
-        <th class="headerbottom" scope="col">nDCG@10</th>
+        <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col"></th>
@@ -180,12 +178,12 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
 <td style="min-width: 85px">[1]</td>
 <td style="min-width: 400px">RankVicuna 7B V1</td>
 <td>-</td>
-<td>-</td>
 <td>SPLADE++ EnsembleDistil</td>
-<td></td>
 <td>100</td>
+<td></td>
 <td>0.7360</td>
 <td>0.7358</td>
+<td></td>
 <td></td>
 <td></td>
 <td></td>
@@ -264,13 +262,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <td class="expand-button"></td>
 <td style="min-width: 85px">[2]</td>
 <td style="min-width: 400px">RankZephyr 7B V1 - Full</td>
-<td>0.7855</td>
-<td>0.8211</td>
+<td>-</td>
 <td>SPLADE++ EnsembleDistil</td>
-<td></td>
 <td>100</td>
+<td></td>
 <td>0.7803</td>
 <td>0.8195</td>
+<td></td>
 <td></td>
 <td></td>
 <td></td>
@@ -302,7 +300,8 @@ Command to generate and evaluate run on TREC 2019 queries:
   --top_k_candidates=100 --dataset=dl19  \
   --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
   --prompt_mode=rank_GPT  \
-  --context_size=4096 --variable_passages
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -319,7 +318,8 @@ Command to generate and evaluate run on TREC 2019 queries:
   --top_k_candidates=100 --dataset=dl20  \
   --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
   --prompt_mode=rank_GPT  \
-  --context_size=4096 --variable_passages
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -328,6 +328,95 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row2-tab3" role="tabpanel" aria-labelledby="row2-tab3">
+    Command to generate run on dev queries:
+
+  <blockquote class="mycode">
+<pre><code>
+</code></pre></blockquote>
+
+  <blockquote class="mycode">
+<pre><code></code></pre>
+  </blockquote>
+
+  </div>
+</div>
+<!-- Tabs content -->
+
+</div></td>
+</tr>
+<!-- Condition: RankZephyr 7B V1 - Full -->
+<tr class="accordion-toggle collapsed" id="row3" data-toggle="collapse" data-parent="#row3" href="#collapse3">
+<td class="expand-button"></td>
+<td style="min-width: 85px">[2]</td>
+<td style="min-width: 400px">RankZephyr 7B V1 - Full</td>
+<td>3</td>
+<td>SPLADE++ EnsembleDistil</td>
+<td>100</td>
+<td></td>
+<td>0.7855</td>
+<td>0.8211</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="hide-table-padding">
+<td></td>
+<td colspan="11">
+<div id="collapse3" class="collapse in p-3">
+
+<!-- Tabs navs -->
+<ul class="nav nav-tabs mb-3" id="row3-tabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <a class="nav-link active" id="row3-tab1-header" data-mdb-toggle="tab" href="#row3-tab1" role="tab" aria-controls="row3-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row3-tab2-header" data-mdb-toggle="tab" href="#row3-tab2" role="tab" aria-controls="row3-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+  </li>
+</ul>
+<!-- Tabs navs -->
+
+<!-- Tabs content -->
+<div class="tab-content" id="row3-content">
+  <div class="tab-pane fade show active" id="row3-tab1" role="tabpanel" aria-labelledby="row3-tab1">
+Command to generate and evaluate run on TREC 2019 queries:
+
+  <blockquote class="mycode">
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
+  --model_path=castorini/rank_zephyr_7b_v1_full  \
+  --top_k_candidates=100 --dataset=dl19  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages \
+  --num_passes=3
+</code></pre></blockquote>
+
+  <blockquote class="mycode">
+<pre><code></code></pre>
+  </blockquote>
+
+  </div>
+  <div class="tab-pane fade" id="row3-tab2" role="tabpanel" aria-labelledby="row3-tab2">
+    Command to generate and evaluate run on TREC 2020 queries:
+
+  <blockquote class="mycode">
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
+  --model_path=castorini/rank_zephyr_7b_v1_full  \
+  --top_k_candidates=100 --dataset=dl20  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages \
+  --num_passes=3
+</code></pre></blockquote>
+
+  <blockquote class="mycode">
+<pre><code></code></pre>
+  </blockquote>
+
+  </div>
+  <div class="tab-pane fade" id="row3-tab3" role="tabpanel" aria-labelledby="row3-tab3">
     Command to generate run on dev queries:
 
   <blockquote class="mycode">
