@@ -1,0 +1,45 @@
+conditions:
+  - name: rank_vicuna_7b_v1
+    display: "RankVicuna 7B V1"
+    display-html: "RankVicuna 7B V1"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_vicuna_7b_v1  --top_k_candidates=100 --dataset=$topics  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096
+    topics:
+      - topic_key: dl19
+        eval_key: dl19-passage
+        scores:
+          - nDCG@10: 0.7360
+      - topic_key: dl20
+        eval_key: dl20-passage
+        scores:
+          - nDCG@10: 0.7358
+  - name: rank_zephyr_7b_v1_full
+    display: "RankZephyr 7B V1 - Full"
+    display-html: "RankZephyr 7B V1 - Full"
+    display-row: "[2]"
+    command: python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_zephyr_7b_v1_full  --top_k_candidates=100 --dataset=$topics  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl19
+        eval_key: dl19-passage
+        scores:
+          - nDCG@10: 0.7803
+      - topic_key: dl20
+        eval_key: dl20-passage
+        scores:
+          - nDCG@10: 0.8211
+  - name: rank_zephyr_7b_v1_full_mult_pass
+    display: "RankZephyr 7B V1 - Full"
+    display-html: "RankZephyr 7B V1 - Full"
+    display-row: "[2]"
+    command: python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_zephyr_7b_v1_full  --top_k_candidates=100 --dataset=$topics  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --num_passes=3
+    topics:
+      - topic_key: dl19
+        eval_key: dl19-passage
+        scores:
+          - MULT: 3
+          - nDCG@10: 0.7855
+      - topic_key: dl20
+        eval_key: dl20-passage
+        scores:
+          - MULT: 3
+          - nDCG@10: 0.8255
