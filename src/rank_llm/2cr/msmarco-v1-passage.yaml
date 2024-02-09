@@ -26,7 +26,7 @@ conditions:
       - topic_key: dl20
         eval_key: dl20-passage
         scores:
-          - nDCG@10: 0.8195
+          - nDCG@10: 0.8211
   - name: rank_zephyr_7b_v1_full_mult_pass
     display: "RankZephyr 7B V1 - Full"
     display-html: "RankZephyr 7B V1 - Full"
@@ -42,4 +42,4 @@ conditions:
         eval_key: dl20-passage
         scores:
           - MULT: 3
-          - nDCG@10: 0.8211
+          - nDCG@10: 0.8255
