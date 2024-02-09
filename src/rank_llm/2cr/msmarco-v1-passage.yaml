@@ -22,9 +22,11 @@ conditions:
       - topic_key: dl19
         eval_key: dl19-passage
         scores:
-          - nDCG@10: 0.7817
+          - MAP: 0.7855
+          - nDCG@10: 0.7803
       - topic_key: dl20
         eval_key: dl20-passage
         scores:
+          - MAP: 0.8211
           - nDCG@10: 0.8195
   
