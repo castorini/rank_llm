@@ -61,6 +61,7 @@ If you use RankLLM, please cite the following relevant papers:
 
 [[2309.15088] RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models](https://arxiv.org/abs/2309.15088)
 
+<!-- {% raw %} -->
 ```
 @ARTICLE{pradeep2023rankvicuna,
   title   = {{RankVicuna}: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models},
@@ -69,9 +70,12 @@ If you use RankLLM, please cite the following relevant papers:
   journal = {arXiv:2309.15088}
 }
 ```
+<!-- {% endraw %} -->
+
 
 [[2312.02724] RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!](https://arxiv.org/abs/2312.02724)
 
+<!-- {% raw %} -->
 ```
 @ARTICLE{pradeep2023rankzephyr,
   title   = {{RankZephyr}: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!},
@@ -80,6 +84,7 @@ If you use RankLLM, please cite the following relevant papers:
   journal = {arXiv:2312.02724}
 }
 ```
+<!-- {% endraw %} -->
 
 ## 🙏 Acknowledgments
 
