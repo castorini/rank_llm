@@ -64,7 +64,7 @@ def retrieve_and_rerank(
     # Retrieve
     print("Retrieving:")
     if retrieval_mode == RetrievalMode.DATASET:
-        retrieved_results = Retriever.from_dataset_with_prebuit_index(
+        retrieved_results = Retriever.from_dataset_with_prebuilt_index(
             dataset_name=dataset, retrieval_method=retrieval_method
         )
     elif retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:

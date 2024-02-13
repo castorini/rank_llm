@@ -90,7 +90,7 @@ class Retriever:
         return retriever.retrieve()
 
     @staticmethod
-    def from_dataset_with_prebuit_index(
+    def from_dataset_with_prebuilt_index(
         dataset_name: str,
         retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
         k: int = 100,
