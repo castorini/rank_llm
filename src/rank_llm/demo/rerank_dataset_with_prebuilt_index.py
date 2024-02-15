@@ -15,7 +15,7 @@ from rank_llm.retrieve.topics_dict import TOPICS
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
-retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset_name)
+retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 
 # Evaluate retrieved results.
 topics = TOPICS[dataset_name]
@@ -45,7 +45,7 @@ eval_result = EvalFunction.from_results(rerank_results, TOPICS[dataset_name])
 print(eval_result)
 
 # Users can specify other retrieval methods:
-retrieved_results = Retriever.from_dataset_with_prebuit_index(
+retrieved_results = Retriever.from_dataset_with_prebuilt_index(
     dataset_name, RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL
 )
 reranker = VicunaReranker()

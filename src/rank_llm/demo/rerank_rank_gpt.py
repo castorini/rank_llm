@@ -13,7 +13,7 @@ from rank_llm.retrieve.retriever import Retriever
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
-retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset_name)
+retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 agent = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
 reranker = Reranker(agent)
 rerank_results = reranker.rerank(retrieved_results)

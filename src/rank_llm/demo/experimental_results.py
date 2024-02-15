@@ -25,7 +25,7 @@ rerankers = {"rg": g_reranker, "rv": v_reranker, "rz": z_reranker}
 
 results = {}
 for dataset in ["dl19"]:  # , "dl20"]:
-    retrieved_results = Retriever.from_dataset_with_prebuit_index(dataset)
+    retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset)
     topics = TOPICS[dataset]
     ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
     for key, reranker in rerankers.items():
