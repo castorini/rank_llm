@@ -2,8 +2,8 @@ import json
 import random
 from typing import Optional, Tuple
 
-from awq import AutoAWQForCausalLM
 import torch
+from awq import AutoAWQForCausalLM
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from transformers import AutoTokenizer

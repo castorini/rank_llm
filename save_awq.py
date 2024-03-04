@@ -34,7 +34,8 @@ def parse_args():
         "--quant_path",
         type=str,
         default="awq_rank_zephyr_7b_v1_full",
-        help="Path/slug where the quantized model is to be stored.")
+        help="Path/slug where the quantized model is to be stored.",
+    )
     args = parser.parse_args()
     return args
 
@@ -71,7 +72,8 @@ def main():
     logging.info(f"Loading model from {model_path}.")
     model = awq.AutoAWQForCausalLM.from_pretrained(model_path)
     tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_path, trust_remote_code=True)
+        model_path, trust_remote_code=True
+    )
 
     logging.info(f"Starting AWQ with data {dataset}.")
     model.quantize(
