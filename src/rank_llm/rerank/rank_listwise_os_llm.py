@@ -3,8 +3,10 @@ import random
 from typing import Optional, Tuple
 
 import torch
+from awq import AutoAWQForCausalLM
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
+from transformers import AutoTokenizer
 from transformers.generation import GenerationConfig
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
@@ -62,7 +64,19 @@ class RankListwiseOSLLM(RankLLM):
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of Rank_GPT prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
+        if "awq" in model:
+            self._llm = AutoAWQForCausalLM.from_quantized(
+                model,
+                fuse_layers=True,
+                max_seq_len=context_size,
+            ).to(0)
+            self._tokenizer = AutoTokenizer.from_pretrained(model)
+        else:
+            self._llm, self._tokenizer = load_model(
+                model,
+                device=device,
+                num_gpus=num_gpus,
+            )
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message
