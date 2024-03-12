@@ -2,6 +2,9 @@ import copy
 import random
 import re
 from abc import ABC, abstractmethod
+
+# batched inference - parallel
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 
@@ -320,6 +323,33 @@ class RankLLM(ABC):
             if "score" in result.hits[j + rank_start]:
                 result.hits[j + rank_start]["score"] = cut_range[j]["score"]
         return result
+
+    def sliding_windows_batched(
+        self,
+        queries_documents: List[Tuple[str, Result]],
+        window_size: int,
+        step: int,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+    ) -> List[Result]:
+        def process_query(query_document):
+            query, retrieved_result = query_document
+            return self.sliding_windows(
+                retrieved_result,
+                rank_start=0,
+                rank_end=len(retrieved_result.hits),
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+            )
+
+        results = []
+        with ThreadPoolExecutor() as executor:
+            futures = [executor.submit(process_query, qd) for qd in queries_documents]
+            for future in as_completed(futures):
+                results.append(future.result())
+        return results
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)

@@ -314,5 +314,60 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertEqual(output, 22)
 
 
+class TestRankListwiseOSLLMBatching(unittest.TestCase):
+    def test_sliding_windows_batched(self):
+        # mock docs
+        mock_results = [
+            (
+                "query1",
+                Result(
+                    hits=[
+                        {"content": "doc1 query1", "score": 0.9},
+                        {"content": "doc2 query1", "score": 0.8},
+                    ]
+                ),
+            ),
+            (
+                "query2",
+                Result(
+                    hits=[
+                        {"content": "doc3 query2", "score": 0.7},
+                        {"content": "doc4 query2", "score": 0.6},
+                        {"content": "doc5 query2", "score": 0.5},
+                    ]
+                ),
+            ),
+        ]
+
+        agent = RankListwiseOSLLM(
+            model="castorini/rank_zephyr_7b_v1_full",
+            context_size=4096,
+            prompt_mode=PromptMode.RANK_GPT,
+            num_few_shot_examples=0,
+            variable_passages=True,
+            window_size=2,
+            system_message="",
+        )
+
+        batched_results = agent.sliding_windows_batched(
+            queries_documents=mock_results,
+            window_size=2,
+            step=1,
+            shuffle_candidates=False,
+            logging=True,
+        )
+
+        self.assertEqual(len(batched_results), 2, "Should process two queries")
+
+        for result in batched_results:
+            self.assertTrue(
+                isinstance(result, Result), "result must be a 'Result' object."
+            )
+            self.assertTrue(len(result.hits) > 0, "result.hits size must be > 0.")
+            for hit in result.hits:
+                self.assertIn("content", hit, "hit must contain 'content' key")
+                self.assertIn("score", hit, "hit must contain 'score' key")
+
+
 if __name__ == "__main__":
     unittest.main()
