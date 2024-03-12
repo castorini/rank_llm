@@ -35,6 +35,7 @@ def main(args):
     num_passes = args.num_passes
     step_size = args.step_size
     window_size = args.window_size
+    num_batches = args.num_batches
     system_message = args.system_message
 
     _ = retrieve_and_rerank(
@@ -55,6 +56,7 @@ def main(args):
         num_passes=num_passes,
         window_size=window_size,
         step_size=step_size,
+        num_batches=num_batches,
         system_message=system_message,
     )
 
@@ -152,6 +154,12 @@ if __name__ == "__main__":
         type=str,
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
+    )
+    parser.add_argument(
+        "--num_batches",
+        type=int,
+        default=1,
+        help="number of batches to split the queries",
     )
     args = parser.parse_args()
     main(args)

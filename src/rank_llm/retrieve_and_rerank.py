@@ -30,6 +30,7 @@ def retrieve_and_rerank(
     num_passes: int = 1,
     window_size: int = 20,
     step_size: int = 10,
+    num_batches: int = 1,
     system_message: str = None,
     index_path: str = None,
     topics_path: str = None,
@@ -126,5 +127,37 @@ def retrieve_and_rerank(
             retrieved_results = rerank_results
             for r in retrieved_results:
                 r.ranking_exec_summary = None
+
+    if num_batches > 1 and isinstance(dataset, list):
+        batch_size = len(dataset) // num_batches
+        batch_results = []
+        for i in range(0, len(dataset), batch_size):
+            batch = dataset[i : i + batch_size]
+            # process batch
+            print(f"Processing batch: {i // batch_size + 1} of {num_batches}:")
+            batch_retrieved_results = Retriever.from_inline_documents(
+                query=query, documents=batch
+            )
+            batch_rerank_results = reranker.rerank(
+                batch_retrieved_results,
+                rank_end=top_k_candidates,
+                window_size=min(window_size, len(batch)),
+                shuffle_candidates=shuffle_candidates,
+                logging=print_prompts_responses,
+                step=step_size,
+            )
+            batch_results.extend(batch_rerank_results)
+        rerank_results = batch_results
+    else:
+        # default behavior
+        print("Processing without batching:")
+        rerank_results = reranker.rerank(
+            retrieved_results,
+            rank_end=top_k_candidates,
+            window_size=min(window_size, top_k_candidates),
+            shuffle_candidates=shuffle_candidates,
+            logging=print_prompts_responses,
+            step=step_size,
+        )
 
     return rerank_results
