@@ -217,10 +217,8 @@ class Retriever:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
             )
-            print('File check')
 
             if not candidates_file.is_file():
-                print('file not found')
                 try: 
                     file_path = download_encoded_queries(f'retrieve_results_{self._dataset}_top{k}.json')
                     with open(file_path, "r") as f:
