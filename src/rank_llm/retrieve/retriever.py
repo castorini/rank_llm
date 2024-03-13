@@ -2,11 +2,12 @@ import json
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union 
 
 from rank_llm.result import Result
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-
+from rank_llm.retrieve.util import download_encoded_queries
+from rank_llm.retrieve.repo_info import QUERY_INFO
 
 class RetrievalMode(Enum):
     DATASET = "dataset"
@@ -216,10 +217,21 @@ class Retriever:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
             )
+            print('File check')
+
             if not candidates_file.is_file():
-                print(f"Retrieving with dataset {self._dataset}")
-                pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
-                retrieved_results = pyserini.retrieve_and_store(k=k)
+                print('file not found')
+                try: 
+                    file_path = download_encoded_queries(f'retrieve_results_{self._dataset}_top{k}.json')
+                    with open(file_path, "r") as f:
+                        loaded_results = json.load(f)
+                    retrieved_results = [
+                        Result(r["query"], r["hits"]) for r in loaded_results
+                    ]
+                except ValueError as e:
+                    print(f"Retrieving with dataset {self._dataset}")
+                    pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
+                    retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
                 with open(candidates_file, "r") as f:
