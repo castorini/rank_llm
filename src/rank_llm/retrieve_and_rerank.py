@@ -129,24 +129,37 @@ def retrieve_and_rerank(
                 r.ranking_exec_summary = None
 
     if num_batches > 1 and isinstance(dataset, list):
-        batch_size = len(dataset) // num_batches
+        print(f"Processing {num_batches} batches.")
+
+        batch_size = max(1, len(dataset) // num_batches)
         batch_results = []
-        for i in range(0, len(dataset), batch_size):
-            batch = dataset[i : i + batch_size]
-            # process batch
-            print(f"Processing batch: {i // batch_size + 1} of {num_batches}:")
-            batch_retrieved_results = Retriever.from_inline_documents(
-                query=query, documents=batch
-            )
-            batch_rerank_results = reranker.rerank(
-                batch_retrieved_results,
-                rank_end=top_k_candidates,
-                window_size=min(window_size, len(batch)),
+
+        queries_documents_batches = [
+            dataset[i : i + batch_size] for i in range(0, len(dataset), batch_size)
+        ]
+
+        formatted_batches = [
+            [
+                (
+                    str(index),
+                    Retriever.from_inline_documents(query=query, documents=batch),
+                )
+                for index, batch in enumerate(queries_documents_batches)
+            ]
+        ]
+
+        # run batching logic
+        for batch_index, queries_documents in enumerate(formatted_batches, start=1):
+            print(f"Processing batch {batch_index} of {len(formatted_batches)}.")
+            batch_result = agent.sliding_windows_batched(
+                queries_documents=queries_documents,
+                window_size=window_size,
+                step=step_size,
                 shuffle_candidates=shuffle_candidates,
                 logging=print_prompts_responses,
-                step=step_size,
             )
-            batch_results.extend(batch_rerank_results)
+            batch_results.extend(batch_result)
+
         rerank_results = batch_results
     else:
         # default behavior

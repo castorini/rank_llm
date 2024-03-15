@@ -1,9 +1,10 @@
 import copy
+
+# batched inference - parallel
+import logging
 import random
 import re
 from abc import ABC, abstractmethod
-
-# batched inference - parallel
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
@@ -11,6 +12,10 @@ from typing import Any, Dict, List, Tuple, Union
 from tqdm import tqdm
 
 from rank_llm.result import RankingExecInfo, Result
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 class PromptMode(Enum):
@@ -333,22 +338,41 @@ class RankLLM(ABC):
         logging: bool = False,
     ) -> List[Result]:
         def process_query(query_document):
-            query, retrieved_result = query_document
-            return self.sliding_windows(
-                retrieved_result,
-                rank_start=0,
-                rank_end=len(retrieved_result.hits),
-                window_size=window_size,
-                step=step,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-            )
+            try:
+                query, retrieved_result = query_document
+                result = self.sliding_windows(
+                    retrieved_result,
+                    rank_start=0,
+                    rank_end=len(retrieved_result.hits),
+                    window_size=window_size,
+                    step=step,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                )
+                if logging:
+                    logging.info(f"Completed processing for query: {query}")
+                return result
+            except Exception as e:
+                logging.error(f"Error processing query {query}: {e}")
+                return None  # Consider how you wish to handle failed queries
 
         results = []
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(process_query, qd) for qd in queries_documents]
-            for future in as_completed(futures):
-                results.append(future.result())
+        with ThreadPoolExecutor(
+            max_workers=4
+        ) as executor:  # Adjust max_workers based on your system's capabilities
+            future_to_query = {
+                executor.submit(process_query, qd): qd[0] for qd in queries_documents
+            }
+            for future in as_completed(future_to_query):
+                query = future_to_query[future]
+                try:
+                    result = future.result()
+                    if result is not None:
+                        results.append(result)
+                    else:
+                        logging.error(f"Failed to process query {query}")
+                except Exception as exc:
+                    logging.error(f"Query {query} generated an exception: {exc}")
         return results
 
     def _replace_number(self, s: str) -> str:
