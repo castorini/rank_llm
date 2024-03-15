@@ -128,39 +128,27 @@ def retrieve_and_rerank(
             for r in retrieved_results:
                 r.ranking_exec_summary = None
 
-    if num_batches > 1 and isinstance(dataset, list):
+    if num_batches > 1 and isinstance(retrieved_results, list):
         print(f"Processing {num_batches} batches.")
 
-        batch_size = max(1, len(dataset) // num_batches)
-        batch_results = []
+        batch_size = max(1, len(retrieved_results) // num_batches)
+        batched_results = []
 
-        queries_documents_batches = [
-            dataset[i : i + batch_size] for i in range(0, len(dataset), batch_size)
-        ]
+        # process n batches
+        for i in range(0, len(retrieved_results), batch_size):
+            batch = retrieved_results[i:i + batch_size]
 
-        formatted_batches = [
-            [
-                (
-                    str(index),
-                    Retriever.from_inline_documents(query=query, documents=batch),
-                )
-                for index, batch in enumerate(queries_documents_batches)
-            ]
-        ]
-
-        # run batching logic
-        for batch_index, queries_documents in enumerate(formatted_batches, start=1):
-            print(f"Processing batch {batch_index} of {len(formatted_batches)}.")
-            batch_result = agent.sliding_windows_batched(
-                queries_documents=queries_documents,
+            # process batch
+            processed_batch_results = agent.sliding_windows_batched(
+                queries_documents=batch, 
                 window_size=window_size,
                 step=step_size,
                 shuffle_candidates=shuffle_candidates,
                 logging=print_prompts_responses,
             )
-            batch_results.extend(batch_result)
+            batched_results.extend(processed_batch_results)
 
-        rerank_results = batch_results
+        rerank_results = batched_results
     else:
         # default behavior
         print("Processing without batching:")

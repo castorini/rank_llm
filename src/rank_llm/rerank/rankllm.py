@@ -331,15 +331,14 @@ class RankLLM(ABC):
 
     def sliding_windows_batched(
         self,
-        queries_documents: List[Tuple[str, Result]],
+        queries_documents: List[Result],
         window_size: int,
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
     ) -> List[Result]:
-        def process_query(query_document):
+        def process_query(retrieved_result):
             try:
-                query, retrieved_result = query_document
                 result = self.sliding_windows(
                     retrieved_result,
                     rank_start=0,
@@ -354,26 +353,28 @@ class RankLLM(ABC):
                 return result
             except Exception as e:
                 logging.error(f"Error processing query {query}: {e}")
-                return None  # Consider how you wish to handle failed queries
+                return None 
 
-        results = []
+        batch_results = []
         with ThreadPoolExecutor(
-            max_workers=4
-        ) as executor:  # Adjust max_workers based on your system's capabilities
-            future_to_query = {
-                executor.submit(process_query, qd): qd[0] for qd in queries_documents
-            }
-            for future in as_completed(future_to_query):
-                query = future_to_query[future]
+            max_workers=8
+        ) as executor:
+            futures = {}
+            
+            for result in queries_documents:
+                future = executor.submit(process_query, result)
+                futures[future] = result
+                logging.info(f"Task submitted for processing.")
+            
+            for future in as_completed(futures):
                 try:
                     result = future.result()
-                    if result is not None:
-                        results.append(result)
-                    else:
-                        logging.error(f"Failed to process query {query}")
+                    batch_results.append(result)
+                    logging.info(f"Task completed successfully: {futures[future]}")
                 except Exception as exc:
-                    logging.error(f"Query {query} generated an exception: {exc}")
-        return results
+                    logging.error(f"Task generated an exception: {exc}", exc_info=True)
+
+        return batch_results
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
