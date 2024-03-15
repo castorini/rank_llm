@@ -1,18 +1,22 @@
-import os
-from pyserini.util import *
-from urllib.parse import urlparse
-import urllib.request
 import json
+import os
+import urllib.request
+from urllib.parse import urlparse
+
+from pyserini.util import *
+
 
 def no_bool_convert(pairs):
-    return {k: str(v).casefold()
-            if isinstance(v, bool) else v for k, v in pairs}
+    return {k: str(v).casefold() if isinstance(v, bool) else v for k, v in pairs}
+
 
 def parse_file_info(file_name, file_url, save_dir):
-    #download file
-    local_file_path = download_url(file_url, save_dir, local_filename=file_name, verbose=True)
+    # download file
+    local_file_path = download_url(
+        file_url, save_dir, local_filename=file_name, verbose=True
+    )
 
-    # Compute MD5 
+    # Compute MD5
     md5 = compute_md5(local_file_path)
 
     # Get file size
@@ -26,10 +30,11 @@ def parse_file_info(file_name, file_url, save_dir):
 
     return description, md5, size
 
+
 # Save directory
 def get_repo_info(repo_url, save_dir):
     parsed_url = urlparse(repo_url)
-    path_parts = parsed_url.path.strip('/').split('/')
+    path_parts = parsed_url.path.strip("/").split("/")
     if len(path_parts) < 2:
         raise ValueError("Invalid GitHub repository URL")
 
@@ -39,33 +44,34 @@ def get_repo_info(repo_url, save_dir):
         data = json.loads(response.read().decode())
 
     query_info = {}
-    for file in data.get('tree', []):
-        if file['type'] == 'blob':
-            file_name = file['path']
+    for file in data.get("tree", []):
+        if file["type"] == "blob":
+            file_name = file["path"]
             file_url = f"https://github.com/{owner}/{repo}/raw/main/{file_name}"
             description, md5, size = parse_file_info(file_name, file_url, save_dir)
-            query_info[file_name.rsplit('/', 1)[-1]] = {
+            query_info["/".join(file_name.rsplit("/", 2)[-2:])] = {
                 "description": description,
                 "urls": [file_url],
                 "md5": md5,
                 "size (bytes)": size,
-                "downloaded": False
+                "downloaded": False,
             }
     return query_info
 
+
 repo_url = "https://github.com/castorini/rank_llm_data/tree/main/retrieve_results"
-save_dir = "retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL" 
+save_dir = "retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL"
 info = get_repo_info(repo_url, save_dir)
 info_json = json.dumps(info, indent=4)
 
-with open('repo_info.txt', 'w') as f:
-    f.write(f'QUERY_INFO = {info_json}\n')
+with open("repo_info.txt", "w") as f:
+    f.write(f"QUERY_INFO = {info_json}\n")
 
-with open('repo_info.txt', 'r') as f:
+with open("repo_info.txt", "r") as f:
     data = f.read()
-    data = data.replace('false', 'False')
+    data = data.replace("false", "False")
 
-with open('repo_info.py', 'w') as f:
+with open("repo_info.py", "w") as f:
     f.write(data)
 
-os.remove('repo_info.txt')
+os.remove("repo_info.txt")

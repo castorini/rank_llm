@@ -2,12 +2,12 @@ import json
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Union 
+from typing import Any, Dict, List, Union
 
 from rank_llm.result import Result
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 from rank_llm.retrieve.util import download_encoded_queries
-from rank_llm.retrieve.repo_info import QUERY_INFO
+
 
 class RetrievalMode(Enum):
     DATASET = "dataset"
@@ -219,8 +219,10 @@ class Retriever:
             )
 
             if not candidates_file.is_file():
-                try: 
-                    file_path = download_encoded_queries(f'retrieve_results_{self._dataset}_top{k}.json')
+                try:
+                    file_path = download_encoded_queries(
+                        f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
+                    )
                     with open(file_path, "r") as f:
                         loaded_results = json.load(f)
                     retrieved_results = [
