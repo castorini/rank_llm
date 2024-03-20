@@ -57,7 +57,7 @@ def main(args):
         window_size=window_size,
         step_size=step_size,
         system_message=system_message,
-        batched=batched
+        batched=batched,
     )
 
 

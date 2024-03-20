@@ -11,6 +11,7 @@ from vllm import LLM, SamplingParams
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.result import Result
 
+
 class RankListwiseOSLLM(RankLLM):
     def __init__(
         self,
@@ -64,12 +65,14 @@ class RankListwiseOSLLM(RankLLM):
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of Rank_GPT prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        
+
         if batched:
             self._llm = LLM(model)
             self._tokenizer = self._llm.get_tokenizer()
         else:
-            self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
+            self._llm, self._tokenizer = load_model(
+                model, device=device, num_gpus=num_gpus
+            )
         self._batched = batched
         self._variable_passages = variable_passages
         self._window_size = window_size
@@ -99,15 +102,26 @@ class RankListwiseOSLLM(RankLLM):
             else:
                 output_ids = output_ids[0][len(inputs["input_ids"][0]) :]
             outputs = self._tokenizer.decode(
-                output_ids, skip_special_tokens=True, spaces_between_special_tokens=False
+                output_ids,
+                skip_special_tokens=True,
+                spaces_between_special_tokens=False,
             )
             return outputs, output_ids.size(0)
         else:
-            sampling_params = SamplingParams(temperature=0.0, max_tokens=self.num_output_tokens(current_window_size))
+            sampling_params = SamplingParams(
+                temperature=0.0, max_tokens=self.num_output_tokens(current_window_size)
+            )
             outputs = self._llm.generate(prompt, sampling_params)
-            print([(output.outputs[0].text, len(output.outputs[0].token_ids)) for output in outputs])
-            return [(output.outputs[0].text, len(output.outputs[0].token_ids)) for output in outputs]
-
+            print(
+                [
+                    (output.outputs[0].text, len(output.outputs[0].token_ids))
+                    for output in outputs
+                ]
+            )
+            return [
+                (output.outputs[0].text, len(output.outputs[0].token_ids))
+                for output in outputs
+            ]
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:

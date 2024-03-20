@@ -45,7 +45,9 @@ class Reranker:
             return self._agent.sliding_windows_batched(
                 retrieved_results,
                 rank_start=max(rank_start, 0),
-                rank_end=min(rank_end, len(retrieved_results[0].hits)), #TODO: Fails arbitrary hit sizes
+                rank_end=min(
+                    rank_end, len(retrieved_results[0].hits)
+                ),  # TODO: Fails arbitrary hit sizes
                 window_size=window_size,
                 step=step,
                 shuffle_candidates=shuffle_candidates,

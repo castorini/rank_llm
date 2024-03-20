@@ -142,7 +142,7 @@ class RankLLM(ABC):
         result.ranking_exec_summary.append(ranking_exec_info)
         result = self.receive_permutation(result, permutation, rank_start, rank_end)
         return result
-    
+
     def permutation_pipeline_batched(
         self,
         results: List[Result],
@@ -174,7 +174,9 @@ class RankLLM(ABC):
             [prompt for prompt, _ in prompts], current_window_size=rank_end - rank_start
         )
 
-        for index, (result, (prompt, in_token_count)) in enumerate(zip(results, prompts)):
+        for index, (result, (prompt, in_token_count)) in enumerate(
+            zip(results, prompts)
+        ):
             permutation, out_token_count = batched_results[index]
             if logging:
                 print(f"output: {permutation}")
@@ -236,7 +238,7 @@ class RankLLM(ABC):
             end_pos = end_pos - step
             start_pos = start_pos - step
         return rerank_result
-    
+
     def sliding_windows_batched(
         self,
         retrieved_results: List[Result],
@@ -289,7 +291,6 @@ class RankLLM(ABC):
             end_pos = end_pos - step
             start_pos = start_pos - step
         return rerank_results
-
 
     def get_ranking_cost_upperbound(
         self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int
