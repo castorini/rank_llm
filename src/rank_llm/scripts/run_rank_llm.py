@@ -36,6 +36,7 @@ def main(args):
     step_size = args.step_size
     window_size = args.window_size
     system_message = args.system_message
+    batched = args.batched
 
     _ = retrieve_and_rerank(
         model_path,
@@ -56,6 +57,7 @@ def main(args):
         window_size=window_size,
         step_size=step_size,
         system_message=system_message,
+        batched=batched
     )
 
 
@@ -152,6 +154,11 @@ if __name__ == "__main__":
         type=str,
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
+    )
+    parser.add_argument(
+        "--batched",
+        action="store_true",
+        help="whether to run the model in batches",
     )
     args = parser.parse_args()
     main(args)

@@ -142,6 +142,51 @@ class RankLLM(ABC):
         result.ranking_exec_summary.append(ranking_exec_info)
         result = self.receive_permutation(result, permutation, rank_start, rank_end)
         return result
+    
+    def permutation_pipeline_batched(
+        self,
+        results: List[Result],
+        rank_start: int,
+        rank_end: int,
+        logging: bool = False,
+    ) -> List[Result]:
+        """
+        Runs the permutation pipeline on the passed in result set within the passed in rank range for a batch of results.
+
+        Args:
+            results (List[Result]): The list of result objects to process.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+
+        Returns:
+            List[Result]: The processed list of result objects after applying permutation.
+        """
+        prompts = []
+        for result in results:
+            prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
+            if logging:
+                print(f"prompt: {prompt}\n")
+            prompts.append((prompt, in_token_count))
+
+        # Assuming run_llm_batched returns a list of tuples (permutation, out_token_count) for each prompt
+        batched_results = self.run_llm(
+            [prompt for prompt, _ in prompts], current_window_size=rank_end - rank_start
+        )
+
+        for index, (result, (prompt, in_token_count)) in enumerate(zip(results, prompts)):
+            permutation, out_token_count = batched_results[index]
+            if logging:
+                print(f"output: {permutation}")
+            ranking_exec_info = RankingExecInfo(
+                prompt, permutation, in_token_count, out_token_count
+            )
+            if result.ranking_exec_summary is None:
+                result.ranking_exec_summary = []
+            result.ranking_exec_summary.append(ranking_exec_info)
+            result = self.receive_permutation(result, permutation, rank_start, rank_end)
+
+        return results
 
     def sliding_windows(
         self,
@@ -191,6 +236,60 @@ class RankLLM(ABC):
             end_pos = end_pos - step
             start_pos = start_pos - step
         return rerank_result
+    
+    def sliding_windows_batched(
+        self,
+        retrieved_results: List[Result],
+        rank_start: int,
+        rank_end: int,
+        window_size: int,
+        step: int,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+    ) -> List[Result]:
+        """
+        Applies the sliding window algorithm to the reranking process for a batch of result objects.
+
+        Args:
+            retrieved_results (List[Result]): The list of result objects to process.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            window_size (int): The size of each sliding window.
+            step (int): The step size for moving the window.
+            shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
+            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+
+        Returns:
+            List[Result]: The list of result objects after applying the sliding window technique.
+        """
+        rerank_results = [copy.deepcopy(result) for result in retrieved_results]
+        if shuffle_candidates:
+            for rerank_result in rerank_results:
+                # Shuffle rerank_result hits between rank_start and rank_end
+                rerank_result.hits[rank_start:rank_end] = random.sample(
+                    rerank_result.hits[rank_start:rank_end],
+                    len(rerank_result.hits[rank_start:rank_end]),
+                )
+                # Rescore all candidates with 1/rank
+                for i, hit in enumerate(rerank_result.hits):
+                    hit["score"] = 1.0 / (i + 1)
+                    hit["rank"] = i + 1
+
+        end_pos = rank_end
+        start_pos = rank_end - window_size
+
+        # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
+        # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
+        while end_pos > rank_start and start_pos + step != rank_start:
+            print(f"start_pos: {start_pos}, end_pos: {end_pos}")
+            start_pos = max(start_pos, rank_start)
+            rerank_results = self.permutation_pipeline_batched(
+                rerank_results, start_pos, end_pos, logging
+            )
+            end_pos = end_pos - step
+            start_pos = start_pos - step
+        return rerank_results
+
 
     def get_ranking_cost_upperbound(
         self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int

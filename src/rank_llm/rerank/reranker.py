@@ -21,6 +21,7 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        batched: bool = False,
     ) -> List[Result]:
         """
         Reranks a list of retrieved results using the RankLLM agent.
@@ -40,6 +41,16 @@ class Reranker:
         Returns:
             List[Result]: A list containing the reranked results.
         """
+        if batched:
+            return self._agent.sliding_windows_batched(
+                retrieved_results,
+                rank_start=max(rank_start, 0),
+                rank_end=min(rank_end, len(retrieved_results[0].hits)), #TODO: Fails arbitrary hit sizes
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+            )
         rerank_results = []
         for result in tqdm(retrieved_results):
             rerank_result = self._agent.sliding_windows(

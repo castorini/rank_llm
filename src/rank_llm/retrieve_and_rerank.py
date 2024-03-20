@@ -34,6 +34,7 @@ def retrieve_and_rerank(
     index_path: str = None,
     topics_path: str = None,
     index_type: str = None,
+    batched: bool = False,
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
@@ -57,6 +58,7 @@ def retrieve_and_rerank(
             variable_passages=variable_passages,
             window_size=window_size,
             system_message=system_message,
+            batched=batched,
         )
     else:
         raise ValueError(f"Unsupported model: {model_path}")
@@ -92,6 +94,7 @@ def retrieve_and_rerank(
             shuffle_candidates=shuffle_candidates,
             logging=print_prompts_responses,
             step=step_size,
+            batched=batched,
         )
 
         # generate trec_eval file & evaluate for named datasets only
