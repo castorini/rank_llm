@@ -7,3 +7,4 @@ python-dotenv>=1.0.1
 faiss-cpu>=1.7.2
 ftfy>=6.1.3
 fschat[model_worker]>=0.2.35
+vllm>=0.3.3
