@@ -6,7 +6,8 @@ from typing import Any, Dict, List, Union
 
 from rank_llm.result import Result
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_llm.retrieve.util import download_encoded_queries
+from rank_llm.retrieve.repo_info import QUERY_INFO
+from rank_llm.retrieve.util import compute_md5, download_encoded_queries
 
 
 class RetrievalMode(Enum):
@@ -217,12 +218,10 @@ class Retriever:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
             )
-
+            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
             if not candidates_file.is_file():
                 try:
-                    file_path = download_encoded_queries(
-                        f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
-                    )
+                    file_path = download_encoded_queries(query_name)
                     with open(file_path, "r") as f:
                         loaded_results = json.load(f)
                     retrieved_results = [
@@ -234,6 +233,9 @@ class Retriever:
                     retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
+                md5_local = compute_md5(candidates_file)
+                if QUERY_INFO[query_name]["md5"] != md5_local:
+                    print("Query Cache MD5 does not match Local")
                 with open(candidates_file, "r") as f:
                     loaded_results = json.load(f)
                 retrieved_results = [
