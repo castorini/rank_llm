@@ -1,6 +1,6 @@
 QUERY_INFO = {
     "BM25/retrieve_results_covid_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC COVID task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_covid_top100.json"
         ],
@@ -9,7 +9,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/retrieve_results_dl19_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL19 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl19_top100.json"
         ],
@@ -18,7 +18,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/retrieve_results_dl20_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL20 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl20_top100.json"
         ],
@@ -27,7 +27,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/retrieve_results_dl21_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL21 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl21_top100.json"
         ],
@@ -36,7 +36,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/retrieve_results_dl22_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL22 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl22_top100.json"
         ],
@@ -45,7 +45,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/retrieve_results_news_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC News task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_news_top100.json"
         ],
@@ -54,7 +54,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/retrieve_results_noveleval_top100.json": {
-        "description": "Sample description",
+        "description": "Top Results for the NovelEval task (from RankGPT). (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_noveleval_top100.json"
         ],
@@ -63,7 +63,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/trec_results_covid_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC COVID task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/trec_results_covid_top100.txt"
         ],
@@ -72,7 +72,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/trec_results_dl19_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL19 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/trec_results_dl19_top100.txt"
         ],
@@ -81,7 +81,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/trec_results_dl20_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL20 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/trec_results_dl20_top100.txt"
         ],
@@ -90,7 +90,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/trec_results_dl21_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL21 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/trec_results_dl21_top100.txt"
         ],
@@ -99,7 +99,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/trec_results_dl22_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC DL22 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/trec_results_dl22_top100.txt"
         ],
@@ -108,7 +108,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25/trec_results_news_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25 Results for the TREC News task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/trec_results_news_top100.txt"
         ],
@@ -117,7 +117,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/retrieve_results_covid_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC COVID task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_covid_top100.json"
         ],
@@ -126,7 +126,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/retrieve_results_dl19_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL19 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl19_top100.json"
         ],
@@ -135,7 +135,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/retrieve_results_dl20_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL20 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl20_top100.json"
         ],
@@ -144,7 +144,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/retrieve_results_dl21_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL21 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl21_top100.json"
         ],
@@ -153,7 +153,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/retrieve_results_dl22_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL22 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl22_top100.json"
         ],
@@ -162,7 +162,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/retrieve_results_news_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC News task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_news_top100.json"
         ],
@@ -171,7 +171,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/trec_results_covid_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC COVID task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/trec_results_covid_top100.txt"
         ],
@@ -180,7 +180,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/trec_results_dl19_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL19 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/trec_results_dl19_top100.txt"
         ],
@@ -189,7 +189,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/trec_results_dl20_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL20 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/trec_results_dl20_top100.txt"
         ],
@@ -198,7 +198,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/trec_results_dl21_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL21 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/trec_results_dl21_top100.txt"
         ],
@@ -207,7 +207,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/trec_results_dl22_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC DL22 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/trec_results_dl22_top100.txt"
         ],
@@ -216,7 +216,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "BM25_RM3/trec_results_news_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 BM25+RM3 Results for the TREC News task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/trec_results_news_top100.txt"
         ],
@@ -225,7 +225,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "D_BERT_KD_TASB/retrieve_results_dl19_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 DistilBERT KD TASB Results for the TREC DL19 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/D_BERT_KD_TASB/retrieve_results_dl19_top100.json"
         ],
@@ -234,7 +234,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "D_BERT_KD_TASB/retrieve_results_dl20_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 DistilBERT KD TASB Results for the TREC DL20 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/D_BERT_KD_TASB/retrieve_results_dl20_top100.json"
         ],
@@ -243,7 +243,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "D_BERT_KD_TASB/trec_results_dl19_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 DistilBERT KD TASB Results for the TREC DL19 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/D_BERT_KD_TASB/trec_results_dl19_top100.txt"
         ],
@@ -252,7 +252,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "D_BERT_KD_TASB/trec_results_dl20_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 DistilBERT KD TASB Results for the TREC DL20 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/D_BERT_KD_TASB/trec_results_dl20_top100.txt"
         ],
@@ -261,7 +261,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "OPEN_AI_ADA2/retrieve_results_dl19_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 OpenAI ADA2 Results for the TREC DL19 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/OPEN_AI_ADA2/retrieve_results_dl19_top100.json"
         ],
@@ -270,7 +270,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "OPEN_AI_ADA2/retrieve_results_dl20_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 OpenAI ADA2 Results for the TREC DL20 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/OPEN_AI_ADA2/retrieve_results_dl20_top100.json"
         ],
@@ -279,7 +279,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "OPEN_AI_ADA2/trec_results_dl19_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 OpenAI ADA2 Results for the TREC DL19 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/OPEN_AI_ADA2/trec_results_dl19_top100.txt"
         ],
@@ -288,7 +288,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "OPEN_AI_ADA2/trec_results_dl20_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 OpenAI ADA2 Results for the TREC DL20 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/OPEN_AI_ADA2/trec_results_dl20_top100.txt"
         ],
@@ -297,7 +297,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "REP_LLAMA/retrieve_results_dl19_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 REP LLAMA Results for the TREC DL19 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/REP_LLAMA/retrieve_results_dl19_top100.json"
         ],
@@ -306,7 +306,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "REP_LLAMA/retrieve_results_dl20_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 REP LLAMA Results for the TREC DL20 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/REP_LLAMA/retrieve_results_dl20_top100.json"
         ],
@@ -315,7 +315,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "REP_LLAMA/trec_results_dl19_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 REP LLAMA Results for the TREC DL19 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/REP_LLAMA/trec_results_dl19_top100.txt"
         ],
@@ -324,7 +324,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "REP_LLAMA/trec_results_dl20_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 REP LLAMA Results for the TREC DL20 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/REP_LLAMA/trec_results_dl20_top100.txt"
         ],
@@ -333,7 +333,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_covid_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC COVID task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_covid_top100.json"
         ],
@@ -342,7 +342,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl19_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL19 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl19_top100.json"
         ],
@@ -351,7 +351,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl20_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL20 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl20_top100.json"
         ],
@@ -360,7 +360,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl21_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL21 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl21_top100.json"
         ],
@@ -369,7 +369,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl22_top100.json": {
-        "description": "Sample description",
+    "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL22 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl22_top100.json"
         ],
@@ -378,7 +378,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_news_top100.json": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC News task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_news_top100.json"
         ],
@@ -387,7 +387,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_covid_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC COVID task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_covid_top100.txt"
         ],
@@ -396,7 +396,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl19_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL19 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl19_top100.txt"
         ],
@@ -405,7 +405,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl20_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL20 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl20_top100.txt"
         ],
@@ -414,7 +414,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl21_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL21 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl21_top100.txt"
         ],
@@ -423,7 +423,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl22_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL22 task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_dl22_top100.txt"
         ],
@@ -432,7 +432,7 @@ QUERY_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_news_top100.txt": {
-        "description": "Sample description",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC News task. (TREC format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/trec_results_news_top100.txt"
         ],
