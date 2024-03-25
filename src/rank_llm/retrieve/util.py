@@ -1,19 +1,3 @@
-#
-# Pyserini: Reproducible IR research with sparse and dense representations
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
 import hashlib
 import logging
 import os
@@ -23,7 +7,7 @@ from urllib.request import urlretrieve
 
 from tqdm import tqdm
 
-from rank_llm.retrieve.repo_info import QUERY_INFO
+from rank_llm.retrieve.repo_info import HITS_INFO
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +88,7 @@ def download_url(
 
 
 def get_cache_home():
-    custom_dir = os.environ.get("PYSERINI_CACHE")
+    custom_dir = os.environ.get("RANK_LLM_CACHE")
     if custom_dir is not None and custom_dir != "":
         print("custom")
         return custom_dir
@@ -113,9 +97,9 @@ def get_cache_home():
     )
 
 
-def download_and_unpack_index(
+def download_and_unpack_hits(
     url,
-    index_directory="files",
+    hits_directory="files",
     local_filename=False,
     force=False,
     verbose=True,
@@ -130,16 +114,16 @@ def download_and_unpack_index(
         file_name = local_filename
 
     if prebuilt:
-        index_directory = os.path.join(get_cache_home(), index_directory)
-        file_path = os.path.join(index_directory, f"{file_name}.{md5}")
+        hits_directory = os.path.join(get_cache_home(), hits_directory)
+        file_path = os.path.join(hits_directory, f"{file_name}.{md5}")
 
-        if not os.path.exists(index_directory):
-            os.makedirs(index_directory)
+        if not os.path.exists(hits_directory):
+            os.makedirs(hits_directory)
 
-        local_file = os.path.join(index_directory, file_name)
+        local_file = os.path.join(hits_directory, file_name)
     else:
-        local_file = os.path.join(index_directory, file_name)
-        file_path = os.path.join(index_directory, file_name)
+        local_file = os.path.join(hits_directory, file_name)
+        file_path = os.path.join(hits_directory, file_name)
 
     # Check to see if file already exists, if so, simply return (quietly) unless force=True, in which case we remove
     # file and download fresh copy.
@@ -156,7 +140,7 @@ def download_and_unpack_index(
 
     print(f"Downloading file at {url}...")
     download_url(
-        url, index_directory, local_filename=local_filename, verbose=False, md5=md5
+        url, hits_directory, local_filename=local_filename, verbose=False, md5=md5
     )
 
     # No need to extract for JSON and text files
@@ -165,20 +149,20 @@ def download_and_unpack_index(
     return local_file
 
 
-def download_encoded_queries(query_name, force=False, verbose=True, mirror=None):
-    if query_name not in QUERY_INFO:
+def download_cached_hits(query_name, force=False, verbose=True, mirror=None):
+    if query_name not in HITS_INFO:
         print(f"query_name unrecognized {query_name}")
         raise ValueError(f"Unrecognized query name {query_name}")
-    query_md5 = QUERY_INFO[query_name]["md5"]
-    for url in QUERY_INFO[query_name]["urls"]:
+    query_md5 = HITS_INFO[query_name]["md5"]
+    for url in HITS_INFO[query_name]["urls"]:
         try:
-            index_dir = query_name.rsplit("/", 2)[-2]
+            hits_dir = query_name.rsplit("/", 2)[-2]
             return download_and_unpack_index(
-                url, index_directory=index_dir, prebuilt=True, md5=query_md5
+                url, hits_directory=hits_dir, prebuilt=True, md5=query_md5
             )
         except (HTTPError, URLError) as e:
-            print(f"Unable to download encoded query at {url}, trying next URL...")
-    raise ValueError(f"Unable to download encoded query at any known URLs.")
+            print(f"Unable to download cached retrieved hits at {url}, trying next URL...")
+    raise ValueError(f"Unable to download cached retrieved hits at any known URLs.")
 
 
 get_cache_home()
