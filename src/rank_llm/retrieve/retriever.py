@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union
 
 from rank_llm.result import Result
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_llm.retrieve.repo_info import QUERY_INFO
+from rank_llm.retrieve.repo_info import HITS_INFO
 from rank_llm.retrieve.util import compute_md5, download_encoded_queries
 
 
@@ -221,7 +221,7 @@ class Retriever:
             query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
             if not candidates_file.is_file():
                 try:
-                    file_path = download_encoded_queries(query_name)
+                    file_path = download_cached_hits(query_name)
                     with open(file_path, "r") as f:
                         loaded_results = json.load(f)
                     retrieved_results = [
@@ -234,7 +234,7 @@ class Retriever:
             else:
                 print("Reusing existing retrieved results.")
                 md5_local = compute_md5(candidates_file)
-                if QUERY_INFO[query_name]["md5"] != md5_local:
+                if HITS_INFO[query_name]["md5"] != md5_local:
                     print("Query Cache MD5 does not match Local")
                 with open(candidates_file, "r") as f:
                     loaded_results = json.load(f)
