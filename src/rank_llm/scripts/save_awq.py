@@ -47,16 +47,10 @@ def load_dataset(dataset: str):
     prompts = []
     for content in data:
         content = content["conversations"]
+        prompt_dict = {pmt["from"]: pmt["value"] for pmt in content}
         prompt = ""
-        for prompt_dict in content:
-            if prompt_dict["from"] == "system":
-                prompt += prompt_dict["value"] + "\n"
-        for prompt_dict in content:
-            if prompt_dict["from"] == "human":
-                prompt += prompt_dict["value"] + "\n"
-        for prompt_dict in content:
-            if prompt_dict["from"] == "gpt":
-                prompt += prompt_dict["value"]
+        for key in ["system", "human", "gpt"]:
+            prompt += prompt_dict[key] + "\n"
         prompts.append(prompt)
     return prompts
 
