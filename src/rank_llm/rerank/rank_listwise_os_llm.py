@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from typing import Optional, Tuple
 
@@ -67,7 +68,7 @@ class RankListwiseOSLLM(RankLLM):
         # ToDo: Make repetition_penalty configurable
 
         if batched:
-            self._llm = LLM(model)
+            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"))
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -112,12 +113,6 @@ class RankListwiseOSLLM(RankLLM):
                 temperature=0.0, max_tokens=self.num_output_tokens(current_window_size)
             )
             outputs = self._llm.generate(prompt, sampling_params)
-            print(
-                [
-                    (output.outputs[0].text, len(output.outputs[0].token_ids))
-                    for output in outputs
-                ]
-            )
             return [
                 (output.outputs[0].text, len(output.outputs[0].token_ids))
                 for output in outputs
