@@ -110,7 +110,9 @@ class RankListwiseOSLLM(RankLLM):
             return outputs, output_ids.size(0)
         else:
             sampling_params = SamplingParams(
-                temperature=0.0, max_tokens=self.num_output_tokens(current_window_size)
+                temperature=0.0,
+                max_tokens=self.num_output_tokens(current_window_size),
+                min_tokens=self.num_output_tokens(current_window_size),
             )
             outputs = self._llm.generate(prompt, sampling_params)
             return [
