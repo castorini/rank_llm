@@ -157,7 +157,7 @@ def download_cached_hits(query_name, force=False, verbose=True, mirror=None):
     for url in HITS_INFO[query_name]["urls"]:
         try:
             hits_dir = query_name.rsplit("/", 2)[-2]
-            return download_and_unpack_index(
+            return download_and_unpack_hits(
                 url, hits_directory=hits_dir, prebuilt=True, md5=query_md5
             )
         except (HTTPError, URLError) as e:
