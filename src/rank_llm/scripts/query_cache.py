@@ -43,20 +43,20 @@ def get_repo_info(repo_url, save_dir):
     with urllib.request.urlopen(api_url) as response:
         data = json.loads(response.read().decode())
 
-    query_info = {}
+    hits_info = {}
     for file in data.get("tree", []):
         if file["type"] == "blob":
             file_name = file["path"]
             file_url = f"https://github.com/{owner}/{repo}/raw/main/{file_name}"
             description, md5, size = parse_file_info(file_name, file_url, save_dir)
-            query_info["/".join(file_name.rsplit("/", 2)[-2:])] = {
+            hits_info["/".join(file_name.rsplit("/", 2)[-2:])] = {
                 "description": description,
                 "urls": [file_url],
                 "md5": md5,
                 "size (bytes)": size,
                 "downloaded": False,
             }
-    return query_info
+    return hits_info
 
 
 repo_url = "https://github.com/castorini/rank_llm_data/tree/main/retrieve_results"
@@ -65,7 +65,7 @@ info = get_repo_info(repo_url, save_dir)
 info_json = json.dumps(info, indent=4)
 
 with open("repo_info.txt", "w") as f:
-    f.write(f"QUERY_INFO = {info_json}\n")
+    f.write(f"HITS_INFO = {info_json}\n")
 
 with open("repo_info.txt", "r") as f:
     data = f.read()
