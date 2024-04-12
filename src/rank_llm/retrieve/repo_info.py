@@ -1,4 +1,4 @@
-QUERY_INFO = {
+HITS_INFO = {
     "BM25/retrieve_results_covid_top100.json": {
         "description": "Top-100 BM25 Results for the TREC COVID task. (Cached JSON format)",
         "urls": [
