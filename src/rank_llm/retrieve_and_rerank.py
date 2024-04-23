@@ -67,14 +67,6 @@ def retrieve_and_rerank(
         retrieved_results = Retriever.from_dataset_with_prebuilt_index(
             dataset_name=dataset, retrieval_method=retrieval_method
         )
-    elif retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
-        retrieved_results = Retriever.from_inline_documents(
-            query=query, documents=dataset
-        )
-    elif retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-        retrieved_results = Retriever.from_inline_hits(query=query, hits=dataset)
-    elif retrieval_mode == RetrievalMode.SAVED_FILE:
-        retrieved_results = Retriever.from_saved_results(file_name=dataset)
     elif retrieval_mode == RetrievalMode.CUSTOM:
         retrieved_results = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
@@ -85,7 +77,7 @@ def retrieve_and_rerank(
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
-        rerank_results = reranker.rerank(
+        rerank_results = reranker.rerank_batach(
             retrieved_results,
             rank_end=top_k_candidates,
             window_size=min(window_size, top_k_candidates),

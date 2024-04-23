@@ -21,7 +21,7 @@ from pyserini.search import (
 )
 from tqdm import tqdm
 
-from rank_llm.result import Result, ResultsWriter
+from rank_llm.data import DataWriter, Request, Query, Candidate
 from rank_llm.retrieve.indices_dict import INDICES
 from rank_llm.retrieve.topics_dict import TOPICS
 
@@ -221,36 +221,32 @@ class PyseriniRetriever:
         return INDICES[key][self._dataset]
 
     def _retrieve_query(
-        self, query: str, ranks: List[Dict[str, any]], k: int, qid=None
+        self, query: str, ranks: List[Request], k: int, qid=None
     ) -> None:
         hits = self._searcher.search(query, k=k)
-        ranks.append(Result(query=query, hits=[]))
-        rank = 0
+        ranks.append(Request(query=Query(text=query, qid=str(qid)), candidates=[]))
         for hit in hits:
-            rank += 1
             document = self._index_reader.doc(hit.docid)
             content = json.loads(document.raw())
+            title = None
             if "title" in content:
                 content = (
                     "Title: " + content["title"] + " " + "Content: " + content["text"]
                 )
+                title = content["title"]
             elif "contents" in content:
                 content = content["contents"]
             else:
                 content = content["passage"]
             content = " ".join(content.split())
             # hit.score could be of type 'numpy.float32' which is not json serializable. Always explicitly cast it to float.
-            ranks[-1].hits.append(
-                {
-                    "content": content,
-                    "qid": qid,
-                    "docid": hit.docid,
-                    "rank": rank,
-                    "score": float(hit.score),
-                }
+            ranks[-1].candidates.append(
+                Candidate(
+                    docid=hit.docid, score=hit.score, content=content, title=title
+                )
             )
 
-    def retrieve(self, k=100, qid=None) -> List[Result]:
+    def retrieve(self, k=100, qid=None) -> List[Request]:
         """
         Retrieves documents for each query, specified by query id `qid`, in the configured topics.
         Returns list of retrieved documents with specified ranking.
@@ -291,7 +287,7 @@ class PyseriniRetriever:
         store_trec: bool = True,
         store_qrels: bool = True,
         retrieve_results_dirname: str = "retrieve_results",
-    ) -> List[Result]:
+    ) -> List[Request]:
         """
         Retrieves documents and stores the results in the given formats.
 
@@ -309,7 +305,7 @@ class PyseriniRetriever:
         Path(f"{retrieve_results_dirname}/{self._retrieval_method.name}").mkdir(
             parents=True, exist_ok=True
         )
-        writer = ResultsWriter(results)
+        writer = DataWriter(results)
         # Store JSON in rank_results to a file
         writer.write_in_json_format(
             f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"

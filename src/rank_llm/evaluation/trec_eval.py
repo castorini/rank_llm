@@ -8,7 +8,7 @@ import pandas as pd
 from pyserini.search import get_qrels_file
 from pyserini.util import download_evaluation_script
 
-from rank_llm.result import Result
+from rank_llm.data import Result
 
 
 class EvalFunction:
@@ -35,10 +35,9 @@ class EvalFunction:
         ).name
         with open(temp_run_file, "w") as file:
             for result in results:
-                for hit in result.hits:
-                    file.write(
-                        f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
-                    )
+                qid = result.query.qid
+                for rank, cand in enumerate(result.candidates, start=1):
+                    file.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank\n")
         # make a deep copy of eval_args to preserve its default value for the next
         args = []
         args.extend(eval_args)

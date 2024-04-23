@@ -161,7 +161,9 @@ def download_cached_hits(query_name, force=False, verbose=True, mirror=None):
                 url, hits_directory=hits_dir, prebuilt=True, md5=query_md5
             )
         except (HTTPError, URLError) as e:
-            print(f"Unable to download cached retrieved hits at {url}, trying next URL...")
+            print(
+                f"Unable to download cached retrieved hits at {url}, trying next URL..."
+            )
     raise ValueError(f"Unable to download cached retrieved hits at any known URLs.")
 
 

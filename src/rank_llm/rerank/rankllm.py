@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 from tqdm import tqdm
 
-from rank_llm.result import RankingExecInfo, Result
+from rank_llm.data import RankingExecInfo, Request, Result
 
 
 class PromptMode(Enum):
@@ -137,15 +137,13 @@ class RankLLM(ABC):
         ranking_exec_info = RankingExecInfo(
             prompt, permutation, in_token_count, out_token_count
         )
-        if result.ranking_exec_summary == None:
-            result.ranking_exec_summary = []
         result.ranking_exec_summary.append(ranking_exec_info)
         result = self.receive_permutation(result, permutation, rank_start, rank_end)
         return result
 
     def sliding_windows(
         self,
-        retrieved_result: Result,
+        request: Request,
         rank_start: int,
         rank_end: int,
         window_size: int,
@@ -157,7 +155,7 @@ class RankLLM(ABC):
         Applies the sliding window algorithm to the reranking process.
 
         Args:
-            retrieved_result (Result): The result object to process.
+            request (Request): The request object to process.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
@@ -168,17 +166,20 @@ class RankLLM(ABC):
         Returns:
             Result: The result object after applying the sliding window technique.
         """
-        rerank_result = copy.deepcopy(retrieved_result)
+        rerank_result = Result(
+            query=copy.deepcopy(request.query),
+            candidates=copy.deepcopy(request.candidates),
+            ranking_exec_summary=[],
+        )
         if shuffle_candidates:
             # First randomly shuffle rerank_result between rank_start and rank_end
-            rerank_result.hits[rank_start:rank_end] = random.sample(
-                rerank_result.hits[rank_start:rank_end],
-                len(rerank_result.hits[rank_start:rank_end]),
+            rerank_result.candidates[rank_start:rank_end] = random.sample(
+                rerank_result.candidates[rank_start:rank_end],
+                len(rerank_result.candidates[rank_start:rank_end]),
             )
             # Next rescore all candidates with 1/rank
-            for i, hit in enumerate(rerank_result.hits):
-                hit["score"] = 1.0 / (i + 1)
-                hit["rank"] = i + 1
+            for i, cand in enumerate(rerank_result.candidates, start=rank_start + 1):
+                cand.score = 1.0 / (i + 1)
         end_pos = rank_end
         start_pos = rank_end - window_size
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
@@ -302,23 +303,21 @@ class RankLLM(ABC):
             This function assumes that the permutation string is a sequence of integers separated by spaces.
             Each integer in the permutation string corresponds to a 1-based index in the ranking results.
             The function first normalizes these to 0-based indices, removes duplicates, and then reorders
-            the items in the specified range of the 'result.hits' list according to the permutation.
+            the items in the specified range of the 'result.candidates' list according to the permutation.
             Items not mentioned in the permutation string remain in their original sequence but are moved after
             the permuted items.
         """
         response = self._clean_response(permutation)
         response = [int(x) - 1 for x in response.split()]
         response = self._remove_duplicate(response)
-        cut_range = copy.deepcopy(result.hits[rank_start:rank_end])
+        cut_range = copy.deepcopy(result.candidates[rank_start:rank_end])
         original_rank = [tt for tt in range(len(cut_range))]
         response = [ss for ss in response if ss in original_rank]
         response = response + [tt for tt in original_rank if tt not in response]
         for j, x in enumerate(response):
-            result.hits[j + rank_start] = copy.deepcopy(cut_range[x])
-            if "rank" in result.hits[j + rank_start]:
-                result.hits[j + rank_start]["rank"] = cut_range[j]["rank"]
-            if "score" in result.hits[j + rank_start]:
-                result.hits[j + rank_start]["score"] = cut_range[j]["score"]
+            result.candidates[j + rank_start] = copy.deepcopy(cut_range[x])
+            if result.candidates[j + rank_start].score:
+                result.candidates[j + rank_start].score = cut_range[j].score
         return result
 
     def _replace_number(self, s: str) -> str:

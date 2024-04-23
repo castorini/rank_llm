@@ -8,7 +8,7 @@ from ftfy import fix_text
 from transformers.generation import GenerationConfig
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from rank_llm.result import Result
+from rank_llm.data import Result
 
 
 class RankListwiseOSLLM(RankLLM):
@@ -135,8 +135,8 @@ class RankListwiseOSLLM(RankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
-        query = result.query
-        num = len(result.hits[rank_start:rank_end])
+        query = result.query.text
+        num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         while True:
             conv = get_conversation_template(self._model)
@@ -146,9 +146,9 @@ class RankListwiseOSLLM(RankLLM):
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
-            for hit in result.hits[rank_start:rank_end]:
+            for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
-                content = hit["content"]
+                content = cand.content
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]

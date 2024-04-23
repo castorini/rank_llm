@@ -33,7 +33,7 @@ print(recall_20)
 
 # Rerank
 reranker = VicunaReranker()
-rerank_results = reranker.rerank(retrieved_results)
+rerank_results = reranker.rerank_batch(retrieved_results)
 
 # Analyze response:
 analyzer = ResponseAnalyzer.from_inline_results(rerank_results)
@@ -49,7 +49,7 @@ retrieved_results = Retriever.from_dataset_with_prebuilt_index(
     dataset_name, RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL
 )
 reranker = VicunaReranker()
-rerank_results = reranker.rerank(retrieved_results)
+rerank_results = reranker.rerank_batch(retrieved_results)
 
 # Analyze response:
 analyzer = ResponseAnalyzer.from_inline_results(rerank_results)
@@ -57,10 +57,10 @@ error_counts = analyzer.count_errors(verbose=True)
 
 from pathlib import Path
 
-from rank_llm.result import ResultsWriter
+from rank_llm.data import DataWriter
 
 # write rerank results
-writer = ResultsWriter(rerank_results)
+writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
 writer.write_in_json_format(f"demo_outputs/rerank_results.json")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")

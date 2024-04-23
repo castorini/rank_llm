@@ -7,7 +7,7 @@ import tiktoken
 from ftfy import fix_text
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from rank_llm.result import Result
+from rank_llm.data import Result
 
 
 class SafeOpenai(RankLLM):
@@ -197,16 +197,16 @@ class SafeOpenai(RankLLM):
     def create_rank_gpt_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        query = result.query
-        num = len(result.hits[rank_start:rank_end])
+        query = result.query.text
+        num = len(result.candidates[rank_start:rank_end])
 
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
             messages = self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
-            for hit in result.hits[rank_start:rank_end]:
+            for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
-                content = hit["content"]
+                content = cand.content
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
                 content = fix_text(content)
@@ -241,17 +241,17 @@ class SafeOpenai(RankLLM):
     def create_LRL_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        query = result.query
-        num = len(result.hits[rank_start:rank_end])
+        query = result.query.text
+        num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
             message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
             rank = 0
-            for hit in result.hits[rank_start:rank_end]:
+            for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
                 psg_id = f"PASSAGE{rank}"
-                content = hit["content"]
+                content = cand.content
                 content = content.replace("Title: Content: ", "")
                 content = content.strip()
                 content = fix_text(content)

@@ -3,7 +3,7 @@ from typing import List
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
-from rank_llm.result import Result
+from rank_llm.data import Request, Result
 
 
 class ZephyrReranker:
@@ -32,9 +32,9 @@ class ZephyrReranker:
         )
         self._reranker = Reranker(agent)
 
-    def rerank(
+    def rerank_batch(
         self,
-        retrieved_results: List[Result],
+        requests: List[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         window_size: int = 20,
@@ -43,10 +43,10 @@ class ZephyrReranker:
         logging: bool = False,
     ) -> List[Result]:
         """
-        Reranks a list of retrieved results using the Zephyr model.
+        Reranks a list of requests using the Zephyr model.
 
         Args:
-            retrieved_results (List[Result]): The list of results to be reranked.
+            requests (List[Request]): The list of requests. Each request has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
             window_size (int, optional): The size of each sliding window. Defaults to 20.
@@ -60,8 +60,8 @@ class ZephyrReranker:
         Note:
             check 'rerank' for implementation details of reranking process.
         """
-        return self._reranker.rerank(
-            retrieved_results=retrieved_results,
+        return self._reranker.rerank_batach(
+            requests=requests,
             rank_start=rank_start,
             rank_end=rank_end,
             window_size=window_size,
