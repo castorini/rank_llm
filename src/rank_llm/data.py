@@ -1,5 +1,39 @@
 import json
-from typing import Any, Dict, List
+from typing import List, TypedDict
+from typing_extensions import NotRequired
+
+
+class Query:
+    def __init__(self, text: str, qid: str = None):
+        self.text = text
+        self.qid = qid
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+
+class Candidate:
+    def __init__(self, docid: str, score: str, content: str, title: str = None):
+        self.docid = docid
+        self.score = score
+        self.content = content
+        self.title = title
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+
+class Request:
+    def __init__(
+        self,
+        query: Query,
+        candidates: List[Candidate],
+    ):
+        self.query = query
+        self.candidates = candidates
+
+    def __repr__(self):
+        return str(self.__dict__)
 
 
 class RankingExecInfo:
@@ -18,12 +52,12 @@ class RankingExecInfo:
 class Result:
     def __init__(
         self,
-        query: str,
-        hits: List[Dict[str, Any]],
+        query: Query,
+        candidates: List[Candidate],
         ranking_exec_summary: List[RankingExecInfo] = None,
     ):
         self.query = query
-        self.hits = hits
+        self.candidates: candidates
         self.ranking_exec_summary = ranking_exec_summary
 
     def __repr__(self):
@@ -48,14 +82,19 @@ class ResultsWriter:
     def write_in_json_format(self, filename: str):
         results = []
         for result in self._results:
-            results.append({"query": result.query, "hits": result.hits})
+            results.append({"query": result.query, "candidates": result.candidates})
         with open(filename, "a" if self._append else "w") as f:
             json.dump(results, f, indent=2)
+
+    def write_in_jsonl_format(self, filename: str):
+        with open(filename, "a" if self._append else "w") as f:
+            for result in self._results:
+                json.dump({"query": result.query, "candidates": result.candidates}, f)
+                f.write("\n")
 
     def write_in_trec_eval_format(self, filename: str):
         with open(filename, "a" if self._append else "w") as f:
             for result in self._results:
-                for hit in result.hits:
-                    f.write(
-                        f"{hit['qid']} Q0 {hit['docid']} {hit['rank']} {hit['score']} rank\n"
-                    )
+                qid = result.query.qid
+                for rank, cand in enumerate(result.candidates, start=1):
+                    f.write(f"{qid} Q0 {cand['docid']} {rank} {cand['score']} rank\n")
