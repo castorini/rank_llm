@@ -16,7 +16,7 @@ dataset_name = "dl19"
 retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 agent = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
 reranker = Reranker(agent)
-rerank_results = reranker.rerank_batach(retrieved_results)
+rerank_results = reranker.rerank_batch(retrieved_results)
 print(rerank_results)
 
 from pathlib import Path

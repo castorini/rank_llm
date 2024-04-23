@@ -60,7 +60,7 @@ class VicunaReranker:
         Note:
             check 'rerank' for implementation details of reranking process.
         """
-        return self._reranker.rerank_batach(
+        return self._reranker.rerank_batch(
             requests=requests,
             rank_start=rank_start,
             rank_end=rank_end,

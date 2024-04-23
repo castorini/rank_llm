@@ -12,7 +12,7 @@ class Reranker:
     def __init__(self, agent: RankLLM) -> None:
         self._agent = agent
 
-    def rerank_batach(
+    def rerank_batch(
         self,
         requests: List[Request],
         rank_start: int = 0,
