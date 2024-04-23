@@ -17,7 +17,7 @@ class Candidate:
     docid: str
     score: float
     content: str
-    title: str = None
+    title: Union[str|None]
 
 
 @dataclass
