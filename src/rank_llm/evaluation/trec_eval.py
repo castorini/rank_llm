@@ -37,7 +37,7 @@ class EvalFunction:
             for result in results:
                 qid = result.query.qid
                 for rank, cand in enumerate(result.candidates, start=1):
-                    file.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank\n")
+                    file.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n")
         # make a deep copy of eval_args to preserve its default value for the next
         args = []
         args.extend(eval_args)

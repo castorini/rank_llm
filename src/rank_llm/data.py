@@ -98,4 +98,4 @@ class DataWriter:
             for d in self._data:
                 qid = d.query.qid
                 for rank, cand in enumerate(d.candidates, start=1):
-                    f.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank\n")
+                    f.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n")
