@@ -325,7 +325,16 @@ class RankLLM(ABC):
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
     def covert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
-        content = doc["segment"]
+        if "text" in doc:
+            content = doc["text"]
+        elif "segment" in doc:
+            content = doc["segment"]
+        elif "contents" in doc:
+            content = doc["contents"]
+        else:
+            content = doc["passage"]
+        if "title" in doc and doc["title"]:
+            content = "Title: " + doc["title"] + " " + "Content: " + content
         content = content.strip()
         content = fix_text(content)
         # For Japanese should cut by character: content = content[:int(max_length)]
