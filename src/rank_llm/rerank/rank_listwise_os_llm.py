@@ -148,11 +148,8 @@ class RankListwiseOSLLM(RankLLM):
             input_context = f"{prefix}\n"
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
-                content = cand.content
-                content = content.replace("Title: Content: ", "")
-                content = content.strip()
                 # For Japanese should cut by character: content = content[:int(max_length)]
-                content = " ".join(content.split()[: int(max_length)])
+                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
                 input_context += f"[{rank}] {self._replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)

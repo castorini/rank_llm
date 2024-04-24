@@ -10,7 +10,9 @@ sys.path.append(parent)
 from rank_llm.data import read_requests_from_file, DataWriter
 from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
-file_name = "retrieve_results/BM25/retrieve_results_dl19_top100.json"
+file_name = (
+    "retrieve_results/BM25/retrieve_results_msmarco-v2.1-doc-segmented-dl21_top20.jsonl"
+)
 requests = read_requests_from_file(file_name)
 
 reranker = ZephyrReranker()

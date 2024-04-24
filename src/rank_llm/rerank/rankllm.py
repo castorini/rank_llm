@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 
+from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import RankingExecInfo, Request, Result
@@ -223,7 +224,7 @@ class RankLLM(ABC):
 
     def get_ranking_cost(
         self,
-        retrieved_results: List[Dict[str, Any]],
+        retrieved_results: List[Request],
         rank_start: int,
         rank_end: int,
         window_size: int,
@@ -233,7 +234,7 @@ class RankLLM(ABC):
         Calculates the ranking cost based on actual token counts from generated prompts.
 
         Args:
-            retrieved_results (List[Dict[str, Any]]): A list of retrieved results for processing.
+            retrieved_results (List[Request]): A list of retrieved results for processing.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
@@ -322,3 +323,11 @@ class RankLLM(ABC):
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
+
+    def covert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+        content = doc["segment"]
+        content = content.strip()
+        content = fix_text(content)
+        # For Japanese should cut by character: content = content[:int(max_length)]
+        content = " ".join(content.split()[: int(max_length)])
+        return self._replace_number(content)

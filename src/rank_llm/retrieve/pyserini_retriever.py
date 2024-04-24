@@ -228,22 +228,19 @@ class PyseriniRetriever:
         for hit in hits:
             document = self._index_reader.doc(hit.docid)
             content = json.loads(document.raw())
-            title = None
+            doc = {}
             if "title" in content:
-                content = (
-                    "Title: " + content["title"] + " " + "Content: " + content["text"]
-                )
-                title = content["title"]
+                doc["title"] = content["title"]
+            if "text" in content:
+                doc["segment"] = content["text"]
             elif "contents" in content:
-                content = content["contents"]
+                doc["segment"] = content["contents"]
             else:
-                content = content["passage"]
-            content = " ".join(content.split())
+                doc["segment"] = content["passage"]
+            doc["segment"] = " ".join(doc["segment"].split())
             # hit.score could be of type 'numpy.float32' which is not json serializable. Always explicitly cast it to float.
             ranks[-1].candidates.append(
-                Candidate(
-                    docid=hit.docid, score=hit.score, content=content, title=title
-                )
+                Candidate(docid=hit.docid, score=hit.score, doc=doc)
             )
 
     def retrieve(self, k=100, qid=None) -> List[Request]:

@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, field
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 
 
 from dacite import from_dict
@@ -9,15 +9,14 @@ from dacite import from_dict
 @dataclass
 class Query:
     text: str
-    qid: str
+    qid: Union[str | int]
 
 
 @dataclass
 class Candidate:
-    docid: str
+    docid: Union[str | int]
     score: float
-    content: str
-    title: Union[str | None]
+    doc: Dict[str, Any]
 
 
 @dataclass
