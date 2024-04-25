@@ -57,7 +57,7 @@ class RankListwiseOSLLM(RankLLM):
         self._device = device
         if self._device == "cuda":
             assert torch.cuda.is_available()
-        if prompt_mode is not PromptMode.RANK_GPT:
+        if prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )

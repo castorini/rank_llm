@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
 
+from dacite import from_dict
+
 from src.rank_llm.evaluation.trec_eval import EvalFunction
 from src.rank_llm.data import Result
 
@@ -8,16 +10,22 @@ from src.rank_llm.data import Result
 class TestEvalFunction(unittest.TestCase):
     def setUp(self):
         self.results = [
-            Result(
-                query="Query1",
-                candidates=[
-                    {"qid": "q1", "docid": "D1", "score": 0.9},
-                    {"qid": "q1", "docid": "D2", "score": 0.8},
-                ],
+            from_dict(
+                data_class=Result,
+                data={
+                    "query": {"text": "Query1", "qid": "q1"},
+                    "candidates": [
+                        {"qid": "q1", "docid": "D1", "score": 0.9},
+                        {"qid": "q1", "docid": "D2", "score": 0.8},
+                    ],
+                },
             ),
-            Result(
-                query="Query2",
-                candidates=[{"qid": "q2", "docid": "D3", "score": 0.85}],
+            from_dict(
+                data_class=Result,
+                data={
+                    "query": {"text": "Query2", "qid": "q2"},
+                    "candidates": [{"qid": "q2", "docid": "D3", "score": 0.85}],
+                },
             ),
         ]
         self.qrels_path = "path/to/qrels"
