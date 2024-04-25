@@ -16,15 +16,15 @@ dataset_name = "dl19"
 retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 agent = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
 reranker = Reranker(agent)
-rerank_results = reranker.rerank(retrieved_results)
+rerank_results = reranker.rerank_batch(retrieved_results)
 print(rerank_results)
 
 from pathlib import Path
 
-from rank_llm.result import ResultsWriter
+from rank_llm.data import DataWriter
 
 # write rerank results
-writer = ResultsWriter(rerank_results)
+writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
 writer.write_in_json_format(f"demo_outputs/rerank_results.json")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")

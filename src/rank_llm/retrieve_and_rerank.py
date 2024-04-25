@@ -1,5 +1,7 @@
+import copy
 from typing import Any, Dict, List, Union
 
+from rank_llm.data import Request
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.rank_gpt import SafeOpenai
@@ -64,19 +66,11 @@ def retrieve_and_rerank(
     # Retrieve
     print("Retrieving:")
     if retrieval_mode == RetrievalMode.DATASET:
-        retrieved_results = Retriever.from_dataset_with_prebuilt_index(
+        requests = Retriever.from_dataset_with_prebuilt_index(
             dataset_name=dataset, retrieval_method=retrieval_method
         )
-    elif retrieval_mode == RetrievalMode.QUERY_AND_DOCUMENTS:
-        retrieved_results = Retriever.from_inline_documents(
-            query=query, documents=dataset
-        )
-    elif retrieval_mode == RetrievalMode.QUERY_AND_HITS:
-        retrieved_results = Retriever.from_inline_hits(query=query, hits=dataset)
-    elif retrieval_mode == RetrievalMode.SAVED_FILE:
-        retrieved_results = Retriever.from_saved_results(file_name=dataset)
     elif retrieval_mode == RetrievalMode.CUSTOM:
-        retrieved_results = Retriever.from_custom_index(
+        requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
     else:
@@ -85,8 +79,8 @@ def retrieve_and_rerank(
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
-        rerank_results = reranker.rerank(
-            retrieved_results,
+        rerank_results = reranker.rerank_batach(
+            requests,
             rank_end=top_k_candidates,
             window_size=min(window_size, top_k_candidates),
             shuffle_candidates=shuffle_candidates,
@@ -123,8 +117,9 @@ def retrieve_and_rerank(
             else:
                 print(f"Skipping evaluation as {dataset} is not in TOPICS.")
         if num_passes > 1:
-            retrieved_results = rerank_results
-            for r in retrieved_results:
-                r.ranking_exec_summary = None
+            requests = [
+                Request(copy.deepycopy(r.query), copy.deepcopy(r.candidates))
+                for r in rerank_results
+            ]
 
     return rerank_results

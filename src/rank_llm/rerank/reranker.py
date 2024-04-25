@@ -5,16 +5,16 @@ from typing import List
 from tqdm import tqdm
 
 from rank_llm.rerank.rankllm import RankLLM
-from rank_llm.result import Result, ResultsWriter
+from rank_llm.data import Request, Result, DataWriter
 
 
 class Reranker:
     def __init__(self, agent: RankLLM) -> None:
         self._agent = agent
 
-    def rerank(
+    def rerank_batch(
         self,
-        retrieved_results: List[Result],
+        requests: List[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         window_size: int = 20,
@@ -23,13 +23,13 @@ class Reranker:
         logging: bool = False,
     ) -> List[Result]:
         """
-        Reranks a list of retrieved results using the RankLLM agent.
+        Reranks a list of requests using the RankLLM agent.
 
         This function applies a sliding window algorithm to rerank the results.
         Each window of results is processed by the RankLLM agent to obtain a new ranking.
 
         Args:
-            retrieved_results (List[Result]): The list of results to be reranked.
+            requests (List[Request]): The list of requests. Each request has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
             window_size (int, optional): The size of each sliding window. Defaults to 20.
@@ -38,21 +38,21 @@ class Reranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
 
         Returns:
-            List[Result]: A list containing the reranked results.
+            List[Result]: A list containing the reranked candidates.
         """
-        rerank_results = []
-        for result in tqdm(retrieved_results):
-            rerank_result = self._agent.sliding_windows(
-                result,
+        results = []
+        for request in tqdm(requests):
+            result = self._agent.sliding_windows(
+                request,
                 rank_start=max(rank_start, 0),
-                rank_end=min(rank_end, len(result.hits)),
+                rank_end=min(rank_end, len(request.candidates)),
                 window_size=window_size,
                 step=step,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
             )
-            rerank_results.append(rerank_result)
-        return rerank_results
+            results.append(result)
+        return results
 
     def write_rerank_results(
         self,
@@ -106,7 +106,7 @@ class Reranker:
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
         # write rerank results
-        writer = ResultsWriter(results)
+        writer = DataWriter(results)
         Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )

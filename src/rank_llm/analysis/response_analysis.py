@@ -10,7 +10,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.result import Result
+from rank_llm.data import Result
 
 
 class ResponseAnalyzer:
@@ -80,9 +80,9 @@ class ResponseAnalyzer:
             with open(result) as f:
                 ranking_exec_summaries = json.load(f)
             for summary in ranking_exec_summaries:
-                for exec_info in summary["ranking_exec_summary"]:
-                    responses.append(exec_info["response"])
-                    num_passage = self._get_num_passages(exec_info["prompt"])
+                for exec_info in summary.ranking_exec_summary:
+                    responses.append(exec_info.response)
+                    num_passage = self._get_num_passages(exec_info.prompt)
                     num_passages.append(int(num_passage))
         return responses, num_passages
 

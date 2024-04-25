@@ -369,7 +369,7 @@ HITS_INFO = {
         "downloaded": False,
     },
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl22_top100.json": {
-    "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL22 task. (Cached JSON format)",
+        "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL22 task. (Cached JSON format)",
         "urls": [
             "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl22_top100.json"
         ],

@@ -24,12 +24,12 @@ z_reranker = ZephyrReranker()
 rerankers = {"rg": g_reranker, "rv": v_reranker, "rz": z_reranker}
 
 results = {}
-for dataset in ["dl19"]:  # , "dl20"]:
-    retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset)
+for dataset in ["dl19", "dl20", "dl21", "dl22"]:
+    retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=20)
     topics = TOPICS[dataset]
     ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
     for key, reranker in rerankers.items():
-        rerank_results = reranker.rerank(retrieved_results)
+        rerank_results = reranker.rerank_batch(retrieved_results)
         rerank_ndcg_10 = EvalFunction.from_results(rerank_results, topics)
         analyzer = ResponseAnalyzer.from_inline_results(rerank_results)
         error_counts = analyzer.count_errors()

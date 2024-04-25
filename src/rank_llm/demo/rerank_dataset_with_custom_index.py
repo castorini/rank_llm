@@ -26,5 +26,5 @@ retrieved_results = Retriever.from_custom_index(
     index_type="lucene",
 )
 reranker = VicunaReranker()
-rerank_results = reranker.rerank(retrieved_results)
+rerank_results = reranker.rerank_batch(retrieved_results)
 print(rerank_results)
