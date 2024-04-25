@@ -58,7 +58,7 @@ class SafeOpenai(RankLLM):
             raise ValueError("Please provide OpenAI Keys.")
         if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.LRL]:
             raise ValueError(
-                f"unsupported prompt mode for GPT models: {prompt_mode}, expected RANK_GPT or LRL."
+                f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT} or {PromptMode.LRL}."
             )
 
         self._window_size = window_size

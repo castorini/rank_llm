@@ -58,10 +58,48 @@ class VicunaReranker:
             List[Result]: A list containing the reranked results.
 
         Note:
-            check 'rerank' for implementation details of reranking process.
+            check 'reranker.rerank_batch' for implementation details of reranking process.
         """
         return self._reranker.rerank_batch(
             requests=requests,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            window_size=window_size,
+            step=step,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+        )
+
+    def rerank(
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        window_size: int = 20,
+        step: int = 10,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+    ) -> Result:
+        """
+        Reranks a request using the Vicuna model.
+
+        Args:
+            request (Request): The reranking request which has a query and a candidates list.
+            rank_start (int, optional): The starting rank for processing. Defaults to 0.
+            rank_end (int, optional): The end rank for processing. Defaults to 100.
+            window_size (int, optional): The size of each sliding window. Defaults to 20.
+            step (int, optional): The step size for moving the window. Defaults to 10.
+            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
+            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+
+        Returns:
+            Result: the rerank result which contains the reranked candidates.
+
+        Note:
+            check 'reranker.rerank' for implementation details of reranking process.
+        """
+        return self._reranker.rerank(
+            request=request,
             rank_start=rank_start,
             rank_end=rank_end,
             window_size=window_size,

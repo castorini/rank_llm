@@ -1,8 +1,10 @@
 import unittest
 
+from dacite import from_dict
+
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.result import Result
+from rank_llm.data import Result
 
 # model, context_size, prompt_mode, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
@@ -142,38 +144,41 @@ failure_inputs = [
 ]
 
 
-r = Result(
-    query="Sample Query",
-    hits=[
-        {
-            "content": "Title: Sample Title Content: Sample Text",
-            "qid": None,
-            "docid": "d1",
-            "rank": 1,
-            "score": 0.5,
-        },
-        {
-            "content": "Title: Sample Title Content: Sample Text",
-            "qid": None,
-            "docid": "d2",
-            "rank": 2,
-            "score": 0.4,
-        },
-        {
-            "content": "Title: Sample Title Content: Sample Text",
-            "qid": None,
-            "docid": "d3",
-            "rank": 3,
-            "score": 0.4,
-        },
-        {
-            "content": "Title: Sample Title Content: Sample Text",
-            "qid": None,
-            "docid": "d4",
-            "rank": 4,
-            "score": 0.3,
-        },
-    ],
+r = from_dict(
+    data_class=Result,
+    data={
+        "query": {"text": "Sample Query", "qid": "q1"},
+        "candidates": [
+            {
+                "doc": {
+                    "contents": "Title: Sample Title Content: Sample Text",
+                },
+                "docid": "d1",
+                "score": 0.5,
+            },
+            {
+                "doc": {
+                    "contents": "Title: Sample Title Content: Sample Text",
+                },
+                "docid": "d2",
+                "score": 0.4,
+            },
+            {
+                "doc": {
+                    "contents": "Title: Sample Title Content: Sample Text",
+                },
+                "docid": "d3",
+                "score": 0.4,
+            },
+            {
+                "doc": {
+                    "contents": "Title: Sample Title Content: Sample Text",
+                },
+                "docid": "d4",
+                "score": 0.3,
+            },
+        ],
+    },
 )
 
 
@@ -294,7 +299,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         start_end_pairs = [(1, 3), (2, 4), (3, 5), (5, 6)]
         for start, end in start_end_pairs:
             prompt, length = agent.create_prompt(r, start, end)
-            expected_output = min(end, len(r.hits)) - max(0, start)
+            expected_output = min(end, len(r.candidates)) - max(0, start)
             self.assertEqual(get_first_int(prompt), max(expected_output, 0))
 
     def test_get_num_tokens(self):

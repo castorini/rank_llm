@@ -54,6 +54,45 @@ class Reranker:
             results.append(result)
         return results
 
+    def rerank(
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        window_size: int = 20,
+        step: int = 10,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+    ) -> Result:
+        """
+        Reranks a request using the RankLLM agent.
+
+        This function applies a sliding window algorithm to rerank the results.
+        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+
+        Args:
+            request (Request): The reranking request which has a query and a candidates list.
+            rank_start (int, optional): The starting rank for processing. Defaults to 0.
+            rank_end (int, optional): The end rank for processing. Defaults to 100.
+            window_size (int, optional): The size of each sliding window. Defaults to 20.
+            step (int, optional): The step size for moving the window. Defaults to 10.
+            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
+            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+
+        Returns:
+            Result: the rerank result which contains the reranked candidates.
+        """
+        results = self.rerank_batch(
+            requests=[request],
+            rank_start=rank_start,
+            rank_end=rank_end,
+            window_size=window_size,
+            step=step,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+        )
+        return results[0]
+
     def write_rerank_results(
         self,
         retrieval_method_name: str,

@@ -273,30 +273,46 @@ def generate_report(args):
                 row_cnt=row_cnt,
                 condition_name=table_keys[name],
                 row=row_ids[name],
-                s1=f'{table[name]["dl19"]["MULT"]:.0f}'
-                if table[name]["dl19"]["MULT"] != 0
-                else "-",
-                s2=f'{table[name]["dl20"]["MAP"]:.4f}'
-                if table[name]["dl20"]["MAP"] != 0
-                else "SPLADE++ EnsembleDistil",
-                s3=f'{table[name]["dl19"]["R@1K"]:.4f}'
-                if table[name]["dl19"]["R@1K"] != 0
-                else "100",
-                s4=f'{table[name]["dl19"]["nDCG@10"]:.4f}'
-                if table[name]["dl19"]["nDCG@10"] != 0
-                else "-",
-                s5=f'{table[name]["dl20"]["nDCG@10"]:.4f}'
-                if table[name]["dl20"]["nDCG@10"] != 0
-                else "-",
-                s6=f'{table[name]["dl20"]["R@1K"]:.4f}'
-                if table[name]["dl20"]["R@1K"] != 0
-                else "",
-                s7=f'{table[name]["dev"]["MRR@10"]:.4f}'
-                if table[name]["dev"]["MRR@10"] != 0
-                else "",
-                s8=f'{table[name]["dev"]["R@1K"]:.4f}'
-                if table[name]["dev"]["R@1K"] != 0
-                else "",
+                s1=(
+                    f'{table[name]["dl19"]["MULT"]:.0f}'
+                    if table[name]["dl19"]["MULT"] != 0
+                    else "-"
+                ),
+                s2=(
+                    f'{table[name]["dl20"]["MAP"]:.4f}'
+                    if table[name]["dl20"]["MAP"] != 0
+                    else "SPLADE++ EnsembleDistil"
+                ),
+                s3=(
+                    f'{table[name]["dl19"]["R@1K"]:.4f}'
+                    if table[name]["dl19"]["R@1K"] != 0
+                    else "100"
+                ),
+                s4=(
+                    f'{table[name]["dl19"]["nDCG@10"]:.4f}'
+                    if table[name]["dl19"]["nDCG@10"] != 0
+                    else "-"
+                ),
+                s5=(
+                    f'{table[name]["dl20"]["nDCG@10"]:.4f}'
+                    if table[name]["dl20"]["nDCG@10"] != 0
+                    else "-"
+                ),
+                s6=(
+                    f'{table[name]["dl20"]["R@1K"]:.4f}'
+                    if table[name]["dl20"]["R@1K"] != 0
+                    else ""
+                ),
+                s7=(
+                    f'{table[name]["dev"]["MRR@10"]:.4f}'
+                    if table[name]["dev"]["MRR@10"] != 0
+                    else ""
+                ),
+                s8=(
+                    f'{table[name]["dev"]["R@1K"]:.4f}'
+                    if table[name]["dev"]["R@1K"] != 0
+                    else ""
+                ),
                 cmd1=format_command(commands[name]["dl19"]),
                 cmd2=format_command(commands[name]["dl20"]),
                 cmd3=format_command(commands[name]["dev"]),

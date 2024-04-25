@@ -62,8 +62,15 @@ def read_requests_from_file(file_path: str) -> List[Request]:
 
 
 class DataWriter:
-    def __init__(self, data: Union[List[Result] | List[Request]], append: bool = False):
-        self._data = data
+    def __init__(
+        self,
+        data: Union[Request | Result | List[Result] | List[Request]],
+        append: bool = False,
+    ):
+        if isinstance(data, list):
+            self._data = data
+        else:
+            self._data = [data]
         self._append = append
 
     def write_ranking_exec_summary(self, filename: str):
