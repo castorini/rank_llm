@@ -60,6 +60,14 @@ def retrieve_and_rerank(
             window_size=window_size,
             system_message=system_message,
         )
+    elif "fid" in model_path.lower():
+        agent = RankFiDDistill(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            window_size=window_size,
+            device=device,
+        )
     else:
         raise ValueError(f"Unsupported model: {model_path}")
 
