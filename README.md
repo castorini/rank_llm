@@ -31,6 +31,11 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 pip install -r requirements.txt
 ```
 
+### Install Pyserini (Optional)
+```
+pip install pyserini
+```
+
 ### Run end to end Test
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
