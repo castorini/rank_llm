@@ -1,7 +1,7 @@
 import unittest
 
 from src.rank_llm.analysis.response_analysis import ResponseAnalyzer
-from src.rank_llm.result import RankingExecInfo, Result
+from src.rank_llm.data import RankingExecInfo, Result
 
 
 class TestResponseAnalyzer(unittest.TestCase):
@@ -10,7 +10,7 @@ class TestResponseAnalyzer(unittest.TestCase):
         self.mock_results = [
             Result(
                 query="Query 1",
-                hits=[],
+                candidates=[],
                 ranking_exec_summary=[
                     RankingExecInfo(
                         prompt="I will provide you with 3 passages",
@@ -28,7 +28,7 @@ class TestResponseAnalyzer(unittest.TestCase):
             ),
             Result(
                 query="Query 2",
-                hits=[],
+                candidates=[],
                 ranking_exec_summary=[
                     RankingExecInfo(
                         prompt="I will provide you with 4 passages",

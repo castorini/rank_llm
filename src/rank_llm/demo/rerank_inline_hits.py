@@ -10,6 +10,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import Request, DataWriter
+from rank_llm.rerank.vicuna_reranker import VicunaReranker
 from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
 request_dict = {
@@ -74,9 +75,11 @@ request_dict = {
     ],
 }
 
-requests = [from_dict(data_class=Request, data=request_dict)]
+request = from_dict(data_class=Request, data=request_dict)
 reranker = ZephyrReranker()
-rerank_results = reranker.rerank_batch(requests)
+rerank_results = reranker.rerank(request=request)
+reranker = VicunaReranker()
+rerank_results = reranker.rerank(request=request)
 print(rerank_results)
 
 # write rerank results

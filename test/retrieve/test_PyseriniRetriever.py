@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from rank_llm.result import Result
+from rank_llm.data import Result
 from rank_llm.retrieve.indices_dict import INDICES
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
