@@ -17,7 +17,7 @@ current_version = 0.12.8
 ### Create Conda Environment
 
 ```bash
-conda create -n rankllm python=3.12
+conda create -n rankllm python=3.10
 conda activate rankllm
 ```
 
