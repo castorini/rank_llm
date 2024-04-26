@@ -10,7 +10,7 @@
 We offer a suite of prompt-decoders, albeit with focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.). Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT)!
 
 # Releases
-current_version = 0.2.8
+current_version = 0.12.8
 
 ## 📟 Instructions
 
@@ -24,6 +24,11 @@ conda activate rankllm
 ### Install Pytorch with CUDA
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
+### Install openjdk with maven if you want to use the retriever
+```bash
+conda install -c conda-forge openjdk=21 maven -y
 ```
 
 ### Install Dependencies
