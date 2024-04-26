@@ -10,7 +10,7 @@
 We offer a suite of prompt-decoders, albeit with focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.). Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT)!
 
 # Releases
-current_version = 0.12.5
+current_version = 0.12.6
 
 ## 📟 Instructions
 
