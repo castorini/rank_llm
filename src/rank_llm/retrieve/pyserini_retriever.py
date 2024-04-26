@@ -202,7 +202,7 @@ class PyseriniRetriever:
     def _init_topics_from_dict(self, dataset: str):
         if dataset not in TOPICS:
             raise ValueError("dataset %s not in TOPICS" % dataset)
-        if dataset in ["dl20", "dl21", "dl22"]:
+        if dataset in ["dl20", "dl21", "dl22", "dl23"]:
             topics_key = dataset
         else:
             topics_key = TOPICS[dataset]
