@@ -17,13 +17,18 @@ current_version = 0.12.8
 ### Create Conda Environment
 
 ```bash
-conda create -n rankllm python=3.10
+conda create -n rankllm python=3.12
 conda activate rankllm
 ```
 
 ### Install Pytorch with CUDA
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
+### Install openjdk with maven if you want to use the retriever
+```bash
+conda install -c conda-forge openjdk=21 maven -y
 ```
 
 ### Install Dependencies
