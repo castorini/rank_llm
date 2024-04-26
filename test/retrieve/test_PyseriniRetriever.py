@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from rank_llm.data import Result
+from dacite import from_dict
+
+from rank_llm.data import Request
 from rank_llm.retrieve.indices_dict import INDICES
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
 
@@ -26,10 +28,11 @@ failure_inputs = [
 
 # Mocking Hits object
 class MockHit:
-    def __init__(self, docid, rank, score):
+    def __init__(self, docid, rank, score, qid):
         self.docid = docid
         self.rank = rank
         self.score = score
+        self.qid = qid
 
 
 class TestPyseriniRetriever(unittest.TestCase):
@@ -75,7 +78,10 @@ class TestPyseriniRetriever(unittest.TestCase):
 
         # Mocking hits
         mock_hits = MagicMock(spec=list[MockHit])
-        mock_hits.__iter__.return_value = [MockHit("d1", 1, 0.5), MockHit("d2", 2, 0.4)]
+        mock_hits.__iter__.return_value = [
+            MockHit("d1", 1, 0.5, "q1"),
+            MockHit("d2", 2, 0.4, "q1"),
+        ]
         # Setting up PyseriniRetriever instance
         retriever = PyseriniRetriever("dl19", RetrievalMethod.BM25)
 
@@ -84,30 +90,29 @@ class TestPyseriniRetriever(unittest.TestCase):
 
         # Creating lists to store expected and actual results
         expected_results = [
-            Result(
-                query="Sample Query",
-                hits=[
-                    {
-                        "content": "Title: Sample Title Content: Sample Text",
-                        "qid": None,
-                        "docid": "d1",
-                        "rank": 1,
-                        "score": 0.5,
-                    },
-                    {
-                        "content": "Title: Sample Title Content: Sample Text",
-                        "qid": None,
-                        "docid": "d2",
-                        "rank": 2,
-                        "score": 0.4,
-                    },
-                ],
+            from_dict(
+                data_class=Request,
+                data={
+                    "query": {"text": "Sample Query", "qid": "q1"},
+                    "candidates": [
+                        {
+                            "doc": {"title": "Sample Title", "text": "Sample Text"},
+                            "docid": "d1",
+                            "score": 0.5,
+                        },
+                        {
+                            "doc": {"title": "Sample Title", "text": "Sample Text"},
+                            "docid": "d2",
+                            "score": 0.4,
+                        },
+                    ],
+                },
             )
         ]
         actual_results = []
 
         # Calling the _retrieve_query method
-        retriever._retrieve_query("Sample Query", actual_results, 2)
+        retriever._retrieve_query("Sample Query", actual_results, 2, "q1")
 
         # Asserting that Hits object is called with the correct query and k
         retriever._searcher.search.assert_called_once_with("Sample Query", k=2)

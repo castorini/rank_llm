@@ -15,8 +15,8 @@ class TestEvalFunction(unittest.TestCase):
                 data={
                     "query": {"text": "Query1", "qid": "q1"},
                     "candidates": [
-                        {"qid": "q1", "docid": "D1", "score": 0.9},
-                        {"qid": "q1", "docid": "D2", "score": 0.8},
+                        {"doc": {"text": "Doc1"}, "docid": "D1", "score": 0.9},
+                        {"doc": {"text": "Doc2"}, "docid": "D2", "score": 0.8},
                     ],
                 },
             ),
@@ -24,7 +24,9 @@ class TestEvalFunction(unittest.TestCase):
                 data_class=Result,
                 data={
                     "query": {"text": "Query2", "qid": "q2"},
-                    "candidates": [{"qid": "q2", "docid": "D3", "score": 0.85}],
+                    "candidates": [
+                        {"doc": {"text": "Doc3"}, "docid": "D3", "score": 0.85}
+                    ],
                 },
             ),
         ]
