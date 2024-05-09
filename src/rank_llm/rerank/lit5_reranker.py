@@ -72,7 +72,7 @@ class LiT5ScoreReranker:
         window_size: int = 20,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
     ) -> None:
-        agent = RankFiDDistill(
+        agent = RankFiDScore(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
