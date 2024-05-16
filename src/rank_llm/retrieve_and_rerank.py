@@ -67,7 +67,8 @@ def retrieve_and_rerank(
     print("Retrieving:")
     if retrieval_mode == RetrievalMode.DATASET:
         requests = Retriever.from_dataset_with_prebuilt_index(
-            dataset_name=dataset, retrieval_method=retrieval_method
+            dataset_name=dataset, retrieval_method=retrieval_method,
+            k=top_k_candidates
         )
     elif retrieval_mode == RetrievalMode.CUSTOM:
         requests = Retriever.from_custom_index(
@@ -79,7 +80,7 @@ def retrieve_and_rerank(
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
-        rerank_results = reranker.rerank_batach(
+        rerank_results = reranker.rerank_batch(
             requests,
             rank_end=top_k_candidates,
             window_size=min(window_size, top_k_candidates),

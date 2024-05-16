@@ -145,18 +145,17 @@ class Retriever:
         """
         if self._retrieval_mode == RetrievalMode.DATASET:
             candidates_file = Path(
-                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             )
-            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
+            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             if not candidates_file.is_file():
                 try:
                     # TODO: Fix caching
-                    # file_path = download_cached_hits(query_name)
-                    # with open(file_path, "r") as f:
-                    #     loaded_results = json.load(f)
-                    # retrieved_results = [
-                    #     from_dict(data_class=Request, data=r) for r in loaded_results
-                    # ]
+                    file_path = download_cached_hits(query_name)
+                    with open(file_path, "r") as f:
+                        retrieved_results = []
+                        for line in f:
+                            retrieved_results.append(from_dict(data_class=Request, data=json.loads(line)))
                     raise ValueError("caching is disabled")
                 except ValueError as e:
                     print(f"Retrieving with dataset {self._dataset}")
@@ -169,10 +168,9 @@ class Retriever:
                 # if HITS_INFO[query_name]["md5"] != md5_local:
                 #     print("Query Cache MD5 does not match Local")
                 with open(candidates_file, "r") as f:
-                    loaded_results = json.load(f)
-                retrieved_results = [
-                    from_dict(data_class=Request, data=r) for r in loaded_results
-                ]
+                    retrieved_results = []
+                    for line in f:
+                        retrieved_results.append(from_dict(data_class=Request, data=json.loads(line)))
 
         elif self._retrieval_mode == RetrievalMode.CUSTOM:
             candidates_file = Path(
