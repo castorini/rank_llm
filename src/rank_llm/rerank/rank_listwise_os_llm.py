@@ -1,11 +1,13 @@
 import json
+import os
 import random
-from typing import Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from transformers.generation import GenerationConfig
+from vllm import LLM, SamplingParams
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.data import Result
@@ -23,6 +25,7 @@ class RankListwiseOSLLM(RankLLM):
         variable_passages: bool = False,
         window_size: int = 20,
         system_message: str = None,
+        batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using
@@ -62,7 +65,14 @@ class RankListwiseOSLLM(RankLLM):
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
+        if batched:
+            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"))
+            self._tokenizer = self._llm.get_tokenizer()
+        else:
+            self._llm, self._tokenizer = load_model(
+                model, device=device, num_gpus=num_gpus
+            )
+        self._batched = batched
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message
@@ -70,6 +80,19 @@ class RankListwiseOSLLM(RankLLM):
         if num_few_shot_examples > 0:
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
                 self._examples = list(json_file)[1:-1]
+
+    def run_llm_batched(self, prompts: List[str | List[Dict[str, str]]],
+                        current_window_size: Optional[int] = None) -> List[Tuple[str, int]]:
+        sampling_params = SamplingParams(
+                temperature=0.0,
+                max_tokens=self.num_output_tokens(current_window_size),
+                min_tokens=self.num_output_tokens(current_window_size),
+            )
+        outputs = self._llm.generate(prompts, sampling_params)
+        return [
+            (output.outputs[0].text, len(output.outputs[0].token_ids))
+            for output in outputs
+        ]
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
