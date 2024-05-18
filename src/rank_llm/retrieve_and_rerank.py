@@ -1,7 +1,7 @@
 import copy
 from typing import Any, Dict, List, Union
 
-from rank_llm.data import Request
+from rank_llm.data import Request, Query
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.rank_gpt import SafeOpenai
@@ -10,6 +10,7 @@ from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
+from rank_llm.retrieve.service_retriever import ServiceRetriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
 
@@ -36,6 +37,8 @@ def retrieve_and_rerank(
     index_path: str = None,
     topics_path: str = None,
     index_type: str = None,
+    interactive: bool = False,
+    host: str = "http://localhost:8081",
 ):
     # Construct Rerank Agent
     if "gpt" in model_path or use_azure_openai:
@@ -65,21 +68,31 @@ def retrieve_and_rerank(
 
     # Retrieve
     print("Retrieving:")
+    if interactive and retrieval_mode != RetrievalMode.DATASET: 
+        raise ValueError(f"Unsupport retrieval mode for interactive retrieval. Currently only DATASET mode is supported.")
+    
     if retrieval_mode == RetrievalMode.DATASET:
-        requests = Retriever.from_dataset_with_prebuilt_index(
-            dataset_name=dataset, retrieval_method=retrieval_method
-        )
+        if interactive:
+            requests = ServiceRetriever.from_dataset_with_prebuilt_index(
+                dataset_name=dataset, retrieval_method=retrieval_method, host=host, request=Request(query=Query(text=query,qid='1')) # default qid? empty?
+            )
+        else:
+            requests = Retriever.from_dataset_with_prebuilt_index(
+                dataset_name=dataset, retrieval_method=retrieval_method
+            )
+
     elif retrieval_mode == RetrievalMode.CUSTOM:
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
+    
     print("Reranking:")
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
-        rerank_results = reranker.rerank_batach(
+        rerank_results = reranker.rerank_batch(
             requests,
             rank_end=top_k_candidates,
             window_size=min(window_size, top_k_candidates),

@@ -12,3 +12,6 @@ class TestServiceRetriever(unittest.TestCase):
         assert(len(response.candidates)==10)
         assert(type(response.candidates[0]) == Candidate)
         assert(response.query == Query(text='hello', qid=''))
+
+    # TODO def test_retrieve_and_rerank_interactive(self):
+        
