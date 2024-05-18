@@ -24,7 +24,7 @@ class ServiceRetriever:
         dataset: Union[str, List[str], List[Dict[str, Any]]],
         host: str,
         retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
-        retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
+        retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
         # index_path: str = None,
         # topics_path: str = None,
         # index_type: str = None,
@@ -85,7 +85,7 @@ class ServiceRetriever:
     def retrieve(
         self, 
         request: Request,
-        k: int = 100, # Anserini REST API currently does not accept k as a parameter
+        k: int = 50, # Anserini REST API currently does not accept k as a parameter
         # retrieval_method. API does not currently support retrieval_method as a parameter
     ) -> List[Request]:
         """
@@ -98,7 +98,7 @@ class ServiceRetriever:
         """
         if self._retrieval_mode == RetrievalMode.DATASET:
             query_url = parse.quote(request.query.text)
-            url = f"{self._host}/api/collection/{self._dataset}/search?query={query_url}"
+            url = f"{self._host}/api/collection/{self._dataset}/search?query={query_url}&hits={str(k)}&qid={request.query.qid}"
             response = requests.get(url)
             if response.status_code == 200:
                 data = response.json()
