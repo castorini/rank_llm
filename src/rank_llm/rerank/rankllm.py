@@ -331,6 +331,8 @@ class RankLLM(ABC):
             content = doc["segment"]
         elif "contents" in doc:
             content = doc["contents"]
+        elif "body" in doc:
+            content = doc["body"]
         else:
             content = doc["passage"]
         if "title" in doc and doc["title"]:

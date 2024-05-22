@@ -17,9 +17,10 @@ from rank_llm.retrieve.topics_dict import TOPICS
 def retrieve_and_rerank(
     model_path: str,
     dataset: Union[str, List[str], List[Dict[str, Any]]],
-    retrieval_mode: RetrievalMode,
-    retrieval_method: RetrievalMethod,
-    top_k_candidates: int = 100,
+    retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
+    retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
+    top_k_retrieve: int = 50,
+    top_k_rerank: int = 10,
     context_size: int = 4096,
     device: str = "cuda",
     num_gpus: int = 1,
@@ -28,6 +29,7 @@ def retrieve_and_rerank(
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
     query: str = "",
+    qid: int = 1,
     use_azure_openai: bool = False,
     variable_passages: bool = False,
     num_passes: int = 1,
@@ -41,6 +43,7 @@ def retrieve_and_rerank(
     host: str = "http://localhost:8081",
 ):
     # Construct Rerank Agent
+    model_full_path = ""        
     if "gpt" in model_path or use_azure_openai:
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
@@ -51,9 +54,13 @@ def retrieve_and_rerank(
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
-    elif "vicuna" in model_path.lower() or "zephyr" in model_path.lower():
+    elif model_path.lower()=="rank_zephyr" or model_path.lower()=="rank_vicuna":
+        if model_path.lower()=="rank_zephyr":
+            model_full_path="castorini/rank_zephyr_7b_v1_full"
+        else:
+            model_full_path= "castorini/rank_vicuna_7b_v1"
         agent = RankListwiseOSLLM(
-            model=model_path,
+            model=model_full_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
@@ -73,9 +80,12 @@ def retrieve_and_rerank(
     
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
-            requests = ServiceRetriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset, retrieval_method=retrieval_method, host=host, request=Request(query=Query(text=query,qid='1')) # default qid? empty?
-            )
+            requests = [ServiceRetriever.from_dataset_with_prebuilt_index(
+                dataset_name=dataset,
+                k=top_k_retrieve,
+                retrieval_method=retrieval_method, 
+                host=host, request=Request(query=Query(text=query,qid=qid))
+            )]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset, retrieval_method=retrieval_method
@@ -94,8 +104,8 @@ def retrieve_and_rerank(
         print(f"Pass {pass_ct + 1} of {num_passes}:")
         rerank_results = reranker.rerank_batch(
             requests,
-            rank_end=top_k_candidates,
-            window_size=min(window_size, top_k_candidates),
+            rank_end=top_k_rerank,
+            window_size=min(window_size, top_k_rerank),
             shuffle_candidates=shuffle_candidates,
             logging=print_prompts_responses,
             step=step_size,
@@ -107,7 +117,7 @@ def retrieve_and_rerank(
                 retrieval_method.name,
                 rerank_results,
                 shuffle_candidates,
-                top_k_candidates=top_k_candidates,
+                top_k_candidates=top_k_rerank,
                 pass_ct=None if num_passes == 1 else pass_ct,
                 window_size=window_size,
                 dataset_name=dataset,
@@ -135,4 +145,4 @@ def retrieve_and_rerank(
                 for r in rerank_results
             ]
 
-    return rerank_results
+    return rerank_results[0]

@@ -87,7 +87,7 @@ class ServiceRetriever:
         request: Request,
         k: int = 50, # Anserini REST API currently does not accept k as a parameter
         # retrieval_method. API does not currently support retrieval_method as a parameter
-    ) -> List[Request]:
+    ) -> Request:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object. 
 
