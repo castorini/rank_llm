@@ -41,6 +41,7 @@ def retrieve_and_rerank(
     index_type: str = None,
     interactive: bool = False,
     host: str = "http://localhost:8081",
+    exec_summary: bool = False,
 ):
     # Construct Rerank Agent
     model_full_path = ""        
@@ -109,36 +110,9 @@ def retrieve_and_rerank(
             shuffle_candidates=shuffle_candidates,
             logging=print_prompts_responses,
             step=step_size,
+            exec_summary=exec_summary
         )
 
-        # generate trec_eval file & evaluate for named datasets only
-        if isinstance(dataset, str):
-            file_name = reranker.write_rerank_results(
-                retrieval_method.name,
-                rerank_results,
-                shuffle_candidates,
-                top_k_candidates=top_k_rerank,
-                pass_ct=None if num_passes == 1 else pass_ct,
-                window_size=window_size,
-                dataset_name=dataset,
-            )
-            if (
-                dataset in TOPICS
-                and dataset not in ["dl22", "dl22-passage", "news"]
-                and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
-            ):
-                print("Evaluating:")
-                EvalFunction.eval(
-                    ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
-                )
-                EvalFunction.eval(
-                    ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
-                )
-                EvalFunction.eval(
-                    ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
-                )
-            else:
-                print(f"Skipping evaluation as {dataset} is not in TOPICS.")
         if num_passes > 1:
             requests = [
                 Request(copy.deepycopy(r.query), copy.deepcopy(r.candidates))
