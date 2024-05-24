@@ -1,16 +1,21 @@
 import json
 import os
 import random
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from transformers.generation import GenerationConfig
-from vllm import LLM, SamplingParams
 
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
+try:
+    from vllm import LLM, SamplingParams
+except:
+    LLM = None
+    SamplingParams = None
+
 from rank_llm.data import Result
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 
 class RankListwiseOSLLM(RankLLM):
@@ -65,7 +70,11 @@ class RankListwiseOSLLM(RankLLM):
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        if batched:
+        if batched and LLM is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+            )
+        elif batched:
             self._llm = LLM(model, download_dir=os.getenv("HF_HOME"))
             self._tokenizer = self._llm.get_tokenizer()
         else:
@@ -81,13 +90,20 @@ class RankListwiseOSLLM(RankLLM):
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
                 self._examples = list(json_file)[1:-1]
 
-    def run_llm_batched(self, prompts: List[str | List[Dict[str, str]]],
-                        current_window_size: Optional[int] = None) -> List[Tuple[str, int]]:
-        sampling_params = SamplingParams(
-                temperature=0.0,
-                max_tokens=self.num_output_tokens(current_window_size),
-                min_tokens=self.num_output_tokens(current_window_size),
+    def run_llm_batched(
+        self,
+        prompts: List[str | List[Dict[str, str]]],
+        current_window_size: Optional[int] = None,
+    ) -> List[Tuple[str, int]]:
+        if SamplingParams is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
+        sampling_params = SamplingParams(
+            temperature=0.0,
+            max_tokens=self.num_output_tokens(current_window_size),
+            min_tokens=self.num_output_tokens(current_window_size),
+        )
         outputs = self._llm.generate(prompts, sampling_params)
         return [
             (output.outputs[0].text, len(output.outputs[0].token_ids))
