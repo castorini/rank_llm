@@ -17,7 +17,9 @@ def search(model_path, dataset,host, query,top_k_retrieve, top_k_rerank,qid):
             top_k_rerank=top_k_rerank,
             top_k_retrieve=top_k_retrieve,
             qid=qid,
+            exec_summary=False,
         )
+
         return jsonify(response), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
