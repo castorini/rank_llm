@@ -21,6 +21,7 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        batched: bool = False,
     ) -> List[Result]:
         """
         Reranks a list of requests using the RankLLM agent.
@@ -36,10 +37,23 @@ class Reranker:
             step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+            batched (bool, optional): Whether to use batched processing. Defaults to False.
 
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
+        if batched:
+            return self._agent.sliding_windows_batched(
+                requests,
+                rank_start=max(rank_start, 0),
+                rank_end=min(
+                    rank_end, len(requests[0].candidates)
+                ),  # TODO: Fails arbitrary hit sizes
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+            )
         results = []
         for request in tqdm(requests):
             result = self._agent.sliding_windows(
