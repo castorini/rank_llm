@@ -55,11 +55,16 @@ def retrieve_and_rerank(
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
-    elif model_path.lower()=="rank_zephyr" or model_path.lower()=="rank_vicuna":
+    elif "vicuna" in model_path.lower() or "zephyr" in model_path.lower():
         if model_path.lower()=="rank_zephyr":
             model_full_path="castorini/rank_zephyr_7b_v1_full"
-        else:
+        elif model_path.lower()=="rank_vicuna":
             model_full_path= "castorini/rank_vicuna_7b_v1"
+        else: 
+            model_full_path=model_path
+            
+        print(f"Loading {model_path} ...")
+
         agent = RankListwiseOSLLM(
             model=model_full_path,
             context_size=context_size,
@@ -75,18 +80,22 @@ def retrieve_and_rerank(
         raise ValueError(f"Unsupported model: {model_path}")
 
     # Retrieve
-    print("Retrieving:")
+    print(f"Retrieving top {top_k_retrieve} passages...")
     if interactive and retrieval_mode != RetrievalMode.DATASET: 
         raise ValueError(f"Unsupport retrieval mode for interactive retrieval. Currently only DATASET mode is supported.")
     
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
-            requests = [ServiceRetriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset,
-                k=top_k_retrieve,
-                retrieval_method=retrieval_method, 
-                host=host, request=Request(query=Query(text=query,qid=qid))
-            )]
+
+            service_retriever = ServiceRetriever(retrieval_method=retrieval_method, retrieval_mode=retrieval_mode)
+            requests = [
+                service_retriever.retrieve(
+                    dataset=dataset, 
+                    request=Request(query=Query(text=query,qid=qid)), 
+                    k=top_k_retrieve, 
+                    host=host
+                )
+            ]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset, retrieval_method=retrieval_method
@@ -98,8 +107,10 @@ def retrieve_and_rerank(
         )
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
+    print(f"Retrieval complete!")
     
-    print("Reranking:")
+    # Reranking
+    print(f"Reranking {top_k_rerank} passages...")
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
@@ -118,5 +129,5 @@ def retrieve_and_rerank(
                 Request(copy.deepycopy(r.query), copy.deepcopy(r.candidates))
                 for r in rerank_results
             ]
-
-    return rerank_results[0]
+    print(f"Reranking with {num_passes} passes complete!")
+    return rerank_results
