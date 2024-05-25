@@ -44,7 +44,7 @@ class ServiceRetriever:
         
     def retrieve(
         self, 
-        dataset: Union[str, List[str], List[Dict[str, Any]]],
+        dataset: str,
         request: Request,
         k: int = 50, 
         host: str = "http://localhost:8081",
