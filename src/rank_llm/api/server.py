@@ -63,7 +63,7 @@ def create_app(model, port, use_azure_openai=False):
     else:
         raise ValueError(f"Unsupported model: {model}")
 
-    @app.route('/api/model/<string:model_path>/index/<string:dataset>/retriever/<string:host>', methods=['GET'])
+    @app.route('/api/model/<string:model_path>/index/<string:dataset>/<string:host>', methods=['GET'])
     def search(model_path, dataset, host):
 
         query = request.args.get('query',type=str)
