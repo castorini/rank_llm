@@ -129,7 +129,7 @@ def retrieve_and_rerank(
 
         if num_passes > 1:
             requests = [
-                Request(copy.deepycopy(r.query), copy.deepcopy(r.candidates))
+                Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
                 for r in rerank_results
             ]
     print(f"Reranking with {num_passes} passes complete!")

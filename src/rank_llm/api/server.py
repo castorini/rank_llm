@@ -7,7 +7,18 @@ from rank_llm.rerank.api_keys import get_openai_api_key, get_azure_openai_args
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rankllm import PromptMode
 
+""" API URL FORMAT
+
+http://localhost:8082/api/model/{model_name}/index/{index_name}/retriever/{retriever_base_host}?query={query}&hits_retriever={top_k_retriever}&hits_reranker={top_k_reranker}&qid={qid}&num_passes={num_passes}
+
+hits_retriever, hits_reranker, qid, and num_passes are OPTIONAL
+Default to 20, 5, None, and 1 respectively
+
+"""
+ 
+
 def create_app(model, port, use_azure_openai=False):
+
     app = Flask(__name__)
     if model == 'rank_zephyr':
         print(f"Loading {model} model...")
@@ -52,8 +63,15 @@ def create_app(model, port, use_azure_openai=False):
     else:
         raise ValueError(f"Unsupported model: {model}")
 
-    @app.route('/api/model/<string:model_path>/index/<string:dataset>/retriever/<string:host>/query=<string:query>&hits_retriever=<int:top_k_retrieve>&hits_reranker=<int:top_k_rerank>&qid=<int:qid>', methods=['GET'])
-    def search(model_path, dataset, host, query, top_k_retrieve, top_k_rerank, qid):
+    @app.route('/api/model/<string:model_path>/index/<string:dataset>/retriever/<string:host>', methods=['GET'])
+    def search(model_path, dataset, host):
+
+        query = request.args.get('query',type=str)
+        top_k_retrieve = request.args.get('hits_retriever',default=20,type=int)
+        top_k_rerank = request.args.get('hits_reranker',default=5,type=int)
+        qid = request.args.get('qid',default=None,type=str)
+        num_passes = request.args.get('num_passes',default=1,type=int)
+
         try:
             # Assuming the function is called with these parameters and returns a response
             response = retrieve_and_rerank.retrieve_and_rerank(
@@ -66,7 +84,8 @@ def create_app(model, port, use_azure_openai=False):
                 top_k_retrieve=top_k_retrieve,
                 qid=qid,
                 exec_summary=False,
-                default_agent=default_agent
+                default_agent=default_agent,
+                num_passes=num_passes,
             )
 
             return jsonify(response[0]), 200
