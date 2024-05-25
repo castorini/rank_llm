@@ -6,7 +6,7 @@ from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank.rankllm import RankLLM, PromptMode
 from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
@@ -42,10 +42,10 @@ def retrieve_and_rerank(
     interactive: bool = False,
     host: str = "http://localhost:8081",
     exec_summary: bool = False,
-    default_agent: RankListwiseOSLLM = None,
+    default_agent: RankLLM = None,
 ):
     model_full_path = ""        
-    if model_path.lower()=="rank_zephyr" and interactive and default_agent is not None: 
+    if interactive and default_agent is not None: 
         agent = default_agent
     # Construct Rerank Agent
     elif "gpt" in model_path or use_azure_openai:
