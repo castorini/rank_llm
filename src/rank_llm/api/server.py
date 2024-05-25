@@ -83,7 +83,7 @@ def create_app(model, port, use_azure_openai=False):
                 top_k_rerank=top_k_rerank,
                 top_k_retrieve=top_k_retrieve,
                 qid=qid,
-                exec_summary=False,
+                populate_exec_summary=False,
                 default_agent=default_agent,
                 num_passes=num_passes,
             )
