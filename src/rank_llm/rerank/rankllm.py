@@ -114,7 +114,7 @@ class RankLLM(ABC):
         rank_start: int,
         rank_end: int,
         logging: bool = False,
-        exec_summary: bool = True,
+        populate_exec_summary: bool = True,
     ) -> Result:
         """
         Runs the permutation pipeline on the passed in result set within the passed in rank range.
@@ -136,7 +136,7 @@ class RankLLM(ABC):
         )
         if logging:
             print(f"output: {permutation}")
-        if exec_summary:
+        if populate_exec_summary:
             ranking_exec_info = RankingExecInfo(
                 prompt, permutation, in_token_count, out_token_count
             )
@@ -153,7 +153,7 @@ class RankLLM(ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        exec_summary: bool = True,
+        populate_exec_summary: bool = True,
     ) -> Result:
         """
         Applies the sliding window algorithm to the reranking process.
@@ -191,7 +191,7 @@ class RankLLM(ABC):
         while end_pos > rank_start and start_pos + step != rank_start:
             start_pos = max(start_pos, rank_start)
             rerank_result = self.permutation_pipeline(
-                rerank_result, start_pos, end_pos, logging, exec_summary=exec_summary,
+                rerank_result, start_pos, end_pos, logging, populate_exec_summary=populate_exec_summary,
             )
             end_pos = end_pos - step
             start_pos = start_pos - step

@@ -41,7 +41,7 @@ def retrieve_and_rerank(
     index_type: str = None,
     interactive: bool = False,
     host: str = "http://localhost:8081",
-    exec_summary: bool = False,
+    populate_exec_summary: bool = False,
     default_agent: RankLLM = None,
 ):
     model_full_path = ""        
@@ -120,11 +120,11 @@ def retrieve_and_rerank(
         rerank_results = reranker.rerank_batch(
             requests,
             rank_end=top_k_retrieve,
-            window_size=min(window_size, top_k_rerank),
+            window_size=min(window_size, top_k_retrieve),
             shuffle_candidates=shuffle_candidates,
             logging=print_prompts_responses,
             step=step_size,
-            exec_summary=exec_summary
+            populate_exec_summary=populate_exec_summary
         )
 
         if num_passes > 1:
