@@ -42,10 +42,13 @@ def retrieve_and_rerank(
     interactive: bool = False,
     host: str = "http://localhost:8081",
     exec_summary: bool = False,
+    default_agent: RankListwiseOSLLM = None,
 ):
-    # Construct Rerank Agent
     model_full_path = ""        
-    if "gpt" in model_path or use_azure_openai:
+    if model_path.lower()=="rank_zephyr" and interactive and default_agent is not None: 
+        agent = default_agent
+    # Construct Rerank Agent
+    elif "gpt" in model_path or use_azure_openai:
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=model_path,
@@ -110,13 +113,13 @@ def retrieve_and_rerank(
     print(f"Retrieval complete!")
     
     # Reranking
-    print(f"Reranking {top_k_rerank} passages...")
+    print(f"Reranking and returning {top_k_rerank} passages...")
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
         rerank_results = reranker.rerank_batch(
             requests,
-            rank_end=top_k_rerank,
+            rank_end=top_k_retrieve,
             window_size=min(window_size, top_k_rerank),
             shuffle_candidates=shuffle_candidates,
             logging=print_prompts_responses,
@@ -130,4 +133,5 @@ def retrieve_and_rerank(
                 for r in rerank_results
             ]
     print(f"Reranking with {num_passes} passes complete!")
+    rerank_results[0].candidates = rerank_results[0].candidates[:top_k_rerank]
     return rerank_results

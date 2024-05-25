@@ -65,7 +65,7 @@ class ServiceRetriever:
         """
 
         parsed_query = parse.quote(request.query.text)
-        url = f"{host}/api/collection/{dataset}/search?query={parsed_query}&hits={str(k)}&qid={request.query.qid}"
+        url = f"{host}/api/index/{dataset}/search?query={parsed_query}&hits={str(k)}&qid={request.query.qid}"
 
         response = requests.get(url)
         if response.ok:
