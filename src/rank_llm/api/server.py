@@ -9,7 +9,7 @@ from rank_llm.rerank.rankllm import PromptMode
 
 """ API URL FORMAT
 
-http://localhost:8082/api/model/{model_name}/index/{index_name}/retriever/{retriever_base_host}?query={query}&hits_retriever={top_k_retriever}&hits_reranker={top_k_reranker}&qid={qid}&num_passes={num_passes}
+http://localhost:8082/api/model/{model_name}/index/{index_name}/{retriever_base_host}?query={query}&hits_retriever={top_k_retriever}&hits_reranker={top_k_reranker}&qid={qid}&num_passes={num_passes}
 
 hits_retriever, hits_reranker, qid, and num_passes are OPTIONAL
 Default to 20, 5, None, and 1 respectively
