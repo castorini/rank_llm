@@ -31,29 +31,35 @@ class ServiceRetriever:
         self._retrieval_method = retrieval_method
 
         if retrieval_mode != RetrievalMode.DATASET:
-            raise ValueError(f"{retrieval_mode} is not supported for ServiceRetriever. Only DATASET mode is currently supported.")
-        
+            raise ValueError(
+                f"{retrieval_mode} is not supported for ServiceRetriever. Only DATASET mode is currently supported."
+            )
+
         if retrieval_method != RetrievalMethod.BM25:
-            raise ValueError(f"{retrieval_method} is not supported for ServiceRetriever. Only BM25 is currently supported.")
-        
+            raise ValueError(
+                f"{retrieval_method} is not supported for ServiceRetriever. Only BM25 is currently supported."
+            )
+
         if not retrieval_method:
             raise "Please provide a retrieval method."
-        
+
         if retrieval_method == RetrievalMethod.UNSPECIFIED:
-            raise ValueError(f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method.")
-        
+            raise ValueError(
+                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
+            )
+
     def retrieve(
-        self, 
+        self,
         dataset: str,
         request: Request,
-        k: int = 50, 
+        k: int = 50,
         host: str = "http://localhost:8081",
     ) -> Request:
         """
-        Executes the retrieval process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object and the top k items to retrieve. 
+        Executes the retrieval process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object and the top k items to retrieve.
 
         Args:
-            request (Request): The request containing the query and qid. 
+            request (Request): The request containing the query and qid.
             dataset (str): The name of the dataset.
             k (int, optional): The top k hits to retrieve. Defaults to 100.
             host (str): The Anserini API host address. Defaults to http://localhost:8081
@@ -64,23 +70,26 @@ class ServiceRetriever:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
 
-        parsed_query = parse.quote(request.query.text)
-        url = f"{host}/api/index/{dataset}/search?query={parsed_query}&hits={str(k)}&qid={request.query.qid}"
+        url = f"{host}/api/index/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
 
-        response = requests.get(url)
-        if response.ok:
-            data = response.json()
-            retrieved_results = Request(
-                query = Query(text = data["query"]["text"], qid = data["query"]["qid"])
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+        except Exception as e:
+            raise type(e)("Failed to retrieve data from Anserini server. " + e.message)
+
+        data = response.json()
+        retrieved_results = Request(
+            query=Query(text=data["query"]["text"], qid=data["query"]["qid"])
+        )
+
+        for candidate in data["candidates"]:
+            retrieved_results.candidates.append(
+                Candidate(
+                    docid=candidate["docid"],
+                    score=candidate["score"],
+                    doc=candidate["doc"],
+                )
             )
-            collection = []
-            for candidate in data["candidates"]:
-                collection.append(Candidate(
-                    docid = candidate["docid"],
-                    score = candidate["score"],
-                    doc = candidate["doc"],
-                ))
-            retrieved_results.candidates = collection
-        else: 
-            raise ValueError(f"Failed to retrieve data from Anserini server. Error code: {response.status_code}")
+
         return retrieved_results

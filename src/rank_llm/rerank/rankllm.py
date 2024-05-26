@@ -191,7 +191,11 @@ class RankLLM(ABC):
         while end_pos > rank_start and start_pos + step != rank_start:
             start_pos = max(start_pos, rank_start)
             rerank_result = self.permutation_pipeline(
-                rerank_result, start_pos, end_pos, logging, populate_exec_summary=populate_exec_summary,
+                rerank_result,
+                start_pos,
+                end_pos,
+                logging,
+                populate_exec_summary=populate_exec_summary,
             )
             end_pos = end_pos - step
             start_pos = start_pos - step

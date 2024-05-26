@@ -15,12 +15,12 @@ hits_retriever, hits_reranker, qid, and num_passes are OPTIONAL
 Default to 20, 5, None, and 1 respectively
 
 """
- 
+
 
 def create_app(model, port, use_azure_openai=False):
 
     app = Flask(__name__)
-    if model == 'rank_zephyr':
+    if model == "rank_zephyr":
         print(f"Loading {model} model...")
         # Load specified model upon server initialization
         default_agent = RankListwiseOSLLM(
@@ -34,7 +34,7 @@ def create_app(model, port, use_azure_openai=False):
             window_size=20,
             system_message="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         )
-    elif model == 'rank_vicuna':
+    elif model == "rank_vicuna":
         print(f"Loading {model} model...")
         # Load specified model upon server initialization
         default_agent = RankListwiseOSLLM(
@@ -47,7 +47,7 @@ def create_app(model, port, use_azure_openai=False):
             variable_passages=False,
             window_size=20,
         )
-    elif 'gpt' in model:
+    elif "gpt" in model:
         print(f"Loading {model} model...")
         # Load specified model upon server initialization
         openai_keys = get_openai_api_key()
@@ -63,14 +63,17 @@ def create_app(model, port, use_azure_openai=False):
     else:
         raise ValueError(f"Unsupported model: {model}")
 
-    @app.route('/api/model/<string:model_path>/index/<string:dataset>/<string:host>', methods=['GET'])
+    @app.route(
+        "/api/model/<string:model_path>/index/<string:dataset>/<string:host>",
+        methods=["GET"],
+    )
     def search(model_path, dataset, host):
 
-        query = request.args.get('query',type=str)
-        top_k_retrieve = request.args.get('hits_retriever',default=20,type=int)
-        top_k_rerank = request.args.get('hits_reranker',default=5,type=int)
-        qid = request.args.get('qid',default=None,type=str)
-        num_passes = request.args.get('num_passes',default=1,type=int)
+        query = request.args.get("query", type=str)
+        top_k_retrieve = request.args.get("hits_retriever", default=20, type=int)
+        top_k_rerank = request.args.get("hits_reranker", default=5, type=int)
+        qid = request.args.get("qid", default=None, type=str)
+        num_passes = request.args.get("num_passes", default=1, type=int)
 
         try:
             # Assuming the function is called with these parameters and returns a response
@@ -79,7 +82,7 @@ def create_app(model, port, use_azure_openai=False):
                 query=query,
                 model_path=model_path,
                 host="http://localhost:" + host,
-                interactive=True, 
+                interactive=True,
                 top_k_rerank=top_k_rerank,
                 top_k_retrieve=top_k_retrieve,
                 qid=qid,
@@ -94,15 +97,26 @@ def create_app(model, port, use_azure_openai=False):
 
     return app, port
 
+
 def main():
     parser = argparse.ArgumentParser(description="Start the RankLLM Flask server.")
-    parser.add_argument('--model', type=str, default='rank_zephyr', help='The model to load (e.g., rank_zephyr).')
-    parser.add_argument('--port', type=int, default=8082, help='The port to run the Flask server on.')
-    parser.add_argument('--use_azure_openai', action='store_true', help='Use Azure OpenAI API.')
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="rank_zephyr",
+        help="The model to load (e.g., rank_zephyr).",
+    )
+    parser.add_argument(
+        "--port", type=int, default=8082, help="The port to run the Flask server on."
+    )
+    parser.add_argument(
+        "--use_azure_openai", action="store_true", help="Use Azure OpenAI API."
+    )
     args = parser.parse_args()
 
     app, port = create_app(args.model, args.port, args.use_azure_openai)
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=False)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

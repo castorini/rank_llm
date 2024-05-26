@@ -44,8 +44,8 @@ def retrieve_and_rerank(
     populate_exec_summary: bool = False,
     default_agent: RankLLM = None,
 ):
-    model_full_path = ""        
-    if interactive and default_agent is not None: 
+    model_full_path = ""
+    if interactive and default_agent is not None:
         agent = default_agent
     # Construct Rerank Agent
     elif "gpt" in model_path or use_azure_openai:
@@ -59,13 +59,13 @@ def retrieve_and_rerank(
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
     elif "vicuna" in model_path.lower() or "zephyr" in model_path.lower():
-        if model_path.lower()=="rank_zephyr":
-            model_full_path="castorini/rank_zephyr_7b_v1_full"
-        elif model_path.lower()=="rank_vicuna":
-            model_full_path= "castorini/rank_vicuna_7b_v1"
-        else: 
-            model_full_path=model_path
-            
+        if model_path.lower() == "rank_zephyr":
+            model_full_path = "castorini/rank_zephyr_7b_v1_full"
+        elif model_path.lower() == "rank_vicuna":
+            model_full_path = "castorini/rank_vicuna_7b_v1"
+        else:
+            model_full_path = model_path
+
         print(f"Loading {model_path} ...")
 
         agent = RankListwiseOSLLM(
@@ -84,19 +84,23 @@ def retrieve_and_rerank(
 
     # Retrieve
     print(f"Retrieving top {top_k_retrieve} passages...")
-    if interactive and retrieval_mode != RetrievalMode.DATASET: 
-        raise ValueError(f"Unsupport retrieval mode for interactive retrieval. Currently only DATASET mode is supported.")
-    
+    if interactive and retrieval_mode != RetrievalMode.DATASET:
+        raise ValueError(
+            f"Unsupport retrieval mode for interactive retrieval. Currently only DATASET mode is supported."
+        )
+
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
 
-            service_retriever = ServiceRetriever(retrieval_method=retrieval_method, retrieval_mode=retrieval_mode)
+            service_retriever = ServiceRetriever(
+                retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
+            )
             requests = [
                 service_retriever.retrieve(
-                    dataset=dataset, 
-                    request=Request(query=Query(text=query,qid=qid)), 
-                    k=top_k_retrieve, 
-                    host=host
+                    dataset=dataset,
+                    request=Request(query=Query(text=query, qid=qid)),
+                    k=top_k_retrieve,
+                    host=host,
                 )
             ]
         else:
@@ -111,7 +115,7 @@ def retrieve_and_rerank(
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print(f"Retrieval complete!")
-    
+
     # Reranking
     print(f"Reranking and returning {top_k_rerank} passages...")
     reranker = Reranker(agent)
@@ -124,7 +128,7 @@ def retrieve_and_rerank(
             shuffle_candidates=shuffle_candidates,
             logging=print_prompts_responses,
             step=step_size,
-            populate_exec_summary=populate_exec_summary
+            populate_exec_summary=populate_exec_summary,
         )
 
         if num_passes > 1:
@@ -133,5 +137,8 @@ def retrieve_and_rerank(
                 for r in rerank_results
             ]
     print(f"Reranking with {num_passes} passes complete!")
-    rerank_results[0].candidates = rerank_results[0].candidates[:top_k_rerank]
+    rerank_results = [
+        rr._replace(candidates=rr.candidates[:top_k_rerank]) for rr in rerank_results
+    ]
+
     return rerank_results
