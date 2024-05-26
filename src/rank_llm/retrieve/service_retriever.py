@@ -54,6 +54,7 @@ class ServiceRetriever:
         request: Request,
         k: int = 50,
         host: str = "http://localhost:8081",
+        timeout: int = 10,
     ) -> Request:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object and the top k items to retrieve.
@@ -73,10 +74,12 @@ class ServiceRetriever:
         url = f"{host}/api/index/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
 
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=timeout)
             response.raise_for_status()
-        except Exception as e:
-            raise type(e)("Failed to retrieve data from Anserini server. " + e.message)
+        except requests.exceptions.RequestException as e:
+            raise type(e)(
+                f"Failed to retrieve data from Anserini server: {str(e)}"
+            ) from e
 
         data = response.json()
         retrieved_results = Request(
