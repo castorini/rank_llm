@@ -141,4 +141,33 @@ def retrieve_and_rerank(
         rr._replace(candidates=rr.candidates[:top_k_rerank]) for rr in rerank_results
     ]
 
+    # generate trec_eval file & evaluate for named datasets only
+    if isinstance(dataset, str):
+        file_name = reranker.write_rerank_results(
+            retrieval_method.name,
+            rerank_results,
+            shuffle_candidates,
+            top_k_candidates=top_k_retrieve,
+            pass_ct=None if num_passes == 1 else pass_ct,
+            window_size=window_size,
+            dataset_name=dataset,
+        )
+        if (
+            dataset in TOPICS
+            and dataset not in ["dl22", "dl22-passage", "news"]
+            and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
+        ):
+            print("Evaluating:")
+            EvalFunction.eval(
+                ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
+            )
+            EvalFunction.eval(
+                ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
+            )
+            EvalFunction.eval(
+                ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
+            )
+        else:
+            print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+
     return rerank_results
