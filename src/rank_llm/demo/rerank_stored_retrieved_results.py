@@ -10,9 +10,7 @@ sys.path.append(parent)
 from rank_llm.data import read_requests_from_file, DataWriter
 from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
-file_name = (
-    "retrieve_results/BM25/retrieve_results_dl23_top20.json"
-)
+file_name = "retrieve_results/BM25/retrieve_results_dl23_top20.json"
 requests = read_requests_from_file(file_name)
 
 reranker = ZephyrReranker()

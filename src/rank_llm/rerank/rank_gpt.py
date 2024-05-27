@@ -127,7 +127,7 @@ class SafeOpenai(RankLLM):
         prompt: Union[str, List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
     ) -> Tuple[str, int]:
-        model_key = "engine" if self.use_azure_ai else "model"
+        model_key = "model"
         response = self._call_completion(
             messages=prompt,
             temperature=0,

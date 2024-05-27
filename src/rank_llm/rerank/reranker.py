@@ -21,6 +21,7 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        populate_exec_summary: bool = True,
     ) -> List[Result]:
         """
         Reranks a list of requests using the RankLLM agent.
@@ -50,6 +51,7 @@ class Reranker:
                 step=step,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
+                populate_exec_summary=populate_exec_summary,
             )
             results.append(result)
         return results
