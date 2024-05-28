@@ -60,15 +60,17 @@ def create_app(model, port, use_azure_openai=False):
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
+    elif model in ["rank_random", "rank_identity"]:
+        # no rankLLm agent is required for trivial rerankers.
+        default_agent = model
     else:
         raise ValueError(f"Unsupported model: {model}")
 
     @app.route(
-        "/api/model/<string:model_path>/index/<string:dataset>/<string:host>",
+        "/api/model/<string:model_path>/index/<string:dataset>/<string:retriever_host>",
         methods=["GET"],
     )
-    def search(model_path, dataset, host):
-
+    def search(model_path, dataset, retriever_host):
         query = request.args.get("query", type=str)
         top_k_retrieve = request.args.get("hits_retriever", default=20, type=int)
         top_k_rerank = request.args.get("hits_reranker", default=5, type=int)
@@ -81,7 +83,7 @@ def create_app(model, port, use_azure_openai=False):
                 dataset=dataset,
                 query=query,
                 model_path=model_path,
-                host="http://localhost:" + host,
+                host="http://localhost:" + retriever_host,
                 interactive=True,
                 top_k_rerank=top_k_rerank,
                 top_k_retrieve=top_k_retrieve,

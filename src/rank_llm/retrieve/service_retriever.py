@@ -54,7 +54,7 @@ class ServiceRetriever:
         request: Request,
         k: int = 50,
         host: str = "http://localhost:8081",
-        timeout: int = 10,
+        timeout: int = 15 * 60, # downloding and decompressing the index can take a long time.
     ) -> Request:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object and the top k items to retrieve.
