@@ -123,7 +123,7 @@ def retrieve_and_rerank(
         return IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
-            shuffle_candidates=(default_agent=="rank_random"),
+            shuffle_candidates=(default_agent == "rank_random"),
         )
 
     reranker = Reranker(agent)
@@ -165,15 +165,9 @@ def retrieve_and_rerank(
             and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
         ):
             print("Evaluating:")
-            EvalFunction.eval(
-                ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
-            )
-            EvalFunction.eval(
-                ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
-            )
-            EvalFunction.eval(
-                ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
-            )
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
         else:
             print(f"Skipping evaluation as {dataset} is not in TOPICS.")
 

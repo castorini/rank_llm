@@ -5,10 +5,12 @@ from rank_llm.rerank.reranker import Reranker
 from rank_llm.data import Request, Result
 from typing import List
 
+
 class IdentityReranker(Reranker):
     def __init__(self):
         # No reranking agent is required.
         super().__init__(None)
+
     def rerank_batch(
         self,
         requests: List[Request],
