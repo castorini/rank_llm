@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Union
 from rank_llm.data import Request, Query
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
+from rank_llm.rerank.identity_reranker import IdentityReranker
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import RankLLM, PromptMode
@@ -118,6 +119,13 @@ def retrieve_and_rerank(
 
     # Reranking
     print(f"Reranking and returning {top_k_rerank} passages...")
+    if default_agent in ["rank_random", "rank_identity"]:
+        return IdentityReranker().rerank_batch(
+            requests,
+            rank_end=top_k_retrieve,
+            shuffle_candidates=(default_agent == "rank_random"),
+        )
+
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
@@ -137,9 +145,8 @@ def retrieve_and_rerank(
                 for r in rerank_results
             ]
     print(f"Reranking with {num_passes} passes complete!")
-    rerank_results = [
-        rr._replace(candidates=rr.candidates[:top_k_rerank]) for rr in rerank_results
-    ]
+    for rr in rerank_results:
+        rr.candidates = rr.candidates[:top_k_rerank]
 
     # generate trec_eval file & evaluate for named datasets only
     if isinstance(dataset, str):
@@ -158,15 +165,9 @@ def retrieve_and_rerank(
             and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
         ):
             print("Evaluating:")
-            EvalFunction.eval(
-                ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
-            )
-            EvalFunction.eval(
-                ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
-            )
-            EvalFunction.eval(
-                ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
-            )
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
         else:
             print(f"Skipping evaluation as {dataset} is not in TOPICS.")
 
