@@ -15,6 +15,7 @@ class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     RANK_GPT = "rank_GPT"
     LRL = "LRL"
+    LiT5 = "LiT5"
 
     def __str__(self):
         return self.value
