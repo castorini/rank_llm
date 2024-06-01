@@ -137,9 +137,9 @@ def retrieve_and_rerank(
                 for r in rerank_results
             ]
     print(f"Reranking with {num_passes} passes complete!")
-    rerank_results = [
-        rr._replace(candidates=rr.candidates[:top_k_rerank]) for rr in rerank_results
-    ]
+
+    for rr in rerank_results:
+        rr.candidates = rr.candidates[:top_k_rerank]
 
     # generate trec_eval file & evaluate for named datasets only
     if isinstance(dataset, str):
