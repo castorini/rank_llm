@@ -124,29 +124,30 @@ def retrieve_and_rerank(
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
     if agent is None:
         shuffle_candidates = True if model_path=="rank_random" else False
-        return (IdentityReranker().rerank_batch(
+        rerank_results = IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
             shuffle_candidates=(shuffle_candidates),
-        ), agent)
-    reranker = Reranker(agent)
-    for pass_ct in range(num_passes):
-        print(f"Pass {pass_ct + 1} of {num_passes}:")
-        rerank_results = reranker.rerank_batch(
-            requests,
-            rank_end=top_k_retrieve,
-            window_size=min(window_size, top_k_retrieve),
-            shuffle_candidates=shuffle_candidates,
-            logging=print_prompts_responses,
-            step=step_size,
-            populate_exec_summary=populate_exec_summary,
         )
+    else:
+        reranker = Reranker(agent)
+        for pass_ct in range(num_passes):
+            print(f"Pass {pass_ct + 1} of {num_passes}:")
+            rerank_results = reranker.rerank_batch(
+                requests,
+                rank_end=top_k_retrieve,
+                window_size=min(window_size, top_k_retrieve),
+                shuffle_candidates=shuffle_candidates,
+                logging=print_prompts_responses,
+                step=step_size,
+                populate_exec_summary=populate_exec_summary,
+            )
 
-        if num_passes > 1:
-            requests = [
-                Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                for r in rerank_results
-            ]
+            if num_passes > 1:
+                requests = [
+                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                    for r in rerank_results
+                ]
     print(f"Reranking with {num_passes} passes complete!")
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]
