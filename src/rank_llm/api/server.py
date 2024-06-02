@@ -1,5 +1,6 @@
 import argparse
 from flask import Flask, jsonify, request
+import torch 
 
 from rank_llm import retrieve_and_rerank
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
@@ -23,11 +24,14 @@ def create_app(model, port, use_azure_openai=False):
     app = Flask(__name__)
 
     global default_agent
+    default_agent = None
+    
     if model == "rank_zephyr":
         print(f"Loading {model} model...")
         # Load specified model upon server initialization
         default_agent = RankListwiseOSLLM(
             model=f"castorini/{model}_7b_v1_full",
+            name=model,
             context_size=4096,
             prompt_mode=PromptMode.RANK_GPT,
             num_few_shot_examples=0,
@@ -42,6 +46,7 @@ def create_app(model, port, use_azure_openai=False):
         # Load specified model upon server initialization
         default_agent = RankListwiseOSLLM(
             model=f"castorini/{model}_7b_v1",
+            name=model,
             context_size=4096,
             prompt_mode=PromptMode.RANK_GPT,
             num_few_shot_examples=0,
@@ -88,11 +93,13 @@ def create_app(model, port, use_azure_openai=False):
 
         # If the request model is not the default model
         global default_agent
-        if model_path != model:
+        if model_path != default_agent.get_name():
+            del default_agent # Need this line 
+            torch.cuda.empty_cache()
             default_agent=None
         try:
             # Assuming the function is called with these parameters and returns a response
-            response = retrieve_and_rerank.retrieve_and_rerank(
+            (response, agent) = retrieve_and_rerank.retrieve_and_rerank(
                 dataset=dataset,
                 query=query,
                 model_path=model_path,
@@ -106,7 +113,7 @@ def create_app(model, port, use_azure_openai=False):
                 num_passes=num_passes,
                 retrieval_method=_retrieval_method,
             )
-
+            default_agent = agent
             return jsonify(response[0]), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500

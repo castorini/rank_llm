@@ -15,6 +15,7 @@ class RankListwiseOSLLM(RankLLM):
     def __init__(
         self,
         model: str,
+        name: str,
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
@@ -63,6 +64,7 @@ class RankListwiseOSLLM(RankLLM):
             )
         # ToDo: Make repetition_penalty configurable
         self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
+        self._name = name
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message
@@ -179,3 +181,6 @@ class RankListwiseOSLLM(RankLLM):
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
+
+    def get_name(self) -> str:
+        return self._name

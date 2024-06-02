@@ -71,6 +71,7 @@ def retrieve_and_rerank(
 
         agent = RankListwiseOSLLM(
             model=model_full_path,
+            name=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
@@ -123,12 +124,11 @@ def retrieve_and_rerank(
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
     if agent is None:
         shuffle_candidates = True if model_path=="rank_random" else False
-        return IdentityReranker().rerank_batch(
+        return (IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
             shuffle_candidates=(shuffle_candidates),
-        )
-
+        ), agent)
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):
         print(f"Pass {pass_ct + 1} of {num_passes}:")
@@ -174,4 +174,4 @@ def retrieve_and_rerank(
         else:
             print(f"Skipping evaluation as {dataset} is not in TOPICS.")
 
-    return rerank_results
+    return (rerank_results, agent)
