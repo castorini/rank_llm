@@ -6,6 +6,7 @@ from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.api_keys import get_openai_api_key, get_azure_openai_args
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 
 """ API URL FORMAT
 
@@ -20,6 +21,8 @@ Default to 20, 5, None, and 1 respectively
 def create_app(model, port, use_azure_openai=False):
 
     app = Flask(__name__)
+
+    global default_agent
     if model == "rank_zephyr":
         print(f"Loading {model} model...")
         # Load specified model upon server initialization
@@ -76,7 +79,17 @@ def create_app(model, port, use_azure_openai=False):
         top_k_rerank = request.args.get("hits_reranker", default=5, type=int)
         qid = request.args.get("qid", default=None, type=str)
         num_passes = request.args.get("num_passes", default=1, type=int)
+        retrieval_method = request.args.get("retrieval_method", default="bm25", type=str)
 
+        if "bm25" in retrieval_method.lower():
+            _retrieval_method = RetrievalMethod.BM25
+        else:
+            return jsonify({"error": str("Retrieval method must be BM25")}), 500
+
+        # If the request model is not the default model
+        global default_agent
+        if model_path != model:
+            default_agent=None
         try:
             # Assuming the function is called with these parameters and returns a response
             response = retrieve_and_rerank.retrieve_and_rerank(
@@ -91,6 +104,7 @@ def create_app(model, port, use_azure_openai=False):
                 populate_exec_summary=False,
                 default_agent=default_agent,
                 num_passes=num_passes,
+                retrieval_method=_retrieval_method,
             )
 
             return jsonify(response[0]), 200
