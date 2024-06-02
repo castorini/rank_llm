@@ -68,9 +68,6 @@ def create_app(model, port, use_azure_openai=False):
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
-    elif model in ["rank_random", "rank_identity"]:
-        # no rankLLm agent is required for trivial rerankers.
-        default_agent = model
     else:
         raise ValueError(f"Unsupported model: {model}")
 
@@ -93,7 +90,7 @@ def create_app(model, port, use_azure_openai=False):
 
         # If the request model is not the default model
         global default_agent
-        if model_path != default_agent.get_name():
+        if default_agent is not None and model_path != default_agent.get_name():
             del default_agent # Need this line 
             torch.cuda.empty_cache()
             default_agent=None

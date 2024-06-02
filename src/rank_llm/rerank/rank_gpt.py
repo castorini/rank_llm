@@ -61,6 +61,7 @@ class SafeOpenai(RankLLM):
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT} or {PromptMode.LRL}."
             )
 
+        self._model = model
         self._window_size = window_size
         self._output_token_estimate = None
         self._keys = keys
@@ -304,3 +305,6 @@ class SafeOpenai(RankLLM):
         }
         model_key = "gpt-3.5" if "gpt-3" in self._model else "gpt-4"
         return cost_dict[(model_key, self._context_size)]
+
+    def get_name(self) -> str:
+        return self._model
