@@ -19,7 +19,7 @@ class IdentityReranker(Reranker):
         shuffle_candidates: bool = False,
     ) -> List[Result]:
         """
-        A trivial reranker that returns a subsection of the retireved candidates list as-is or shuffled.
+        A trivial reranker that returns a subsection of the retrieved candidates list as-is or shuffled.
 
         Args:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.

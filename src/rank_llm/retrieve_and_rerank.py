@@ -80,6 +80,8 @@ def retrieve_and_rerank(
             window_size=window_size,
             system_message=system_message,
         )
+    elif "unspecified" in model_path.lower():
+        agent = None
     else:
         raise ValueError(f"Unsupported model: {model_path}")
 
@@ -119,11 +121,12 @@ def retrieve_and_rerank(
 
     # Reranking
     print(f"Reranking and returning {top_k_rerank} passages...")
-    if default_agent in ["rank_random", "rank_identity"]:
+    if default_agent in ["rank_random", "rank_identity"] or agent is None:
+        shuffle_candidates = False if agent is None else (default_agent=="rank_random")
         return IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
-            shuffle_candidates=(default_agent == "rank_random"),
+            shuffle_candidates=(shuffle_candidates),
         )
 
     reranker = Reranker(agent)
