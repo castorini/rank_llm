@@ -1,6 +1,5 @@
 import copy
 from typing import Any, Dict, List, Union
-
 from rank_llm.data import Request
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
@@ -122,7 +121,7 @@ def retrieve_and_rerank(
                 print(f"Skipping evaluation as {dataset} is not in TOPICS.")
         if num_passes > 1:
             requests = [
-                Request(copy.deepycopy(r.query), copy.deepcopy(r.candidates))
+                Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
                 for r in rerank_results
             ]
 

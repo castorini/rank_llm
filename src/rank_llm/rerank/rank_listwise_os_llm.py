@@ -1,8 +1,15 @@
-import json
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 import os
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
 from typing import Dict, List, Optional, Tuple, Union
 
+from tqdm import tqdm
 import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
@@ -66,7 +73,8 @@ class RankListwiseOSLLM(RankLLM):
             )
         # ToDo: Make repetition_penalty configurable
         if batched:
-            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"))
+            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"),
+                            enforce_eager=False, tensor_parallel_size=4)
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -88,6 +96,7 @@ class RankListwiseOSLLM(RankLLM):
                 max_tokens=self.num_output_tokens(current_window_size),
                 min_tokens=self.num_output_tokens(current_window_size),
             )
+        logger.info(f"VLLM Generating!")
         outputs = self._llm.generate(prompts, sampling_params)
         return [
             (output.outputs[0].text, len(output.outputs[0].token_ids))
@@ -196,6 +205,27 @@ class RankListwiseOSLLM(RankLLM):
                     // ((rank_end - rank_start) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)
+
+    def create_prompt_batched(
+        self, results: List[Result], rank_start: int, rank_end: int,
+        batch_size: int = 32
+    ) -> List[Tuple[str, int]]:
+        def chunks(lst, n):
+            """Yield successive n-sized chunks from lst."""
+            for i in range(0, len(lst), n):
+                yield lst[i:i + n]
+
+        all_completed_prompts = []
+
+        with ThreadPoolExecutor() as executor:
+            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
+                futures = [
+                    executor.submit(self.create_prompt, result, rank_start, rank_end)
+                    for result in batch
+                ]
+                completed_prompts = [future.result() for future in as_completed(futures)]
+                all_completed_prompts.extend(completed_prompts)
+        return all_completed_prompts
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))

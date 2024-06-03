@@ -1,3 +1,9 @@
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
 import copy
 import random
 import re
@@ -65,6 +71,24 @@ class RankLLM(ABC):
 
         Returns:
             Tuple[str, int]: A tuple object containing the text response and the number of tokens in the response.
+        """
+        pass
+
+    @abstractmethod
+    def create_prompt_batched(
+        self, results: List[Result], rank_start: int, rank_end: int,
+        batch_size: int
+    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
+        """
+        Abstract method to create a batch of prompts based on the results and given ranking range.
+
+        Args:
+            results (List[Result]): The list of result objects containing data for prompt generation.
+            rank_start (int): The starting rank for prompt generation.
+            rank_end (int): The ending rank for prompt generation.
+
+        Returns:
+            Tuple[List[Union[str, List[Dict[str, str]]], List[int]]: A tuple object containing the list of generated prompts and the list of number of tokens in the generated prompts.
         """
         pass
 
@@ -141,12 +165,13 @@ class RankLLM(ABC):
             List[Result]: The list of processed result objects after applying permutation.
         """
         prompts = []
-        for result in results:
-            prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
-            if logging:
-                print(f"prompt: {prompt}\n")
-            prompts.append((prompt, in_token_count))
-
+        logger.info("Loading prompts.")
+        prompts = self.create_prompt_batched(results, rank_start,
+                                             rank_end, batch_size=32)
+        if logging:
+            for prompt in prompts:
+                logger.debug(f"prompt: {prompt[0]}\n")
+        logger.info("Prompts loaded.")
         batched_results = self.run_llm_batched(
             [prompt for prompt, _ in prompts], 
             current_window_size=rank_end - rank_start
@@ -157,7 +182,7 @@ class RankLLM(ABC):
         ):
             permutation, out_token_count = batched_results[index]
             if logging:
-                print(f"output: {permutation}")
+                logger.debug(f"output: {permutation}")
             ranking_exec_info = RankingExecInfo(
                 prompt, permutation, in_token_count, out_token_count
             )
@@ -189,12 +214,12 @@ class RankLLM(ABC):
         """
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
-            print(f"prompt: {prompt}\n")
+            logger.debug(f"prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(
             prompt, current_window_size=rank_end - rank_start
         )
         if logging:
-            print(f"output: {permutation}")
+            logger.debug(f"output: {permutation}")
         ranking_exec_info = RankingExecInfo(
             prompt, permutation, in_token_count, out_token_count
         )
@@ -258,7 +283,7 @@ class RankLLM(ABC):
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
         # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
         while end_pos > rank_start and start_pos + step != rank_start:
-            print(f"start_pos: {start_pos}, end_pos: {end_pos}")
+            logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
             rerank_results = self.permutation_pipeline_batched(
                 rerank_results, start_pos, end_pos, logging
