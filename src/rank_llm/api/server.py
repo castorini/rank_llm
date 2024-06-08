@@ -11,10 +11,10 @@ from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 
 """ API URL FORMAT
 
-http://localhost:8082/api/model/{model_name}/index/{index_name}/{retriever_base_host}?query={query}&hits_retriever={top_k_retriever}&hits_reranker={top_k_reranker}&qid={qid}&num_passes={num_passes}
+http://localhost:{host_name}/api/model/{model_name}/index/{index_name}/{retriever_base_host}?query={query}&hits_retriever={top_k_retriever}&hits_reranker={top_k_reranker}&qid={qid}&num_passes={num_passes}&retrieval_method={retrieval_method}
 
 hits_retriever, hits_reranker, qid, and num_passes are OPTIONAL
-Default to 20, 5, None, and 1 respectively
+Default to 20, 10, None, and 1 respectively
 
 """
 
@@ -26,9 +26,9 @@ def create_app(model, port, use_azure_openai=False):
     global default_agent
     default_agent = None
     
+    # Load specified model upon server initialization
     if model == "rank_zephyr":
         print(f"Loading {model} model...")
-        # Load specified model upon server initialization
         default_agent = RankListwiseOSLLM(
             model=f"castorini/{model}_7b_v1_full",
             name=model,
@@ -43,7 +43,6 @@ def create_app(model, port, use_azure_openai=False):
         )
     elif model == "rank_vicuna":
         print(f"Loading {model} model...")
-        # Load specified model upon server initialization
         default_agent = RankListwiseOSLLM(
             model=f"castorini/{model}_7b_v1",
             name=model,
@@ -57,7 +56,6 @@ def create_app(model, port, use_azure_openai=False):
         )
     elif "gpt" in model:
         print(f"Loading {model} model...")
-        # Load specified model upon server initialization
         openai_keys = get_openai_api_key()
         print(openai_keys)
         default_agent = SafeOpenai(
@@ -71,16 +69,32 @@ def create_app(model, port, use_azure_openai=False):
     else:
         raise ValueError(f"Unsupported model: {model}")
 
+    # Start server
     @app.route(
         "/api/model/<string:model_path>/index/<string:dataset>/<string:retriever_host>",
         methods=["GET"],
     )
+
     def search(model_path, dataset, retriever_host):
+        """retrieve and rerank (search)
+        
+        Args:
+            - model_path (str): name of reranking model (e.g., rank_zephyr)
+            - dataset (str): dataset from which to retrieve
+            - retriever_host (str): host of Anserini API 
+        """
+        
+        # query to search for
         query = request.args.get("query", type=str)
+        # search all of dataset and return top k candidates
         top_k_retrieve = request.args.get("hits_retriever", default=20, type=int)
-        top_k_rerank = request.args.get("hits_reranker", default=5, type=int)
+        # rerank top_k_retrieve candidates from retrieve stage and return top_k_rerank candidates
+        top_k_rerank = request.args.get("hits_reranker", default=10, type=int)
+        # qid of query 
         qid = request.args.get("qid", default=None, type=str)
+        # number of passes reranker goes through 
         num_passes = request.args.get("num_passes", default=1, type=int)
+        # retrieval method to use 
         retrieval_method = request.args.get("retrieval_method", default="bm25", type=str)
 
         if "bm25" in retrieval_method.lower():
@@ -91,11 +105,13 @@ def create_app(model, port, use_azure_openai=False):
         # If the request model is not the default model
         global default_agent
         if default_agent is not None and model_path != default_agent.get_name():
-            del default_agent # Need this line 
-            torch.cuda.empty_cache()
+            # Delete the old agent to clear up the CUDA cache
+            del default_agent # this line is required for clearing the cache
+            torch.cuda.empty_cache() 
             default_agent=None
         try:
-            # Assuming the function is called with these parameters and returns a response
+
+            # calls Anserini retriever API and reranks 
             (response, agent) = retrieve_and_rerank.retrieve_and_rerank(
                 dataset=dataset,
                 query=query,
@@ -110,7 +126,10 @@ def create_app(model, port, use_azure_openai=False):
                 num_passes=num_passes,
                 retrieval_method=_retrieval_method,
             )
+
+            # set the default reranking agent to the most recently used reranking agent
             default_agent = agent
+
             return jsonify(response[0]), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
