@@ -8,8 +8,6 @@ from dacite import from_dict
 
 from rank_llm.data import Request
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_llm.retrieve.repo_info import HITS_INFO
-from rank_llm.retrieve.utils import compute_md5, download_cached_hits
 
 
 class RetrievalMode(Enum):

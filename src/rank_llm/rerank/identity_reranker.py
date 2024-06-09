@@ -1,9 +1,9 @@
 import copy
 import random
-
-from rank_llm.rerank.reranker import Reranker
-from rank_llm.data import Request, Result
 from typing import List
+
+from rank_llm.data import Request, Result
+from rank_llm.rerank.reranker import Reranker
 
 
 class IdentityReranker(Reranker):

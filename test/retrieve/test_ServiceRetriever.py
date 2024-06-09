@@ -1,15 +1,14 @@
 import unittest
 
-from rank_llm.retrieve.service_retriever import ServiceRetriever
-from rank_llm.data import Request, Query, Candidate
 from rank_llm import retrieve_and_rerank
+from rank_llm.data import Candidate, Query, Request
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.retriever import RetrievalMode, Retriever
+from rank_llm.retrieve.retriever import RetrievalMode
+from rank_llm.retrieve.service_retriever import ServiceRetriever
 
 
 class TestServiceRetriever(unittest.TestCase):
     def test_from_datatest_with_prebuilt_index(self):
-
         service_retriever = ServiceRetriever(
             retrieval_method=RetrievalMethod.BM25, retrieval_mode=RetrievalMode.DATASET
         )

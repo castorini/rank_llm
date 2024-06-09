@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import openai
 import tiktoken
 
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.data import Result
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 
 class SafeOpenai(RankLLM):

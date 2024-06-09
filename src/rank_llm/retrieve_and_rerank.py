@@ -1,13 +1,13 @@
 import copy
 from typing import Any, Dict, List, Union
 
-from rank_llm.data import Request, Query
+from rank_llm.data import Query, Request
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.identity_reranker import IdentityReranker
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
@@ -46,17 +46,17 @@ def retrieve_and_rerank(
     default_agent: RankLLM = None,
 ):
     """Retrieve candidates using Anserini API and rerank them
-    
+
     Returns:
-        - List of top_k_rerank candidates 
+        - List of top_k_rerank candidates
     """
-    
+
     model_full_path = ""
 
     # Use the default rerank agent
     if interactive and default_agent is not None:
         agent = default_agent
-    
+
     # Construct Rerank Agent
     elif "gpt" in model_path or use_azure_openai:
         # GPT based reranking models
@@ -94,7 +94,7 @@ def retrieve_and_rerank(
         print(f"Completed loading {model_path}")
 
     elif model_path.lower() in ["unspecified", "rank_random", "rank_identity"]:
-        # Use no reranker 
+        # Use no reranker
         agent = None
     else:
         raise ValueError(f"Unsupported model: {model_path}")
@@ -108,12 +108,11 @@ def retrieve_and_rerank(
 
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
-
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
             )
 
-            # Calls Anserini API 
+            # Calls Anserini API
             requests = [
                 service_retriever.retrieve(
                     dataset=dataset,
@@ -139,7 +138,7 @@ def retrieve_and_rerank(
 
     if agent is None:
         # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
-        shuffle_candidates = True if model_path=="rank_random" else False
+        shuffle_candidates = True if model_path == "rank_random" else False
         rerank_results = IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
@@ -182,14 +181,20 @@ def retrieve_and_rerank(
                 and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
             ):
                 print("Evaluating:")
-                EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-                EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-                EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
+                )
             else:
                 print(f"Skipping evaluation as {dataset} is not in TOPICS.")
 
     print(f"Reranking with {num_passes} passes complete!")
-    
+
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]
 

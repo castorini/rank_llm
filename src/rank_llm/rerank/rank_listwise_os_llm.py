@@ -7,8 +7,8 @@ from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from transformers.generation import GenerationConfig
 
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.data import Result
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 
 class RankListwiseOSLLM(RankLLM):
