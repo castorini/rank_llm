@@ -83,7 +83,7 @@ class RankListwiseOSLLM(RankLLM):
             )
         elif batched:
             self._llm = LLM(model, download_dir=os.getenv("HF_HOME"),
-                            enforce_eager=False, tensor_parallel_size=4)
+                            enforce_eager=False)
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -184,6 +184,7 @@ class RankListwiseOSLLM(RankLLM):
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
         query = result.query.text
+        query = self._replace_number(query)
         num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         while True:

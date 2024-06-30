@@ -43,6 +43,8 @@ class Reranker:
             List[Result]: A list containing the reranked candidates.
         """
         if batched:
+            for i in range(1, len(requests)):
+                assert len(requests[0]) == len(requests[i]), "Batched requests must have the same number of candidates"
             return self._agent.sliding_windows_batched(
                 requests,
                 rank_start=max(rank_start, 0),

@@ -104,6 +104,7 @@ class SafeOpenai(RankLLM):
                     )
                 break
             except Exception as e:
+                print("Error in completion call")
                 print(str(e))
                 if "This model's maximum context length is" in str(e):
                     print("reduce_length")
@@ -127,7 +128,7 @@ class SafeOpenai(RankLLM):
         prompt: Union[str, List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
     ) -> Tuple[str, int]:
-        model_key = "engine" if self.use_azure_ai else "model"
+        model_key = "model"
         response = self._call_completion(
             messages=prompt,
             temperature=0,
@@ -144,20 +145,35 @@ class SafeOpenai(RankLLM):
     def _get_prefix_for_rank_gpt_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
+        # APEER
         return [
             {
                 "role": "system",
-                "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+                "content": "You are RankGPT, an advanced assistant specialized in ranking passages by their relevance to a given query.",
             },
             {
                 "role": "user",
-                "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+                "content": f"You will be given {num} passages, marked with a numerical identifier []. Rank these passages according to how relevant they are to the query: {query}."
             },
-            {"role": "assistant", "content": "Okay, please provide the passages."},
+            {"role": "assistant", "content": "Okay, please provide the passages."}
         ]
+        
+        # return [
+        #     {
+        #         "role": "system",
+        #         "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        #     },
+        #     {
+        #         "role": "user",
+        #         "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+        #     },
+        #     {"role": "assistant", "content": "Okay, please provide the passages."},
+        # ]
 
     def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
-        return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
+        # APEER
+        return f"Search Query: {query}.\nArrange the {num} passages above in order of relevance to the search query, from most to least relevant. Use the numerical identifiers for ranking. The format should be [] > [], e.g., [1] > [2]. Only provide the ranking results without any additional text or explanation."
+        # return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
@@ -185,6 +201,12 @@ class SafeOpenai(RankLLM):
                 self._output_token_estimate = _output_token_estimate
             return _output_token_estimate
 
+    def create_prompt_batched(self):
+        pass
+
+    def run_llm_batched(self):
+        pass
+    
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:

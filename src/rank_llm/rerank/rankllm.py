@@ -214,12 +214,12 @@ class RankLLM(ABC):
         """
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
-            logger.debug(f"prompt: {prompt}\n")
+            logger.info(f"prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(
             prompt, current_window_size=rank_end - rank_start
         )
         if logging:
-            logger.debug(f"output: {permutation}")
+            logger.info(f"output: {permutation}")
         ranking_exec_info = RankingExecInfo(
             prompt, permutation, in_token_count, out_token_count
         )
