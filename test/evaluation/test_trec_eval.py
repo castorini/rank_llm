@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 from dacite import from_dict
 
-from src.rank_llm.evaluation.trec_eval import EvalFunction
 from src.rank_llm.data import Result
+from src.rank_llm.evaluation.trec_eval import EvalFunction
 
 
 class TestEvalFunction(unittest.TestCase):

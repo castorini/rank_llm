@@ -1,13 +1,13 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.data import read_requests_from_file, DataWriter
+from rank_llm.data import DataWriter, read_requests_from_file
 from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 
 file_name = "retrieve_results/BM25/retrieve_results_dl23_top20.json"

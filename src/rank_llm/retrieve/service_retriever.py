@@ -1,14 +1,10 @@
-import json
-import requests
 from urllib import parse
-from enum import Enum
-from typing import Any, Dict, List, Union
 
-from rank_llm.data import Request, Candidate, Query
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_llm.retrieve.repo_info import HITS_INFO
-from rank_llm.retrieve.utils import compute_md5, download_cached_hits
-from rank_llm.retrieve.retriever import RetrievalMode, Retriever
+import requests
+
+from rank_llm.data import Candidate, Query, Request
+from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.retriever import RetrievalMode
 
 
 class ServiceRetriever:
@@ -72,7 +68,7 @@ class ServiceRetriever:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
 
-        url = f"{host}/api/index/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
+        url = f"{host}/api/collection/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
 
         try:
             response = requests.get(url, timeout=timeout)

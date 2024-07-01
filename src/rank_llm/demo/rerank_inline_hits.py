@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from dacite import from_dict
 
@@ -9,7 +9,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.data import Request, DataWriter
+from rank_llm.data import DataWriter, Request
 from rank_llm.rerank.vicuna_reranker import VicunaReranker
 from rank_llm.rerank.zephyr_reranker import ZephyrReranker
 

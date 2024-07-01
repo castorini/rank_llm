@@ -1,13 +1,13 @@
 import copy
 from typing import Any, Dict, List, Union
 
-from rank_llm.data import Request, Query
+from rank_llm.data import Query, Request
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.identity_reranker import IdentityReranker
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
@@ -45,11 +45,21 @@ def retrieve_and_rerank(
     populate_exec_summary: bool = False,
     default_agent: RankLLM = None,
 ):
+    """Retrieve candidates using Anserini API and rerank them
+
+    Returns:
+        - List of top_k_rerank candidates
+    """
+
     model_full_path = ""
+
+    # Use the default rerank agent
     if interactive and default_agent is not None:
         agent = default_agent
+
     # Construct Rerank Agent
     elif "gpt" in model_path or use_azure_openai:
+        # GPT based reranking models
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
             model=model_path,
@@ -60,17 +70,18 @@ def retrieve_and_rerank(
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
     elif "vicuna" in model_path.lower() or "zephyr" in model_path.lower():
+        # RankVicuna or RankZephyr model suite
         if model_path.lower() == "rank_zephyr":
             model_full_path = "castorini/rank_zephyr_7b_v1_full"
         elif model_path.lower() == "rank_vicuna":
             model_full_path = "castorini/rank_vicuna_7b_v1"
         else:
             model_full_path = model_path
-
         print(f"Loading {model_path} ...")
 
         agent = RankListwiseOSLLM(
             model=model_full_path,
+            name=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
@@ -80,6 +91,11 @@ def retrieve_and_rerank(
             window_size=window_size,
             system_message=system_message,
         )
+        print(f"Completed loading {model_path}")
+
+    elif model_path.lower() in ["unspecified", "rank_random", "rank_identity"]:
+        # Use no reranker
+        agent = None
     else:
         raise ValueError(f"Unsupported model: {model_path}")
 
@@ -92,10 +108,11 @@ def retrieve_and_rerank(
 
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
-
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
             )
+
+            # Calls Anserini API
             requests = [
                 service_retriever.retrieve(
                     dataset=dataset,
@@ -108,7 +125,6 @@ def retrieve_and_rerank(
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset, retrieval_method=retrieval_method
             )
-
     elif retrieval_mode == RetrievalMode.CUSTOM:
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
@@ -118,57 +134,68 @@ def retrieve_and_rerank(
     print(f"Retrieval complete!")
 
     # Reranking
-    print(f"Reranking and returning {top_k_rerank} passages...")
-    if default_agent in ["rank_random", "rank_identity"]:
-        return IdentityReranker().rerank_batch(
+    print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
+
+    if agent is None:
+        # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
+        shuffle_candidates = True if model_path == "rank_random" else False
+        rerank_results = IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
-            shuffle_candidates=(default_agent == "rank_random"),
+            shuffle_candidates=(shuffle_candidates),
         )
+    else:
+        reranker = Reranker(agent)
+        for pass_ct in range(num_passes):
+            print(f"Pass {pass_ct + 1} of {num_passes}:")
+            rerank_results = reranker.rerank_batch(
+                requests,
+                rank_end=top_k_retrieve,
+                window_size=min(window_size, top_k_retrieve),
+                shuffle_candidates=shuffle_candidates,
+                logging=print_prompts_responses,
+                step=step_size,
+                populate_exec_summary=populate_exec_summary,
+            )
 
-    reranker = Reranker(agent)
-    for pass_ct in range(num_passes):
-        print(f"Pass {pass_ct + 1} of {num_passes}:")
-        rerank_results = reranker.rerank_batch(
-            requests,
-            rank_end=top_k_retrieve,
-            window_size=min(window_size, top_k_retrieve),
-            shuffle_candidates=shuffle_candidates,
-            logging=print_prompts_responses,
-            step=step_size,
-            populate_exec_summary=populate_exec_summary,
-        )
+            if num_passes > 1:
+                requests = [
+                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                    for r in rerank_results
+                ]
 
-        if num_passes > 1:
-            requests = [
-                Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                for r in rerank_results
-            ]
+        # generate trec_eval file & evaluate for named datasets only
+        if isinstance(dataset, str):
+            file_name = reranker.write_rerank_results(
+                retrieval_method.name,
+                rerank_results,
+                shuffle_candidates,
+                top_k_candidates=top_k_retrieve,
+                pass_ct=None if num_passes == 1 else pass_ct,
+                window_size=window_size,
+                dataset_name=dataset,
+            )
+            if (
+                dataset in TOPICS
+                and dataset not in ["dl22", "dl22-passage", "news"]
+                and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
+            ):
+                print("Evaluating:")
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
+                )
+            else:
+                print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+
     print(f"Reranking with {num_passes} passes complete!")
+
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]
 
-    # generate trec_eval file & evaluate for named datasets only
-    if isinstance(dataset, str):
-        file_name = reranker.write_rerank_results(
-            retrieval_method.name,
-            rerank_results,
-            shuffle_candidates,
-            top_k_candidates=top_k_retrieve,
-            pass_ct=None if num_passes == 1 else pass_ct,
-            window_size=window_size,
-            dataset_name=dataset,
-        )
-        if (
-            dataset in TOPICS
-            and dataset not in ["dl22", "dl22-passage", "news"]
-            and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
-        ):
-            print("Evaluating:")
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
-        else:
-            print(f"Skipping evaluation as {dataset} is not in TOPICS.")
-
-    return rerank_results
+    return (rerank_results, agent)

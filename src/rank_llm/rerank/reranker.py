@@ -4,8 +4,8 @@ from typing import List
 
 from tqdm import tqdm
 
+from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank.rankllm import RankLLM
-from rank_llm.data import Request, Result, DataWriter
 
 
 class Reranker:

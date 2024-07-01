@@ -1,9 +1,9 @@
 import copy
 import random
-
-from rank_llm.rerank.reranker import Reranker
-from rank_llm.data import Request, Result
 from typing import List
+
+from rank_llm.data import Request, Result
+from rank_llm.rerank.reranker import Reranker
 
 
 class IdentityReranker(Reranker):
@@ -19,7 +19,7 @@ class IdentityReranker(Reranker):
         shuffle_candidates: bool = False,
     ) -> List[Result]:
         """
-        A trivial reranker that returns a subsection of the retireved candidates list as-is or shuffled.
+        A trivial reranker that returns a subsection of the retrieved candidates list as-is or shuffled.
 
         Args:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.

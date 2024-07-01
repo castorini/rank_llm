@@ -1,9 +1,9 @@
 from typing import List
 
+from rank_llm.data import Request, Result
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
-from rank_llm.data import Request, Result
 
 
 class ZephyrReranker:
