@@ -46,7 +46,7 @@ class Reranker:
         """
         if batched:
             for i in range(1, len(requests)):
-                assert len(requests[0]) == len(requests[i]), "Batched requests must have the same number of candidates"
+                assert len(requests[0].candidates) == len(requests[i].candidates), "Batched requests must have the same number of candidates"
             return self._agent.sliding_windows_batched(
                 requests,
                 rank_start=max(rank_start, 0),
@@ -172,8 +172,8 @@ class Reranker:
             f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
         )
         writer.write_in_trec_eval_format(result_file_name)
-        writer.write_in_json_format(
-            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.json"
+        writer.write_in_jsonl_format(
+            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
         )
         # Write ranking execution summary
         Path(f"{ranking_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
