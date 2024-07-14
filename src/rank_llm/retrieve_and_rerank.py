@@ -10,7 +10,8 @@ from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
-
+from rank_llm.rerank.rankllm import RankLLM
+from rank_llm.rerank.rank_pointwise_reranker import RankPointwise
 
 def retrieve_and_rerank(
     model_path: str,
@@ -61,7 +62,21 @@ def retrieve_and_rerank(
             system_message=system_message,
             batched=batched,
         )
-    else:
+    elif "mono" in model_path.lower():
+        agent = RankPointwise(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+        )
+    elif "duo" in model_path.lower():
+        agent = RankLLM(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+        )
+    else: 
         raise ValueError(f"Unsupported model: {model_path}")
 
     # Retrieve
@@ -77,6 +92,13 @@ def retrieve_and_rerank(
         )
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
+    #temporary code for printing the prompts
+    # print("Requests:")
+    # for req in requests:
+    #     print(req)
+    # if "mono" in model_path.lower():
+
+
     print("Reranking:")
     reranker = Reranker(agent)
     for pass_ct in range(num_passes):

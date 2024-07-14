@@ -68,6 +68,7 @@ class Reranker:
                 logging=logging,
             )
             results.append(result)
+        # print(results[0])
         return results
 
     def rerank(

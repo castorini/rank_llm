@@ -21,6 +21,8 @@ class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     RANK_GPT = "rank_GPT"
     LRL = "LRL"
+    MONO = "mono"
+    DUO = "duo"
 
     def __str__(self):
         return self.value
