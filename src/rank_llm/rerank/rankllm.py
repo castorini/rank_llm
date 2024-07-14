@@ -199,6 +199,7 @@ class RankLLM(ABC):
         rank_start: int,
         rank_end: int,
         logging: bool = False,
+        populate_exec_summary: bool = True,
     ) -> Result:
         """
         Runs the permutation pipeline on the passed in result set within the passed in rank range.
@@ -214,16 +215,17 @@ class RankLLM(ABC):
         """
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
-            logger.info(f"prompt: {prompt}\n")
+            logger.info(f"Prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(
             prompt, current_window_size=rank_end - rank_start
         )
         if logging:
-            logger.info(f"output: {permutation}")
-        ranking_exec_info = RankingExecInfo(
-            prompt, permutation, in_token_count, out_token_count
-        )
-        result.ranking_exec_summary.append(ranking_exec_info)
+            print(f"Output: {permutation}")
+        if populate_exec_summary:
+            ranking_exec_info = RankingExecInfo(
+                prompt, permutation, in_token_count, out_token_count
+            )
+            result.ranking_exec_summary.append(ranking_exec_info)
         result = self.receive_permutation(result, permutation, rank_start, rank_end)
         return result
 
@@ -301,6 +303,7 @@ class RankLLM(ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        populate_exec_summary: bool = True,
     ) -> Result:
         """
         Applies the sliding window algorithm to the reranking process.
@@ -331,7 +334,11 @@ class RankLLM(ABC):
         while end_pos > rank_start and start_pos + step != rank_start:
             start_pos = max(start_pos, rank_start)
             rerank_result = self.permutation_pipeline(
-                rerank_result, start_pos, end_pos, logging
+                rerank_result,
+                start_pos,
+                end_pos,
+                logging,
+                populate_exec_summary=populate_exec_summary,
             )
             end_pos = end_pos - step
             start_pos = start_pos - step
@@ -474,6 +481,8 @@ class RankLLM(ABC):
             content = doc["segment"]
         elif "contents" in doc:
             content = doc["contents"]
+        elif "body" in doc:
+            content = doc["body"]
         else:
             content = doc["passage"]
         if "title" in doc and doc["title"]:

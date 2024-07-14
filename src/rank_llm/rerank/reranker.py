@@ -21,7 +21,8 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        batched: bool = False,
+        vllm_batched: bool = False,
+        populate_exec_summary: bool = True,
     ) -> List[Result]:
         """
         Reranks a list of requests using the RankLLM agent.
@@ -37,7 +38,8 @@ class Reranker:
             step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-            batched (bool, optional): Whether to use batched processing. Defaults to False.
+            vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
+            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
 
         Returns:
             List[Result]: A list containing the reranked candidates.
@@ -66,6 +68,7 @@ class Reranker:
                 step=step,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
+                populate_exec_summary=populate_exec_summary,
             )
             results.append(result)
         return results
