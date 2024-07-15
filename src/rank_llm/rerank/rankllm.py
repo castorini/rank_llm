@@ -20,6 +20,7 @@ from rank_llm.data import RankingExecInfo, Request, Result
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     RANK_GPT = "rank_GPT"
+    RANK_GPT_APEER = "rank_GPT_APEER"
     LRL = "LRL"
 
     def __str__(self):

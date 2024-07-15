@@ -37,7 +37,7 @@ class RankListwiseOSLLM(RankLLM):
         variable_passages: bool = False,
         window_size: int = 20,
         system_message: str = None,
-        batched: bool = False,
+        vllm_batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using
@@ -58,6 +58,7 @@ class RankListwiseOSLLM(RankLLM):
          - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
+         - vllm_batched (bool, optional): Indicates whether batched inference using VLLM is leveraged. Defaults to False.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -77,11 +78,11 @@ class RankListwiseOSLLM(RankLLM):
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        if batched and LLM is None:
+        if vllm_batched and LLM is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
-        elif batched:
+        elif vllm_batched:
             self._llm = LLM(model, download_dir=os.getenv("HF_HOME"),
                             enforce_eager=False)
             self._tokenizer = self._llm.get_tokenizer()
@@ -89,7 +90,7 @@ class RankListwiseOSLLM(RankLLM):
             self._llm, self._tokenizer = load_model(
                 model, device=device, num_gpus=num_gpus
             )
-        self._batched = batched
+        self._vllm_batched = vllm_batched
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message

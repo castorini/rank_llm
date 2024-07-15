@@ -44,7 +44,7 @@ class Reranker:
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
-        if batched:
+        if vllm_batched:
             for i in range(1, len(requests)):
                 assert len(requests[0].candidates) == len(requests[i].candidates), "Batched requests must have the same number of candidates"
             return self._agent.sliding_windows_batched(

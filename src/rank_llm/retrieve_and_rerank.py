@@ -79,7 +79,7 @@ def retrieve_and_rerank(
             variable_passages=variable_passages,
             window_size=window_size,
             system_message=system_message,
-            batched=batched,
+            vllm_batched=vllm_batched,
         )
     else:
         raise ValueError(f"Unsupported model: {model_path}")
@@ -108,7 +108,7 @@ def retrieve_and_rerank(
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset, retrieval_method=retrieval_method,
-                k=top_k_candidates
+                k=top_k_retrieve
             )
 
     elif retrieval_mode == RetrievalMode.CUSTOM:

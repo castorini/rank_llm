@@ -21,6 +21,7 @@ def main(args):
     use_azure_openai = args.use_azure_openai
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
+    top_k_rerank = top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
@@ -36,14 +37,15 @@ def main(args):
     step_size = args.step_size
     window_size = args.window_size
     system_message = args.system_message
-    batched = args.batched
+    vllm_batched = args.vllm_batched
 
     _ = retrieve_and_rerank(
         model_path=model_path,
         dataset=dataset,
         retrieval_mode=retrieval_mode,
         retrieval_method=retrieval_method,
-        top_k_candidates=top_k_candidates,
+        top_k_retrieve=top_k_candidates,
+        top_k_rerank=top_k_rerank,
         context_size=context_size,
         device=device,
         num_gpus=num_gpus,
@@ -57,7 +59,7 @@ def main(args):
         window_size=window_size,
         step_size=step_size,
         system_message=system_message,
-        batched=batched,
+        vllm_batched=vllm_batched,
     )
 
 
@@ -86,6 +88,12 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="the number of top candidates to rerank",
+    )
+    parser.add_argument(
+        "--top_k_rerank",
+        type=int,
+        default=-1,
+        help="the number of top candidates to return from reranking",
     )
     parser.add_argument(
         "--dataset",
@@ -156,7 +164,7 @@ if __name__ == "__main__":
         help="the system message used in prompts",
     )
     parser.add_argument(
-        "--batched",
+        "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
     )
