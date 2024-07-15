@@ -171,7 +171,7 @@ class RankLLM(ABC):
                                              rank_end, batch_size=32)
         if logging:
             for prompt in prompts:
-                logger.debug(f"prompt: {prompt[0]}\n")
+                logger.debug(f"Prompt: {prompt[0]}\n")
         logger.info("Prompts loaded.")
         batched_results = self.run_llm_batched(
             [prompt for prompt, _ in prompts], 

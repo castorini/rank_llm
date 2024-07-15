@@ -4,6 +4,9 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
 import tiktoken
+import logging
+logging.getLogger("openai").setLevel(logging.WARNING)
+
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.data import Result
@@ -56,7 +59,7 @@ class SafeOpenai(RankLLM):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide OpenAI Keys.")
-        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.APEER, PromptMode.LRL]:
+        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.RANK_GPT_APEER, PromptMode.LRL]:
             raise ValueError(
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT}, {PromptMode.RANK_GPT_APEER} or {PromptMode.LRL}."
             )

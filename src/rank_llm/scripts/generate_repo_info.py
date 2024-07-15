@@ -38,7 +38,7 @@ def generate_hits_info(base_path):
                 hits_info[relative_path] = {
                     "description": f"Top-{k} {method} Results for the {dataset} task. (Cached JSONL format)",
                     "urls": [
-                        f"https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/{relative_path}"
+                        f"https://github.com/castorini/rank_llm_data/raw/main/{relative_path}"
                     ],
                     "md5": generate_md5(file_path),
                     "size (bytes)": get_file_size(file_path),
@@ -61,7 +61,7 @@ def generate_hits_info(base_path):
                 hits_info[relative_path] = {
                     "description": f"Top-{k} {method} Results for the {dataset} task. (TREC format)",
                     "urls": [
-                        f"https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/{relative_path}"
+                        f"https://github.com/castorini/rank_llm_data/raw/main/{relative_path}"
                     ],
                     "md5": generate_md5(file_path),
                     "size (bytes)": get_file_size(file_path),

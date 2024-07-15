@@ -150,23 +150,29 @@ class Retriever:
             query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             if not candidates_file.is_file():
                 try:
-                    # TODO: Fix caching
                     file_path = download_cached_hits(query_name)
                     with open(file_path, "r") as f:
                         retrieved_results = []
                         for line in f:
                             retrieved_results.append(from_dict(data_class=Request, data=json.loads(line)))
-                    raise ValueError("caching is disabled")
                 except ValueError as e:
-                    print(f"Retrieving with dataset {self._dataset}")
-                    pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
-                    retrieved_results = pyserini.retrieve_and_store(k=k)
+                    try:
+                        assert k <= 100
+                        query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
+                        file_path = download_cached_hits(query_name)
+                        with open(file_path, "r") as f:
+                            retrieved_results = []
+                            for line in f:
+                                retrieved_results.append(from_dict(data_class=Request, data=json.loads(line)))
+                    except:
+                        print(f"Retrieving with dataset {self._dataset}")
+                        pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
+                        retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
-                # TODO: Fix Caching
-                # md5_local = compute_md5(candidates_file)
-                # if HITS_INFO[query_name]["md5"] != md5_local:
-                #     print("Query Cache MD5 does not match Local")
+                md5_local = compute_md5(candidates_file)
+                if HITS_INFO[query_name]["md5"] != md5_local:
+                    print("Query Cache MD5 does not match Local")
                 with open(candidates_file, "r") as f:
                     retrieved_results = []
                     for line in f:

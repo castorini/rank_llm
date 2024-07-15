@@ -2,7 +2,7 @@ HITS_INFO = {
     "BM25/retrieve_results_covid_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC COVID task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_covid_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_covid_top100.jsonl",
         ],
         "md5": "7dd70b911afc40647c37580e2f17a27f",
         "size (bytes)": 8779956,
@@ -11,7 +11,7 @@ HITS_INFO = {
     "BM25/retrieve_results_dl19_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC DL19 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_dl19_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl19_top100.jsonl",
         ],
         "md5": "518ab9f821fb74d862589d1d141c208e",
         "size (bytes)": 2000369,
@@ -20,7 +20,7 @@ HITS_INFO = {
     "BM25/retrieve_results_dl20_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC DL20 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_dl20_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl20_top100.jsonl",
         ],
         "md5": "3b6397f50fd78229e8d733243745a6d4",
         "size (bytes)": 2528494,
@@ -29,7 +29,7 @@ HITS_INFO = {
     "BM25/retrieve_results_dl21_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC DL21 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_dl21_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl21_top100.jsonl",
         ],
         "md5": "6ca5e405c55fc2280d66eb0afc7416f5",
         "size (bytes)": 2140373,
@@ -38,7 +38,7 @@ HITS_INFO = {
     "BM25/retrieve_results_dl22_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC DL22 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_dl22_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_dl22_top100.jsonl",
         ],
         "md5": "08322ee30bf084d1309f5c5a515f2f18",
         "size (bytes)": 3021942,
@@ -47,7 +47,7 @@ HITS_INFO = {
     "BM25/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.raggy-dev_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC24-Raggy Dev task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.raggy-dev_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.raggy-dev_top100.jsonl",
         ],
         "md5": "ff8a8db2180bc628115d678135179a21",
         "size (bytes)": 26911601,
@@ -56,7 +56,7 @@ HITS_INFO = {
     "BM25/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC24-Researchy Dev task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev_top100.jsonl",
         ],
         "md5": "41ff53ef4235f94924c75bb35f46f5f7",
         "size (bytes)": 141212740,
@@ -65,7 +65,7 @@ HITS_INFO = {
     "BM25/retrieve_results_news_top100.jsonl": {
         "description": "Top-100 BM25 Results for the TREC News task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_news_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_news_top100.jsonl",
         ],
         "md5": "3fa0063db9ba1dcfc5b527a062d41720",
         "size (bytes)": 41110970,
@@ -74,7 +74,7 @@ HITS_INFO = {
     "BM25/retrieve_results_noveleval_top100.jsonl": {
         "description": "Top-100 BM25 Results for the NovelEval task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25/retrieve_results_noveleval_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25/retrieve_results_noveleval_top100.jsonl",
         ],
         "md5": "96b9e6bc7e881122ab11a94656da816e",
         "size (bytes)": 417977,
@@ -155,7 +155,7 @@ HITS_INFO = {
     "BM25_RM3/retrieve_results_covid_top100.jsonl": {
         "description": "Top-100 BM25 + RM3 Results for the TREC COVID task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25_RM3/retrieve_results_covid_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_covid_top100.jsonl",
         ],
         "md5": "f80e8341da7de1d0cce166ed6e2fa84e",
         "size (bytes)": 9020100,
@@ -164,7 +164,7 @@ HITS_INFO = {
     "BM25_RM3/retrieve_results_dl19_top100.jsonl": {
         "description": "Top-100 BM25 + RM3 Results for the TREC DL19 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25_RM3/retrieve_results_dl19_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl19_top100.jsonl",
         ],
         "md5": "2f8ff225e60baa2c2d47162ae4d371c1",
         "size (bytes)": 2054706,
@@ -173,7 +173,7 @@ HITS_INFO = {
     "BM25_RM3/retrieve_results_dl20_top100.jsonl": {
         "description": "Top-100 BM25 + RM3 Results for the TREC DL20 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25_RM3/retrieve_results_dl20_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl20_top100.jsonl",
         ],
         "md5": "b8414ab263a05df678d375281c2bc000",
         "size (bytes)": 2548091,
@@ -182,7 +182,7 @@ HITS_INFO = {
     "BM25_RM3/retrieve_results_dl21_top100.jsonl": {
         "description": "Top-100 BM25 + RM3 Results for the TREC DL21 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25_RM3/retrieve_results_dl21_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl21_top100.jsonl",
         ],
         "md5": "1a0841bb0f82b820bfb2de700a9e89b5",
         "size (bytes)": 2157834,
@@ -191,7 +191,7 @@ HITS_INFO = {
     "BM25_RM3/retrieve_results_dl22_top100.jsonl": {
         "description": "Top-100 BM25 + RM3 Results for the TREC DL22 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25_RM3/retrieve_results_dl22_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_dl22_top100.jsonl",
         ],
         "md5": "1dd01bb2bb44b41d6af77c2879492be7",
         "size (bytes)": 3060472,
@@ -200,7 +200,7 @@ HITS_INFO = {
     "BM25_RM3/retrieve_results_news_top100.jsonl": {
         "description": "Top-100 BM25 + RM3 Results for the TREC News task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/BM25_RM3/retrieve_results_news_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/BM25_RM3/retrieve_results_news_top100.jsonl",
         ],
         "md5": "c5e8733df0a5276df2fb5b0862dba0b3",
         "size (bytes)": 38912304,
@@ -263,7 +263,7 @@ HITS_INFO = {
     "D_BERT_KD_TASB/retrieve_results_dl19_top100.jsonl": {
         "description": "Top-100 D_BERT_KD_TASB Results for the TREC DL19 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/D_BERT_KD_TASB/retrieve_results_dl19_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/D_BERT_KD_TASB/retrieve_results_dl19_top100.jsonl",
         ],
         "md5": "22f14897bf37098aa4836e254287b2f1",
         "size (bytes)": 1864083,
@@ -272,7 +272,7 @@ HITS_INFO = {
     "D_BERT_KD_TASB/retrieve_results_dl20_top100.jsonl": {
         "description": "Top-100 D_BERT_KD_TASB Results for the TREC DL20 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/D_BERT_KD_TASB/retrieve_results_dl20_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/D_BERT_KD_TASB/retrieve_results_dl20_top100.jsonl",
         ],
         "md5": "9221b308063d3cd42c574e7dbff38941",
         "size (bytes)": 2318086,
@@ -299,7 +299,7 @@ HITS_INFO = {
     "OPEN_AI_ADA2/retrieve_results_dl19_top100.jsonl": {
         "description": "Top-100 OpenAI ADA2 Results for the TREC DL19 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/OPEN_AI_ADA2/retrieve_results_dl19_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/OPEN_AI_ADA2/retrieve_results_dl19_top100.jsonl",
         ],
         "md5": "16d5a9a1448b58d2f89c844a7c6b4a4c",
         "size (bytes)": 1849150,
@@ -308,7 +308,7 @@ HITS_INFO = {
     "OPEN_AI_ADA2/retrieve_results_dl20_top100.jsonl": {
         "description": "Top-100 OpenAI ADA2 Results for the TREC DL20 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/OPEN_AI_ADA2/retrieve_results_dl20_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/OPEN_AI_ADA2/retrieve_results_dl20_top100.jsonl",
         ],
         "md5": "7480ae59f7146241e13ff39efb47d3f3",
         "size (bytes)": 2306232,
@@ -335,7 +335,7 @@ HITS_INFO = {
     "REP_LLAMA/retrieve_results_dl19_top100.jsonl": {
         "description": "Top-100 repLLaMA Results for the TREC DL19 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/REP_LLAMA/retrieve_results_dl19_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/REP_LLAMA/retrieve_results_dl19_top100.jsonl",
         ],
         "md5": "f3cd43822547ade6602dd12af9144ebc",
         "size (bytes)": 3648493,
@@ -344,7 +344,7 @@ HITS_INFO = {
     "REP_LLAMA/retrieve_results_dl20_top100.jsonl": {
         "description": "Top-100 repLLaMA Results for the TREC DL20 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/REP_LLAMA/retrieve_results_dl20_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/REP_LLAMA/retrieve_results_dl20_top100.jsonl",
         ],
         "md5": "e994e98c1d1f495a8a311670d5df7f07",
         "size (bytes)": 4581491,
@@ -371,7 +371,7 @@ HITS_INFO = {
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_covid_top100.jsonl": {
         "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC COVID task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_covid_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_covid_top100.jsonl",
         ],
         "md5": "74a41136fab99a77e8919ac29a6cc659",
         "size (bytes)": 7648893,
@@ -380,7 +380,7 @@ HITS_INFO = {
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl19_top100.jsonl": {
         "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL19 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl19_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl19_top100.jsonl",
         ],
         "md5": "894d37a5701bde517f75e117b2d5cad4",
         "size (bytes)": 1844101,
@@ -389,7 +389,7 @@ HITS_INFO = {
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl20_top100.jsonl": {
         "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL20 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl20_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl20_top100.jsonl",
         ],
         "md5": "241c63eba8f4ce8b7795fcaaf565bb03",
         "size (bytes)": 2285466,
@@ -398,7 +398,7 @@ HITS_INFO = {
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl21_top100.jsonl": {
         "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL21 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl21_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl21_top100.jsonl",
         ],
         "md5": "5b90d5460014d94d977921202c42606a",
         "size (bytes)": 2082006,
@@ -407,7 +407,7 @@ HITS_INFO = {
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl22_top100.jsonl": {
         "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC DL22 task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl22_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_dl22_top100.jsonl",
         ],
         "md5": "9082402af60b5e9208556853bc7842b0",
         "size (bytes)": 2958535,
@@ -416,7 +416,7 @@ HITS_INFO = {
     "SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_news_top100.jsonl": {
         "description": "Top-100 SPLADE++ CoCondenser-EnsembleDistil Results for the TREC News task. (Cached JSONL format)",
         "urls": [
-            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_news_top100.jsonl",
+            "https://github.com/castorini/rank_llm_data/raw/main/retrieve_results/SPLADE_P_P_ENSEMBLE_DISTIL/retrieve_results_news_top100.jsonl",
         ],
         "md5": "adcff66eb90b5f66e7ae47af7012fdb0",
         "size (bytes)": 26116086,
