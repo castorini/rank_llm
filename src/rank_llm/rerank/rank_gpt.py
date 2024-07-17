@@ -1,15 +1,16 @@
+import logging
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
 import tiktoken
-import logging
+
 logging.getLogger("openai").setLevel(logging.WARNING)
 
 
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.data import Result
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 
 class SafeOpenai(RankLLM):
@@ -59,7 +60,11 @@ class SafeOpenai(RankLLM):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide OpenAI Keys.")
-        if prompt_mode not in [PromptMode.RANK_GPT, PromptMode.RANK_GPT_APEER, PromptMode.LRL]:
+        if prompt_mode not in [
+            PromptMode.RANK_GPT,
+            PromptMode.RANK_GPT_APEER,
+            PromptMode.LRL,
+        ]:
             raise ValueError(
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT}, {PromptMode.RANK_GPT_APEER} or {PromptMode.LRL}."
             )
@@ -173,8 +178,8 @@ class SafeOpenai(RankLLM):
             },
             {
                 "role": "user",
-                "content": f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
-            }
+                "content": f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance.",
+            },
         ]
 
     def _get_suffix_for_rank_gpt_apeer_prompt(self, query: str, num: int) -> str:
@@ -211,7 +216,7 @@ class SafeOpenai(RankLLM):
 
     def run_llm_batched(self):
         pass
-    
+
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
@@ -228,13 +233,19 @@ class SafeOpenai(RankLLM):
 
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            messages = self._get_prefix_for_rank_gpt_apeer_prompt(query, num) if self._prompt_mode == PromptMode.RANK_GPT_APEER else self._get_prefix_for_rank_gpt_prompt(query, num)
+            messages = (
+                self._get_prefix_for_rank_gpt_apeer_prompt(query, num)
+                if self._prompt_mode == PromptMode.RANK_GPT_APEER
+                else self._get_prefix_for_rank_gpt_prompt(query, num)
+            )
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-                    messages[-1]["content"] += f"\n[{rank}] {self._replace_number(content)}"
+                    messages[-1][
+                        "content"
+                    ] += f"\n[{rank}] {self._replace_number(content)}"
                 else:
                     messages.append(
                         {
@@ -246,7 +257,9 @@ class SafeOpenai(RankLLM):
                         {"role": "assistant", "content": f"Received passage [{rank}]."}
                     )
             if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-                messages[-1]["content"] += f"\n{self._get_suffix_for_rank_gpt_apeer_prompt(query, num)}"
+                messages[-1][
+                    "content"
+                ] += f"\n{self._get_suffix_for_rank_gpt_apeer_prompt(query, num)}"
             else:
                 messages.append(
                     {

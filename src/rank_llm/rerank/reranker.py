@@ -4,8 +4,8 @@ from typing import List
 
 from tqdm import tqdm
 
+from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank.rankllm import RankLLM
-from rank_llm.data import Request, Result, DataWriter
 
 
 class Reranker:
@@ -46,7 +46,9 @@ class Reranker:
         """
         if vllm_batched:
             for i in range(1, len(requests)):
-                assert len(requests[0].candidates) == len(requests[i].candidates), "Batched requests must have the same number of candidates"
+                assert len(requests[0].candidates) == len(
+                    requests[i].candidates
+                ), "Batched requests must have the same number of candidates"
             return self._agent.sliding_windows_batched(
                 requests,
                 rank_start=max(rank_start, 0),

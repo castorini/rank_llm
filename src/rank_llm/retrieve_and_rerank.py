@@ -1,12 +1,13 @@
 import copy
 from typing import Any, Dict, List, Union
-from rank_llm.data import Request, Query
+
+from rank_llm.data import Query, Request
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.identity_reranker import IdentityReranker
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.rankllm import RankLLM, PromptMode
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.rerank.reranker import Reranker
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
@@ -93,7 +94,6 @@ def retrieve_and_rerank(
 
     if retrieval_mode == RetrievalMode.DATASET:
         if interactive:
-
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
             )
@@ -107,8 +107,9 @@ def retrieve_and_rerank(
             ]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset, retrieval_method=retrieval_method,
-                k=top_k_retrieve
+                dataset_name=dataset,
+                retrieval_method=retrieval_method,
+                k=top_k_retrieve,
             )
 
     elif retrieval_mode == RetrievalMode.CUSTOM:

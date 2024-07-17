@@ -1,18 +1,20 @@
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
-import os
 import json
-from concurrent.futures import ThreadPoolExecutor
+import os
 import random
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
-from tqdm import tqdm
 import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
+from tqdm import tqdm
 from transformers.generation import GenerationConfig
 
 try:
@@ -83,8 +85,9 @@ class RankListwiseOSLLM(RankLLM):
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
         elif vllm_batched:
-            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"),
-                            enforce_eager=False)
+            self._llm = LLM(
+                model, download_dir=os.getenv("HF_HOME"), enforce_eager=False
+            )
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -225,22 +228,27 @@ class RankListwiseOSLLM(RankLLM):
         return prompt, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int,
-        batch_size: int = 32
+        self,
+        results: List[Result],
+        rank_start: int,
+        rank_end: int,
+        batch_size: int = 32,
     ) -> List[Tuple[str, int]]:
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
-                yield lst[i:i + n]
+                yield lst[i : i + n]
 
         all_completed_prompts = []
 
         with ThreadPoolExecutor() as executor:
-            for batch in tqdm(chunks(results, batch_size),
-                              desc="Processing batches"):
-                completed_prompts = list(executor.map(
-                    lambda result: self.create_prompt(result, rank_start,
-                                                      rank_end), batch))
+            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
+                completed_prompts = list(
+                    executor.map(
+                        lambda result: self.create_prompt(result, rank_start, rank_end),
+                        batch,
+                    )
+                )
                 all_completed_prompts.extend(completed_prompts)
         return all_completed_prompts
 

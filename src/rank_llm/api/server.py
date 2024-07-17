@@ -1,10 +1,11 @@
 import argparse
+
 from flask import Flask, jsonify, request
 
 from rank_llm import retrieve_and_rerank
-from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.api_keys import get_openai_api_key, get_azure_openai_args
+from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.rank_gpt import SafeOpenai
+from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
 
 """ API URL FORMAT
@@ -18,7 +19,6 @@ Default to 20, 5, None, and 1 respectively
 
 
 def create_app(model, port, use_azure_openai=False):
-
     app = Flask(__name__)
     if model == "rank_zephyr":
         print(f"Loading {model} model...")

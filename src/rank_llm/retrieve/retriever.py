@@ -154,7 +154,9 @@ class Retriever:
                     with open(file_path, "r") as f:
                         retrieved_results = []
                         for line in f:
-                            retrieved_results.append(from_dict(data_class=Request, data=json.loads(line)))
+                            retrieved_results.append(
+                                from_dict(data_class=Request, data=json.loads(line))
+                            )
                 except ValueError as e:
                     try:
                         assert k <= 100
@@ -163,10 +165,14 @@ class Retriever:
                         with open(file_path, "r") as f:
                             retrieved_results = []
                             for line in f:
-                                retrieved_results.append(from_dict(data_class=Request, data=json.loads(line)))
+                                retrieved_results.append(
+                                    from_dict(data_class=Request, data=json.loads(line))
+                                )
                     except:
                         print(f"Retrieving with dataset {self._dataset}")
-                        pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
+                        pyserini = PyseriniRetriever(
+                            self._dataset, self._retrieval_method
+                        )
                         retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
@@ -176,7 +182,9 @@ class Retriever:
                 with open(candidates_file, "r") as f:
                     retrieved_results = []
                     for line in f:
-                        retrieved_results.append(from_dict(data_class=Request, data=json.loads(line)))
+                        retrieved_results.append(
+                            from_dict(data_class=Request, data=json.loads(line))
+                        )
 
         elif self._retrieval_mode == RetrievalMode.CUSTOM:
             candidates_file = Path(

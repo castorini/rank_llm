@@ -1,6 +1,8 @@
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -50,7 +52,9 @@ class RankLLM(ABC):
         return self._context_size
 
     @abstractmethod
-    def run_llm_batched(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[Tuple[str, int]]:
+    def run_llm_batched(
+        self, prompts: List[Union[str, List[Dict[str, str]]]]
+    ) -> List[Tuple[str, int]]:
         """
         Abstract method to run the target language model with a batch of prompts.
 
@@ -77,8 +81,7 @@ class RankLLM(ABC):
 
     @abstractmethod
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int,
-        batch_size: int
+        self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
     ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         """
         Abstract method to create a batch of prompts based on the results and given ranking range.
@@ -167,15 +170,15 @@ class RankLLM(ABC):
         """
         prompts = []
         logger.info("Loading prompts.")
-        prompts = self.create_prompt_batched(results, rank_start,
-                                             rank_end, batch_size=32)
+        prompts = self.create_prompt_batched(
+            results, rank_start, rank_end, batch_size=32
+        )
         if logging:
             for prompt in prompts:
                 logger.debug(f"Prompt: {prompt[0]}\n")
         logger.info("Prompts loaded.")
         batched_results = self.run_llm_batched(
-            [prompt for prompt, _ in prompts], 
-            current_window_size=rank_end - rank_start
+            [prompt for prompt, _ in prompts], current_window_size=rank_end - rank_start
         )
 
         for index, (result, (prompt, in_token_count)) in enumerate(
@@ -230,7 +233,9 @@ class RankLLM(ABC):
         result = self.receive_permutation(result, permutation, rank_start, rank_end)
         return result
 
-    def shuffle_and_rescore(rerank_results: List[Result], rank_start: int, rank_end: int):
+    def shuffle_and_rescore(
+        rerank_results: List[Result], rank_start: int, rank_end: int
+    ):
         """
         Shuffles candidates between rank_start and rank_end, and rescales scores based on new rank.
 
@@ -273,11 +278,14 @@ class RankLLM(ABC):
         Returns:
             List[Result]: The list of result objects after applying the sliding window technique.
         """
-        rerank_results = [Result(
-            query=copy.deepcopy(request.query),
-            candidates=copy.deepcopy(request.candidates),
-            ranking_exec_summary=[],
-        ) for request in requests]
+        rerank_results = [
+            Result(
+                query=copy.deepcopy(request.query),
+                candidates=copy.deepcopy(request.candidates),
+                ranking_exec_summary=[],
+            )
+            for request in requests
+        ]
         if shuffle_candidates:
             self.shuffle_and_rescore(rerank_results, rank_start, rank_end)
         end_pos = rank_end
@@ -475,7 +483,9 @@ class RankLLM(ABC):
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
-    def convert_doc_to_prompt_content(self, doc: Dict[str, Any], max_length: int) -> str:
+    def convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
         if "text" in doc:
             content = doc["text"]
         elif "segment" in doc:

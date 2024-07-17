@@ -2,7 +2,7 @@ import json
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import List
 
 from pyserini.index import IndexReader
 from pyserini.prebuilt_index_info import (
@@ -21,7 +21,7 @@ from pyserini.search import (
 )
 from tqdm import tqdm
 
-from rank_llm.data import DataWriter, Request, Query, Candidate
+from rank_llm.data import Candidate, DataWriter, Query, Request
 from rank_llm.retrieve.indices_dict import INDICES
 from rank_llm.retrieve.topics_dict import TOPICS
 
