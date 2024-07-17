@@ -1,13 +1,9 @@
-import logging
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
 import tiktoken
-
-logging.getLogger("openai").setLevel(logging.WARNING)
-
 
 from rank_llm.data import Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
