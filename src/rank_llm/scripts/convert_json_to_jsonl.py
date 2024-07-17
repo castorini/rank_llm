@@ -1,3 +1,7 @@
+"""
+Convert from unsupported JSON request format to newer JSONL request format.
+"""
+
 import argparse
 import json
 import os

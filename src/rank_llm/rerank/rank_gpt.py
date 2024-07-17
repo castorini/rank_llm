@@ -148,35 +148,37 @@ class SafeOpenai(RankLLM):
     def _get_prefix_for_rank_gpt_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
-        if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-            return [
-                {
-                    "role": "system",
-                    "content": "As RankGPT, your task is to evaluate and rank unique passages based on their relevance and accuracy to a given query. Prioritize passages that directly address the query and provide detailed, correct answers. Ignore factors such as length, complexity, or writing style unless they seriously hinder readability.",
-                },
-                {
-                    "role": "user",
-                    "content": f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
-                }
-            ]
-        else:
-            return [
-                {
-                    "role": "system",
-                    "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
-                },
-                {
-                    "role": "user",
-                    "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
-                },
-                {"role": "assistant", "content": "Okay, please provide the passages."},
-            ]
+        return [
+            {
+                "role": "system",
+                "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+            },
+            {
+                "role": "user",
+                "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+            },
+            {"role": "assistant", "content": "Okay, please provide the passages."},
+        ]
 
     def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
-        if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-            return f"Given the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
-        else:
-            return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
+        return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
+
+    def _get_prefix_for_rank_gpt_apeer_prompt(
+        self, query: str, num: int
+    ) -> List[Dict[str, str]]:
+        return [
+            {
+                "role": "system",
+                "content": "As RankGPT, your task is to evaluate and rank unique passages based on their relevance and accuracy to a given query. Prioritize passages that directly address the query and provide detailed, correct answers. Ignore factors such as length, complexity, or writing style unless they seriously hinder readability.",
+            },
+            {
+                "role": "user",
+                "content": f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
+            }
+        ]
+
+    def _get_suffix_for_rank_gpt_apeer_prompt(self, query: str, num: int) -> str:
+        return f"Given the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
@@ -226,11 +228,11 @@ class SafeOpenai(RankLLM):
 
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            messages = self._get_prefix_for_rank_gpt_prompt(query, num)
+            messages = self._get_prefix_for_rank_gpt_apeer_prompt(query, num) if self._prompt_mode == PromptMode.RANK_GPT_APEER else self._get_prefix_for_rank_gpt_prompt(query, num)
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
-                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
+                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 if self._prompt_mode == PromptMode.RANK_GPT_APEER:
                     messages[-1]["content"] += f"\n[{rank}] {self._replace_number(content)}"
                 else:
@@ -244,7 +246,7 @@ class SafeOpenai(RankLLM):
                         {"role": "assistant", "content": f"Received passage [{rank}]."}
                     )
             if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-                messages[-1]["content"] += f"\n{self._get_suffix_for_rank_gpt_prompt(query, num)}"
+                messages[-1]["content"] += f"\n{self._get_suffix_for_rank_gpt_apeer_prompt(query, num)}"
             else:
                 messages.append(
                     {
@@ -276,7 +278,7 @@ class SafeOpenai(RankLLM):
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
                 psg_id = f"PASSAGE{rank}"
-                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
+                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 message += f'{psg_id} = "{self._replace_number(content)}"\n'
                 psg_ids.append(psg_id)
             message += f'QUESTION = "{query}"\n'

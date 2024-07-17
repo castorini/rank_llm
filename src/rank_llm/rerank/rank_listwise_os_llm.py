@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 import os
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -199,7 +199,7 @@ class RankListwiseOSLLM(RankLLM):
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
                 # For Japanese should cut by character: content = content[:int(max_length)]
-                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
+                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 input_context += f"[{rank}] {self._replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)
@@ -236,12 +236,11 @@ class RankListwiseOSLLM(RankLLM):
         all_completed_prompts = []
 
         with ThreadPoolExecutor() as executor:
-            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
-                futures = [
-                    executor.submit(self.create_prompt, result, rank_start, rank_end)
-                    for result in batch
-                ]
-                completed_prompts = [future.result() for future in as_completed(futures)]
+            for batch in tqdm(chunks(results, batch_size),
+                              desc="Processing batches"):
+                completed_prompts = list(executor.map(
+                    lambda result: self.create_prompt(result, rank_start,
+                                                      rank_end), batch))
                 all_completed_prompts.extend(completed_prompts)
         return all_completed_prompts
 
