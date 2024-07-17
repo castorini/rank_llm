@@ -4,8 +4,8 @@ from typing import List
 
 from tqdm import tqdm
 
+from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank.rankllm import RankLLM
-from rank_llm.data import Request, Result, DataWriter
 
 
 class Reranker:
@@ -21,6 +21,7 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        vllm_batched: bool = False,
         populate_exec_summary: bool = True,
     ) -> List[Result]:
         """
@@ -37,10 +38,28 @@ class Reranker:
             step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+            vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
+            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
 
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
+        if vllm_batched:
+            for i in range(1, len(requests)):
+                assert len(requests[0].candidates) == len(
+                    requests[i].candidates
+                ), "Batched requests must have the same number of candidates"
+            return self._agent.sliding_windows_batched(
+                requests,
+                rank_start=max(rank_start, 0),
+                rank_end=min(
+                    rank_end, len(requests[0].candidates)
+                ),  # TODO: Fails arbitrary hit sizes
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+            )
         results = []
         for request in tqdm(requests):
             result = self._agent.sliding_windows(
@@ -155,8 +174,8 @@ class Reranker:
             f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
         )
         writer.write_in_trec_eval_format(result_file_name)
-        writer.write_in_json_format(
-            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.json"
+        writer.write_in_jsonl_format(
+            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
         )
         # Write ranking execution summary
         Path(f"{ranking_execution_summary_dirname}/{retrieval_method_name}/").mkdir(

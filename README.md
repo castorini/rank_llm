@@ -36,13 +36,26 @@ conda install -c conda-forge openjdk=21 maven -y
 pip install -r requirements.txt
 ```
 
-### Run end to end Test
+### Run end to end - RankZephyr
+
+We can run the RankZephyr model with the following command:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 ```
 
-### Contributing 
+Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vllm` library.
+If you want to run multiple passes of the model, you can use the `--num_passes` flag.
+
+### Run end to end - RankGPT4-o
+
+We can run the RankGPT4-o model with the following command:
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o --top_k_candidates=100 --dataset=dl20 \
+  --retrieval_method=bm25 --prompt_mode=rank_GPT_APEER  --context_size=4096 --use_azure_openai
+```
+Note that the `--prompt_mode` is set to `rank_GPT_APEER` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
+This can be changed to `rank_GPT` to use the original prompt.
 
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 

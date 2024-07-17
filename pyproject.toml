@@ -26,6 +26,11 @@ requires-python = ">= 3.10"
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
+[project.optional-dependencies]
+vllm = [
+    "vllm>=0.4.0"
+]
+
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
 
