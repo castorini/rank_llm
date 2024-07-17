@@ -92,11 +92,6 @@ def retrieve_and_rerank(
         )
     else:
         raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
-    #temporary code for printing the prompts
-    # print("Requests:")
-    # for req in requests:
-    #     print(req)
-    # if "mono" in model_path.lower():
 
 
     print("Reranking:")

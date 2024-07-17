@@ -1,5 +1,6 @@
 import logging
-
+import math
+from functools import cmp_to_key
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,8 @@ import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from transformers.generation import GenerationConfig
+from rank_llm.data import RankingExecInfo, Request, Result, Candidate
+
 
 try:
     from vllm import LLM, SamplingParams
@@ -98,8 +101,6 @@ class RankPointwise(RankLLM):
             min_tokens=self.num_output_tokens(current_window_size),
         )
         outputs = self._llm.generate(prompts, sampling_params)
-        print(outputs)
-        print("BATCHED")
 
         return [
             (output.outputs[0].text, len(output.outputs[0].token_ids))
@@ -108,29 +109,37 @@ class RankPointwise(RankLLM):
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, int, float]:
         if current_window_size is None:
             current_window_size = self._window_size
         inputs = self._tokenizer([prompt])
         inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-        gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size)
-        gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
+        gen_cfg.max_new_tokens = self.num_output_tokens()
+        gen_cfg.min_new_tokens = self.num_output_tokens()
+        gen_cfg.bad_words_ids = [[0]]
+        gen_cfg.decoder_start_token_id = None
+        gen_cfg.output_scores = True
+        gen_cfg.return_dict_in_generate = True
         # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
-        output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
+        token_prompt = self._tokenizer.encode(prompt, return_tensors="pt").to(self._device)
+        output = self._llm.generate(token_prompt, generation_config=gen_cfg)
+        output_ids = output.sequences
+        logits = output.scores
 
         if self._llm.config.is_encoder_decoder:
             output_ids = output_ids[0]
-            output_ids = output_ids[1:]
-        else:
-            output_ids = output_ids[0][len(inputs["input_ids"][0]) :]
             output_ids = output_ids[1:]
 
         outputs = self._tokenizer.decode(
             output_ids, skip_special_tokens=True, spaces_between_special_tokens=False
         )
-        return outputs, output_ids.size(0)
+        truth_logit = logits[0][0][1176]
+        false_logit = logits[0][0][6136]
+        score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
+        #print(outputs, output_ids.size(0))
+        return outputs, output_ids.size(0), score
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         return 1
@@ -143,7 +152,7 @@ class RankPointwise(RankLLM):
         
 
     def _add_few_shot_examples(self, conv):
-        return 0
+        return 1
         #unused for now
 
     def create_prompt(
@@ -183,3 +192,55 @@ class RankPointwise(RankLLM):
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
+
+    def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
+        if x.score < y.score:
+            return -1
+        elif x.score > y.score:
+            return 1
+        else: 
+            return 0
+
+    def permutation_pipeline(
+        self,
+        result: Result,
+        rank_start: int,
+        rank_end: int,
+        logging: bool = False,
+    ) -> Result:
+        """
+        Runs the permutation pipeline on the passed in result set within the passed in rank range.
+
+        Args:
+            result (Result): The result object to process.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+
+        Returns:
+            Result: The processed result object after applying permutation.
+        """
+        #print(len(result.candidates))
+        for i in range (len(result.candidates)):
+            prompt, num_tokens = self.create_prompt(result, i, rank_end)
+            output, output_num_tokens, score = self.run_llm(prompt=prompt)
+            (result.candidates[i]).score = score
+
+        result.candidates.sort(key=cmp_to_key(self.candidate_comparator))
+
+
+            
+        # prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
+        # if logging:
+        #     logger.info(f"prompt: {prompt}\n")
+        # permutation, out_token_count = self.run_llm(
+        #     prompt, current_window_size=rank_end - rank_start
+        # )
+        # if logging:
+        #     logger.info(f"output: {permutation}")
+        # ranking_exec_info = RankingExecInfo(
+        #     prompt, permutation, in_token_count, out_token_count
+        # )
+        # result.ranking_exec_summary.append(ranking_exec_info)
+
+        return result
