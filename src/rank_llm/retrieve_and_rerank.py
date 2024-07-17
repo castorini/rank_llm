@@ -82,6 +82,22 @@ def retrieve_and_rerank(
             system_message=system_message,
             vllm_batched=vllm_batched,
         )
+    elif "fiddistill" in model_path.lower():
+        agent = RankFiDDistill(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            window_size=window_size,
+            device=device,
+        )
+    elif "fidscore" in model_path.lower():
+        agent = RankFiDScore(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            window_size=window_size,
+            device=device,
+        )
     else:
         raise ValueError(f"Unsupported model: {model_path}")
 
