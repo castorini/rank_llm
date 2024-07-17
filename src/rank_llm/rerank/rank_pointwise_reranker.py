@@ -1,5 +1,6 @@
 import logging
 import math
+import copy
 from functools import cmp_to_key
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -117,7 +118,6 @@ class RankPointwise(RankLLM):
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_new_tokens = self.num_output_tokens()
-        gen_cfg.bad_words_ids = [[0]]
         gen_cfg.decoder_start_token_id = None
         gen_cfg.output_scores = True
         gen_cfg.return_dict_in_generate = True
@@ -228,19 +228,42 @@ class RankPointwise(RankLLM):
 
         result.candidates.sort(key=cmp_to_key(self.candidate_comparator))
 
-
-            
-        # prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
-        # if logging:
-        #     logger.info(f"prompt: {prompt}\n")
-        # permutation, out_token_count = self.run_llm(
-        #     prompt, current_window_size=rank_end - rank_start
-        # )
-        # if logging:
-        #     logger.info(f"output: {permutation}")
-        # ranking_exec_info = RankingExecInfo(
-        #     prompt, permutation, in_token_count, out_token_count
-        # )
-        # result.ranking_exec_summary.append(ranking_exec_info)
-
         return result
+    
+    def sliding_windows(
+        self,
+        request: Request,
+        rank_start: int,
+        rank_end: int,
+        window_size: int,
+        step: int,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+    ) -> Result:
+        """
+        Applies the sliding window algorithm to the reranking process.
+
+        Args:
+            request (Request): The request object to process.
+            rank_start (int): The start index for ranking.
+            rank_end (int): The end index for ranking.
+            window_size (int): The size of each sliding window.
+            step (int): The step size for moving the window.
+            shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
+            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+
+        Returns:
+            Result: The result object after applying the sliding window technique.
+        """
+        rerank_result = Result(
+            query=copy.deepcopy(request.query),
+            candidates=copy.deepcopy(request.candidates),
+            ranking_exec_summary=[],
+        )
+        rerank_result = self.permutation_pipeline(
+            rerank_result, rank_start, rank_end, logging
+        )
+
+        return rerank_result
+
+    
