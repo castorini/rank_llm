@@ -70,17 +70,19 @@ class RankFiDDistill(RankLLM):
         assert False, "Not supported batch"
         return []
 
-    def run_llm(self, prompt: str) -> Tuple[str, int]:
+    def run_llm(self, prompt: list[str]) -> Tuple[str, int]:
         """
         Run the target language model with a passed in prompt.
         """
         self._model.eval()
 
-        inputs = {k: v.to(self._device) for k, v in self._tokenizer(prompt,
-                                                                    return_tensors='pt',
-                                                                    padding='max_length',
-                                                                    truncation=True,
-                                                                    max_length=self.max_tokens())}
+        inputs = {
+            k: v.reshape(v.shape[0], -1).to(self._device) for k, v in self._tokenizer(prompt,
+                                                                                      return_tensors='pt',
+                                                                                      padding='max_length',
+                                                                                      truncation=True,
+                                                                                      max_length=self.max_tokens())
+        }
 
         with torch.no_grad():
             outputs = self._model.generate(
@@ -95,18 +97,18 @@ class RankFiDDistill(RankLLM):
 
     def create_prompt(
             self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[str, int]:
+    ) -> Tuple[list[str], int]:
         """
         Create a prompt based on the result and given ranking range.
         """
 
         # For now, we concat the prompt, because it seems LiT5 is also concatting the stuff
-        prompt = " ".join(
-            self._gen_passage(result.query.text, result.ranking_exec_summary[i].prompt, i + 1)
+        prompts = [
+            self._gen_passage(result.query.text, i + 1)
             for i in range(rank_start, rank_end)
-        )
+        ]
 
-        return prompt, self.get_num_tokens(prompt)
+        return prompts, sum(self.get_num_tokens(prompt) for prompt in prompts)
 
     def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
         """
@@ -137,7 +139,7 @@ class RankFiDDistill(RankLLM):
             return output_token_estimate
 
     @staticmethod
-    def _gen_passage(query: str, rank_exec_info: RankingExecInfo, index: int) -> str:
+    def _gen_passage(query: str, index: int) -> str:
         return f"Search Query: {query} Passage: [{index}] Relevance Ranking: "
 
 
