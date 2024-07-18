@@ -7,42 +7,43 @@ from torch.nn import CrossEntropyLoss
 import numpy as np
 import copy
 
-from lit5.options import Options
+from .options import Options
 
+# TODO CHANGE THIS OPTIONS TO "A NEW OPTION"
 options = Options()
 options.add_reader_options()
 options.add_eval_options()
 opt = options.parse()
 
 if opt.write_crossattention_scores:
-    from lit5.modeling_t5 import T5ForConditionalGeneration, T5Stack
+    from .modeling_t5 import T5ForConditionalGeneration, T5Stack
 else:
     from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
 
-    
+
 class FiDStack(T5Stack):
     def __init__(self, config, embed_tokens=None):
         super().__init__(config, embed_tokens=embed_tokens)
 
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        inputs_embeds=None,
-        head_mask=None,
-        cross_attn_head_mask=None,
-        past_key_values=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            inputs_embeds=None,
+            head_mask=None,
+            cross_attn_head_mask=None,
+            past_key_values=None,
+            use_cache=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         if not self.is_decoder:
             input_ids = input_ids.view(input_ids.size(0) * self.config.n_passages, -1)
             attention_mask = attention_mask.view(attention_mask.size(0) * self.config.n_passages, -1)
-        
+
         output = super().forward(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -57,7 +58,7 @@ class FiDStack(T5Stack):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        
+
         if not self.is_decoder:
             bsz = input_ids.size(0) // self.config.n_passages
             if not return_dict:
@@ -92,12 +93,12 @@ class FiD(T5ForConditionalGeneration):
 
         self.config.n_passages = opt.n_passages
         self.config.bsz = opt.batch_size
-        
+
         encoder_config = copy.deepcopy(config)
         encoder_config.is_decoder = False
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
-        
+
         self.encoder = FiDStack(encoder_config, self.shared)
 
         decoder_config = copy.deepcopy(config)
@@ -150,10 +151,12 @@ class FiD(T5ForConditionalGeneration):
         norms = torch.stack(norms)
 
         output = {}
-        self.aggregate_value(norms, mask, n_passages, ids, mask_query, output, prefix="norms", output_sequence_lengths=output_sequence_lengths)
+        self.aggregate_value(norms, mask, n_passages, ids, mask_query, output, prefix="norms",
+                             output_sequence_lengths=output_sequence_lengths)
         return output
 
-    def aggregate_value(self, scores, mask, n_passages, ids, mask_query=None, output={}, prefix="", output_sequence_lengths=[]):
+    def aggregate_value(self, scores, mask, n_passages, ids, mask_query=None, output={}, prefix="",
+                        output_sequence_lengths=[]):
         n_layers, bsz, n_tokens, total_tokens = scores.size()
 
         ids = ids.view(bsz, n_passages, -1)
@@ -166,10 +169,10 @@ class FiD(T5ForConditionalGeneration):
         scores_woquery = None
         # Compute scores based on scores without query
         if not mask_query is None:
-            output[f"{prefix}woquery"]  = self.get_woquery_score(scores, mask_query, mask, n_layers, output_sequence_lengths=output_sequence_lengths)
+            output[f"{prefix}woquery"] = self.get_woquery_score(scores, mask_query, mask, n_layers,
+                                                                output_sequence_lengths=output_sequence_lengths)
 
         return output
-
 
     def get_woquery_score(self, scores, mask_query, mask, n_layers, output_sequence_lengths):
         if scores.size(-1) > mask_query.size(-1):
@@ -179,13 +182,13 @@ class FiD(T5ForConditionalGeneration):
             mask_query = torch.cat([mask_query, zero_padding], dim=-1)
         mask_query = mask * (~mask_query[:, None])
         scores_woquery = scores.masked_fill(~mask_query[:, None], 0.0)
-                
+
         ntokens_woquery = 256 * n_layers
-        
+
         # zero out scores after EOS token. This is needed when batching results in sequences with different lengths.
         for i in range(len(scores_woquery)):
             scores_woquery[i, output_sequence_lengths[i]:, :, :] = 0
-            
+
         scores_woquery = scores_woquery.sum(dim=[1, 3])
         return scores_woquery / ntokens_woquery
 
@@ -203,17 +206,18 @@ class FiD(T5ForConditionalGeneration):
             xattn = mod.layer[1].EncDecAttention
             xattn.normalized_score_storage = None
 
+
 def cross_attention_forward(
-    self,
-    hidden_states,
-    mask=None,
-    key_value_states=None,
-    position_bias=None,
-    past_key_value=None,
-    layer_head_mask=None,
-    query_length=None,
-    use_cache=False,
-    output_attentions=False,
+        self,
+        hidden_states,
+        mask=None,
+        key_value_states=None,
+        position_bias=None,
+        past_key_value=None,
+        layer_head_mask=None,
+        query_length=None,
+        use_cache=False,
+        output_attentions=False,
 ):
     """
     Self-attention (if key_value_states is None) or attention over source sentence (provided by key_value_states).
@@ -221,14 +225,14 @@ def cross_attention_forward(
     # Input is (batch_size, seq_length, dim)
     # Mask is (batch_size, key_length) (non-causal) or (batch_size, key_length, key_length)
     # past_key_value[0] is (batch_size, n_heads, q_len - 1, dim_per_head)
-    
+
     batch_size, seq_length = hidden_states.shape[:2]
     real_seq_length = seq_length
 
     if past_key_value is not None:
         assert (
-            len(past_key_value) == 2
-        ), f"past_key_value should have 2 past states: keys and values. Got { len(past_key_value)} past states"
+                len(past_key_value) == 2
+        ), f"past_key_value should have 2 past states: keys and values. Got {len(past_key_value)} past states"
         real_seq_length += past_key_value[0].shape[2] if query_length is None else query_length
 
     key_length = real_seq_length if key_value_states is None else key_value_states.shape[1]
@@ -278,7 +282,6 @@ def cross_attention_forward(
         query_states, key_states.transpose(3, 2)
     )  # equivalent of torch.einsum("bnqd,bnkd->bnqk", query_states, key_states), compatible with onnx op>9
 
-    
     if position_bias is None:
         if not self.has_relative_attention_bias:
             position_bias = torch.zeros(
@@ -292,7 +295,7 @@ def cross_attention_forward(
         # if key and values are already calculated
         # we want only the last query position bias
         if past_key_value is not None:
-            position_bias = position_bias[:, :, -hidden_states.size(1) :, :]
+            position_bias = position_bias[:, :, -hidden_states.size(1):, :]
 
         if mask is not None:
             position_bias = position_bias + mask  # (batch_size, n_heads, seq_length, key_length)
