@@ -1,32 +1,12 @@
 import torch
-import transformers
 
-torch.manual_seed(0)
-transformers.set_seed(0)
-
-import numpy as np
-from torch.utils.data import DataLoader, SequentialSampler
-
-import lit5.data
-import lit5.model
-
-import copy
-import json
-from typing import List, Union, Dict, Any, Tuple, Optional
+from typing import List, Union, Dict, Tuple, Optional
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from rank_llm.data import Result, RankingExecInfo
+from rank_llm.rerank.lit5.model import FiD
+from rank_llm.data import Result
 
-from .lit5.options import Options
-
-opt = Options()
-
-if opt.write_crossattention_scores:
-    from lit5.modeling_t5 import T5ForConditionalGeneration, T5Stack
-else:
-    from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
-
-from transformers import T5Tokenizer, AutoModelForSeq2SeqLM
+from transformers import T5Tokenizer
 
 
 class RankFiDDistill(RankLLM):
@@ -46,7 +26,7 @@ class RankFiDDistill(RankLLM):
                          num_few_shot_examples=num_few_shot_examples)
         # TODO use adaptor for this guy
         self._tokenizer = T5Tokenizer.from_pretrained(model)
-        self._model = AutoModelForSeq2SeqLM.from_pretrained(model).to(device)
+        self._model = FiD.from_pretrained(model).to(device).eval()
 
         self._window_size = window_size
         self._device = device
@@ -70,18 +50,21 @@ class RankFiDDistill(RankLLM):
         assert False, "Not supported batch"
         return []
 
-    def run_llm(self, prompt: list[str]) -> Tuple[str, int]:
+    def run_llm(self, prompts: List[Dict[str, str]]) -> Tuple[str, int]:
         """
         Run the target language model with a passed in prompt.
         """
+
+        prompt_text = [prompt['text'] for prompt in prompts]
+
         self._model.eval()
 
         inputs = {
-            k: v.reshape(v.shape[0], -1).to(self._device) for k, v in self._tokenizer(prompt,
-                                                                                      return_tensors='pt',
-                                                                                      padding='max_length',
-                                                                                      truncation=True,
-                                                                                      max_length=self.max_tokens())
+            k: v.reshape(v.shape[:-2], -1).to(self._device) for k, v in self._tokenizer(prompt_text,
+                                                                                        return_tensors='pt',
+                                                                                        padding='max_length',
+                                                                                        truncation=True,
+                                                                                        max_length=self.max_tokens())
         }
 
         with torch.no_grad():
@@ -97,18 +80,24 @@ class RankFiDDistill(RankLLM):
 
     def create_prompt(
             self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[list[str], int]:
+    ) -> Tuple[List[Dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
         """
 
         # For now, we concat the prompt, because it seems LiT5 is also concatting the stuff
         prompts = [
-            self._gen_passage(result.query.text, i + 1)
+            {
+                "text": self._gen_passage(result.query.text, i + 1,
+                                          self.convert_doc_to_prompt_content(
+                                              result.candidates[i].doc,
+                                              self.max_tokens()
+                                          ))
+            }
             for i in range(rank_start, rank_end)
         ]
 
-        return prompts, sum(self.get_num_tokens(prompt) for prompt in prompts)
+        return prompts, sum(self.get_num_tokens(prompt['text']) for prompt in prompts)
 
     def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
         """
@@ -138,106 +127,156 @@ class RankFiDDistill(RankLLM):
 
             return output_token_estimate
 
+    def _tokenize(self, s: str):
+        return self._tokenizer(s)
+
     @staticmethod
-    def _gen_passage(query: str, index: int) -> str:
-        return f"Search Query: {query} Passage: [{index}] Relevance Ranking: "
+    def _gen_passage(query: str, index: int, passage: str) -> str:
+        return f"Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "
 
 
 class RankFiDScore(RankLLM):
     def __init__(
             self,
-            model_path: str,
+            model: str,
             context_size: int = 300,
             prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+            num_few_shot_examples: int = 0,
             window_size: int = 20,
             device: str = 'cuda',
     ) -> None:
         """
          Creates instance of the RankFiDScore class, a specialized version of RankLLM designed from Lit5-Score.
         """
-        super().__init__(model=model_path, context_size=context_size, prompt_mode=prompt_mode)
-        self.tokenizer = T5Tokenizer.from_pretrained(model_path)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_path).to(device)
-        self.window_size = window_size
-        self.device = device
-        self.batch_size = 1
-        self.stride = 10
-        self.answer_maxlength = 100
-        self.n_passes = 1
+        super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode,
+                         num_few_shot_examples=num_few_shot_examples)
+        self._tokenizer = T5Tokenizer.from_pretrained(model)
+        self._model = FiD.from_pretrained(model).to(device).eval()
 
-    # code from LiT5-Score.py
-    def evaluate(model, dataset, dataloader, tokenizer, opt):
-        if opt.write_crossattention_scores:
-            model.overwrite_forward_crossattention()
-            model.reset_score_storage()
+        self._window_size = window_size
+        self._device = device
+
+        self._batch_size = 1
+        self._stride = 10
+        self._answer_maxlength = 100
+        self._n_passes = 1
+
+        self._post_init()
+
+        self._output_token_estimate = None
+
+    def _post_init(self) -> None:
+        # set the overwrite forward cross attention
+        self._model.overwrite_forward_crossattention()
+
+    def run_llm_batched(
+            self, prompts: List[Union[str, List[Dict[str, str]]]]
+    ) -> List[Tuple[str, int]]:
+        assert False, "Not supported batch"
+        return []
+
+    def create_prompt_batched(
+            self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
+        assert False, "Not supported batch"
+        return []
+
+    def run_llm(self, prompts: List[Dict[str, str]]) -> Tuple[str, int]:
+        # get arbitrary query (they should be the same)
+        query = prompts[0]['query']
+
+        inputs = {
+            k: v.reshape(v.shape[:-2], -1).to(self._device) for k, v in self._tokenizer(
+                [prompt['text'] for prompt in prompts],
+                return_tensors='pt',
+                padding='max_length',
+                truncation=True,
+                max_length=self.max_tokens()
+            )
+        }
+
+        passage_ids = inputs['input_ids']
+        passage_mask = inputs['attention_mask']
 
         with torch.no_grad():
-            for i, batch in enumerate(dataloader):
-                (idx, passage_ids, passage_mask, query) = batch
-                passage_ids = passage_ids.contiguous().view(passage_ids.size(0), -1)
-                passage_mask = passage_mask.contiguous().view(passage_mask.size(0), -1)
+            self._model.reset_score_storage()
 
-                if opt.write_crossattention_scores:
-                    model.reset_score_storage()
+            outputs = self._model.generate(
+                **inputs,
+                max_length=self._answer_maxlength,
+                do_sample=False
+            )
 
-                outputs = model.generate(
-                    input_ids=passage_ids.cuda(),
-                    attention_mask=passage_mask.cuda(),
-                    max_length=opt.answer_maxlength,
-                    do_sample=False
-                )
+        output_length = 0
+        for j in range(outputs.shape[1]):
+            if outputs[0, j] == FiD.ANSWER_EOS_TOKEN:
+                output_length = j
+                break
+        else:
+            output_length = outputs.shape[1]
 
-                # need to zero out scores after EOS token. This is needed when batching results in sequences with different lengths.
-                output_sequence_lengths = []
-                for output in outputs:
-                    length = 0
-                    for token in output:
-                        if token == 1:  # EOS token
-                            break
-                        length += 1
-                    output_sequence_lengths.append(length)
+        query_mask_reader = self._tokenizer(
+            query,
+            max_length=self.max_tokens(),
+            padding="longest",
+            truncation=True,
+            return_tensors="pt",
+            add_special_tokens=False,
+        )['attention_mask'].bool()
 
-                if opt.write_crossattention_scores:
-                    query_mask_reader = (
-                        tokenizer.batch_encode_plus(
-                            query,
-                            max_length=opt.text_maxlength,
-                            padding="longest",
-                            truncation=True,
-                            return_tensors="pt",
-                            add_special_tokens=False,
-                        )["attention_mask"]
-                        .bool()
-                        .cuda()
-                    )
+        with torch.no_grad():
+            crossattention_scores = self._model.get_crossattention_scores(len(prompts),
+                                                                          ids=passage_ids.cuda(self._device),
+                                                                          mask=passage_mask.to(self._device),
+                                                                          mask_query=query_mask_reader.to(self._device),
+                                                                          output_sequence_lengths=[output_length])
+            # only supports normswoquery for now
+            crossattention_score: torch.Tensor = crossattention_scores['normswoquery']
+            sorted, idxes = torch.sort(crossattention_score, dim=-1)
 
-                    crossattention_scores = model.get_crossattention_scores(opt.n_passages,
-                                                                            mask=passage_mask.cuda(),
-                                                                            ids=passage_ids.cuda(),
-                                                                            mask_query=query_mask_reader.cuda(),
-                                                                            output_sequence_lengths=output_sequence_lengths)
+        return " ".join(idxes.detach().cpu()[0].tolist()), output_length + crossattention_score.shape[1]
 
-                for k, o in enumerate(outputs):
-                    example = dataset.data[idx[k]]
-                    if opt.write_crossattention_scores:
-                        for j in range(min(len(example['ctxs']), opt.n_passages)):
-                            for key in crossattention_scores:
-                                example['ctxs'][j][key] = crossattention_scores[key][k, j].item()
-
-    def run_llm(self, prompt: Union[str, List[Dict[str, str]]]) -> Tuple[str, int]:
-        """
-        Run the target language model with a passed in prompt.
-        """
-
-    def create_prompt(self, result: Result, rank_start: int, rank_end: int) -> Tuple[str, int]:
+    def create_prompt(self, result: Result, rank_start: int, rank_end: int) -> Tuple[List[Dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
         """
+        query = result.query.text
+        results = []
 
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
-        """
-        Abstract method to calculate the number of tokens contained in the given prompt.
-        """
+        sum_token = 0
+
+        for i in range(rank_start, rank_end + 1):
+            results.append({
+                'query': query,
+                'text': self._gen_passage(
+                    query,
+                    self.convert_doc_to_prompt_content(result.candidates[i].doc, self.max_tokens())
+                )
+            })
+            sum_token += len(self._tokenizer.encode(results[-1]['text']))
+
+        return results, sum_token
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))
+
+    def cost_per_1k_token(self, input_token: bool) -> float:
+        return 0.
+
+    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+        if current_window_size is None:
+            current_window_size = self._window_size
+        if self._output_token_estimate is not None and self._window_size == current_window_size:
+            return self._output_token_estimate
+        else:
+            output_token_estimate = (
+                    len(self._tokenizer.encode(" > ".join([f"[{i + 1}]" for i in range(current_window_size)]))) - 1
+            )
+            if self._output_token_estimate is None and self._window_size == current_window_size:
+                self._output_token_estimate = output_token_estimate
+
+            return output_token_estimate
+
+    @staticmethod
+    def _gen_passage(query: str, passage: str) -> str:
+        return f"question: {query} context: {passage}"

@@ -1,24 +1,11 @@
-import types
-import torch
-import transformers
-import torch.nn.functional as F
-from torch import nn
-from torch.nn import CrossEntropyLoss
-import numpy as np
 import copy
+import types
 
-from .options import Options
+import torch
+from torch import nn
 
-# TODO CHANGE THIS OPTIONS TO "A NEW OPTION"
-options = Options()
-options.add_reader_options()
-options.add_eval_options()
-opt = options.parse()
-
-if opt.write_crossattention_scores:
-    from .modeling_t5 import T5ForConditionalGeneration, T5Stack
-else:
-    from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
+from .modeling_t5 import T5ForConditionalGeneration as T5CondGenCustom, T5Stack as T5StackCustom
+from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
 
 
 class FiDStack(T5Stack):
@@ -85,14 +72,13 @@ class FiD(T5ForConditionalGeneration):
         r"decoder\.block\.0\.layer\.1\.EncDecAttention\.relative_attention_bias\.weight",
     ]
 
+    ANSWER_EOS_TOKEN = 1
+
     def __init__(self, config):
         super().__init__(config)
         self.model_dim = config.d_model
 
         self.shared = nn.Embedding(config.vocab_size, config.d_model)
-
-        self.config.n_passages = opt.n_passages
-        self.config.bsz = opt.batch_size
 
         encoder_config = copy.deepcopy(config)
         encoder_config.is_decoder = False

@@ -74,14 +74,13 @@ class LiT5ScoreReranker:
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            window_size=window_size,
-            runfile_path=runfile_path,
+            window_size=window_size
         )
         self._reranker = Reranker(agent)
 
     def rerank(
         self,
-        retrieved_results: List[Result],
+        request: Request,
         rank_start: int = 0,
         rank_end: int = 100,
         window_size: int = 20,
@@ -108,11 +107,11 @@ class LiT5ScoreReranker:
             check 'rerank' for implementation details of reranking process.
         """
         return self._reranker.rerank(
-            retrieved_results=retrieved_results,
+            request=request,
             rank_start=rank_start,
             rank_end=rank_end,
             window_size=window_size,
             step=step,
             shuffle_candidates=shuffle_candidates,
-            logging=logging
+            logging=logging,
         )
