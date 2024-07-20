@@ -1,11 +1,27 @@
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 import json
+import os
 import random
-from typing import Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
+from tqdm import tqdm
 from transformers.generation import GenerationConfig
+
+try:
+    from vllm import LLM, SamplingParams
+except:
+    LLM = None
+    SamplingParams = None
 
 from rank_llm.data import Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
@@ -24,6 +40,7 @@ class RankListwiseOSLLM(RankLLM):
         variable_passages: bool = False,
         window_size: int = 20,
         system_message: str = None,
+        vllm_batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using
@@ -44,6 +61,7 @@ class RankListwiseOSLLM(RankLLM):
          - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
+         - vllm_batched (bool, optional): Indicates whether batched inference using VLLM is leveraged. Defaults to False.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -63,8 +81,20 @@ class RankListwiseOSLLM(RankLLM):
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
         # ToDo: Make repetition_penalty configurable
-        self._llm, self._tokenizer = load_model(model, device=device, num_gpus=num_gpus)
-        self._name = name
+        if vllm_batched and LLM is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+            )
+        elif vllm_batched:
+            self._llm = LLM(
+                model, download_dir=os.getenv("HF_HOME"), enforce_eager=False
+            )
+            self._tokenizer = self._llm.get_tokenizer()
+        else:
+            self._llm, self._tokenizer = load_model(
+                model, device=device, num_gpus=num_gpus
+            )
+        self._vllm_batched = vllm_batched
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message
@@ -72,6 +102,27 @@ class RankListwiseOSLLM(RankLLM):
         if num_few_shot_examples > 0:
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
                 self._examples = list(json_file)[1:-1]
+
+    def run_llm_batched(
+        self,
+        prompts: List[str | List[Dict[str, str]]],
+        current_window_size: Optional[int] = None,
+    ) -> List[Tuple[str, int]]:
+        if SamplingParams is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+            )
+        logger.info(f"VLLM Generating!")
+        sampling_params = SamplingParams(
+            temperature=0.0,
+            max_tokens=self.num_output_tokens(current_window_size),
+            min_tokens=self.num_output_tokens(current_window_size),
+        )
+        outputs = self._llm.generate(prompts, sampling_params)
+        return [
+            (output.outputs[0].text, len(output.outputs[0].token_ids))
+            for output in outputs
+        ]
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
@@ -138,6 +189,7 @@ class RankListwiseOSLLM(RankLLM):
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
         query = result.query.text
+        query = self._replace_number(query)
         num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         while True:
@@ -151,7 +203,7 @@ class RankListwiseOSLLM(RankLLM):
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
                 # For Japanese should cut by character: content = content[:int(max_length)]
-                content = self.covert_doc_to_prompt_content(cand.doc, max_length)
+                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 input_context += f"[{rank}] {self._replace_number(content)}\n"
 
             input_context += self._add_post_prompt(query, num)
@@ -175,6 +227,31 @@ class RankListwiseOSLLM(RankLLM):
                     // ((rank_end - rank_start) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)
+
+    def create_prompt_batched(
+        self,
+        results: List[Result],
+        rank_start: int,
+        rank_end: int,
+        batch_size: int = 32,
+    ) -> List[Tuple[str, int]]:
+        def chunks(lst, n):
+            """Yield successive n-sized chunks from lst."""
+            for i in range(0, len(lst), n):
+                yield lst[i : i + n]
+
+        all_completed_prompts = []
+
+        with ThreadPoolExecutor() as executor:
+            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
+                completed_prompts = list(
+                    executor.map(
+                        lambda result: self.create_prompt(result, rank_start, rank_end),
+                        batch,
+                    )
+                )
+                all_completed_prompts.extend(completed_prompts)
+        return all_completed_prompts
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))

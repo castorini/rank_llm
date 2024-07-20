@@ -40,6 +40,7 @@ def retrieve_and_rerank(
     index_path: str = None,
     topics_path: str = None,
     index_type: str = None,
+    vllm_batched: bool = False,
     interactive: bool = False,
     host: str = "http://localhost:8081",
     populate_exec_summary: bool = False,
@@ -90,6 +91,7 @@ def retrieve_and_rerank(
             variable_passages=variable_passages,
             window_size=window_size,
             system_message=system_message,
+            vllm_batched=vllm_batched,
         )
         print(f"Completed loading {model_path}")
 
@@ -123,7 +125,9 @@ def retrieve_and_rerank(
             ]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
-                dataset_name=dataset, retrieval_method=retrieval_method
+                dataset_name=dataset,
+                retrieval_method=retrieval_method,
+                k=top_k_retrieve,
             )
     elif retrieval_mode == RetrievalMode.CUSTOM:
         requests = Retriever.from_custom_index(
@@ -158,40 +162,19 @@ def retrieve_and_rerank(
                 populate_exec_summary=populate_exec_summary,
             )
 
-            if num_passes > 1:
-                requests = [
-                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                    for r in rerank_results
-                ]
-
-        # generate trec_eval file & evaluate for named datasets only
-        if isinstance(dataset, str):
-            file_name = reranker.write_rerank_results(
-                retrieval_method.name,
-                rerank_results,
-                shuffle_candidates,
-                top_k_candidates=top_k_retrieve,
-                pass_ct=None if num_passes == 1 else pass_ct,
-                window_size=window_size,
-                dataset_name=dataset,
-            )
-            if (
-                dataset in TOPICS
-                and dataset not in ["dl22", "dl22-passage", "news"]
-                and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
-            ):
-                print("Evaluating:")
-                EvalFunction.eval(
-                    ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
-                )
-                EvalFunction.eval(
-                    ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
-                )
-                EvalFunction.eval(
-                    ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
-                )
-            else:
-                print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+    reranker = Reranker(agent)
+    for pass_ct in range(num_passes):
+        print(f"Pass {pass_ct + 1} of {num_passes}:")
+        rerank_results = reranker.rerank_batch(
+            requests,
+            rank_end=top_k_retrieve,
+            window_size=min(window_size, top_k_retrieve),
+            shuffle_candidates=shuffle_candidates,
+            logging=print_prompts_responses,
+            step=step_size,
+            vllm_batched=vllm_batched,
+            populate_exec_summary=populate_exec_summary,
+        )
 
     print(f"Reranking with {num_passes} passes complete!")
 

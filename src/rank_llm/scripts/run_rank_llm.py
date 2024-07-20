@@ -21,6 +21,7 @@ def main(args):
     use_azure_openai = args.use_azure_openai
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
+    top_k_rerank = top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
@@ -36,26 +37,29 @@ def main(args):
     step_size = args.step_size
     window_size = args.window_size
     system_message = args.system_message
+    vllm_batched = args.vllm_batched
 
     _ = retrieve_and_rerank(
-        model_path,
-        dataset,
-        retrieval_mode,
-        retrieval_method,
-        top_k_candidates,
-        context_size,
-        device,
-        num_gpus,
-        prompt_mode,
-        num_few_shot_examples,
-        shuffle_candidates,
-        print_prompts_responses,
+        model_path=model_path,
+        dataset=dataset,
+        retrieval_mode=retrieval_mode,
+        retrieval_method=retrieval_method,
+        top_k_retrieve=top_k_candidates,
+        top_k_rerank=top_k_rerank,
+        context_size=context_size,
+        device=device,
+        num_gpus=num_gpus,
+        prompt_mode=prompt_mode,
+        num_few_shot_examples=num_few_shot_examples,
+        shuffle_candidates=shuffle_candidates,
+        print_prompts_responses=print_prompts_responses,
         use_azure_openai=use_azure_openai,
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
         step_size=step_size,
         system_message=system_message,
+        vllm_batched=vllm_batched,
     )
 
 
@@ -84,6 +88,12 @@ if __name__ == "__main__":
         type=int,
         default=100,
         help="the number of top candidates to rerank",
+    )
+    parser.add_argument(
+        "--top_k_rerank",
+        type=int,
+        default=-1,
+        help="the number of top candidates to return from reranking",
     )
     parser.add_argument(
         "--dataset",
@@ -152,6 +162,11 @@ if __name__ == "__main__":
         type=str,
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
+    )
+    parser.add_argument(
+        "--vllm_batched",
+        action="store_true",
+        help="whether to run the model in batches",
     )
     args = parser.parse_args()
     main(args)

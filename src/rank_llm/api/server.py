@@ -1,7 +1,6 @@
 import argparse
-
-import torch
 from flask import Flask, jsonify, request
+import torch
 
 from rank_llm import retrieve_and_rerank
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
@@ -9,7 +8,6 @@ from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-
 """ API URL FORMAT
 
 http://localhost:{host_name}/api/model/{model_name}/index/{index_name}/{retriever_base_host}?query={query}&hits_retriever={top_k_retriever}&hits_reranker={top_k_reranker}&qid={qid}&num_passes={num_passes}&retrieval_method={retrieval_method}

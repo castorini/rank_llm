@@ -155,6 +155,7 @@ def download_cached_hits(query_name, force=False, verbose=True, mirror=None):
         raise ValueError(f"Unrecognized query name {query_name}")
     query_md5 = HITS_INFO[query_name]["md5"]
     for url in HITS_INFO[query_name]["urls"]:
+        print(f"Trying to download cached retrieved hits at {url}...")
         try:
             hits_dir = query_name.rsplit("/", 2)[-2]
             return download_and_unpack_hits(
