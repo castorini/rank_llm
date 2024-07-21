@@ -1,12 +1,24 @@
 from datetime import datetime
 from pathlib import Path
 from typing import List
+from enum import Enum
 
 from tqdm import tqdm
 
 from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank.rankllm import RankLLM
 
+class OperationMode(Enum):
+    STANDARD = 0
+    VLLM = 1
+    T5 = 2
+    
+    @classmethod
+    def from_int(cls, val):
+        for mode in cls:
+            if mode.value == val:
+                return mode
+        raise ValueError(f"{val} is not a valid {cls.__name__}")
 
 class Reranker:
     def __init__(self, agent: RankLLM) -> None:
@@ -21,7 +33,7 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        vllm_batched: bool = False,
+        operation_mode: OperationMode = OperationMode.STANDARD,
         populate_exec_summary: bool = True,
     ) -> List[Result]:
         """
@@ -44,11 +56,26 @@ class Reranker:
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
-        if vllm_batched:
-            for i in range(1, len(requests)):
-                assert len(requests[0].candidates) == len(
-                    requests[i].candidates
-                ), "Batched requests must have the same number of candidates"
+
+        if operation_mode == OperationMode.STANDARD:
+            results = []
+            for request in tqdm(requests):
+                result = self._agent.sliding_windows(
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    window_size=window_size,
+                    step=step,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_exec_summary=populate_exec_summary,
+                )
+                results.append(result)
+            return results
+        elif operation_mode == OperationMode.VLLM:
+            if len(set([len(req.candidates) for req in requests])) !=1:
+                raise ValueError("Batched requests must have the same number of candidates")
+            
             return self._agent.sliding_windows_batched(
                 requests,
                 rank_start=max(rank_start, 0),
@@ -60,20 +87,9 @@ class Reranker:
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
             )
-        results = []
-        for request in tqdm(requests):
-            result = self._agent.sliding_windows(
-                request,
-                rank_start=max(rank_start, 0),
-                rank_end=min(rank_end, len(request.candidates)),
-                window_size=window_size,
-                step=step,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-                populate_exec_summary=populate_exec_summary,
-            )
-            results.append(result)
-        return results
+        else: # T5 Operation mode
+            # TODO
+            return ()
 
     def rerank(
         self,

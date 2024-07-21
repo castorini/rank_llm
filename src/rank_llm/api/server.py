@@ -127,7 +127,7 @@ def create_app(model, port, use_azure_openai=False):
                 default_agent=default_agent,
                 num_passes=num_passes,
                 retrieval_method=_retrieval_method,
-                print_prompts_responses=True,  # logging
+                print_prompts_responses=False
             )
 
             # set the default reranking agent to the most recently used reranking agent

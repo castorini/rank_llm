@@ -6,7 +6,7 @@ from rank_llm.rerank.identity_reranker import IdentityReranker
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from rank_llm.rerank.reranker import Reranker
+from rank_llm.rerank.reranker import Reranker, OperationMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
 from rank_llm.retrieve.service_retriever import ServiceRetriever
@@ -37,7 +37,7 @@ def retrieve_and_rerank(
     index_path: str = None,
     topics_path: str = None,
     index_type: str = None,
-    vllm_batched: bool = False,
+    operation_mode: int = 0,
     interactive: bool = False,
     host: str = "http://localhost:8081",
     populate_exec_summary: bool = False,
@@ -88,7 +88,7 @@ def retrieve_and_rerank(
             variable_passages=variable_passages,
             window_size=window_size,
             system_message=system_message,
-            vllm_batched=vllm_batched,
+            vllm_batched=OperationMode.from_int(operation_mode)==OperationMode.VLLM,
         )
         print(f"Completed loading {model_path}")
 
@@ -154,7 +154,7 @@ def retrieve_and_rerank(
                 shuffle_candidates=shuffle_candidates,
                 logging=print_prompts_responses,
                 step=step_size,
-                vllm_batched=False,
+                operation_mode=OperationMode.from_int(operation_mode),
                 populate_exec_summary=populate_exec_summary,
             )
 

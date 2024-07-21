@@ -1,13 +1,16 @@
 import argparse
 import os
 import sys
+import torch
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-import torch
+STANDARD = 0
+VLLM = 1
+T5 = 2
 
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
@@ -38,6 +41,16 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
+    t5 = args.t5
+
+    operation_mode=STANDARD
+    if vllm_batched and t5:
+        raise ValueError("t5 and vllm_batched cannot both be enabled")
+    elif vllm_batched:
+        operation_mode=VLLM
+    elif t5:
+        operation_mode=T5
+        
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -59,7 +72,7 @@ def main(args):
         window_size=window_size,
         step_size=step_size,
         system_message=system_message,
-        vllm_batched=vllm_batched,
+        operation_mode=operation_mode
     )
 
 
@@ -167,6 +180,11 @@ if __name__ == "__main__":
         "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
+    )
+    parser.add_argument(
+        "--t5",
+        action="store_true",
+        help="whether to run in t5 operation mode"
     )
     args = parser.parse_args()
     main(args)
