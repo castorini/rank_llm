@@ -467,17 +467,22 @@ class RankLLM(ABC):
             Items not mentioned in the permutation string remain in their original sequence but are moved after
             the permuted items.
         """
+
+        # Parse and normalize the permutation indices
         response = self._clean_response(permutation)
         response = [int(x) - 1 for x in response.split()]
         response = self._remove_duplicate(response)
+
+        # Extract the relevant candidates and create a mapping for new order
         cut_range = copy.deepcopy(result.candidates[rank_start:rank_end])
         original_rank = [tt for tt in range(len(cut_range))]
         response = [ss for ss in response if ss in original_rank]
         response = response + [tt for tt in original_rank if tt not in response]
+
+        # Update candidates in the new order
         for j, x in enumerate(response):
             result.candidates[j + rank_start] = copy.deepcopy(cut_range[x])
-            if result.candidates[j + rank_start].score:
-                result.candidates[j + rank_start].score = cut_range[j].score
+
         return result
 
     def _replace_number(self, s: str) -> str:

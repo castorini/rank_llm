@@ -95,6 +95,7 @@ class RankListwiseOSLLM(RankLLM):
                 model, device=device, num_gpus=num_gpus
             )
         self._vllm_batched = vllm_batched
+        self._name = name
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message

@@ -133,8 +133,6 @@ def retrieve_and_rerank(
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
-    else:
-        raise ValueError(f"Invalid retrieval mode: {retrieval_mode}")
     print(f"Retrieval complete!")
 
     # Reranking
@@ -159,25 +157,11 @@ def retrieve_and_rerank(
                 shuffle_candidates=shuffle_candidates,
                 logging=print_prompts_responses,
                 step=step_size,
+                vllm_batched=False,
                 populate_exec_summary=populate_exec_summary,
             )
 
-    reranker = Reranker(agent)
-    for pass_ct in range(num_passes):
-        print(f"Pass {pass_ct + 1} of {num_passes}:")
-        rerank_results = reranker.rerank_batch(
-            requests,
-            rank_end=top_k_retrieve,
-            window_size=min(window_size, top_k_retrieve),
-            shuffle_candidates=shuffle_candidates,
-            logging=print_prompts_responses,
-            step=step_size,
-            vllm_batched=vllm_batched,
-            populate_exec_summary=populate_exec_summary,
-        )
-
     print(f"Reranking with {num_passes} passes complete!")
-
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]
 

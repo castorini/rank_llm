@@ -8,6 +8,8 @@ from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
+from rank_llm.retrieve.retriever import RetrievalMode
+
 """ API URL FORMAT
 
 http://localhost:{host_name}/api/model/{model_name}/index/{index_name}/{retriever_base_host}?query={query}&hits_retriever={top_k_retriever}&hits_reranker={top_k_reranker}&qid={qid}&num_passes={num_passes}&retrieval_method={retrieval_method}
@@ -112,6 +114,7 @@ def create_app(model, port, use_azure_openai=False):
             # calls Anserini retriever API and reranks
             (response, agent) = retrieve_and_rerank.retrieve_and_rerank(
                 dataset=dataset,
+                retrieval_mode=RetrievalMode.DATASET,
                 query=query,
                 model_path=model_path,
                 host="http://localhost:" + retriever_host,
@@ -123,6 +126,7 @@ def create_app(model, port, use_azure_openai=False):
                 default_agent=default_agent,
                 num_passes=num_passes,
                 retrieval_method=_retrieval_method,
+                print_prompts_responses=True, # logging
             )
 
             # set the default reranking agent to the most recently used reranking agent
