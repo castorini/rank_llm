@@ -1,6 +1,7 @@
 import argparse
-from flask import Flask, jsonify, request
+
 import torch
+from flask import Flask, jsonify, request
 
 from rank_llm import retrieve_and_rerank
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
@@ -126,7 +127,7 @@ def create_app(model, port, use_azure_openai=False):
                 default_agent=default_agent,
                 num_passes=num_passes,
                 retrieval_method=_retrieval_method,
-                print_prompts_responses=True, # logging
+                print_prompts_responses=True,  # logging
             )
 
             # set the default reranking agent to the most recently used reranking agent
