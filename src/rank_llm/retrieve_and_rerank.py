@@ -12,6 +12,7 @@ from rank_llm.retrieve.retriever import RetrievalMode, Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 from rank_llm.rerank.rankllm import RankLLM
 from rank_llm.rerank.rank_pointwise_reranker import RankPointwise
+from rank_llm.rerank.rank_pairwise_reranker import RankPairwise
 
 def retrieve_and_rerank(
     model_path: str,
@@ -70,7 +71,7 @@ def retrieve_and_rerank(
             num_few_shot_examples=num_few_shot_examples,
         )
     elif "duo" in model_path.lower():
-        agent = RankLLM(
+        agent = RankPairwise(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
