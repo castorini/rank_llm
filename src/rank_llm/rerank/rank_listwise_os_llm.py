@@ -5,12 +5,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-import json
 import os
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import random
-from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
+from tqdm import tqdm
 import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
@@ -41,6 +42,7 @@ class RankListwiseOSLLM(RankLLM):
         window_size: int = 20,
         system_message: str = None,
         vllm_batched: bool = False,
+        batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using
@@ -89,6 +91,13 @@ class RankListwiseOSLLM(RankLLM):
             self._llm = LLM(
                 model, download_dir=os.getenv("HF_HOME"), enforce_eager=False
             )
+        if batched and LLM is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+            )
+        elif batched:
+            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"),
+                            enforce_eager=False)
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -96,6 +105,7 @@ class RankListwiseOSLLM(RankLLM):
             )
         self._vllm_batched = vllm_batched
         self._name = name
+        self._batched = batched
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message

@@ -150,20 +150,35 @@ class SafeOpenai(RankLLM):
     def _get_prefix_for_rank_gpt_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
+        # APEER
         return [
             {
                 "role": "system",
-                "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+                "content": "You are RankGPT, an advanced assistant specialized in ranking passages by their relevance to a given query.",
             },
             {
                 "role": "user",
-                "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+                "content": f"You will be given {num} passages, marked with a numerical identifier []. Rank these passages according to how relevant they are to the query: {query}."
             },
-            {"role": "assistant", "content": "Okay, please provide the passages."},
+            {"role": "assistant", "content": "Okay, please provide the passages."}
         ]
+        
+        # return [
+        #     {
+        #         "role": "system",
+        #         "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        #     },
+        #     {
+        #         "role": "user",
+        #         "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+        #     },
+        #     {"role": "assistant", "content": "Okay, please provide the passages."},
+        # ]
 
     def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
-        return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
+        # APEER
+        return f"Search Query: {query}.\nArrange the {num} passages above in order of relevance to the search query, from most to least relevant. Use the numerical identifiers for ranking. The format should be [] > [], e.g., [1] > [2]. Only provide the ranking results without any additional text or explanation."
+        # return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
     def _get_prefix_for_rank_gpt_apeer_prompt(
         self, query: str, num: int
@@ -213,7 +228,6 @@ class SafeOpenai(RankLLM):
 
     def run_llm_batched(self):
         pass
-
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:

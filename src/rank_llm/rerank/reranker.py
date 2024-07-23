@@ -35,6 +35,7 @@ class Reranker:
         logging: bool = False,
         operation_mode: OperationMode = OperationMode.STANDARD,
         populate_exec_summary: bool = True,
+        batched: bool = False,
     ) -> List[Result]:
         """
         Reranks a list of requests using the RankLLM agent.
@@ -52,6 +53,7 @@ class Reranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
             populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
+            batched (bool, optional): Whether to use batched processing. Defaults to False.
 
         Returns:
             List[Result]: A list containing the reranked candidates.
@@ -87,9 +89,22 @@ class Reranker:
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
             )
+        
         else: # T5 Operation mode
-            # TODO
-            return ()
+            if batched:
+                for i in range(1, len(requests)):
+                    assert len(requests[0]) == len(requests[i]), "Batched requests must have the same number of candidates"
+                return self._agent.sliding_windows_batched(
+                    requests,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(
+                        rank_end, len(requests[0].candidates)
+                    ),  # TODO: Fails arbitrary hit sizes
+                    window_size=window_size,
+                    step=step,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                )
 
     def rerank(
         self,

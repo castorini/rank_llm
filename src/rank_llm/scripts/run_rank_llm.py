@@ -51,6 +51,7 @@ def main(args):
     elif t5:
         operation_mode=T5
         
+    batched = args.batched
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -59,6 +60,7 @@ def main(args):
         retrieval_method=retrieval_method,
         top_k_retrieve=top_k_candidates,
         top_k_rerank=top_k_rerank,
+        top_k_candidates=top_k_candidates,
         context_size=context_size,
         device=device,
         num_gpus=num_gpus,
@@ -73,6 +75,7 @@ def main(args):
         step_size=step_size,
         system_message=system_message,
         operation_mode=operation_mode
+        batched=batched,
     )
 
 
@@ -185,6 +188,11 @@ if __name__ == "__main__":
         "--t5",
         action="store_true",
         help="whether to run in t5 operation mode"
+    )
+    parser.add_argument(
+        "--batched",
+        action="store_true",
+        help="whether to run the model in batches",
     )
     args = parser.parse_args()
     main(args)

@@ -10,7 +10,9 @@ from rank_llm.rerank.reranker import Reranker, OperationMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode, Retriever
 from rank_llm.retrieve.service_retriever import ServiceRetriever
-
+from rank_llm.rerank.rankllm import RankLLM
+from rank_llm.rerank.rank_pointwise_reranker import RankPointwise
+from rank_llm.rerank.rank_pairwise_reranker import RankPairwise
 
 def retrieve_and_rerank(
     model_path: str,
@@ -42,6 +44,7 @@ def retrieve_and_rerank(
     host: str = "http://localhost:8081",
     populate_exec_summary: bool = False,
     default_agent: RankLLM = None,
+    batched: bool = False,
 ):
     """Retrieve candidates using Anserini API and rerank them
 
@@ -89,9 +92,23 @@ def retrieve_and_rerank(
             window_size=window_size,
             system_message=system_message,
             vllm_batched=OperationMode.from_int(operation_mode)==OperationMode.VLLM,
+            batched=batched,
         )
         print(f"Completed loading {model_path}")
-
+    elif "mono" in model_path.lower():
+        agent = RankPointwise(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+        )
+    elif "duo" in model_path.lower():
+        agent = RankPairwise(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+        )
     elif model_path.lower() in ["unspecified", "rank_random", "rank_identity"]:
         # Use no reranker
         agent = None

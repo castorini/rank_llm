@@ -148,6 +148,7 @@ class Retriever:
             query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             if not candidates_file.is_file():
                 try:
+                    # TODO: Fix caching
                     file_path = download_cached_hits(query_name)
                     with open(file_path, "r") as f:
                         retrieved_results = []
