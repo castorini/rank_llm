@@ -68,7 +68,7 @@ class RankLLM(ABC):
         pass
 
     @abstractmethod
-    def run_llm(self, prompt: Union[str, List[Dict[str, str]]]) -> Tuple[str, int]:
+    def run_llm(self, prompt: Union[str, List[Dict[str, str]]], **kwargs) -> Tuple[str, int]:
         """
         Abstract method to run the target language model with a passed in prompt.
 

@@ -5,6 +5,7 @@ from rank_llm.data import Query, Request
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.api_keys import get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.identity_reranker import IdentityReranker
+from rank_llm.rerank.rank_fid import RankFiDScore, RankFiDDistill
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
@@ -82,7 +83,7 @@ def retrieve_and_rerank(
             system_message=system_message,
             vllm_batched=vllm_batched,
         )
-    elif "fiddistill" in model_path.lower():
+    elif "lit5-distill" in model_path.lower():
         agent = RankFiDDistill(
             model=model_path,
             context_size=context_size,
@@ -90,7 +91,7 @@ def retrieve_and_rerank(
             window_size=window_size,
             device=device,
         )
-    elif "fidscore" in model_path.lower():
+    elif "lit5-score" in model_path.lower():
         agent = RankFiDScore(
             model=model_path,
             context_size=context_size,
