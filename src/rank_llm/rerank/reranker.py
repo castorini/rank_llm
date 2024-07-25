@@ -11,7 +11,7 @@ from rank_llm.rerank.rankllm import RankLLM
 class OperationMode(Enum):
     STANDARD = 0
     VLLM = 1
-    T5 = 2
+    MONO_DUO = 2
     
     @classmethod
     def from_int(cls, val):
@@ -33,7 +33,6 @@ class Reranker:
         step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        operation_mode: OperationMode = OperationMode.STANDARD,
         populate_exec_summary: bool = True,
         batched: bool = False,
     ) -> List[Result]:
@@ -60,20 +59,30 @@ class Reranker:
         """
 
         if operation_mode == OperationMode.STANDARD:
-            results = []
-            for request in tqdm(requests):
-                result = self._agent.sliding_windows(
-                    request,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(rank_end, len(request.candidates)),
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                results.append(result)
-            return results
+            # results = []
+            # for request in tqdm(requests):
+            #     result = self._agent.sliding_windows(
+            #         request,
+            #         rank_start=max(rank_start, 0),
+            #         rank_end=min(rank_end, len(request.candidates)),
+            #         window_size=window_size,
+            #         step=step,
+            #         shuffle_candidates=shuffle_candidates,
+            #         logging=logging,
+            #         populate_exec_summary=populate_exec_summary,
+            #     )
+            #     results.append(result)
+            # return results
+            return self._agent.sliding_windows_batched(
+                requests,
+                rank_start=max(rank_start, 0),
+                rank_end=min(rank_end, len(requests[0].candidates)),
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+                populate_exec_summary=populate_exec_summary,
+            )
         elif operation_mode == OperationMode.VLLM:
             if len(set([len(req.candidates) for req in requests])) !=1:
                 raise ValueError("Batched requests must have the same number of candidates")
@@ -89,22 +98,21 @@ class Reranker:
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
             )
-        
-        else: # T5 Operation mode
-            if batched:
-                for i in range(1, len(requests)):
-                    assert len(requests[0]) == len(requests[i]), "Batched requests must have the same number of candidates"
-                return self._agent.sliding_windows_batched(
-                    requests,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(
-                        rank_end, len(requests[0].candidates)
-                    ),  # TODO: Fails arbitrary hit sizes
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                )
+        elif operation_mode == OperationMode.MONO_DUO:
+            if len(set([len(req.candidates) for req in requests])) !=1:
+                raise ValueError("Batched requests must have the same number of candidates")
+            
+            return self._agent.sliding_windows_batched(
+                requests,
+                rank_start=max(rank_start, 0),
+                rank_end=min(
+                    rank_end, len(requests[0].candidates)
+                ),  # TODO: Fails arbitrary hit sizes
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+            )
 
     def rerank(
         self,

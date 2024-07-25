@@ -36,14 +36,6 @@ class ServiceRetriever:
                 f"{retrieval_method} is not supported for ServiceRetriever. Only BM25 is currently supported."
             )
 
-        if not retrieval_method:
-            raise "Please provide a retrieval method."
-
-        if retrieval_method == RetrievalMethod.UNSPECIFIED:
-            raise ValueError(
-                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
-            )
-
     def retrieve(
         self,
         dataset: str,

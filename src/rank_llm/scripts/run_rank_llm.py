@@ -10,7 +10,7 @@ sys.path.append(parent)
 
 STANDARD = 0
 VLLM = 1
-T5 = 2
+MONO_DUO = 2
 
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
@@ -41,18 +41,16 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
-    t5 = args.t5
+    mono_duo = args.mono_duo
 
     operation_mode=STANDARD
-    if vllm_batched and t5:
-        raise ValueError("t5 and vllm_batched cannot both be enabled")
+    if vllm_batched and mono_duo:
+        raise ValueError("mono_duo and vllm_batched cannot both be enabled")
     elif vllm_batched:
         operation_mode=VLLM
-    elif t5:
-        operation_mode=T5
+    elif mono_duo:
+        operation_mode=MONO_DUO
         
-    batched = args.batched
-
     _ = retrieve_and_rerank(
         model_path=model_path,
         dataset=dataset,
@@ -75,7 +73,6 @@ def main(args):
         step_size=step_size,
         system_message=system_message,
         operation_mode=operation_mode
-        batched=batched,
     )
 
 
@@ -185,14 +182,9 @@ if __name__ == "__main__":
         help="whether to run the model in batches",
     )
     parser.add_argument(
-        "--t5",
+        "--mono_duo",
         action="store_true",
-        help="whether to run in t5 operation mode"
-    )
-    parser.add_argument(
-        "--batched",
-        action="store_true",
-        help="whether to run the model in batches",
+        help="whether to run in mono_duo operation mode"
     )
     args = parser.parse_args()
     main(args)

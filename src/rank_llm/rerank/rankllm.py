@@ -157,6 +157,7 @@ class RankLLM(ABC):
         rank_start: int,
         rank_end: int,
         logging: bool = False,
+        populate_exec_summary: bool = False,
     ) -> List[Result]:
         """
         Runs the permutation pipeline on a batch of result objects within the passed in rank range.
@@ -189,9 +190,10 @@ class RankLLM(ABC):
             permutation, out_token_count = batched_results[index]
             if logging:
                 logger.debug(f"output: {permutation}")
-            ranking_exec_info = RankingExecInfo(
-                prompt, permutation, in_token_count, out_token_count
-            )
+            if populate_exec_summary:
+                ranking_exec_info = RankingExecInfo(
+                    prompt, permutation, in_token_count, out_token_count
+                )
             if result.ranking_exec_summary is None:
                 result.ranking_exec_summary = []
             result.ranking_exec_summary.append(ranking_exec_info)
@@ -266,11 +268,12 @@ class RankLLM(ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        populate_exec_summary: bool = False,
     ) -> List[Result]:
         """
         Applies the sliding window algorithm to the reranking process for a batch of result objects.
         Args:
-            retrieved_results (List[Request]): The list of request objects to process.
+            requests (List[Request]): The list of request objects to process.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
@@ -296,10 +299,11 @@ class RankLLM(ABC):
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
         # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
         while end_pos > rank_start and start_pos + step != rank_start:
-            logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
+            if logging: 
+                logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
             rerank_results = self.permutation_pipeline_batched(
-                rerank_results, start_pos, end_pos, logging
+                rerank_results, start_pos, end_pos, logging, populate_exec_summary
             )
             end_pos = end_pos - step
             start_pos = start_pos - step

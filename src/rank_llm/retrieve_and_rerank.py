@@ -44,7 +44,6 @@ def retrieve_and_rerank(
     host: str = "http://localhost:8081",
     populate_exec_summary: bool = False,
     default_agent: RankLLM = None,
-    batched: bool = False,
 ):
     """Retrieve candidates using Anserini API and rerank them
 
@@ -52,7 +51,7 @@ def retrieve_and_rerank(
         - List of top_k_rerank candidates
     """
 
-    model_full_path = ""
+    model_path = model_path.lower()
 
     # Use the default rerank agent
     if interactive and default_agent is not None:
@@ -70,18 +69,17 @@ def retrieve_and_rerank(
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
-    elif "vicuna" in model_path.lower() or "zephyr" in model_path.lower():
+    elif "vicuna" in model_path or "zephyr" in model_path:
         # RankVicuna or RankZephyr model suite
-        if model_path.lower() == "rank_zephyr":
-            model_full_path = "castorini/rank_zephyr_7b_v1_full"
-        elif model_path.lower() == "rank_vicuna":
-            model_full_path = "castorini/rank_vicuna_7b_v1"
-        else:
-            model_full_path = model_path
         print(f"Loading {model_path} ...")
 
+        model_full_paths = {
+            "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
+            "rank_vicuna": "castorini/rank_vicuna_7b_v1"
+        }
+
         agent = RankListwiseOSLLM(
-            model=model_full_path,
+            model= model_full_paths[model_path] if model_path in model_full_paths else model_path,
             name=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
@@ -92,24 +90,24 @@ def retrieve_and_rerank(
             window_size=window_size,
             system_message=system_message,
             vllm_batched=OperationMode.from_int(operation_mode)==OperationMode.VLLM,
-            batched=batched,
         )
+
         print(f"Completed loading {model_path}")
-    elif "mono" in model_path.lower():
+    elif "mono" in model_path:
         agent = RankPointwise(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif "duo" in model_path.lower():
+    elif "duo" in model_path:
         agent = RankPairwise(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
         )
-    elif model_path.lower() in ["unspecified", "rank_random", "rank_identity"]:
+    elif model_path in ["unspecified", "rank_random", "rank_identity"]:
         # Use no reranker
         agent = None
     else:
@@ -171,7 +169,6 @@ def retrieve_and_rerank(
                 shuffle_candidates=shuffle_candidates,
                 logging=print_prompts_responses,
                 step=step_size,
-                operation_mode=OperationMode.from_int(operation_mode),
                 populate_exec_summary=populate_exec_summary,
             )
 

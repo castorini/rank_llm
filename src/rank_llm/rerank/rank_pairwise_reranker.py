@@ -5,29 +5,24 @@ from functools import cmp_to_key
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-import os
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import random
 from typing import Dict, List, Optional, Tuple
 
 from tqdm import tqdm
 import torch
-from fastchat.model import get_conversation_template, load_model
-from ftfy import fix_text
 from transformers.generation import GenerationConfig
-from rank_llm.data import RankingExecInfo, Request, Result, Candidate
+from rank_llm.data import Request, Result, Candidate
 
 
 try:
-    from vllm import LLM, SamplingParams
+    from vllm import SamplingParams
 except:
     LLM = None
     SamplingParams = None
 
 from rank_llm.data import Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from transformers import AutoTokenizer, AutoModel, T5ForConditionalGeneration, T5Tokenizer
+from transformers import T5ForConditionalGeneration, T5Tokenizer
 
 
 class RankPairwise(RankLLM):
@@ -293,5 +288,5 @@ class RankPairwise(RankLLM):
         )
 
         return rerank_result
-
+    
     

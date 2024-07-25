@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 import os
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import random
 from typing import Dict, List, Optional, Tuple
 
@@ -42,12 +42,10 @@ class RankListwiseOSLLM(RankLLM):
         window_size: int = 20,
         system_message: str = None,
         vllm_batched: bool = False,
-        batched: bool = False,
     ) -> None:
         """
-         Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using
-         a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage
-         handling, and custom system messages for generating prompts.
+         Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
+         RankListWiseOSLLM uses the default implementations for sliding_window
 
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
@@ -91,13 +89,6 @@ class RankListwiseOSLLM(RankLLM):
             self._llm = LLM(
                 model, download_dir=os.getenv("HF_HOME"), enforce_eager=False
             )
-        if batched and LLM is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
-            )
-        elif batched:
-            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"),
-                            enforce_eager=False)
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -105,7 +96,6 @@ class RankListwiseOSLLM(RankLLM):
             )
         self._vllm_batched = vllm_batched
         self._name = name
-        self._batched = batched
         self._variable_passages = variable_passages
         self._window_size = window_size
         self._system_message = system_message
