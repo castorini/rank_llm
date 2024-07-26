@@ -1,15 +1,19 @@
 import time
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
-
 import openai
 import tiktoken
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
+from tqdm import tqdm
 
-from rank_llm.data import Result
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
+from rank_llm.data import Result, Request
+from rank_llm.rerank.listwise.listwise_rankllm import PromptMode, ListwiseRankLLM
 
+class CompletionMode(Enum):
+    UNSPECIFIED = 0
+    CHAT = 1
+    TEXT = 2
 
-class SafeOpenai(RankLLM):
+class SafeOpenai(ListwiseRankLLM):
     def __init__(
         self,
         model: str,
@@ -51,7 +55,7 @@ class SafeOpenai(RankLLM):
         - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
-        super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
+        super().__init__(model, context_size, prompt_mode, num_few_shot_examples, window_size)
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
@@ -65,7 +69,6 @@ class SafeOpenai(RankLLM):
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT}, {PromptMode.RANK_GPT_APEER} or {PromptMode.LRL}."
             )
 
-        self._window_size = window_size
         self._output_token_estimate = None
         self._keys = keys
         self._cur_key_id = key_start_id or 0
@@ -81,10 +84,33 @@ class SafeOpenai(RankLLM):
             openai.api_base = api_base
             self.use_azure_ai = True
 
-    class CompletionMode(Enum):
-        UNSPECIFIED = 0
-        CHAT = 1
-        TEXT = 2
+    def rerank_batch(
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> List[Result]:
+        window_size: int = kwargs.get('window_size', 20)
+        step: int = kwargs.get('step', 10)
+        populate_exec_summary: bool = kwargs.get('populate_exec_summary', False)
+
+        results = []
+        for request in tqdm(requests):
+            result = self.sliding_windows(
+                request,
+                rank_start=max(rank_start, 0),
+                rank_end=min(rank_end, len(request.candidates)),
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+                populate_exec_summary=populate_exec_summary,
+            )
+            results.append(result)
+        return results
 
     def _call_completion(
         self,
@@ -149,20 +175,35 @@ class SafeOpenai(RankLLM):
     def _get_prefix_for_rank_gpt_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
+        # APEER
         return [
             {
                 "role": "system",
-                "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+                "content": "You are RankGPT, an advanced assistant specialized in ranking passages by their relevance to a given query.",
             },
             {
                 "role": "user",
-                "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+                "content": f"You will be given {num} passages, marked with a numerical identifier []. Rank these passages according to how relevant they are to the query: {query}."
             },
-            {"role": "assistant", "content": "Okay, please provide the passages."},
+            {"role": "assistant", "content": "Okay, please provide the passages."}
         ]
+        
+        # return [
+        #     {
+        #         "role": "system",
+        #         "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        #     },
+        #     {
+        #         "role": "user",
+        #         "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+        #     },
+        #     {"role": "assistant", "content": "Okay, please provide the passages."},
+        # ]
 
     def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
-        return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
+        # APEER
+        return f"Search Query: {query}.\nArrange the {num} passages above in order of relevance to the search query, from most to least relevant. Use the numerical identifiers for ranking. The format should be [] > [], e.g., [1] > [2]. Only provide the ranking results without any additional text or explanation."
+        # return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
 
     def _get_prefix_for_rank_gpt_apeer_prompt(
         self, query: str, num: int
@@ -212,7 +253,6 @@ class SafeOpenai(RankLLM):
 
     def run_llm_batched(self):
         pass
-
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
@@ -346,3 +386,6 @@ class SafeOpenai(RankLLM):
         }
         model_key = "gpt-3.5" if "gpt-3" in self._model else "gpt-4"
         return cost_dict[(model_key, self._context_size)]
+
+    def get_name(self) -> str:
+        return self._model

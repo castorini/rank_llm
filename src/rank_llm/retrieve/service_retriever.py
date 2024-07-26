@@ -36,14 +36,6 @@ class ServiceRetriever:
                 f"{retrieval_method} is not supported for ServiceRetriever. Only BM25 is currently supported."
             )
 
-        if not retrieval_method:
-            raise "Please provide a retrieval method."
-
-        if retrieval_method == RetrievalMethod.UNSPECIFIED:
-            raise ValueError(
-                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
-            )
-
     def retrieve(
         self,
         dataset: str,
@@ -68,7 +60,7 @@ class ServiceRetriever:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
 
-        url = f"{host}/api/index/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
+        url = f"{host}/api/collection/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
 
         try:
             response = requests.get(url, timeout=timeout)

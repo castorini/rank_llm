@@ -1,15 +1,14 @@
 import argparse
 import os
 import sys
+import torch
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-import torch
-
-from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode
 from rank_llm.retrieve.topics_dict import TOPICS
@@ -38,7 +37,7 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
-
+        
     _ = retrieve_and_rerank(
         model_path=model_path,
         dataset=dataset,

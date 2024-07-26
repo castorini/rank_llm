@@ -8,7 +8,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
-from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
 
 
 def main(args):

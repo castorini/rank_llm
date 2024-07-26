@@ -12,7 +12,6 @@ import argparse
 import json
 import os
 
-
 def convert_json_to_jsonl(input_file, output_file):
     output_dir = os.path.dirname(output_file)
     if output_dir and not os.path.exists(output_dir):

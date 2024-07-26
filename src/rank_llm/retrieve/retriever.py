@@ -8,8 +8,8 @@ from dacite import from_dict
 
 from rank_llm.data import Request
 from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_llm.retrieve.repo_info import HITS_INFO
 from rank_llm.retrieve.utils import compute_md5, download_cached_hits
+from rank_llm.retrieve.repo_info import HITS_INFO
 
 
 class RetrievalMode(Enum):
@@ -65,12 +65,6 @@ class Retriever:
         """
         if not dataset_name:
             raise ValueError("Please provide name of the dataset.")
-        if not isinstance(dataset_name, str):
-            raise ValueError(
-                f"Invalid dataset format: {dataset_name}. Expected a string representing name of the dataset."
-            )
-        if not retrieval_method:
-            raise "Please provide a retrieval method."
         if retrieval_method == RetrievalMethod.UNSPECIFIED:
             raise ValueError(
                 f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."

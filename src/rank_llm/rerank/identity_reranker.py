@@ -3,13 +3,9 @@ import random
 from typing import List
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank.reranker import Reranker
 
 
-class IdentityReranker(Reranker):
-    def __init__(self):
-        # No reranking agent is required.
-        super().__init__(None)
+class IdentityReranker():
 
     def rerank_batch(
         self,
@@ -19,7 +15,7 @@ class IdentityReranker(Reranker):
         shuffle_candidates: bool = False,
     ) -> List[Result]:
         """
-        A trivial reranker that returns a subsection of the retireved candidates list as-is or shuffled.
+        A trivial reranker that returns a subsection of the retrieved candidates list as-is or shuffled.
 
         Args:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.
