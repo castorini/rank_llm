@@ -1,17 +1,21 @@
 from typing import Any, Dict, List, Union
 
 from rank_llm.data import Query, Request
-from rank_llm.rerank.listwise.gpt.api_keys import get_azure_openai_args, get_openai_api_key
-from rank_llm.rerank.identity_reranker import IdentityReranker
-from rank_llm.rerank.listwise.gpt.rank_gpt import SafeOpenai
-from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.retriever import RetrievalMode, Retriever
-from rank_llm.retrieve.service_retriever import ServiceRetriever
+from rank_llm.rerank import IdentityReranker, RankLLM
+from rank_llm.rerank.listwise import (
+    PromptMode,
+    RankListwiseOSLLM,
+    SafeOpenai,
+    get_azure_openai_args,
+    get_openai_api_key,
+)
+from rank_llm.retrieve import (
+    RetrievalMethod,
+    RetrievalMode,
+    Retriever,
+    ServiceRetriever,
+)
 
-from rank_llm.retrieve.topics_dict import TOPICS
-from rank_llm.rerank.rankllm import RankLLM
 
 def retrieve_and_rerank(
     model_path: str,
@@ -40,7 +44,16 @@ def retrieve_and_rerank(
 
     # Retrieve initial candidates
     print(f"Retrieving top {top_k_retrieve} passages...")
-    requests = retrieve(dataset, top_k_retrieve, interactive, retrieval_mode, retrieval_method, query, qid, **kwargs)
+    requests = retrieve(
+        dataset,
+        top_k_retrieve,
+        interactive,
+        retrieval_mode,
+        retrieval_method,
+        query,
+        qid,
+        **kwargs,
+    )
     print(f"Retrieval complete!")
 
     # Reranking stage
@@ -73,17 +86,18 @@ def retrieve_and_rerank(
         rr.candidates = rr.candidates[:top_k_rerank]
     return (rerank_results, reranker)
 
+
 def retrieve(
-        top_k_retrieve: int = 50,
-        interactive: bool = False,
-        retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
-        retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
-        query: str = "",
-        qid: int = 1,
-        **kwargs,
+    top_k_retrieve: int = 50,
+    interactive: bool = False,
+    retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
+    retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
+    query: str = "",
+    qid: int = 1,
+    **kwargs,
 ):
     """Retrieve initial candidates
-    
+
     Keyword arguments:
     dataset -- dataset to search if interactive
     top_k_retrieve -- top k candidates to retrieve
@@ -94,7 +108,7 @@ def retrieve(
 
     Return: requests -- List[Requests]
     """
-    
+
     # Retrieve
     if interactive and retrieval_mode != RetrievalMode.DATASET:
         raise ValueError(
@@ -103,11 +117,13 @@ def retrieve(
 
     requests: List[Request] = []
     if retrieval_mode == RetrievalMode.DATASET:
-        host: str = kwargs.get('host', 'http://localhost:8081')
-        dataset: Union[str, List[str], List[Dict[str, Any]]] = kwargs.get('dataset', None)
-        if dataset==None:
-            raise ValueError('Must provide a dataset')
-        
+        host: str = kwargs.get("host", "http://localhost:8081")
+        dataset: Union[str, List[str], List[Dict[str, Any]]] = kwargs.get(
+            "dataset", None
+        )
+        if dataset == None:
+            raise ValueError("Must provide a dataset")
+
         if interactive:
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
@@ -129,18 +145,20 @@ def retrieve(
                 k=top_k_retrieve,
             )
     elif retrieval_mode == RetrievalMode.CUSTOM:
-        keys_and_defaults = [  
-            ('index_path', None),
-            ('topics_path', None), 
-            ('index_type', None),
+        keys_and_defaults = [
+            ("index_path", None),
+            ("topics_path", None),
+            ("index_type", None),
         ]
-        [index_path, topics_path, index_type] = extract_kwargs(keys_and_defaults, **kwargs)
+        [index_path, topics_path, index_type] = extract_kwargs(
+            keys_and_defaults, **kwargs
+        )
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
 
     return requests
-    
+
 
 def get_reranker(
     model_path: str,
@@ -149,30 +167,35 @@ def get_reranker(
     **kwargs: Any,
 ):
     """Construct rerank agent
-    
+
     Keyword arguments:
     argument -- description
-    model_path -- name of model 
-    default_agent -- used for interactive mode to pass in a pre-instantiated agent to use 
+    model_path -- name of model
+    default_agent -- used for interactive mode to pass in a pre-instantiated agent to use
     interactive -- whether to run retrieve_and_rerank in interactive mode, used by the API
 
     Return: rerank agent -- Option<RankLLM>
     """
-    use_azure_openai: bool = kwargs.get('use_azure_openai', False)
-    
+    use_azure_openai: bool = kwargs.get("use_azure_openai", False)
+
     if interactive and default_agent is not None:
         # Default rerank agent
         agent = default_agent
     elif "gpt" in model_path or use_azure_openai:
         # GPT based reranking models
 
-        keys_and_defaults = [  
-            ('context_size', 4096),
-            ('prompt_mode', PromptMode.RANK_GPT), 
-            ('num_few_shot_examples', 0),
-            ('window_size', 20),
+        keys_and_defaults = [
+            ("context_size", 4096),
+            ("prompt_mode", PromptMode.RANK_GPT),
+            ("num_few_shot_examples", 0),
+            ("window_size", 20),
         ]
-        [context_size, prompt_mode, num_few_shot_examples, window_size] = extract_kwargs(keys_and_defaults, **kwargs)
+        [
+            context_size,
+            prompt_mode,
+            num_few_shot_examples,
+            window_size,
+        ] = extract_kwargs(keys_and_defaults, **kwargs)
 
         openai_keys = get_openai_api_key()
         agent = SafeOpenai(
@@ -190,24 +213,36 @@ def get_reranker(
 
         model_full_paths = {
             "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
-            "rank_vicuna": "castorini/rank_vicuna_7b_v1"
+            "rank_vicuna": "castorini/rank_vicuna_7b_v1",
         }
 
-        keys_and_defaults = [  
-            ('context_size', 4096),
-            ('prompt_mode', PromptMode.RANK_GPT), 
-            ('num_few_shot_examples', 0),
-            ('device', 'cuda'),
-            ('num_gpus', 1),
-            ('variable_passages', False),
-            ('window_size', 20),
-            ('system_message', None),
-            ('vllm_batched', False)
+        keys_and_defaults = [
+            ("context_size", 4096),
+            ("prompt_mode", PromptMode.RANK_GPT),
+            ("num_few_shot_examples", 0),
+            ("device", "cuda"),
+            ("num_gpus", 1),
+            ("variable_passages", False),
+            ("window_size", 20),
+            ("system_message", None),
+            ("vllm_batched", False),
         ]
-        [context_size, prompt_mode, num_few_shot_examples, device, num_gpus, variable_passages, window_size, system_message, vllm_batched] = extract_kwargs(keys_and_defaults, **kwargs)
+        [
+            context_size,
+            prompt_mode,
+            num_few_shot_examples,
+            device,
+            num_gpus,
+            variable_passages,
+            window_size,
+            system_message,
+            vllm_batched,
+        ] = extract_kwargs(keys_and_defaults, **kwargs)
 
         agent = RankListwiseOSLLM(
-            model= model_full_paths[model_path] if model_path in model_full_paths else model_path,
+            model=model_full_paths[model_path]
+            if model_path in model_full_paths
+            else model_path,
             name=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
@@ -217,27 +252,35 @@ def get_reranker(
             variable_passages=variable_passages,
             window_size=window_size,
             system_message=system_message,
-            vllm_batched=vllm_batched
+            vllm_batched=vllm_batched,
         )
 
         print(f"Completed loading {model_path}")
     elif model_path in ["unspecified", "rank_random", "rank_identity"]:
-        # NULL reranker 
+        # NULL reranker
         agent = None
     else:
         raise ValueError(f"Unsupported model: {model_path}")
-    
-    return agent 
-    
+
+    return agent
+
+
 def extract_kwargs(
-    keys_and_defaults: List[(str,Any)],
+    keys_and_defaults: List[(str, Any)],
     **kwargs,
 ):
-    extracted_kwargs = [kwargs.get(key_and_default[0], key_and_default[-1]) for key_and_default in keys_and_defaults]
+    extracted_kwargs = [
+        kwargs.get(key_and_default[0], key_and_default[-1])
+        for key_and_default in keys_and_defaults
+    ]
 
     # Check that type of provided kwarg is compatible with the provided default type
-    for (i, extracted_kwarg) in enumerate(extract_kwargs):
-        if type(keys_and_defaults[i[-1]]) != None and (type(extracted_kwarg) != type(keys_and_defaults[i[-1]])):
-            raise ValueError("Provided kwarg must be compatible with the argument's default type")
-    
+    for i, extracted_kwarg in enumerate(extract_kwargs):
+        if type(keys_and_defaults[i[-1]]) != None and (
+            type(extracted_kwarg) != type(keys_and_defaults[i[-1]])
+        ):
+            raise ValueError(
+                "Provided kwarg must be compatible with the argument's default type"
+            )
+
     return extracted_kwargs

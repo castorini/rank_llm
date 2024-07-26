@@ -3,8 +3,8 @@ from urllib import parse
 import requests
 
 from rank_llm.data import Candidate, Query, Request
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.retriever import RetrievalMode
+
+from . import RetrievalMethod, RetrievalMode
 
 
 class ServiceRetriever:

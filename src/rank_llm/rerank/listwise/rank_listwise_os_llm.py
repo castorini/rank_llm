@@ -1,16 +1,20 @@
+import json
 import logging
 import os
-import json
-import torch
 import random
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Any, Optional, Tuple
-from tqdm import tqdm
+from typing import Any, Dict, List, Optional, Tuple
+
+import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from tqdm import tqdm
 from transformers.generation import GenerationConfig
-from rank_llm.retrieve_and_rerank import extract_kwargs
+
+from rank_llm import extract_kwargs
+from rank_llm.data import Request, Result
+
+from . import ListwiseRankLLM, PromptMode
 
 try:
     from vllm import LLM, SamplingParams
@@ -18,13 +22,8 @@ except:
     LLM = None
     SamplingParams = None
 
-from rank_llm.rerank.listwise.listwise_rankllm import PromptMode, ListwiseRankLLM
-from rank_llm.data import Request, Result
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+
 
 class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
@@ -71,7 +70,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - GPU acceleration is supported and recommended for faster computations.
         TODO: Make repetition_penalty configurable
         """
-        super().__init__(model, context_size, prompt_mode, num_few_shot_examples, window_size)
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, window_size
+        )
         self._device = device
         self._vllm_batched = vllm_batched
         self._name = name
@@ -84,7 +85,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 self._examples = list(json_file)[1:-1]
         if self._device == "cuda":
             assert torch.cuda.is_available()
-        
+
         if prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
@@ -112,20 +113,24 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        keys_and_defaults = [  
-            ('top_k_retrieve', 50),
-            ('window_size', 20), 
-            ('step', 10),
-            ('populate_exec_summary', False),
+        keys_and_defaults = [
+            ("top_k_retrieve", 50),
+            ("window_size", 20),
+            ("step", 10),
+            ("populate_exec_summary", False),
         ]
-        (top_k_retrieve, window_size, step ,populate_exec_summary) = extract_kwargs(keys_and_defaults, **kwargs)
+        (top_k_retrieve, window_size, step, populate_exec_summary) = extract_kwargs(
+            keys_and_defaults, **kwargs
+        )
         window_size = min(window_size, top_k_retrieve)
 
         if self._vllm_batched:
             # reranking using vllm
-            if len(set([len(req.candidates) for req in requests])) !=1:
-                raise ValueError("Batched requests must have the same number of candidates")
-            
+            if len(set([len(req.candidates) for req in requests])) != 1:
+                raise ValueError(
+                    "Batched requests must have the same number of candidates"
+                )
+
             return self.sliding_windows_batched(
                 requests,
                 rank_start=max(rank_start, 0),
@@ -139,7 +144,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 populate_exec_summary=populate_exec_summary,
             )
         else:
-            # Normal operation mode 
+            # Normal operation mode
             results = []
             for request in tqdm(requests):
                 result = self.sliding_windows(

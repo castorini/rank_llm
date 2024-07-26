@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
+from rank_llm.rerank.rank_gpt import SafeOpenai
 
 # model, context_size, prompt_mode, num_few_shot_examples, keys, key_start_id
 valid_inputs = [

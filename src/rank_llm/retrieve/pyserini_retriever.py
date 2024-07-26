@@ -22,8 +22,8 @@ from pyserini.search import (
 from tqdm import tqdm
 
 from rank_llm.data import Candidate, DataWriter, Query, Request
-from rank_llm.retrieve.indices_dict import INDICES
-from rank_llm.retrieve.topics_dict import TOPICS
+
+from . import INDICES, TOPICS
 
 
 class RetrievalMethod(Enum):

@@ -5,8 +5,7 @@ from typing import List
 from rank_llm.data import Request, Result
 
 
-class IdentityReranker():
-
+class IdentityReranker:
     def rerank_batch(
         self,
         requests: List[Request],

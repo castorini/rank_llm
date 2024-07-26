@@ -4,13 +4,16 @@ import torch
 from flask import Flask, jsonify, request
 
 from rank_llm import retrieve_and_rerank
-from rank_llm.rerank.listwise.gpt.api_keys import get_azure_openai_args, get_openai_api_key
+from rank_llm.rerank.listwise.gpt.api_keys import (
+    get_azure_openai_args,
+    get_openai_api_key,
+)
+from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
 from rank_llm.rerank.rank_gpt import SafeOpenai
 from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
+from rank_llm.rerank.reranker import OperationMode
 from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode
-from rank_llm.rerank.reranker import OperationMode
 
 """ API URL FORMAT
 
@@ -129,7 +132,7 @@ def create_app(model, port, use_azure_openai=False):
                 num_passes=num_passes,
                 retrieval_method=_retrieval_method,
                 print_prompts_responses=False,
-                operation_mode=OperationMode.STANDARD.value
+                operation_mode=OperationMode.STANDARD.value,
             )
 
             # set the default reranking agent to the most recently used reranking agent

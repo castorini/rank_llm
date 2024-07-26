@@ -1,9 +1,8 @@
 from typing import List
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
+from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
-from rank_llm.rerank.reranker import Reranker
 
 
 class ZephyrReranker:
@@ -19,7 +18,7 @@ class ZephyrReranker:
         window_size: int = 20,
         system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query",
     ) -> None:
-        agent = RankListwiseOSLLM(
+        self._reranker = RankListwiseOSLLM(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
@@ -30,7 +29,6 @@ class ZephyrReranker:
             window_size=window_size,
             system_message=system_message,
         )
-        self._reranker = Reranker(agent)
 
     def rerank_batch(
         self,

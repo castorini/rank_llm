@@ -1,19 +1,11 @@
-import copy
-import random
-import re
-from abc import ABC, abstractmethod
-from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
-from ftfy import fix_text
-from tqdm import tqdm
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List, Tuple, Union
 
-from rank_llm.data import RankingExecInfo, Request, Result
+from rank_llm.data import Request, Result
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+
 
 class RankLLM(ABC):
     def __init__(
@@ -151,7 +143,7 @@ class RankLLM(ABC):
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
-        pass 
+        pass
 
     @abstractmethod
     def rerank(
@@ -218,4 +210,4 @@ class RankLLM(ABC):
             The function creates directories and files as needed. The file names are constructed based on the
             provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
         """
-        pass    
+        pass

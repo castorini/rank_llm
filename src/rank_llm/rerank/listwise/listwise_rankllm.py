@@ -1,23 +1,21 @@
 import copy
+import logging
 import random
 import re
-import logging
+from abc import ABC
 from datetime import datetime
-from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
 from ftfy import fix_text
 from tqdm import tqdm
-from pathlib import Path
 
-from rank_llm.data import RankingExecInfo, Request, Result, DataWriter
+from rank_llm.data import DataWriter, RankingExecInfo, Request, Result
+from rank_llm.rerank import RankLLM
 
-from rank_llm.rerank.rankllm import RankLLM
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
+
 
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
@@ -27,6 +25,7 @@ class PromptMode(Enum):
 
     def __str__(self):
         return self.value
+
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
@@ -39,8 +38,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         - get_num_tokens
         - cost_per_1k_token
         - num_output_tokens
-    """  
-    
+    """
+
     def __init__(
         self,
         model: str,
@@ -54,7 +53,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._prompt_mode = prompt_mode
         self._num_few_shot_examples = num_few_shot_examples
         self._window_size = window_size
-    
+
     def rerank(
         self,
         request: Request,
@@ -64,8 +63,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> Result:
-        window_size: int = kwargs.get('window_size', 20)
-        step: int = kwargs.get('step', 10)
+        window_size: int = kwargs.get("window_size", 20)
+        step: int = kwargs.get("step", 10)
 
         results = self.rerank_batch(
             requests=[request],
@@ -77,8 +76,8 @@ class ListwiseRankLLM(RankLLM, ABC):
             logging=logging,
             **kwargs,
         )
-        return results[0]  
-    
+        return results[0]
+
     def write_rerank_results(
         self,
         retrieval_method_name: str,
@@ -94,7 +93,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         _modelname = self._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
             _modelname = self._model.split("/")[-2] + "_" + _modelname
-        name = f"{_modelname}_{self._context_size}_{top_k_candidates}_{self._prompt_mode}"
+        name = (
+            f"{_modelname}_{self._context_size}_{top_k_candidates}_{self._prompt_mode}"
+        )
         if dataset_name:
             name = f"{name}_{dataset_name}"
         if self._num_few_shot_examples > 0:
@@ -128,7 +129,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             f"{ranking_execution_summary_dirname}/{retrieval_method_name}/{name}.json"
         )
         return result_file_name
-    
+
     def max_tokens(self) -> int:
         """
         Returns the maximum number of tokens for a given model
@@ -286,7 +287,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
         # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
         while end_pos > rank_start and start_pos + step != rank_start:
-            if logging: 
+            if logging:
                 logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
             rerank_results = self.permutation_pipeline_batched(

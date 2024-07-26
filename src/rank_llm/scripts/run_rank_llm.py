@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+
 import torch
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +38,7 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
-        
+
     _ = retrieve_and_rerank(
         model_path=model_path,
         dataset=dataset,

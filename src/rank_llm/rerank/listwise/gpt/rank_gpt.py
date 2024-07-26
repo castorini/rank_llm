@@ -1,17 +1,20 @@
 import time
-import openai
-import tiktoken
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
+
+import openai
+import tiktoken
 from tqdm import tqdm
 
-from rank_llm.data import Result, Request
-from rank_llm.rerank.listwise.listwise_rankllm import PromptMode, ListwiseRankLLM
+from rank_llm.data import Request, Result
+from rank_llm.rerank.listwise import ListwiseRankLLM, PromptMode
+
 
 class CompletionMode(Enum):
     UNSPECIFIED = 0
     CHAT = 1
     TEXT = 2
+
 
 class SafeOpenai(ListwiseRankLLM):
     def __init__(
@@ -55,7 +58,9 @@ class SafeOpenai(ListwiseRankLLM):
         - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
-        super().__init__(model, context_size, prompt_mode, num_few_shot_examples, window_size)
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, window_size
+        )
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
@@ -93,9 +98,9 @@ class SafeOpenai(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        window_size: int = kwargs.get('window_size', 20)
-        step: int = kwargs.get('step', 10)
-        populate_exec_summary: bool = kwargs.get('populate_exec_summary', False)
+        window_size: int = kwargs.get("window_size", 20)
+        step: int = kwargs.get("step", 10)
+        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
 
         results = []
         for request in tqdm(requests):
@@ -183,11 +188,11 @@ class SafeOpenai(ListwiseRankLLM):
             },
             {
                 "role": "user",
-                "content": f"You will be given {num} passages, marked with a numerical identifier []. Rank these passages according to how relevant they are to the query: {query}."
+                "content": f"You will be given {num} passages, marked with a numerical identifier []. Rank these passages according to how relevant they are to the query: {query}.",
             },
-            {"role": "assistant", "content": "Okay, please provide the passages."}
+            {"role": "assistant", "content": "Okay, please provide the passages."},
         ]
-        
+
         # return [
         #     {
         #         "role": "system",
@@ -253,6 +258,7 @@ class SafeOpenai(ListwiseRankLLM):
 
     def run_llm_batched(self):
         pass
+
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
