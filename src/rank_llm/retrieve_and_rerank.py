@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from rank_llm.data import Query, Request
 from rank_llm.rerank import (
@@ -45,13 +45,13 @@ def retrieve_and_rerank(
     # Retrieve initial candidates
     print(f"Retrieving top {top_k_retrieve} passages...")
     requests = retrieve(
-        dataset,
         top_k_retrieve,
         interactive,
         retrieval_mode,
         retrieval_method,
         query,
         qid,
+        dataset=dataset,
         **kwargs,
     )
     print(f"Retrieval complete!")
@@ -266,7 +266,7 @@ def get_reranker(
 
 
 def extract_kwargs(
-    keys_and_defaults: List[(str, Any)],
+    keys_and_defaults: List[Tuple[str, Any]],
     **kwargs,
 ):
     extracted_kwargs = [

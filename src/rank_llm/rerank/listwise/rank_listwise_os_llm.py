@@ -11,11 +11,10 @@ from ftfy import fix_text
 from tqdm import tqdm
 from transformers.generation import GenerationConfig
 
-from rank_llm import extract_kwargs
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
 
-from . import ListwiseRankLLM
+from .listwise_rankllm import ListwiseRankLLM
 
 try:
     from vllm import LLM, SamplingParams
@@ -114,16 +113,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        keys_and_defaults = [
-            ("top_k_retrieve", 50),
-            ("window_size", 20),
-            ("step", 10),
-            ("populate_exec_summary", False),
-        ]
-        (top_k_retrieve, window_size, step, populate_exec_summary) = extract_kwargs(
-            keys_and_defaults, **kwargs
-        )
+        top_k_retrieve: int = kwargs.get('top_k_retrieve', 50)
+        window_size: int = kwargs.get('window_size', 20)
         window_size = min(window_size, top_k_retrieve)
+        step: int = kwargs.get('step', 10)
+        populate_exec_summary: bool = kwargs.get('populate_exec_summary', False)
 
         if self._vllm_batched:
             # reranking using vllm

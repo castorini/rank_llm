@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Enum, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
+from enum import Enum
 
 from rank_llm.data import Request, Result
 

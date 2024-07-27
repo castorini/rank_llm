@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
-from rank_llm.rerank.listwise import ListwiseRankLLM
+from .listwise_rankllm import ListwiseRankLLM
 
 
 class CompletionMode(Enum):

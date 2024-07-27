@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, patch
 from dacite import from_dict
 
 from rank_llm.data import Request
-from rank_llm.retrieve.indices_dict import INDICES
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from rank_llm.retrieve import PyseriniRetriever, RetrievalMethod, INDICES
 
 valid_inputs = [
     ("dl19", RetrievalMethod.BM25),

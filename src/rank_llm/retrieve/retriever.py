@@ -12,9 +12,9 @@ from . import (
     HITS_INFO,
     PyseriniRetriever,
     RetrievalMethod,
-    compute_md5,
-    download_cached_hits,
 )
+
+from rank_llm.retrieve.utils import compute_md5, download_cached_hits
 
 
 class RetrievalMode(Enum):
