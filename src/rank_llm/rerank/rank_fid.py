@@ -10,6 +10,7 @@ from transformers import T5Tokenizer
 
 
 class RankFiDDistill(RankLLM):
+
     def __init__(
             self,
             model: str,
@@ -17,6 +18,7 @@ class RankFiDDistill(RankLLM):
             prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
             num_few_shot_examples: int = 0,
             window_size: int = 20,
+            precision: str = 'bfloat16',
             device: str = 'cuda'
     ) -> None:
         """
@@ -25,6 +27,7 @@ class RankFiDDistill(RankLLM):
         super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode,
                          num_few_shot_examples=num_few_shot_examples)
         # TODO use adaptor for this guy
+        self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = FiD.from_pretrained(model).to(device).eval()
 
@@ -37,6 +40,9 @@ class RankFiDDistill(RankLLM):
         self._answer_maxlength = 100
 
         self._output_token_estimate = None
+
+        self._post_init()
+
 
     def run_llm_batched(
             self, prompts: List[Union[str, List[Dict[str, str]]]]
@@ -131,8 +137,22 @@ class RankFiDDistill(RankLLM):
 
             return output_token_estimate
 
+    def _post_init(self):
+        self._to_precision(self._precision)
+
     def _tokenize(self, s: str):
         return self._tokenizer(s)
+
+    def _to_precision(self, precision: str) -> None:
+        """
+        We don't support python12 for now, after python 12, the code should be changed into
+        """
+        if precision == 'float32':
+            self._llm = self._llm.float()
+        elif precision == 'bfloat16':
+            self._llm = self._llm.bfloat16()
+        elif precision == 'float16':
+            self._llm = self._llm.float16()
 
     @staticmethod
     def _gen_passage(query: str, index: int, passage: str) -> str:
