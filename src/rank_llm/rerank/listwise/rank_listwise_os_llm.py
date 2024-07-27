@@ -2,17 +2,19 @@ import json
 import logging
 import os
 import random
-import torch
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
+
+import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from tqdm import tqdm
 from transformers.generation import GenerationConfig
 
 from rank_llm import extract_kwargs
-from rank_llm.rerank import PromptMode
 from rank_llm.data import Request, Result
+from rank_llm.rerank import PromptMode
+
 from . import ListwiseRankLLM
 
 try:

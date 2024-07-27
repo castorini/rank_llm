@@ -8,8 +8,8 @@ sys.path.append(parent)
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank.listwise import SafeOpenai, VicunaReranker, ZephyrReranker
 from rank_llm.rerank import get_openai_api_key
+from rank_llm.rerank.listwise import SafeOpenai, VicunaReranker, ZephyrReranker
 from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 

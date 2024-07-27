@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import PromptMode
-from rank_llm.retrieve import RetrievalMethod, TOPICS
+from rank_llm.retrieve import TOPICS, RetrievalMethod
 
 
 def main(args):

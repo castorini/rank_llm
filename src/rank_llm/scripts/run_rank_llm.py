@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+
 import torch
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -10,7 +11,7 @@ sys.path.append(parent)
 
 from rank_llm import retrieve_and_rerank
 from rank_llm.rerank import PromptMode
-from rank_llm.retrieve import RetrievalMethod, RetrievalMode, TOPICS
+from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 
 
 def main(args):

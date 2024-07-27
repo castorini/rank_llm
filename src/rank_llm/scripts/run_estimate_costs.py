@@ -11,7 +11,7 @@ sys.path.append(parent)
 from rank_llm.analysis.estimate_costs import EstimationMode
 from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise import SafeOpenai
-from rank_llm.retrieve import PyseriniRetriever, RetrievalMethod, TOPICS
+from rank_llm.retrieve import TOPICS, PyseriniRetriever, RetrievalMethod
 
 
 def main(args):

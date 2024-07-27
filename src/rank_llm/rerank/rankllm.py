@@ -1,10 +1,11 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Enum, Tuple, Union
+from typing import Any, Dict, Enum, List, Tuple, Union
 
 from rank_llm.data import Request, Result
 
 logger = logging.getLogger(__name__)
+
 
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
@@ -14,7 +15,8 @@ class PromptMode(Enum):
 
     def __str__(self):
         return self.value
-    
+
+
 class RankLLM(ABC):
     def __init__(
         self,

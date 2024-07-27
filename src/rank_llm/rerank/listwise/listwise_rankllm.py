@@ -11,9 +11,10 @@ from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import DataWriter, RankingExecInfo, Request, Result
-from rank_llm.rerank import RankLLM, PromptMode
+from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
+
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
