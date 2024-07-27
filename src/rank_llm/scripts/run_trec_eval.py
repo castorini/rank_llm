@@ -3,9 +3,8 @@ import os
 from argparse import ArgumentParser
 
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank.listwise.listwise_rankllm import PromptMode
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.topics_dict import TOPICS
+from rank_llm.rerank import PromptMode
+from rank_llm.retrieve import RetrievalMethod, TOPICS
 
 
 def main(args):

@@ -6,10 +6,9 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank.listwise.gpt.api_keys import get_openai_api_key
-from rank_llm.rerank.rank_gpt import SafeOpenai
-from rank_llm.rerank.reranker import Reranker
-from rank_llm.retrieve.retriever import Retriever
+from rank_llm.rerank import get_openai_api_key
+from rank_llm.rerank.listwise import SafeOpenai, Reranker
+from rank_llm.retrieve import Retriever
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"

@@ -4,7 +4,6 @@ import random
 import re
 from abc import ABC
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -12,20 +11,9 @@ from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import DataWriter, RankingExecInfo, Request, Result
-from rank_llm.rerank import RankLLM
+from rank_llm.rerank import RankLLM, PromptMode
 
 logger = logging.getLogger(__name__)
-
-
-class PromptMode(Enum):
-    UNSPECIFIED = "unspecified"
-    RANK_GPT = "rank_GPT"
-    RANK_GPT_APEER = "rank_GPT_APEER"
-    LRL = "LRL"
-
-    def __str__(self):
-        return self.value
-
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
