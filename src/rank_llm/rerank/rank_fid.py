@@ -56,7 +56,6 @@ class RankFiDDistill(RankLLM):
         """
 
         prompt_text = [prompt['text'] for prompt in prompts]
-        print(prompt_text[0])
 
         self._llm.eval()
 
@@ -93,7 +92,7 @@ class RankFiDDistill(RankLLM):
         # For now, we concat the prompt, because it seems LiT5 is also concatting the stuff
         prompts = [
             {
-                "text": self._gen_passage(result.query.text, i + 1,
+                "text": self._gen_passage(result.query.text, i + 1 - rank_start,
                                           self.convert_doc_to_prompt_content(
                                               result.candidates[i].doc,
                                               self.max_tokens()
