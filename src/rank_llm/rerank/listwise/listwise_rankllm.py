@@ -4,17 +4,15 @@ import random
 import re
 from abc import ABC
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import DataWriter, RankingExecInfo, Request, Result
+from rank_llm.data import RankingExecInfo, Request, Result
 from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
-
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
@@ -43,41 +41,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._num_few_shot_examples = num_few_shot_examples
         self._window_size = window_size
 
-    def rerank(
+    def get_output_filename(
         self,
-        request: Request,
-        rank_start: int = 0,
-        rank_end: int = 100,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
+        top_k_candidates: int,
+        dataset_name: str,
+        shuffle_candidates: bool,
         **kwargs: Any,
-    ) -> Result:
-        window_size: int = kwargs.get("window_size", 20)
-        step: int = kwargs.get("step", 10)
-
-        results = self.rerank_batch(
-            requests=[request],
-            rank_start=rank_start,
-            rank_end=rank_end,
-            window_size=window_size,
-            step=step,
-            shuffle_candidates=shuffle_candidates,
-            logging=logging,
-            **kwargs,
-        )
-        return results[0]
-
-    def write_rerank_results(
-        self,
-        retrieval_method_name: str,
-        results: List[Result],
-        shuffle_candidates: bool = False,
-        top_k_candidates: int = 100,
-        pass_ct: int = None,
-        window_size: int = None,
-        dataset_name: str = None,
-        rerank_results_dirname: str = "rerank_results",
-        ranking_execution_summary_dirname: str = "ranking_execution_summary",
     ) -> str:
         _modelname = self._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
@@ -89,35 +58,11 @@ class ListwiseRankLLM(RankLLM, ABC):
             name = f"{name}_{dataset_name}"
         if self._num_few_shot_examples > 0:
             name += f"_{self._num_few_shot_examples}_shot"
-        name = (
+        return (
             f"{name}_shuffled_{datetime.isoformat(datetime.now())}"
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
-        if window_size is not None:
-            name += f"_window_{window_size}"
-        if pass_ct is not None:
-            name += f"_pass_{pass_ct}"
-        # write rerank results
-        writer = DataWriter(results)
-        Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
-            parents=True, exist_ok=True
-        )
-        result_file_name = (
-            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
-        )
-        writer.write_in_trec_eval_format(result_file_name)
-        writer.write_in_jsonl_format(
-            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
-        )
-        # Write ranking execution summary
-        Path(f"{ranking_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
-            parents=True, exist_ok=True
-        )
-        writer.write_ranking_exec_summary(
-            f"{ranking_execution_summary_dirname}/{retrieval_method_name}/{name}.json"
-        )
-        return result_file_name
 
     def max_tokens(self) -> int:
         """

@@ -6,8 +6,8 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank import get_openai_api_key
-from rank_llm.rerank.listwise import Reranker, SafeOpenai
+from rank_llm.rerank import Reranker, get_openai_api_key
+from rank_llm.rerank.listwise import SafeOpenai
 from rank_llm.retrieve import Retriever
 
 # By default uses BM25 for retrieval

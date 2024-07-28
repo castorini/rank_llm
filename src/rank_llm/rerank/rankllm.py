@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Union
 from enum import Enum
+from typing import Any, Dict, List, Tuple, Union
 
 from rank_llm.data import Request, Result
 
@@ -157,68 +157,14 @@ class RankLLM(ABC):
         pass
 
     @abstractmethod
-    def rerank(
+    def get_output_filename(
         self,
-        request: Request,
-        rank_start: int = 0,
-        rank_end: int = 100,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
+        top_k_candidates: int,
+        dataset_name: str,
+        shuffle_candidates: bool,
         **kwargs: Any,
-    ) -> Result:
-        """
-        Reranks a request using the RankLLM agent.
-
-        This function applies a sliding window algorithm to rerank the results.
-        Each window of results is processed by the RankLLM agent to obtain a new ranking.
-
-        Args:
-            request (Request): The reranking request which has a query and a candidates list.
-            rank_start (int, optional): The starting rank for processing. Defaults to 0.
-            rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
-            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
-            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-
-        Returns:
-            Result: the rerank result which contains the reranked candidates.
-        """
-        pass
-
-    @abstractmethod
-    def write_rerank_results(
-        self,
-        retrieval_method_name: str,
-        results: List[Result],
-        shuffle_candidates: bool = False,
-        top_k_candidates: int = 100,
-        pass_ct: int = None,
-        window_size: int = None,
-        dataset_name: str = None,
-        rerank_results_dirname: str = "rerank_results",
-        ranking_execution_summary_dirname: str = "ranking_execution_summary",
     ) -> str:
         """
-        Writes the reranked results to files in specified formats.
-
-        This function saves the reranked results in both TREC Eval format and JSON format.
-        A summary of the ranking execution is saved as well.
-
-        Args:
-            retrieval_method_name (str): The name of the retrieval method.
-            results (List[Result]): The reranked results to be written.
-            shuffle_candidates (bool, optional): Indicates if the candidates were shuffled. Defaults to False.
-            top_k_candidates (int, optional): The number of top candidates considered. Defaults to 100.
-            pass_ct (int, optional): Pass count, if applicable. Defaults to None.
-            window_size (int, optional): The window size used in reranking. Defaults to None.
-            dataset_name (str, optional): The name of the dataset used. Defaults to None.
-
-        Returns:
-            str: The file name of the saved reranked results in TREC Eval format.
-
-        Note:
-            The function creates directories and files as needed. The file names are constructed based on the
-            provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
+        Returns the output filename used when writing rerank results to file
         """
         pass

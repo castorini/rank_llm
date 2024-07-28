@@ -51,6 +51,7 @@ import json
 import os
 import sys
 from collections import defaultdict
+
 from pyserini.search import LuceneSearcher, get_qrels, get_topics
 from tqdm import tqdm
 

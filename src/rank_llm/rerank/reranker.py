@@ -1,0 +1,275 @@
+from pathlib import Path
+from typing import List, Any, Tuple
+
+from rank_llm.data import DataWriter, Request, Result
+from rank_llm.rerank.rankllm import RankLLM
+from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank import (
+    PromptMode,
+    RankLLM,
+    get_azure_openai_args,
+    get_openai_api_key,
+)
+
+
+class Reranker:
+    def __init__(self, agent: RankLLM) -> None:
+        self._agent = agent
+
+    def rerank_batch(
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> List[Result]:
+        """
+        Reranks a list of requests using the RankLLM agent.
+
+        This function applies a sliding window algorithm to rerank the results.
+        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+
+        Args:
+            requests (List[Request]): The list of requests. Each request has a query and a candidates list.
+            rank_start (int, optional): The starting rank for processing. Defaults to 0.
+            rank_end (int, optional): The end rank for processing. Defaults to 100.
+            window_size (int, optional): The size of each sliding window. Defaults to 20.
+            step (int, optional): The step size for moving the window. Defaults to 10.
+            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
+            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+            vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
+            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
+            batched (bool, optional): Whether to use batched processing. Defaults to False.
+
+        Returns:
+            List[Result]: A list containing the reranked candidates.
+        """
+        return self._agent.rerank_batch(requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs)
+
+    def rerank(
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> Result:
+        """
+        Reranks a request using the RankLLM agent.
+
+        This function applies a sliding window algorithm to rerank the results.
+        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+
+        Args:
+            request (Request): The reranking request which has a query and a candidates list.
+            rank_start (int, optional): The starting rank for processing. Defaults to 0.
+            rank_end (int, optional): The end rank for processing. Defaults to 100.
+            window_size (int, optional): The size of each sliding window. Defaults to 20.
+            step (int, optional): The step size for moving the window. Defaults to 10.
+            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
+            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+
+        Returns:
+            Result: the rerank result which contains the reranked candidates.
+        """
+        results = self.rerank_batch(
+            requests=[request],
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            **kwargs,
+        )
+        return results[0]
+ 
+
+    def write_rerank_results(
+        self,
+        retrieval_method_name: str,
+        results: List[Result],
+        shuffle_candidates: bool = False,
+        top_k_candidates: int = 100,
+        pass_ct: int = None,
+        window_size: int = None,
+        dataset_name: str = None,
+        rerank_results_dirname: str = "rerank_results",
+        ranking_execution_summary_dirname: str = "ranking_execution_summary",
+        **kwargs,
+    ) -> str:
+        """
+        Writes the reranked results to files in specified formats.
+
+        This function saves the reranked results in both TREC Eval format and JSON format.
+        A summary of the ranking execution is saved as well.
+
+        Args:
+            retrieval_method_name (str): The name of the retrieval method.
+            results (List[Result]): The reranked results to be written.
+            shuffle_candidates (bool, optional): Indicates if the candidates were shuffled. Defaults to False.
+            top_k_candidates (int, optional): The number of top candidates considered. Defaults to 100.
+            pass_ct (int, optional): Pass count, if applicable. Defaults to None.
+            window_size (int, optional): The window size used in reranking. Defaults to None.
+            dataset_name (str, optional): The name of the dataset used. Defaults to None.
+
+        Returns:
+            str: The file name of the saved reranked results in TREC Eval format.
+
+        Note:
+            The function creates directories and files as needed. The file names are constructed based on the
+            provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
+        """
+
+        name = self._agent.get_output_filename(top_k_candidates, dataset_name, shuffle_candidates, **kwargs)
+
+        if window_size is not None:
+            name += f"_window_{window_size}"
+        if pass_ct is not None:
+            name += f"_pass_{pass_ct}"
+        # write rerank results
+        writer = DataWriter(results)
+        Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
+            parents=True, exist_ok=True
+        )
+        result_file_name = (
+            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
+        )
+        writer.write_in_trec_eval_format(result_file_name)
+        writer.write_in_jsonl_format(
+            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
+        )
+        # Write ranking execution summary
+        Path(f"{ranking_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
+            parents=True, exist_ok=True
+        )
+        writer.write_ranking_exec_summary(
+            f"{ranking_execution_summary_dirname}/{retrieval_method_name}/{name}.json"
+        )
+        return result_file_name
+    
+
+    def create_agent(
+        model_path: str,
+        default_agent: RankLLM,
+        interactive: bool,
+        **kwargs: Any,
+    ) -> RankLLM:
+        """Construct rerank agent
+
+        Keyword arguments:
+        argument -- description
+        model_path -- name of model
+        default_agent -- used for interactive mode to pass in a pre-instantiated agent to use
+        interactive -- whether to run retrieve_and_rerank in interactive mode, used by the API
+
+        Return: rerank agent -- Option<RankLLM>
+        """
+        use_azure_openai: bool = kwargs.get("use_azure_openai", False)
+
+        if interactive and default_agent is not None:
+            # Default rerank agent
+            agent = default_agent
+        elif "gpt" in model_path or use_azure_openai:
+            # GPT based reranking models
+
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                ("num_few_shot_examples", 0),
+                ("window_size", 20),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                window_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            openai_keys = get_openai_api_key()
+            agent = SafeOpenai(
+                model=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                window_size=window_size,
+                num_few_shot_examples=num_few_shot_examples,
+                keys=openai_keys,
+                **(get_azure_openai_args() if use_azure_openai else {}),
+            )
+        elif "vicuna" in model_path or "zephyr" in model_path:
+            # RankVicuna or RankZephyr model suite
+            print(f"Loading {model_path} ...")
+
+            model_full_paths = {
+                "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
+                "rank_vicuna": "castorini/rank_vicuna_7b_v1",
+            }
+
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                ("num_few_shot_examples", 0),
+                ("device", "cuda"),
+                ("num_gpus", 1),
+                ("variable_passages", False),
+                ("window_size", 20),
+                ("system_message", None),
+                ("vllm_batched", False),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                device,
+                num_gpus,
+                variable_passages,
+                window_size,
+                system_message,
+                vllm_batched,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankListwiseOSLLM(
+                model=model_full_paths[model_path]
+                if model_path in model_full_paths
+                else model_path,
+                name=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                device=device,
+                num_gpus=num_gpus,
+                variable_passages=variable_passages,
+                window_size=window_size,
+                system_message=system_message,
+                vllm_batched=vllm_batched,
+            )
+
+            print(f"Completed loading {model_path}")
+        elif model_path in ["unspecified", "rank_random", "rank_identity"]:
+            # NULL reranker
+            agent = None
+        else:
+            raise ValueError(f"Unsupported model: {model_path}")
+
+        return agent
+
+def extract_kwargs(
+    keys_and_defaults: List[Tuple[str, Any]],
+    **kwargs,
+):
+    extracted_kwargs = [
+        kwargs.get(key_and_default[0], key_and_default[-1])
+        for key_and_default in keys_and_defaults
+    ]
+
+    # Check that type of provided kwarg is compatible with the provided default type
+    for i, extracted_kwarg in enumerate(extract_kwargs):
+        if type(keys_and_defaults[i[-1]]) != None and (
+            type(extracted_kwarg) != type(keys_and_defaults[i[-1]])
+        ):
+            raise ValueError(
+                "Provided kwarg must be compatible with the argument's default type"
+            )
+
+    return extracted_kwargs

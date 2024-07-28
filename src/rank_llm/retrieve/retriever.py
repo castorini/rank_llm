@@ -7,14 +7,9 @@ from typing import Any, Dict, List, Union
 from dacite import from_dict
 
 from rank_llm.data import Request
-
-from . import (
-    HITS_INFO,
-    PyseriniRetriever,
-    RetrievalMethod,
-)
-
 from rank_llm.retrieve.utils import compute_md5, download_cached_hits
+
+from . import HITS_INFO, PyseriniRetriever, RetrievalMethod
 
 
 class RetrievalMode(Enum):

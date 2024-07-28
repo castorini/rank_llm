@@ -1,14 +1,8 @@
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Union
 
 from rank_llm.data import Query, Request
-from rank_llm.rerank import (
-    IdentityReranker,
-    PromptMode,
-    RankLLM,
-    get_azure_openai_args,
-    get_openai_api_key,
-)
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
+from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
     RetrievalMethod,
     RetrievalMode,
@@ -40,7 +34,10 @@ def retrieve_and_rerank(
     """
 
     # Get reranking agent
-    reranker = get_reranker(model_path.lower(), default_agent, interactive, **kwargs)
+    agent = Reranker.create_agent(
+        model_path.lower(), default_agent, interactive, **kwargs
+    )
+    reranker = Reranker(agent)
 
     # Retrieve initial candidates
     print(f"Retrieving top {top_k_retrieve} passages...")
@@ -158,129 +155,3 @@ def retrieve(
         )
 
     return requests
-
-
-def get_reranker(
-    model_path: str,
-    default_agent: RankLLM,
-    interactive: bool,
-    **kwargs: Any,
-):
-    """Construct rerank agent
-
-    Keyword arguments:
-    argument -- description
-    model_path -- name of model
-    default_agent -- used for interactive mode to pass in a pre-instantiated agent to use
-    interactive -- whether to run retrieve_and_rerank in interactive mode, used by the API
-
-    Return: rerank agent -- Option<RankLLM>
-    """
-    use_azure_openai: bool = kwargs.get("use_azure_openai", False)
-
-    if interactive and default_agent is not None:
-        # Default rerank agent
-        agent = default_agent
-    elif "gpt" in model_path or use_azure_openai:
-        # GPT based reranking models
-
-        keys_and_defaults = [
-            ("context_size", 4096),
-            ("prompt_mode", PromptMode.RANK_GPT),
-            ("num_few_shot_examples", 0),
-            ("window_size", 20),
-        ]
-        [
-            context_size,
-            prompt_mode,
-            num_few_shot_examples,
-            window_size,
-        ] = extract_kwargs(keys_and_defaults, **kwargs)
-
-        openai_keys = get_openai_api_key()
-        agent = SafeOpenai(
-            model=model_path,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            window_size=window_size,
-            num_few_shot_examples=num_few_shot_examples,
-            keys=openai_keys,
-            **(get_azure_openai_args() if use_azure_openai else {}),
-        )
-    elif "vicuna" in model_path or "zephyr" in model_path:
-        # RankVicuna or RankZephyr model suite
-        print(f"Loading {model_path} ...")
-
-        model_full_paths = {
-            "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
-            "rank_vicuna": "castorini/rank_vicuna_7b_v1",
-        }
-
-        keys_and_defaults = [
-            ("context_size", 4096),
-            ("prompt_mode", PromptMode.RANK_GPT),
-            ("num_few_shot_examples", 0),
-            ("device", "cuda"),
-            ("num_gpus", 1),
-            ("variable_passages", False),
-            ("window_size", 20),
-            ("system_message", None),
-            ("vllm_batched", False),
-        ]
-        [
-            context_size,
-            prompt_mode,
-            num_few_shot_examples,
-            device,
-            num_gpus,
-            variable_passages,
-            window_size,
-            system_message,
-            vllm_batched,
-        ] = extract_kwargs(keys_and_defaults, **kwargs)
-
-        agent = RankListwiseOSLLM(
-            model=model_full_paths[model_path]
-            if model_path in model_full_paths
-            else model_path,
-            name=model_path,
-            context_size=context_size,
-            prompt_mode=prompt_mode,
-            num_few_shot_examples=num_few_shot_examples,
-            device=device,
-            num_gpus=num_gpus,
-            variable_passages=variable_passages,
-            window_size=window_size,
-            system_message=system_message,
-            vllm_batched=vllm_batched,
-        )
-
-        print(f"Completed loading {model_path}")
-    elif model_path in ["unspecified", "rank_random", "rank_identity"]:
-        # NULL reranker
-        agent = None
-    else:
-        raise ValueError(f"Unsupported model: {model_path}")
-
-    return agent
-
-
-def extract_kwargs(
-    keys_and_defaults: List[Tuple[str, Any]],
-    **kwargs,
-):
-    extracted_kwargs = [
-        kwargs.get(key_and_default[0], key_and_default[-1])
-        for key_and_default in keys_and_defaults
-    ]
-
-    # Check that type of provided kwarg is compatible with the provided default type
-    for i, extracted_kwarg in enumerate(extract_kwargs):
-        if type(keys_and_defaults[i[-1]]) != None and (
-            type(extracted_kwarg) != type(keys_and_defaults[i[-1]])
-        ):
-            raise ValueError(
-                "Provided kwarg must be compatible with the argument's default type"
-            )
-
-    return extracted_kwargs
