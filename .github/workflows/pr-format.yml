@@ -26,6 +26,12 @@ jobs:
       - name: Install Repo Dependencies
         run: |
           pip install -e .
-      - name: Run Unit Tests
+      - name: Run analysis tests
         run: |
-          python -m unittest discover -s test
+          python -m unittest discover -s test/analysis
+      - name: Run evaluation tests
+        run: |
+          python -m unittest discover -s test/evaluation
+      - name: Run rerank tests
+        run: |
+          python -m unittest discover -s test/rerank
