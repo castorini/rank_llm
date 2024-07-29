@@ -55,7 +55,7 @@ def retrieve_and_rerank(
 
     # Reranking stage
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
-    if reranker is None:
+    if agent is None:
         # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
         shuffle_candidates = True if model_path == "rank_random" else False
         rerank_results = IdentityReranker().rerank_batch(

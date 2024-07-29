@@ -1,15 +1,15 @@
 from pathlib import Path
-from typing import List, Any, Tuple
+from typing import Any, List, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
-from rank_llm.rerank.rankllm import RankLLM
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.rerank import (
     PromptMode,
     RankLLM,
     get_azure_openai_args,
     get_openai_api_key,
 )
+from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank.rankllm import RankLLM
 
 
 class Reranker:
@@ -46,7 +46,9 @@ class Reranker:
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
-        return self._agent.rerank_batch(requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs)
+        return self._agent.rerank_batch(
+            requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
+        )
 
     def rerank(
         self,
@@ -84,7 +86,6 @@ class Reranker:
             **kwargs,
         )
         return results[0]
- 
 
     def write_rerank_results(
         self,
@@ -122,7 +123,9 @@ class Reranker:
             provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
         """
 
-        name = self._agent.get_output_filename(top_k_candidates, dataset_name, shuffle_candidates, **kwargs)
+        name = self._agent.get_output_filename(
+            top_k_candidates, dataset_name, shuffle_candidates, **kwargs
+        )
 
         if window_size is not None:
             name += f"_window_{window_size}"
@@ -148,7 +151,6 @@ class Reranker:
             f"{ranking_execution_summary_dirname}/{retrieval_method_name}/{name}.json"
         )
         return result_file_name
-    
 
     def create_agent(
         model_path: str,
@@ -254,10 +256,18 @@ class Reranker:
 
         return agent
 
+
 def extract_kwargs(
     keys_and_defaults: List[Tuple[str, Any]],
     **kwargs,
-):
+) -> List[Any]:
+    """Extract specified kwargs from **kwargs
+
+    Keyword arguments:
+    keys_and_defaults -- List of Tuple(keyname, default)
+    Return: List of extracted kwargs in order provided in keys_and_default
+    """
+
     extracted_kwargs = [
         kwargs.get(key_and_default[0], key_and_default[-1])
         for key_and_default in keys_and_defaults
