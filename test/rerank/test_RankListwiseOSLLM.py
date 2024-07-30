@@ -274,9 +274,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         output = agent.num_output_tokens()
         self.assertEqual(output, 19)
 
-    # __init__ spins up gpu?
-    # what base method actually runs llm
-
     @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.run_llm")
     def test_run_llm(self, mock_run_llm):
         agent = RankListwiseOSLLM(
