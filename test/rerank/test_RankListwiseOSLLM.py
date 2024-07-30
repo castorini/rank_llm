@@ -191,8 +191,13 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.mock_tokenizer = MagicMock()
         self.mock_load_model.return_value = self.mock_llm, self.mock_tokenizer
 
+        self.patcher_cuda = patch("torch.cuda.is_available")
+        self.mock_cuda = self.patcher_cuda.start()
+        self.mock_cuda.return_value = True
+
     def tearDown(self):
         self.patcher.stop()
+        self.patcher_cuda.stop()
 
     def test_valid_inputs(self):
         for (
