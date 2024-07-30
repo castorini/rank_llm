@@ -54,7 +54,7 @@ class RankLLM(ABC):
 
     @abstractmethod
     def run_llm_batched(
-        self, prompts: List[Union[str, List[Dict[str, str]]]]
+        self, prompts: List[Union[str, List[Dict[str, str]]]], **kwargs
     ) -> List[Tuple[str, int]]:
         """
         Abstract method to run the target language model with a batch of prompts.

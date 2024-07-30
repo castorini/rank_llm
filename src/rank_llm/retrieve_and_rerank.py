@@ -42,6 +42,7 @@ def retrieve_and_rerank(
     topics_path: str = None,
     index_type: str = None,
     vllm_batched: bool = False,
+    batch_size: int = -1,
     interactive: bool = False,
     host: str = "http://localhost:8081",
     populate_exec_summary: bool = False,
@@ -90,6 +91,7 @@ def retrieve_and_rerank(
             prompt_mode=prompt_mode,
             window_size=window_size,
             device=device,
+            batch_size=batch_size
         )
     elif "lit5-score" in model_path.lower():
         agent = RankFiDScore(

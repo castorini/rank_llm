@@ -2,6 +2,8 @@ import torch
 
 from typing import List, Union, Dict, Tuple, Optional
 
+from networkx import prominent_group
+
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.rerank.lit5.model import FiD, FiDCrossAttentionScore
 from rank_llm.data import Result
@@ -19,7 +21,8 @@ class RankFiDDistill(RankLLM):
             num_few_shot_examples: int = 0,
             window_size: int = 20,
             precision: str = 'bfloat16',
-            device: str = 'cuda'
+            device: str = 'cuda',
+            batch_size: int = -1
     ) -> None:
         """
          Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
@@ -35,7 +38,8 @@ class RankFiDDistill(RankLLM):
         self._device = device
 
         # TODO consider make them non magic
-        self._batch_size = 1
+        self._batch_size = batch_size
+
         self._stride = 10
         self._answer_maxlength = 100
 
@@ -43,33 +47,20 @@ class RankFiDDistill(RankLLM):
 
         self._post_init()
 
-
-    def run_llm_batched(
-            self, prompts: List[Union[str, List[Dict[str, str]]]]
-    ) -> List[Tuple[str, int]]:
-        assert False, "Not supported batch"
-        return []
-
-    def create_prompt_batched(
-            self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
-    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
-        assert False, "Not supported batch"
-        return []
-
-    def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
-        """
-        Run the target language model with a passed in prompt.
-        """
-
-        prompt_text = [prompt['text'] for prompt in prompts]
+    def _run_llm_by_length_unified(self, batch_prompts: List[List[str]]) -> List[Tuple[str, int]]:
+        if len(batch_prompts) == 0:
+            return []
 
         self._llm.eval()
 
+        batch_size = len(batch_prompts)
+        n_passages = len(batch_prompts[0])
+
         # single batch, unsqueeze
         inputs = {
-            k: v.reshape(*v.shape[:-2], -1).unsqueeze(0).to(self._device)
+            k: v.reshape(batch_size, -1).to(self._device)
             for k, v
-            in self._tokenizer(prompt_text,
+            in self._tokenizer([prompt for prompts in batch_prompts for prompt in prompts],
                                return_tensors='pt',
                                padding='max_length',
                                truncation=True,
@@ -81,12 +72,46 @@ class RankFiDDistill(RankLLM):
                 **inputs,
                 max_length=self._answer_maxlength,
                 do_sample=False,
-                n_passages=len(prompts)
+                n_passages=n_passages
             )
 
         decoded_outputs = self._tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        return decoded_outputs, outputs.shape[1]
+        # all token size should be equal
+        return [(decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs]
+
+    def run_llm_batched(
+            self, prompts: List[List[Dict[str, str]]], current_window_size: int
+    ) -> List[Tuple[str, int]]:
+        assert self._batch_size > 0, f"Requires batch_size > 0 for batched run llm"
+        if len(prompts) == 0:
+            return []
+
+        # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
+        #   (which is commonly the same) then rerank stuff having same passage sizes
+
+        prompt_infos =  [list(map(lambda x: x['text'], prompt)) for prompt in prompts]
+
+        results = []
+
+        for i in range(0, len(prompt_infos), self._batch_size):
+            result_batch = self._run_llm_by_length_unified(prompt_infos[i:min(i + self._batch_size, len(prompt_infos))])
+            results.extend(result_batch)
+
+        return results
+
+
+    def create_prompt_batched(
+            self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+    ) -> List[Tuple[List[Dict[str, str]], int]]:
+        return [self.create_prompt(result, rank_start, rank_end) for result in results]
+
+    def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
+        """
+        Run the target language model with a passed in prompt.
+        """
+
+        return self._run_llm_by_length_unified([list(map(lambda x: x['text'], prompts))])[0]
 
     def create_prompt(
             self, result: Result, rank_start: int, rank_end: int
@@ -251,10 +276,10 @@ class RankFiDScore(RankLLM):
 
         with torch.no_grad():
             crossattention_scores = self._llm.get_crossattention_scores(len(prompts),
-                                                                          ids=passage_ids.cuda(self._device),
-                                                                          mask=passage_mask.bool().to(self._device),
-                                                                          mask_query=query_mask_reader.to(self._device),
-                                                                          output_sequence_lengths=[output_length])
+                                                                        ids=passage_ids.cuda(self._device),
+                                                                        mask=passage_mask.bool().to(self._device),
+                                                                        mask_query=query_mask_reader.to(self._device),
+                                                                        output_sequence_lengths=[output_length])
             # only supports normswoquery for now
             crossattention_score: torch.Tensor = crossattention_scores['normswoquery']
             sorted, idxes = torch.sort(crossattention_score, dim=-1)
