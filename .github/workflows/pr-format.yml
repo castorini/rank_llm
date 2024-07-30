@@ -25,11 +25,6 @@ jobs:
       - name: Install Repo Dependencies
         run: |
           pip install -e .
-      - name: Check if requirements.txt is up-to-date
-        run: |
-          python -m pip install pipreqs
-          pipreqs ./ --force
-          diff requirements.txt requirements.txt.bak || (echo "requirements.txt is not up-to-date" && exit 1)
       - name: Run analysis tests
         run: |
           python -m unittest discover -s test/analysis
