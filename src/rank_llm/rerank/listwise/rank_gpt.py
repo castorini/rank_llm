@@ -182,7 +182,6 @@ class SafeOpenai(ListwiseRankLLM):
     def _get_prefix_for_rank_gpt_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
-        # APEER
         return [
             {
                 "role": "system",
@@ -201,6 +200,7 @@ class SafeOpenai(ListwiseRankLLM):
     def _get_prefix_for_rank_gpt_apeer_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
+        # APEER
         return [
             {
                 "role": "system",

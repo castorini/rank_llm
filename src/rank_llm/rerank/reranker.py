@@ -152,6 +152,9 @@ class Reranker:
         )
         return result_file_name
 
+    def get_agent(self) -> RankLLM:
+        return self._agent
+
     def create_agent(
         model_path: str,
         default_agent: RankLLM,
@@ -254,6 +257,12 @@ class Reranker:
         else:
             raise ValueError(f"Unsupported model: {model_path}")
 
+        if agent is None and model_path not in [
+            "unspecified",
+            "rank_random",
+            "rank_identity",
+        ]:
+            raise ValueError(f"Unsupported model: {model_path}")
         return agent
 
 

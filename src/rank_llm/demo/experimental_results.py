@@ -8,13 +8,14 @@ sys.path.append(parent)
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank import get_openai_api_key
+from rank_llm.rerank import Reranker, get_openai_api_key
 from rank_llm.rerank.listwise import SafeOpenai, VicunaReranker, ZephyrReranker
 from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
 # create rerankers
-g_reranker = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
+agent = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
+g_reranker = Reranker(agent)
 v_reranker = VicunaReranker()
 z_reranker = ZephyrReranker()
 rerankers = {"rg": g_reranker, "rv": v_reranker, "rz": z_reranker}
