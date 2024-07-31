@@ -75,7 +75,8 @@ class RankFiDDistill(RankLLM):
                 n_passages=n_passages
             )
 
-        decoded_outputs = self._tokenizer.decode(outputs[0], skip_special_tokens=True)
+        decoded_outputs = [self._tokenizer.decode(outputs[i],
+                                                  skip_special_tokens=True) for i in range(outputs.shape[0])]
 
         # all token size should be equal
         return [(decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs]
@@ -90,7 +91,7 @@ class RankFiDDistill(RankLLM):
         # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
         #   (which is commonly the same) then rerank stuff having same passage sizes
 
-        prompt_infos =  [list(map(lambda x: x['text'], prompt)) for prompt in prompts]
+        prompt_infos = [list(map(lambda x: x['text'], prompt)) for prompt in prompts]
 
         results = []
 
@@ -99,7 +100,6 @@ class RankFiDDistill(RankLLM):
             results.extend(result_batch)
 
         return results
-
 
     def create_prompt_batched(
             self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
