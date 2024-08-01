@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank import (
@@ -13,7 +13,7 @@ from rank_llm.rerank.rankllm import RankLLM
 
 
 class Reranker:
-    def __init__(self, agent: RankLLM) -> None:
+    def __init__(self, agent: Optional[RankLLM]) -> None:
         self._agent = agent
 
     def rerank_batch(
@@ -93,8 +93,6 @@ class Reranker:
         results: List[Result],
         shuffle_candidates: bool = False,
         top_k_candidates: int = 100,
-        pass_ct: int = None,
-        window_size: int = None,
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
         ranking_execution_summary_dirname: str = "ranking_execution_summary",
@@ -122,6 +120,8 @@ class Reranker:
             The function creates directories and files as needed. The file names are constructed based on the
             provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
         """
+        pass_ct: Optional[int] = kwargs.get("pass_ct", None)
+        window_size: Optional[int] = kwargs.get("window_size", None)
 
         name = self._agent.get_output_filename(
             top_k_candidates, dataset_name, shuffle_candidates, **kwargs

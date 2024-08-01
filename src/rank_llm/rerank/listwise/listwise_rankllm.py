@@ -14,6 +14,7 @@ from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
+
 class ListwiseRankLLM(RankLLM, ABC):
     """
     All children of ListwiseRankLLM must implement these functions:
@@ -35,9 +36,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         num_few_shot_examples: int,
         window_size: int,
     ) -> None:
-        super().__init__(model)
-        self._context_size = context_size
-        self._prompt_mode = prompt_mode
+        super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
         self._window_size = window_size
 

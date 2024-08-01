@@ -85,33 +85,40 @@ def retrieve_and_rerank(
                 Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
                 for r in rerank_results
             ]
+
+        for rr in rerank_results:
+            rr.candidates = rr.candidates[:top_k_rerank]
+
+        # generate trec_eval file & evaluate for named datasets only
+        if isinstance(dataset, str):
+            file_name = reranker.write_rerank_results(
+                retrieval_method.name,
+                rerank_results,
+                shuffle_candidates,
+                top_k_candidates=top_k_retrieve,
+                pass_ct=None if num_passes == 1 else pass_ct,
+                window_size=kwargs.get("window_size", None),
+                dataset_name=dataset,
+            )
+            if (
+                dataset in TOPICS
+                and dataset not in ["dl22", "dl22-passage", "news"]
+                and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
+            ):
+                print("Evaluating:")
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name]
+                )
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name]
+                )
+            else:
+                print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+
     print(f"Reranking with {num_passes} passes complete!")
-
-    for rr in rerank_results:
-        rr.candidates = rr.candidates[:top_k_rerank]
-
-    # generate trec_eval file & evaluate for named datasets only
-    if isinstance(dataset, str):
-        file_name = reranker.write_rerank_results(
-            retrieval_method.name,
-            rerank_results,
-            shuffle_candidates,
-            top_k_candidates=top_k_retrieve,
-            pass_ct=None if num_passes == 1 else pass_ct,
-            window_size=kwargs.get("window_size", None),
-            dataset_name=dataset,
-        )
-        if (
-            dataset in TOPICS
-            and dataset not in ["dl22", "dl22-passage", "news"]
-            and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
-        ):
-            print("Evaluating:")
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
-        else:
-            print(f"Skipping evaluation as {dataset} is not in TOPICS.")
 
     if interactive:
         return (rerank_results, reranker.get_agent())

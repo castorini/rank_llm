@@ -19,11 +19,10 @@ class PromptMode(Enum):
 
 
 class RankLLM(ABC):
-    def __init__(
-        self,
-        model: str,
-    ) -> None:
+    def __init__(self, model: str, context_size: int, prompt_mode: PromptMode) -> None:
         self._model = model
+        self._context_size = context_size
+        self._prompt_mode = prompt_mode
 
     @abstractmethod
     def run_llm_batched(
