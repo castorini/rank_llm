@@ -171,7 +171,10 @@ class Retriever:
             else:
                 print("Reusing existing retrieved results.")
                 md5_local = compute_md5(candidates_file)
-                if HITS_INFO[query_name]["md5"] != md5_local:
+                if (
+                    query_name in HITS_INFO
+                    and HITS_INFO[query_name]["md5"] != md5_local
+                ):
                     print("Query Cache MD5 does not match Local")
                 with open(candidates_file, "r") as f:
                     retrieved_results = []
