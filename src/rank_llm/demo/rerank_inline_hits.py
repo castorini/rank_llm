@@ -10,8 +10,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import DataWriter, Request
-from rank_llm.rerank.vicuna_reranker import VicunaReranker
-from rank_llm.rerank.zephyr_reranker import ZephyrReranker
+from rank_llm.rerank.listwise import VicunaReranker, ZephyrReranker
 
 request_dict = {
     "query": {"text": "how long is life cycle of flea", "qid": "264014"},

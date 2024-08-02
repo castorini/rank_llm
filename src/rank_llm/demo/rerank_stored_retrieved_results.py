@@ -8,7 +8,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import DataWriter, read_requests_from_file
-from rank_llm.rerank.zephyr_reranker import ZephyrReranker
+from rank_llm.rerank.listwise import ZephyrReranker
 
 file_name = "retrieve_results/BM25/retrieve_results_dl23_top20.json"
 requests = read_requests_from_file(file_name)

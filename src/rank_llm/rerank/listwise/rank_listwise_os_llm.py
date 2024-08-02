@@ -1,15 +1,9 @@
-import logging
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
 import json
+import logging
 import os
 import random
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 from fastchat.model import get_conversation_template, load_model
@@ -17,20 +11,25 @@ from ftfy import fix_text
 from tqdm import tqdm
 from transformers.generation import GenerationConfig
 
+from rank_llm.data import Request, Result
+from rank_llm.rerank import PromptMode
+
+from .listwise_rankllm import ListwiseRankLLM
+
 try:
     from vllm import LLM, SamplingParams
 except:
     LLM = None
     SamplingParams = None
 
-from rank_llm.data import Result
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
+logger = logging.getLogger(__name__)
 
 
-class RankListwiseOSLLM(RankLLM):
+class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
         model: str,
+        name: str,
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
@@ -42,9 +41,8 @@ class RankListwiseOSLLM(RankLLM):
         vllm_batched: bool = False,
     ) -> None:
         """
-         Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using
-         a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage
-         handling, and custom system messages for generating prompts.
+         Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
+         RankListWiseOSLLM uses the default implementations for sliding_window
 
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
@@ -70,16 +68,28 @@ class RankListwiseOSLLM(RankLLM):
          - This class is operates given scenarios where listwise ranking is required, with support for dynamic
          passage handling and customization of prompts through system messages and few-shot examples.
          - GPU acceleration is supported and recommended for faster computations.
+        TODO: Make repetition_penalty configurable
         """
-        super().__init__(model, context_size, prompt_mode, num_few_shot_examples)
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, window_size
+        )
         self._device = device
+        self._vllm_batched = vllm_batched
+        self._name = name
+        self._variable_passages = variable_passages
+        self._system_message = system_message
+        self._output_token_estimate = None
+
+        if num_few_shot_examples > 0:
+            with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
+                self._examples = list(json_file)[1:-1]
         if self._device == "cuda":
             assert torch.cuda.is_available()
+
         if prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
-        # ToDo: Make repetition_penalty configurable
         if vllm_batched and LLM is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
@@ -93,14 +103,57 @@ class RankListwiseOSLLM(RankLLM):
             self._llm, self._tokenizer = load_model(
                 model, device=device, num_gpus=num_gpus
             )
-        self._vllm_batched = vllm_batched
-        self._variable_passages = variable_passages
-        self._window_size = window_size
-        self._system_message = system_message
-        self._output_token_estimate = None
-        if num_few_shot_examples > 0:
-            with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
-                self._examples = list(json_file)[1:-1]
+
+    def rerank_batch(
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> List[Result]:
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
+        window_size: int = kwargs.get("window_size", 20)
+        window_size = min(window_size, top_k_retrieve)
+        step: int = kwargs.get("step", 10)
+        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+
+        if self._vllm_batched:
+            # reranking using vllm
+            if len(set([len(req.candidates) for req in requests])) != 1:
+                raise ValueError(
+                    "Batched requests must have the same number of candidates"
+                )
+
+            return self.sliding_windows_batched(
+                requests,
+                rank_start=max(rank_start, 0),
+                rank_end=min(
+                    rank_end, len(requests[0].candidates)
+                ),  # TODO: Fails arbitrary hit sizes
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+                populate_exec_summary=populate_exec_summary,
+            )
+        else:
+            # Normal operation mode
+            results = []
+            for request in tqdm(requests):
+                result = self.sliding_windows(
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    window_size=window_size,
+                    step=step,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_exec_summary=populate_exec_summary,
+                )
+                results.append(result)
+            return results
 
     def run_llm_batched(
         self,
@@ -257,3 +310,6 @@ class RankListwiseOSLLM(RankLLM):
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
+
+    def get_name(self) -> str:
+        return self._name

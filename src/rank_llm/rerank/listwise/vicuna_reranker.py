@@ -1,9 +1,8 @@
 from typing import List
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.rerank.reranker import Reranker
+from rank_llm.rerank import PromptMode
+from rank_llm.rerank.listwise import RankListwiseOSLLM
 
 
 class VicunaReranker:
@@ -19,7 +18,7 @@ class VicunaReranker:
         window_size: int = 20,
         system_message: str = None,
     ) -> None:
-        agent = RankListwiseOSLLM(
+        self._reranker = RankListwiseOSLLM(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
@@ -30,7 +29,6 @@ class VicunaReranker:
             window_size=window_size,
             system_message=system_message,
         )
-        self._reranker = Reranker(agent)
 
     def rerank_batch(
         self,

@@ -3,8 +3,8 @@ import unittest
 from dacite import from_dict
 
 from rank_llm.data import Result
-from rank_llm.rerank.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank import PromptMode
+from rank_llm.rerank.listwise import RankListwiseOSLLM
 
 # model, context_size, prompt_mode, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
