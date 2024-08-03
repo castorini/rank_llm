@@ -9,10 +9,9 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.analysis.estimate_costs import EstimationMode
-from rank_llm.rerank.rank_gpt import SafeOpenai
-from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.retrieve.pyserini_retriever import PyseriniRetriever, RetrievalMethod
-from rank_llm.retrieve.topics_dict import TOPICS
+from rank_llm.rerank import PromptMode
+from rank_llm.rerank.listwise import SafeOpenai
+from rank_llm.retrieve import TOPICS, PyseriniRetriever, RetrievalMethod
 
 
 def main(args):

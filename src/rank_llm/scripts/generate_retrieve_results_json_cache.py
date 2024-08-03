@@ -55,7 +55,7 @@ from collections import defaultdict
 from pyserini.search import LuceneSearcher, get_qrels, get_topics
 from tqdm import tqdm
 
-from rank_llm.topics_dict import TOPICS
+from rank_llm.retrieve import TOPICS
 
 sys.path.append(os.getcwd())
 

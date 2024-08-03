@@ -2,9 +2,7 @@ import unittest
 
 from rank_llm import retrieve_and_rerank
 from rank_llm.data import Candidate, Query, Request
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.retriever import RetrievalMode
-from rank_llm.retrieve.service_retriever import ServiceRetriever
+from rank_llm.retrieve import RetrievalMethod, RetrievalMode, ServiceRetriever
 
 
 class TestServiceRetriever(unittest.TestCase):

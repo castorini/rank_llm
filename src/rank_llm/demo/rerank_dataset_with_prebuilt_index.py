@@ -8,10 +8,8 @@ sys.path.append(parent)
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank.vicuna_reranker import VicunaReranker
-from rank_llm.retrieve.pyserini_retriever import RetrievalMethod
-from rank_llm.retrieve.retriever import Retriever
-from rank_llm.retrieve.topics_dict import TOPICS
+from rank_llm.rerank.listwise import VicunaReranker
+from rank_llm.retrieve import TOPICS, RetrievalMethod, Retriever
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
