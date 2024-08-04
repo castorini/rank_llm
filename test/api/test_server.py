@@ -5,6 +5,13 @@ import requests
 # Needs RankLLM API to be active at 8082 and Anserini API to be active at 8081
 # If not mocked, this test suite takes around 5min on a single RTX4090
 
+# - name: Run API tests
+#   run: |
+#     python -m unittest discover -s test/api
+# - name: Run retrieve_and_rerank
+#   run: |
+#     python -m unittest test/test_retrieve_and_rerank
+
 
 class TestAPI(unittest.TestCase):
     BASE_URL = "http://localhost:8082/api/model/{model_name}/index/{index_name}/{anserini_host_addr}"
