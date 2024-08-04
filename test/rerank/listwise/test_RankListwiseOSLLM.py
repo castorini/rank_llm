@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock, patch
 
 from dacite import from_dict
 
@@ -183,6 +184,21 @@ r = from_dict(
 
 
 class TestRankListwiseOSLLM(unittest.TestCase):
+    def setUp(self):
+        self.patcher = patch("rank_llm.rerank.rank_listwise_os_llm.load_model")
+        self.mock_load_model = self.patcher.start()
+        self.mock_llm = MagicMock()
+        self.mock_tokenizer = MagicMock()
+        self.mock_load_model.return_value = self.mock_llm, self.mock_tokenizer
+
+        self.patcher_cuda = patch("torch.cuda.is_available")
+        self.mock_cuda = self.patcher_cuda.start()
+        self.mock_cuda.return_value = True
+
+    def tearDown(self):
+        self.patcher.stop()
+        self.patcher_cuda.stop()
+
     def test_valid_inputs(self):
         for (
             model,
@@ -231,7 +247,8 @@ class TestRankListwiseOSLLM(unittest.TestCase):
                     system_message=system_message,
                 )
 
-    def test_num_output_tokens(self):
+    @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens")
+    def test_num_output_tokens(self, mock_num_output_tokens):
         # Creating PyseriniRetriever instance
         agent = RankListwiseOSLLM(
             "castorini/rank_zephyr_7b_v1_full",
@@ -243,6 +260,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             system_message="",
         )
 
+        mock_num_output_tokens.return_value = 40
         output = agent.num_output_tokens()
         self.assertEqual(output, 40)
 
@@ -257,10 +275,12 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             system_message="",
         )
 
+        mock_num_output_tokens.return_value = 19
         output = agent.num_output_tokens()
         self.assertEqual(output, 19)
 
-    def test_run_llm(self):
+    @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.run_llm")
+    def test_run_llm(self, mock_run_llm):
         agent = RankListwiseOSLLM(
             "castorini/rank_zephyr_7b_v1_full",
             4096,
@@ -270,6 +290,8 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             window_size=5,
             system_message="",
         )
+
+        mock_run_llm.return_value = ("> [1] > [2] > [3] > [4] > [5", 19)
         output, size = agent.run_llm(
             "How are you doing ? What is your name? What is your age? What is your favorite color?"
         )
@@ -288,6 +310,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             variable_passages=True,
             window_size=5,
             system_message="",
+            device="cpu",
         )
 
         import re
@@ -302,7 +325,8 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             expected_output = min(end, len(r.candidates)) - max(0, start)
             self.assertEqual(get_first_int(prompt), max(expected_output, 0))
 
-    def test_get_num_tokens(self):
+    @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.get_num_tokens")
+    def test_get_num_tokens(self, mock_get_num_tokens):
         agent = RankListwiseOSLLM(
             "castorini/rank_zephyr_7b_v1_full",
             4096,
@@ -311,8 +335,10 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             variable_passages=True,
             window_size=5,
             system_message="",
+            device="cpu",
         )
 
+        mock_get_num_tokens.return_value = 22
         output = agent.get_num_tokens(
             "How are you doing? What is your name? What is your age? What is your favorite color?"
         )
