@@ -16,6 +16,7 @@ from rank_llm.retrieve import (
 
 def retrieve_and_rerank(
     model_path: str,
+    query: str,
     dataset: Union[str, List[str], List[Dict[str, Any]]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
     retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
@@ -23,7 +24,6 @@ def retrieve_and_rerank(
     top_k_rerank: int = 10,
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
-    query: str = "",
     qid: int = 1,
     num_passes: int = 1,
     interactive: bool = False,
@@ -54,8 +54,7 @@ def retrieve_and_rerank(
         **kwargs,
     )
     print(f"Retrieval complete!")
-
-    # Reranking stage
+    # Reranking stagea
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
     if reranker.get_agent() is None:
         # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
@@ -63,7 +62,7 @@ def retrieve_and_rerank(
         rerank_results = IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
-            shuffle_candidates=(shuffle_candidates),
+            shuffle_candidates=shuffle_candidates,
         )
     else:
         # Reranker is of type RankLLM
@@ -160,16 +159,26 @@ def retrieve(
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
             )
+            if isinstance(dataset, str):
+                dataset = [dataset]
+            if isinstance(dataset, list):
+                # This check remains the same as the contents check still needs manual iteration
+                if all(isinstance(item, dict) for item in dataset):
+                    raise ValueError(
+                        "List[Dict[str, Any]] dataset input is not supported for interactive retrieval"
+                    )
 
-            # Calls Anserini API
-            requests = [
-                service_retriever.retrieve(
-                    dataset=dataset,
-                    request=Request(query=Query(text=query, qid=qid)),
-                    k=top_k_retrieve,
-                    host=host,
+            requests = []
+            for ds in dataset:
+                # Calls Anserini API
+                requests.append(
+                    service_retriever.retrieve(
+                        dataset=ds,
+                        request=Request(query=Query(text=query, qid=qid)),
+                        k=top_k_retrieve,
+                        host=host,
+                    )
                 )
-            ]
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,
