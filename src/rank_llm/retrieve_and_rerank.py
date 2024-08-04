@@ -53,8 +53,8 @@ def retrieve_and_rerank(
         dataset=dataset,
         **kwargs,
     )
-    print(f"Retrieval complete!")
-    # Reranking stagea
+
+    # Reranking stages
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
     if reranker.get_agent() is None:
         # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
@@ -87,7 +87,6 @@ def retrieve_and_rerank(
 
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]
-    print(f"Reranking with {num_passes} passes complete!")
 
     # generate trec_eval file & evaluate for named datasets only
     if isinstance(dataset, str) and reranker.get_agent() is not None:
