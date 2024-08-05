@@ -10,6 +10,7 @@ from rank_llm.rerank import (
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.rerank.rankllm import RankLLM
+from rank_llm.rerank.pointwise.monot5 import MonoT5
 
 
 class Reranker:
@@ -251,6 +252,32 @@ class Reranker:
             )
 
             print(f"Completed loading {model_path}")
+        elif "monot5" in model_path:
+            # using monot5
+            print(f"Loading {model_path} ...")
+
+            model_full_paths = {
+                "rank_monot5": "castorini/monot5-3b-msmarco-10k"
+            }
+            
+            keys_and_defaults = [
+                ("context_size", 512),
+                ("device", "cuda"),\
+            ]
+            [
+                context_size,
+                device
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = MonoT5(
+                model=model_full_paths[model_path]
+                if model_path in model_full_paths
+                else model_path,
+                context_size=context_size,
+                device=device
+            )
+
+
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None
