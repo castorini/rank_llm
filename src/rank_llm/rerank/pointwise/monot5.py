@@ -1,15 +1,11 @@
 import logging
 import math
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import cmp_to_key
-from typing import Dict, List, Optional, Tuple
+from typing import List, Tuple
 
-import torch
-from tqdm import tqdm
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers.generation import GenerationConfig
 
-from rank_llm.data import Candidate, Result
+from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 
 try:
@@ -24,52 +20,73 @@ class MonoT5(PointwiseRankLLM):
     def __init__(
         self,
         model: str,
-        device: str = "cuda",
-        window_size: int = 20,
+        prompt_mode: str = "monot5",
+        context_size: int = 512,
+        device: str = "cuda"
     ):
-        super.__init__(model, device, window_size)
-        self._tokenizer = T5Tokenizer.from_pretrained("castorini/monot5-large-msmarco")
+        super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode, device=device)
+        self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = T5ForConditionalGeneration.from_pretrained(
-            "castorini/monot5-large-msmarco"
+            model
         ).to(self._device)
+        self._context_size = context_size
 
     def run_llm_batched(
         self,
-        prompts: List[str | List[Dict[str, str]]],
-        current_window_size: Optional[int] = None,
-    ) -> List[Tuple[str, int]]:
-        if SamplingParams is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
-            )
-        logger.info(f"VLLM Generating!")
-        sampling_params = SamplingParams(
-            temperature=0.0,
-            max_tokens=self.num_output_tokens(current_window_size),
-            min_tokens=self.num_output_tokens(current_window_size),
-        )
-        outputs = self._llm.generate(prompts, sampling_params)
-
-        return [
-            (output.outputs[0].text, len(output.outputs[0].token_ids))
-            for output in outputs
-        ]
-
-    def run_llm(
-        self, prompt: str, current_window_size: Optional[int] = None
-    ) -> Tuple[str, int, float]:
-        if current_window_size is None:
-            current_window_size = self._window_size
-        inputs = self._tokenizer([prompt])
-        inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
+        prompts: List[str],
+    ) -> Tuple[List[str], List[int], List[float]]:
+        
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_new_tokens = self.num_output_tokens()
-        gen_cfg.decoder_start_token_id = None
         gen_cfg.output_scores = True
         gen_cfg.return_dict_in_generate = True
-        # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
+
+        token_prompts = self._tokenizer(
+            prompts,
+            padding=True,
+            truncation=True,
+            return_tensors='pt' 
+        ).to(self._device)
+
+        token_prompts = token_prompts['input_ids']
+
+        outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
+
+        output_ids = outputs.sequences
+        logits = outputs.scores
+
+        outputs = [ 
+            self._tokenizer.decode(
+                single_token_sequence, skip_special_tokens=True, spaces_between_special_tokens=False
+            ) 
+            for single_token_sequence in output_ids
+        ]
+
+        output_token_counts = []
+        scores = []
+
+        for logit_tensor in logits[0]:
+            truth_logit = logit_tensor[1176]
+            false_logit = logit_tensor[6136]
+            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
+            scores.append(score)
+            output_token_counts.append(self.num_output_tokens)
+
+        return outputs, output_token_counts, scores
+        
+    def run_llm(
+        self, prompt: str
+    ) -> Tuple[str, int, float]:
+        
+        gen_cfg = GenerationConfig.from_model_config(self._llm.config)
+        gen_cfg.max_new_tokens = self.num_output_tokens()
+        gen_cfg.min_new_tokens = self.num_output_tokens()
+        gen_cfg.output_scores = True
+        gen_cfg.return_dict_in_generate = True
+        gen_cfg.do_sample = False
+
         token_prompt = self._tokenizer.encode(prompt, return_tensors="pt").to(
             self._device
         )
@@ -87,99 +104,29 @@ class MonoT5(PointwiseRankLLM):
         truth_logit = logits[0][0][1176]
         false_logit = logits[0][0][6136]
         score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
-        # print(outputs, output_ids.size(0))
+
         return outputs, output_ids.size(0), score
 
-    def _add_prefix_prompt(self, query: str, num: int) -> str:
-        return f"Given the query: {query}, output its relevance to the {num} documents."
-
-    def _add_post_prompt(self, query: str, num: int) -> str:
-        return f"Given the query: {query}, output its relevance to the {num} documents."
-
-    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+    def num_output_tokens(self) -> int:
         return 1
 
     def create_prompt(
-        self, result: Result, rank_start: int, rank_end: int
+        self, result: Result, index: int
     ) -> Tuple[str, int]:
         query = result.query.text
-        query = self._replace_number(query)
         input = (
-            f"Query: {query} Document: {result.candidates[rank_start].doc['contents']}"
+            f"Query: {query} Document: {result.candidates[index].doc['contents']}"
         )
         prompt = (
-            self._tokenizer.decode(self._tokenizer.encode(input)[:480])[:-4]
+            self._tokenizer.decode(self._tokenizer.encode(input)[:(self._context_size - 32)])[:-4]
             + " Relevant: "
         )
         prompt = prompt.replace("<unk>", "")
 
         return prompt, self.get_num_tokens(prompt)
 
-    def create_prompt_batched(
-        self,
-        results: List[Result],
-        rank_start: int,
-        rank_end: int,
-        batch_size: int = 32,
-    ) -> List[Tuple[str, int]]:
-        def chunks(lst, n):
-            """Yield successive n-sized chunks from lst."""
-            for i in range(0, len(lst), n):
-                yield lst[i : i + n]
-
-        all_completed_prompts = []
-
-        with ThreadPoolExecutor() as executor:
-            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
-                futures = [
-                    executor.submit(self.create_prompt, result, rank_start, rank_end)
-                    for result in batch
-                ]
-                completed_prompts = [
-                    future.result() for future in as_completed(futures)
-                ]
-                all_completed_prompts.extend(completed_prompts)
-        return all_completed_prompts
-
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
-
-    def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
-        if x.score < y.score:
-            return -1
-        elif x.score > y.score:
-            return 1
-        else:
-            return 0
-
-    def permutation_pipeline(
-        self,
-        result: Result,
-        rank_start: int,
-        rank_end: int,
-        logging: bool = False,
-    ) -> Result:
-        """
-        Runs the permutation pipeline on the passed in result set within the passed in rank range.
-
-        Args:
-            result (Result): The result object to process.
-            rank_start (int): The start index for ranking.
-            rank_end (int): The end index for ranking.
-            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
-
-        Returns:
-            Result: The processed result object after applying permutation.
-        """
-        # print(len(result.candidates))
-        for i in range(len(result.candidates)):
-            prompt, num_tokens = self.create_prompt(result, i, rank_end)
-            output, output_num_tokens, score = self.run_llm(prompt=prompt)
-            (result.candidates[i]).score = score
-
-        result.candidates.sort(key=cmp_to_key(self.candidate_comparator))
-
-        return result
