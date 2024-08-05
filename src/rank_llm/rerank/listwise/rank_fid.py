@@ -418,8 +418,23 @@ class RankFiDScore(ListwiseRankLLM):
             self, prompts: List[List[Dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         assert self._batch_size > 0, f"Requires batch_size > 0 for batched run llm"
+        if len(prompts) == 0:
+            return []
 
-        return self._run_llm_by_length_unified([[(x['query'], x['text']) for x in prmpt] for prmpt in prompts])
+        # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
+        #   (which is commonly the same) then rerank stuff having same passage sizes
+
+        results = []
+
+        for i in range(0, len(prompts), self._batch_size):
+            batch_prompt = [
+                [(x['query'], x['text']) for x in prmpt]
+                for prmpt in prompts[i:min(i + self._batch_size, len(prompts))]
+            ]
+            result_batch = self._run_llm_by_length_unified(batch_prompt)
+            results.extend(result_batch)
+
+        return results
 
     def create_prompt_batched(
             self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
