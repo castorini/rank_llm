@@ -2,13 +2,14 @@ from typing import List, Union, Dict, Tuple, Optional, Any
 
 import torch
 from click import prompt
+from dns.resolver import query
 from tqdm import tqdm
 from transformers import T5Tokenizer
 
 from rank_llm.data import Result, Request
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
-from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore
+from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore, cross_attention_forward
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 
@@ -278,7 +279,7 @@ class RankFiDScore(ListwiseRankLLM):
         # TODO use adaptor for this guy
         self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
-        self._llm = FiD.from_pretrained(model).to(device).eval()
+        self._llm = FiDCrossAttentionScore.from_pretrained(model).to(device).eval()
 
         self._window_size = window_size
         self._device = device
@@ -303,7 +304,7 @@ class RankFiDScore(ListwiseRankLLM):
         n_passages = len(batch_prompts[0])
 
         inputs = {
-            k: v.reshape(batch_size, -1).unsqueeze(0).to(self._device) for k, v in self._tokenizer(
+            k: v.reshape(batch_size, -1).to(self._device) for k, v in self._tokenizer(
                 [prompt for prompts in batch_prompts for (_, prompt) in prompts],
                 return_tensors='pt',
                 padding='max_length',
@@ -320,18 +321,22 @@ class RankFiDScore(ListwiseRankLLM):
 
             outputs = self._llm.generate(
                 **inputs,
-                max_length=n_passages,
+                max_length=20,
                 do_sample=False,
-                n_passages=len(batch_prompts)
+                n_passages=n_passages
             )
 
-        output_length = 0
-        for j in range(outputs.shape[1]):
-            if outputs[0, j] == FiDCrossAttentionScore.ANSWER_EOS_TOKEN:
-                output_length = j
-                break
-        else:
-            output_length = outputs.shape[1]
+        output_sequence_lengths = []
+
+        for output in outputs:
+            output_length = 0
+            for j in range(output.shape[0]):
+                if output[j] == FiDCrossAttentionScore.ANSWER_EOS_TOKEN:
+                    output_length = j
+                    break
+            else:
+                output_length = outputs.shape[1]
+            output_sequence_lengths.append(output_length)
 
         query_mask_reader = self._tokenizer(
             queries,
@@ -347,28 +352,15 @@ class RankFiDScore(ListwiseRankLLM):
                                                                         ids=passage_ids.to(self._device),
                                                                         mask=passage_mask.bool().to(self._device),
                                                                         mask_query=query_mask_reader.to(self._device),
-                                                                        output_sequence_lengths=[output_length])
+                                                                        output_sequence_lengths=output_sequence_lengths)
             # only supports normswoquery for now
             crossattention_score: torch.Tensor = crossattention_scores['normswoquery']
-            sorted, idxes = torch.sort(crossattention_score, dim=-1)
+            sorted, idxes = torch.sort(crossattention_score, dim=-1, descending=True)
             idxes = idxes.detach().cpu()
 
-        print([
-            (
-                " > ".join(
-                    [f"[{x + 1}]" for x in idxes[i].tolist()]
-                ),
-                output_length + crossattention_score.shape[1]
-            ) for i in range(idxes.shape[0])
-        ])
-
         return [
-            (
-                " > ".join(
-                    [f"[{x + 1}]" for x in idxes[i].tolist()]
-                ),
-                output_length + crossattention_score.shape[1]
-            ) for i in range(idxes.shape[0])
+            (" > ".join([f"[{x + 1}]" for x in idxes[i].tolist()]),
+             output_sequence_lengths[i] + crossattention_score.shape[1]) for i in range(idxes.shape[0])
         ]
 
     def rerank_batch(
@@ -449,7 +441,7 @@ class RankFiDScore(ListwiseRankLLM):
 
         for i in range(rank_start, rank_end):
             results.append({
-                'query': query,
+                'query': f"question: {query}",
                 'text': self._gen_passage(
                     query,
                     self.convert_doc_to_prompt_content(result.candidates[i].doc, self.max_tokens())
