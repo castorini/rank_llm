@@ -5,12 +5,30 @@ from tqdm import tqdm
 from transformers import T5Tokenizer
 
 from rank_llm.data import Result, Request
+from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
 from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 
 class RankFiDDistill(ListwiseRankLLM):
+
+    def _post_init(self):
+        self._to_precision(self._precision)
+
+    def _tokenize(self, s: str):
+        return self._tokenizer(s)
+
+    def _to_precision(self, precision: str) -> None:
+        """
+        We don't support python12 for now, after python 12, the code should be changed into
+        """
+        if precision == 'float32':
+            self._llm = self._llm.float()
+        elif precision == 'bfloat16':
+            self._llm = self._llm.bfloat16()
+        elif precision == 'float16':
+            self._llm = self._llm.float16()
 
     def __init__(
             self,
@@ -42,7 +60,7 @@ class RankFiDDistill(ListwiseRankLLM):
         self._batch_size = batch_size
 
         self._stride = 10
-        self._answer_maxlength = 100
+        self._answer_maxlength = 140
 
         self._output_token_estimate = None
 
@@ -214,7 +232,15 @@ class RankFiDDistill(ListwiseRankLLM):
 
             return output_token_estimate
 
+    @staticmethod
+    def _gen_passage(query: str, index: int, passage: str) -> str:
+        return f"Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "
+
+
+class RankFiDScore(ListwiseRankLLM):
     def _post_init(self):
+        # set the overwrite forward cross attention
+        self._llm.overwrite_forward_crossattention()
         self._to_precision(self._precision)
 
     def _tokenize(self, s: str):
@@ -231,12 +257,6 @@ class RankFiDDistill(ListwiseRankLLM):
         elif precision == 'float16':
             self._llm = self._llm.float16()
 
-    @staticmethod
-    def _gen_passage(query: str, index: int, passage: str) -> str:
-        return f"Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "
-
-
-class RankFiDScore(RankLLM):
     def __init__(
             self,
             model: str,
@@ -244,37 +264,112 @@ class RankFiDScore(RankLLM):
             prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
             num_few_shot_examples: int = 0,
             window_size: int = 20,
+            precision: str = 'bfloat16',
             device: str = 'cuda',
+            batched: bool = False,
+            batch_size: int = -1
     ) -> None:
         """
          Creates instance of the RankFiDScore class, a specialized version of RankLLM designed from Lit5-Score.
         """
         super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode,
-                         num_few_shot_examples=num_few_shot_examples)
+                         num_few_shot_examples=num_few_shot_examples, window_size=window_size)
+        # TODO use adaptor for this guy
+        self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
-        self._llm = FiDCrossAttentionScore.from_pretrained(model).to(device).eval()
+        self._llm = FiD.from_pretrained(model).to(device).eval()
 
         self._window_size = window_size
         self._device = device
 
-        self._batch_size = 1
-        self._stride = 10
-        self._answer_maxlength = 100
-        self._n_passes = 1
+        # TODO consider make them non magic
+        self._batched = batched
+        self._batch_size = batch_size
 
-        self._post_init()
+        self._stride = 10
+        self._answer_maxlength = 140
 
         self._output_token_estimate = None
 
-    def _post_init(self) -> None:
-        # set the overwrite forward cross attention
-        self._llm.overwrite_forward_crossattention()
+        self._post_init()
+
+    def _run_llm_by_length_unified(self, prompts: List[List[str]]) -> List[Tuple[str, int]]:
+        # get arbitrary query (they should be the same)
+        query = prompts[0]
+
+        inputs = {
+            k: v.reshape(*v.shape[:-2], -1).unsqueeze(0).to(self._device) for k, v in self._tokenizer(
+                prompts,
+                return_tensors='pt',
+                padding='max_length',
+                truncation=True,
+                max_length=self.max_tokens()
+            ).items()
+        }
+
+        passage_ids = inputs['input_ids']
+        passage_mask = inputs['attention_mask']
+
+        with torch.no_grad():
+            self._llm.reset_score_storage()
+
+            outputs = self._llm.generate(
+                **inputs,
+                max_length=self._answer_maxlength,
+                do_sample=False,
+                n_passages=len(prompts)
+            )
+
+        output_length = 0
+        for j in range(outputs.shape[1]):
+            if outputs[0, j] == FiDCrossAttentionScore.ANSWER_EOS_TOKEN:
+                output_length = j
+                break
+        else:
+            output_length = outputs.shape[1]
+
+        query_mask_reader = self._tokenizer(
+            query,
+            max_length=self.max_tokens(),
+            padding="longest",
+            truncation=True,
+            return_tensors="pt",
+            add_special_tokens=False,
+        )['attention_mask'].bool()
+
+        with torch.no_grad():
+            crossattention_scores = self._llm.get_crossattention_scores(len(prompts),
+                                                                        ids=passage_ids.cuda(self._device),
+                                                                        mask=passage_mask.bool().to(self._device),
+                                                                        mask_query=query_mask_reader.to(self._device),
+                                                                        output_sequence_lengths=[output_length])
+            # only supports normswoquery for now
+            crossattention_score: torch.Tensor = crossattention_scores['normswoquery']
+            sorted, idxes = torch.sort(crossattention_score, dim=-1)
+
+        return (" > ".join(map(lambda x: f"[{x + 1}]", idxes.detach().cpu()[0].tolist())),
+                output_length + crossattention_score.shape[1])
 
     def run_llm_batched(
-            self, prompts: List[Union[str, List[Dict[str, str]]]]
+            self, prompts: List[List[Dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
-        assert False, "Not supported batch"
-        return []
+        assert self._batch_size > 0, f"Requires batch_size > 0 for batched run llm"
+
+        if len(prompts) == 0:
+            return []
+
+        # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
+        #   (which is commonly the same) then rerank stuff having same passage sizes
+
+        prompt_infos = [list(map(lambda x: x['text'], prompt)) for prompt in prompts]
+
+        results = []
+
+        for i in range(0, len(prompt_infos), self._batch_size):
+            result_batch = self._run_llm_by_length_unified(prompt_infos[i:min(i + self._batch_size, len(prompt_infos))])
+            results.extend(result_batch)
+
+        return results
 
     def create_prompt_batched(
             self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
@@ -379,7 +474,7 @@ class RankFiDScore(RankLLM):
                 self._output_token_estimate = output_token_estimate
 
             return output_token_estimate
-    
+
     @staticmethod
     def _gen_passage(query: str, passage: str) -> str:
         return f"question: {query} context: {passage}"
