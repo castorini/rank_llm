@@ -30,11 +30,12 @@ class PointwiseRankLLM(RankLLM, ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
-        device: str = "cuda"
+        device: str = "cuda",
+        filename: str = ""
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
         self._device = device
-        self._filename = ""
+        self._filename = filename
 
     def rerank_batch(
         self,
@@ -89,37 +90,6 @@ class PointwiseRankLLM(RankLLM, ABC):
             return 1
         else:
             return 0
-        
-    @abstractmethod
-    def run_llm_batched(
-        self,
-        prompts: List[str],
-    ) -> Tuple[List[str], List[int], List[float]]:
-        pass
-
-    @abstractmethod
-    def run_llm(
-        self, prompt: str
-    ) -> Tuple[str, int, float]:
-        pass
-
-    @abstractmethod
-    def create_prompt(
-        self, result: Result, index: int
-    ) -> Tuple[str, int]:
-        pass
-
-    @abstractmethod
-    def get_num_tokens(self, prompt: str) -> int:
-        pass
-
-    @abstractmethod
-    def cost_per_1k_token(self, input_token: bool) -> float:
-        pass
-
-    @abstractmethod
-    def num_output_tokens(self) -> int:
-        pass
 
     def get_output_filename(
         self,

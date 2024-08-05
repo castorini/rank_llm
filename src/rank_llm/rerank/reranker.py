@@ -257,14 +257,16 @@ class Reranker:
             print(f"Loading {model_path} ...")
 
             model_full_paths = {
-                "rank_monot5": "castorini/monot5-3b-msmarco-10k"
+                "monot5": "castorini/monot5-3b-msmarco-10k"
             }
             
             keys_and_defaults = [
+                ("prompt_mode", PromptMode.MONOT5),
                 ("context_size", 512),
-                ("device", "cuda"),\
+                ("device", "cuda")
             ]
             [
+                prompt_mode,
                 context_size,
                 device
             ] = extract_kwargs(keys_and_defaults, **kwargs)
@@ -273,6 +275,7 @@ class Reranker:
                 model=model_full_paths[model_path]
                 if model_path in model_full_paths
                 else model_path,
+                prompt_mode=prompt_mode,
                 context_size=context_size,
                 device=device
             )

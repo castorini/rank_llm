@@ -24,10 +24,11 @@ class MonoT5(PointwiseRankLLM):
     def __init__(
         self,
         model: str,
+        prompt_mode: str = "monot5",
         context_size: int = 512,
         device: str = "cuda"
     ):
-        super().__init__(model=model, context_size=context_size, prompt_mode="unspecified", device=device)
+        super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode, device=device)
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = T5ForConditionalGeneration.from_pretrained(
             model
