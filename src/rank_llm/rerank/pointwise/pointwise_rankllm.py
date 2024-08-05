@@ -1,12 +1,10 @@
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 import copy
 from functools import cmp_to_key
-from tqdm import tqdm
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from typing import List, Any, Tuple, Union, Dict, Optional
+from typing import List, Any, Tuple
 from rank_llm.data import Result, Request, Candidate
 
 try:

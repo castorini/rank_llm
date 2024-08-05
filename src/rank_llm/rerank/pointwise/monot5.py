@@ -1,15 +1,11 @@
 import logging
 import math
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import cmp_to_key
-from typing import Dict, List, Optional, Tuple, Any
+from typing import List, Tuple
 
-import torch
-from tqdm import tqdm
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers.generation import GenerationConfig
 
-from rank_llm.data import Candidate, Result
+from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 
 try:
