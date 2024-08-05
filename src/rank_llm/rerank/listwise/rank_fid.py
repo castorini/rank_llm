@@ -1,6 +1,7 @@
 from typing import List, Union, Dict, Tuple, Optional, Any
 
 import torch
+from click import prompt
 from tqdm import tqdm
 from transformers import T5Tokenizer
 
@@ -33,7 +34,7 @@ class RankFiDDistill(ListwiseRankLLM):
     def __init__(
             self,
             model: str,
-            context_size: int = 300,
+            context_size: int = 150,
             prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
             num_few_shot_examples: int = 0,
             window_size: int = 20,
@@ -109,10 +110,10 @@ class RankFiDDistill(ListwiseRankLLM):
             logging: bool = False,
             **kwargs: Any,
     ) -> List[Result]:
-        top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
-        window_size: int = kwargs.get("window_size", 20)
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", 100)
+        window_size: int = kwargs.get("window_size", self._window_size)
         window_size = min(window_size, top_k_retrieve)
-        step: int = kwargs.get("step", 10)
+        step: int = kwargs.get("step", self._stride)
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
 
         if self._batched:
@@ -287,19 +288,23 @@ class RankFiDScore(ListwiseRankLLM):
         self._batch_size = batch_size
 
         self._stride = 10
-        self._answer_maxlength = 140
 
         self._output_token_estimate = None
 
         self._post_init()
 
-    def _run_llm_by_length_unified(self, prompts: List[List[str]]) -> List[Tuple[str, int]]:
+    def _run_llm_by_length_unified(self, batch_prompts: List[List[Tuple[str, str]]]) -> List[Tuple[str, int]]:
+        if len(batch_prompts) == 0:
+            return []
+
         # get arbitrary query (they should be the same)
-        query = prompts[0]
+        queries = [prompts[0][0] for prompts in batch_prompts]
+        batch_size = len(batch_prompts)
+        n_passages = len(batch_prompts[0])
 
         inputs = {
-            k: v.reshape(*v.shape[:-2], -1).unsqueeze(0).to(self._device) for k, v in self._tokenizer(
-                prompts,
+            k: v.reshape(batch_size, -1).unsqueeze(0).to(self._device) for k, v in self._tokenizer(
+                [prompt for prompts in batch_prompts for (_, prompt) in prompts],
                 return_tensors='pt',
                 padding='max_length',
                 truncation=True,
@@ -315,9 +320,9 @@ class RankFiDScore(ListwiseRankLLM):
 
             outputs = self._llm.generate(
                 **inputs,
-                max_length=self._answer_maxlength,
+                max_length=n_passages,
                 do_sample=False,
-                n_passages=len(prompts)
+                n_passages=len(batch_prompts)
             )
 
         output_length = 0
@@ -329,7 +334,7 @@ class RankFiDScore(ListwiseRankLLM):
             output_length = outputs.shape[1]
 
         query_mask_reader = self._tokenizer(
-            query,
+            queries,
             max_length=self.max_tokens(),
             padding="longest",
             truncation=True,
@@ -338,101 +343,100 @@ class RankFiDScore(ListwiseRankLLM):
         )['attention_mask'].bool()
 
         with torch.no_grad():
-            crossattention_scores = self._llm.get_crossattention_scores(len(prompts),
-                                                                        ids=passage_ids.cuda(self._device),
+            crossattention_scores = self._llm.get_crossattention_scores(n_passages,
+                                                                        ids=passage_ids.to(self._device),
                                                                         mask=passage_mask.bool().to(self._device),
                                                                         mask_query=query_mask_reader.to(self._device),
                                                                         output_sequence_lengths=[output_length])
             # only supports normswoquery for now
             crossattention_score: torch.Tensor = crossattention_scores['normswoquery']
             sorted, idxes = torch.sort(crossattention_score, dim=-1)
+            idxes = idxes.detach().cpu()
 
-        return (" > ".join(map(lambda x: f"[{x + 1}]", idxes.detach().cpu()[0].tolist())),
-                output_length + crossattention_score.shape[1])
+        print([
+            (
+                " > ".join(
+                    [f"[{x + 1}]" for x in idxes[i].tolist()]
+                ),
+                output_length + crossattention_score.shape[1]
+            ) for i in range(idxes.shape[0])
+        ])
+
+        return [
+            (
+                " > ".join(
+                    [f"[{x + 1}]" for x in idxes[i].tolist()]
+                ),
+                output_length + crossattention_score.shape[1]
+            ) for i in range(idxes.shape[0])
+        ]
+
+    def rerank_batch(
+            self,
+            requests: List[Request],
+            rank_start: int = 0,
+            rank_end: int = 100,
+            shuffle_candidates: bool = False,
+            logging: bool = False,
+            **kwargs: Any,
+    ) -> List[Result]:
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", 100)
+        window_size: int = kwargs.get("window_size", self._window_size)
+        window_size = min(window_size, top_k_retrieve)
+        step: int = kwargs.get("step", self._stride)
+        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+
+        if self._batched:
+            # reranking using vllm
+            if len(set([len(req.candidates) for req in requests])) != 1:
+                raise ValueError(
+                    "Batched requests must have the same number of candidates"
+                )
+
+            return self.sliding_windows_batched(
+                requests,
+                rank_start=max(rank_start, 0),
+                rank_end=min(
+                    rank_end, len(requests[0].candidates)
+                ),  # TODO: Fails arbitrary hit sizes
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+                populate_exec_summary=populate_exec_summary,
+            )
+        else:
+            # Normal operation mode
+            results = []
+            for request in tqdm(requests):
+                result = self.sliding_windows(
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    window_size=window_size,
+                    step=step,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_exec_summary=populate_exec_summary,
+                )
+                results.append(result)
+            return results
 
     def run_llm_batched(
             self, prompts: List[List[Dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         assert self._batch_size > 0, f"Requires batch_size > 0 for batched run llm"
 
-        if len(prompts) == 0:
-            return []
-
-        # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
-        #   (which is commonly the same) then rerank stuff having same passage sizes
-
-        prompt_infos = [list(map(lambda x: x['text'], prompt)) for prompt in prompts]
-
-        results = []
-
-        for i in range(0, len(prompt_infos), self._batch_size):
-            result_batch = self._run_llm_by_length_unified(prompt_infos[i:min(i + self._batch_size, len(prompt_infos))])
-            results.extend(result_batch)
-
-        return results
+        return self._run_llm_by_length_unified([[(x['query'], x['text']) for x in prmpt] for prmpt in prompts])
 
     def create_prompt_batched(
             self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
-    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
-        assert False, "Not supported batch"
-        return []
+    ) -> List[Tuple[List[Dict[str, str]], int]]:
+        return [self.create_prompt(result, rank_start, rank_end) for result in results]
 
     def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
         # get arbitrary query (they should be the same)
-        query = prompts[0]['query']
-
-        inputs = {
-            k: v.reshape(*v.shape[:-2], -1).unsqueeze(0).to(self._device) for k, v in self._tokenizer(
-                [prompt['text'] for prompt in prompts],
-                return_tensors='pt',
-                padding='max_length',
-                truncation=True,
-                max_length=self.max_tokens()
-            ).items()
-        }
-
-        passage_ids = inputs['input_ids']
-        passage_mask = inputs['attention_mask']
-
-        with torch.no_grad():
-            self._llm.reset_score_storage()
-
-            outputs = self._llm.generate(
-                **inputs,
-                max_length=self._answer_maxlength,
-                do_sample=False,
-                n_passages=len(prompts)
-            )
-
-        output_length = 0
-        for j in range(outputs.shape[1]):
-            if outputs[0, j] == FiDCrossAttentionScore.ANSWER_EOS_TOKEN:
-                output_length = j
-                break
-        else:
-            output_length = outputs.shape[1]
-
-        query_mask_reader = self._tokenizer(
-            query,
-            max_length=self.max_tokens(),
-            padding="longest",
-            truncation=True,
-            return_tensors="pt",
-            add_special_tokens=False,
-        )['attention_mask'].bool()
-
-        with torch.no_grad():
-            crossattention_scores = self._llm.get_crossattention_scores(len(prompts),
-                                                                        ids=passage_ids.cuda(self._device),
-                                                                        mask=passage_mask.bool().to(self._device),
-                                                                        mask_query=query_mask_reader.to(self._device),
-                                                                        output_sequence_lengths=[output_length])
-            # only supports normswoquery for now
-            crossattention_score: torch.Tensor = crossattention_scores['normswoquery']
-            sorted, idxes = torch.sort(crossattention_score, dim=-1)
-
-        return (" > ".join(map(lambda x: f"[{x + 1}]", idxes.detach().cpu()[0].tolist())),
-                output_length + crossattention_score.shape[1])
+        return self._run_llm_by_length_unified([[(x['query'], x['text']) for x in prompts]])[0]
 
     def create_prompt(self, result: Result, rank_start: int, rank_end: int) -> Tuple[List[Dict[str, str]], int]:
         """

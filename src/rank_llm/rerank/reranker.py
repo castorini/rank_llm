@@ -9,7 +9,7 @@ from rank_llm.rerank import (
     get_openai_api_key,
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
-from rank_llm.rerank.listwise.rank_fid import RankFiDDistill
+from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.rankllm import RankLLM
 
 
@@ -254,7 +254,7 @@ class Reranker:
             print(f"Completed loading {model_path}")
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
-                ("context_size", 300),
+                ("context_size", 150),
                 ("prompt_mode", PromptMode.LiT5),
                 ("num_few_shot_examples", 0),
                 ("window_size", 20),
@@ -270,6 +270,35 @@ class Reranker:
                 = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankFiDDistill(
+                model=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                window_size=window_size,
+                precision=precision,
+                device=device,
+                batched=vllm_batched,
+                batch_size=batch_size
+            )
+            print(f"Completed loading {model_path}")
+        elif "lit5-score" in model_path.lower():
+            keys_and_defaults = [
+                ("context_size", 150),
+                ("prompt_mode", PromptMode.LiT5),
+                ("num_few_shot_examples", 0),
+                ("window_size", 100),
+                ("precision", "bfloat16"),
+                # TODO add num_gpus
+                ("device", "cuda"),
+                ("batch_size", -1),
+                # reuse this parameter, but its not for "vllm", but only for "batched"
+                ("vllm_batched", False)
+            ]
+
+            context_size, prompt_mode, num_few_shot_examples, window_size, precision, device, batch_size, vllm_batched \
+                = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankFiDScore(
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
