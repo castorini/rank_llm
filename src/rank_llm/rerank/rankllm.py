@@ -13,6 +13,7 @@ class PromptMode(Enum):
     RANK_GPT = "rank_GPT"
     RANK_GPT_APEER = "rank_GPT_APEER"
     LRL = "LRL"
+    LiT5 = "LiT5"
 
     def __str__(self):
         return self.value
@@ -26,7 +27,7 @@ class RankLLM(ABC):
 
     @abstractmethod
     def run_llm_batched(
-        self, prompts: List[Union[str, List[Dict[str, str]]]]
+        self, prompts: List[Union[str, List[Dict[str, str]]]], **kwargs
     ) -> List[Tuple[str, int]]:
         """
         Abstract method to run the target language model with a batch of prompts.

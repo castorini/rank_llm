@@ -112,12 +112,12 @@ class ListwiseRankLLM(RankLLM, ABC):
             if logging:
                 logger.debug(f"output: {permutation}")
             if populate_exec_summary:
+                if result.ranking_exec_summary is None:
+                    result.ranking_exec_summary = []
                 ranking_exec_info = RankingExecInfo(
                     prompt, permutation, in_token_count, out_token_count
                 )
-            if result.ranking_exec_summary is None:
-                result.ranking_exec_summary = []
-            result.ranking_exec_summary.append(ranking_exec_info)
+                result.ranking_exec_summary.append(ranking_exec_info)
             result = self.receive_permutation(result, permutation, rank_start, rank_end)
 
         return results

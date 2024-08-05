@@ -1,17 +1,16 @@
+from typing import List, Union, Dict, Tuple, Optional, Any
+
 import torch
-
-from typing import List, Union, Dict, Tuple, Optional
-
-from networkx import prominent_group
-
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from rank_llm.rerank.lit5.model import FiD, FiDCrossAttentionScore
-from rank_llm.data import Result
-
+from tqdm import tqdm
 from transformers import T5Tokenizer
 
+from rank_llm.data import Result, Request
+from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
+from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
-class RankFiDDistill(RankLLM):
+
+class RankFiDDistill(ListwiseRankLLM):
 
     def __init__(
             self,
@@ -22,13 +21,14 @@ class RankFiDDistill(RankLLM):
             window_size: int = 20,
             precision: str = 'bfloat16',
             device: str = 'cuda',
+            batched: bool = False,
             batch_size: int = -1
     ) -> None:
         """
          Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
         """
         super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode,
-                         num_few_shot_examples=num_few_shot_examples)
+                         num_few_shot_examples=num_few_shot_examples, window_size=window_size)
         # TODO use adaptor for this guy
         self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
@@ -38,6 +38,7 @@ class RankFiDDistill(RankLLM):
         self._device = device
 
         # TODO consider make them non magic
+        self._batched = batched
         self._batch_size = batch_size
 
         self._stride = 10
@@ -81,8 +82,59 @@ class RankFiDDistill(RankLLM):
         # all token size should be equal
         return [(decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs]
 
+    def rerank_batch(
+            self,
+            requests: List[Request],
+            rank_start: int = 0,
+            rank_end: int = 100,
+            shuffle_candidates: bool = False,
+            logging: bool = False,
+            **kwargs: Any,
+    ) -> List[Result]:
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
+        window_size: int = kwargs.get("window_size", 20)
+        window_size = min(window_size, top_k_retrieve)
+        step: int = kwargs.get("step", 10)
+        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+
+        if self._batched:
+            # reranking using vllm
+            if len(set([len(req.candidates) for req in requests])) != 1:
+                raise ValueError(
+                    "Batched requests must have the same number of candidates"
+                )
+
+            return self.sliding_windows_batched(
+                requests,
+                rank_start=max(rank_start, 0),
+                rank_end=min(
+                    rank_end, len(requests[0].candidates)
+                ),  # TODO: Fails arbitrary hit sizes
+                window_size=window_size,
+                step=step,
+                shuffle_candidates=shuffle_candidates,
+                logging=logging,
+                populate_exec_summary=populate_exec_summary,
+            )
+        else:
+            # Normal operation mode
+            results = []
+            for request in tqdm(requests):
+                result = self.sliding_windows(
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    window_size=window_size,
+                    step=step,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_exec_summary=populate_exec_summary,
+                )
+                results.append(result)
+            return results
+
     def run_llm_batched(
-            self, prompts: List[List[Dict[str, str]]], current_window_size: int
+            self, prompts: List[List[Dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         assert self._batch_size > 0, f"Requires batch_size > 0 for batched run llm"
         if len(prompts) == 0:
@@ -327,7 +379,7 @@ class RankFiDScore(RankLLM):
                 self._output_token_estimate = output_token_estimate
 
             return output_token_estimate
-
+    
     @staticmethod
     def _gen_passage(query: str, passage: str) -> str:
         return f"question: {query} context: {passage}"

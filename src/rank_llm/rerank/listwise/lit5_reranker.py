@@ -1,6 +1,6 @@
 from typing import List
 
-from rank_llm.rerank.rank_fid import RankFiDDistill, RankFiDScore
+from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
 from rank_llm.data import Result, Request

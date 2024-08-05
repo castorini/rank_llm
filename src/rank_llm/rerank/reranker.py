@@ -9,6 +9,7 @@ from rank_llm.rerank import (
     get_openai_api_key,
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank.listwise.rank_fid import RankFiDDistill
 from rank_llm.rerank.rankllm import RankLLM
 
 
@@ -17,13 +18,13 @@ class Reranker:
         self._agent = agent
 
     def rerank_batch(
-        self,
-        requests: List[Request],
-        rank_start: int = 0,
-        rank_end: int = 100,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
-        **kwargs: Any,
+            self,
+            requests: List[Request],
+            rank_start: int = 0,
+            rank_end: int = 100,
+            shuffle_candidates: bool = False,
+            logging: bool = False,
+            **kwargs: Any,
     ) -> List[Result]:
         """
         Reranks a list of requests using the RankLLM agent.
@@ -51,13 +52,13 @@ class Reranker:
         )
 
     def rerank(
-        self,
-        request: Request,
-        rank_start: int = 0,
-        rank_end: int = 100,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
-        **kwargs: Any,
+            self,
+            request: Request,
+            rank_start: int = 0,
+            rank_end: int = 100,
+            shuffle_candidates: bool = False,
+            logging: bool = False,
+            **kwargs: Any,
     ) -> Result:
         """
         Reranks a request using the RankLLM agent.
@@ -88,15 +89,15 @@ class Reranker:
         return results[0]
 
     def write_rerank_results(
-        self,
-        retrieval_method_name: str,
-        results: List[Result],
-        shuffle_candidates: bool = False,
-        top_k_candidates: int = 100,
-        dataset_name: str = None,
-        rerank_results_dirname: str = "rerank_results",
-        ranking_execution_summary_dirname: str = "ranking_execution_summary",
-        **kwargs,
+            self,
+            retrieval_method_name: str,
+            results: List[Result],
+            shuffle_candidates: bool = False,
+            top_k_candidates: int = 100,
+            dataset_name: str = None,
+            rerank_results_dirname: str = "rerank_results",
+            ranking_execution_summary_dirname: str = "ranking_execution_summary",
+            **kwargs,
     ) -> str:
         """
         Writes the reranked results to files in specified formats.
@@ -156,10 +157,10 @@ class Reranker:
         return self._agent
 
     def create_agent(
-        model_path: str,
-        default_agent: RankLLM,
-        interactive: bool,
-        **kwargs: Any,
+            model_path: str,
+            default_agent: RankLLM,
+            interactive: bool,
+            **kwargs: Any,
     ) -> RankLLM:
         """Construct rerank agent
 
@@ -251,6 +252,35 @@ class Reranker:
             )
 
             print(f"Completed loading {model_path}")
+        elif "lit5-distill" in model_path.lower():
+            keys_and_defaults = [
+                ("context_size", 300),
+                ("prompt_mode", PromptMode.LiT5),
+                ("num_few_shot_examples", 0),
+                ("window_size", 20),
+                ("precision", "bfloat16"),
+                # TODO add num_gpus
+                ("device", "cuda"),
+                ("batch_size", -1),
+                # reuse this parameter, but its not for "vllm", but only for "batched"
+                ("vllm_batched", False)
+            ]
+
+            context_size, prompt_mode, num_few_shot_examples, window_size, precision, device, batch_size, vllm_batched \
+                = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankFiDDistill(
+                model=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                window_size=window_size,
+                precision=precision,
+                device=device,
+                batched=vllm_batched,
+                batch_size=batch_size
+            )
+            print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None
@@ -267,8 +297,8 @@ class Reranker:
 
 
 def extract_kwargs(
-    keys_and_defaults: List[Tuple[str, Any]],
-    **kwargs,
+        keys_and_defaults: List[Tuple[str, Any]],
+        **kwargs,
 ) -> List[Any]:
     """Extract specified kwargs from **kwargs
 
@@ -283,9 +313,9 @@ def extract_kwargs(
     ]
 
     # Check that type of provided kwarg is compatible with the provided default type
-    for i, extracted_kwarg in enumerate(extract_kwargs):
-        if type(keys_and_defaults[i[-1]]) != None and (
-            type(extracted_kwarg) != type(keys_and_defaults[i[-1]])
+    for i, extracted_kwarg in enumerate(extracted_kwargs):
+        if type(keys_and_defaults[i][-1]) != None and (
+                type(extracted_kwarg) != type(keys_and_defaults[i][-1])
         ):
             raise ValueError(
                 "Provided kwarg must be compatible with the argument's default type"
