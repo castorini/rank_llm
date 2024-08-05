@@ -29,23 +29,23 @@ class ListwiseRankLLM(RankLLM, ABC):
     """
 
     def __init__(
-        self,
-        model: str,
-        context_size: int,
-        prompt_mode: PromptMode,
-        num_few_shot_examples: int,
-        window_size: int,
+            self,
+            model: str,
+            context_size: int,
+            prompt_mode: PromptMode,
+            num_few_shot_examples: int,
+            window_size: int,
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
         self._window_size = window_size
 
     def get_output_filename(
-        self,
-        top_k_candidates: int,
-        dataset_name: str,
-        shuffle_candidates: bool,
-        **kwargs: Any,
+            self,
+            top_k_candidates: int,
+            dataset_name: str,
+            shuffle_candidates: bool,
+            **kwargs: Any,
     ) -> str:
         _modelname = self._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
@@ -73,12 +73,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         return self._context_size
 
     def permutation_pipeline_batched(
-        self,
-        results: List[Result],
-        rank_start: int,
-        rank_end: int,
-        logging: bool = False,
-        populate_exec_summary: bool = False,
+            self,
+            results: List[Result],
+            rank_start: int,
+            rank_end: int,
+            logging: bool = False,
+            populate_exec_summary: bool = False,
     ) -> List[Result]:
         """
         Runs the permutation pipeline on a batch of result objects within the passed in rank range.
@@ -106,7 +106,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         )
 
         for index, (result, (prompt, in_token_count)) in enumerate(
-            zip(results, prompts)
+                zip(results, prompts)
         ):
             permutation, out_token_count = batched_results[index]
             if logging:
@@ -123,12 +123,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         return results
 
     def permutation_pipeline(
-        self,
-        result: Result,
-        rank_start: int,
-        rank_end: int,
-        logging: bool = False,
-        populate_exec_summary: bool = True,
+            self,
+            result: Result,
+            rank_start: int,
+            rank_end: int,
+            logging: bool = False,
+            populate_exec_summary: bool = True,
     ) -> Result:
         """
         Runs the permutation pipeline on the passed in result set within the passed in rank range.
@@ -159,7 +159,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return result
 
     def shuffle_and_rescore(
-        rerank_results: List[Result], rank_start: int, rank_end: int
+            rerank_results: List[Result], rank_start: int, rank_end: int
     ):
         """
         Shuffles candidates between rank_start and rank_end, and rescales scores based on new rank.
@@ -181,15 +181,15 @@ class ListwiseRankLLM(RankLLM, ABC):
                 cand["rank"] = i + 1
 
     def sliding_windows_batched(
-        self,
-        requests: List[Request],
-        rank_start: int,
-        rank_end: int,
-        window_size: int,
-        step: int,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
-        populate_exec_summary: bool = False,
+            self,
+            requests: List[Request],
+            rank_start: int,
+            rank_end: int,
+            window_size: int,
+            step: int,
+            shuffle_candidates: bool = False,
+            logging: bool = False,
+            populate_exec_summary: bool = False,
     ) -> List[Result]:
         """
         Applies the sliding window algorithm to the reranking process for a batch of result objects.
@@ -231,15 +231,15 @@ class ListwiseRankLLM(RankLLM, ABC):
         return rerank_results
 
     def sliding_windows(
-        self,
-        request: Request,
-        rank_start: int,
-        rank_end: int,
-        window_size: int,
-        step: int,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
-        populate_exec_summary: bool = True,
+            self,
+            request: Request,
+            rank_start: int,
+            rank_end: int,
+            window_size: int,
+            step: int,
+            shuffle_candidates: bool = False,
+            logging: bool = False,
+            populate_exec_summary: bool = True,
     ) -> Result:
         """
         Applies the sliding window algorithm to the reranking process.
@@ -281,7 +281,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return rerank_result
 
     def get_ranking_cost_upperbound(
-        self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int
+            self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int
     ) -> Tuple[float, int]:
         """
         Calculates the upper bound of the ranking cost for a given set of parameters.
@@ -299,22 +299,22 @@ class ListwiseRankLLM(RankLLM, ABC):
         # For every prompt generated for every query assume the max context size is used.
         num_promt = (rank_end - rank_start - window_size) / step + 1
         input_token_count = (
-            num_q * num_promt * (self._context_size - self.num_output_tokens())
+                num_q * num_promt * (self._context_size - self.num_output_tokens())
         )
         output_token_count = num_q * num_promt * self.num_output_tokens()
         cost = (
-            input_token_count * self.cost_per_1k_token(input_token=True)
-            + output_token_count * self.cost_per_1k_token(input_token=False)
-        ) / 1000.0
+                       input_token_count * self.cost_per_1k_token(input_token=True)
+                       + output_token_count * self.cost_per_1k_token(input_token=False)
+               ) / 1000.0
         return (cost, input_token_count + output_token_count)
 
     def get_ranking_cost(
-        self,
-        retrieved_results: List[Request],
-        rank_start: int,
-        rank_end: int,
-        window_size: int,
-        step: int,
+            self,
+            retrieved_results: List[Request],
+            rank_start: int,
+            rank_end: int,
+            window_size: int,
+            step: int,
     ) -> Tuple[float, int]:
         """
         Calculates the ranking cost based on actual token counts from generated prompts.
@@ -344,9 +344,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                 start_pos = start_pos - step
                 output_token_count += self.num_output_tokens()
         cost = (
-            input_token_count * self.cost_per_1k_token(input_token=True)
-            + output_token_count * self.cost_per_1k_token(input_token=False)
-        ) / 1000.0
+                       input_token_count * self.cost_per_1k_token(input_token=True)
+                       + output_token_count * self.cost_per_1k_token(input_token=False)
+               ) / 1000.0
         return (cost, input_token_count + output_token_count)
 
     def _clean_response(self, response: str) -> str:
@@ -367,7 +367,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return new_response
 
     def receive_permutation(
-        self, result: Result, permutation: str, rank_start: int, rank_end: int
+            self, result: Result, permutation: str, rank_start: int, rank_end: int
     ) -> Result:
         """
         Processes and applies a permutation to the ranking results.
@@ -409,6 +409,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         # Update candidates in the new order
         for j, x in enumerate(response):
             result.candidates[j + rank_start] = copy.deepcopy(cut_range[x])
+            if result.candidates[j + rank_start].score is not None:
+                result.candidates[j + rank_start].score = cut_range[j].score
 
         return result
 
@@ -416,7 +418,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
     def convert_doc_to_prompt_content(
-        self, doc: Dict[str, Any], max_length: int
+            self, doc: Dict[str, Any], max_length: int
     ) -> str:
         if "text" in doc:
             content = doc["text"]
