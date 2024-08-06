@@ -262,7 +262,7 @@ class RankFiDScore(ListwiseRankLLM):
     def __init__(
             self,
             model: str,
-            context_size: int = 300,
+            context_size: int = 150,
             prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
             num_few_shot_examples: int = 0,
             window_size: int = 20,
