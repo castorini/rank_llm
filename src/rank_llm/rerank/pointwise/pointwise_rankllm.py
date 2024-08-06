@@ -1,5 +1,6 @@
 import logging
 from abc import ABC
+from tqdm import tqdm
 import copy
 from functools import cmp_to_key
 from datetime import datetime
@@ -52,7 +53,7 @@ class PointwiseRankLLM(RankLLM, ABC):
             )
             for request in requests
         ]
-        for index in range(len(rerank_results[0].candidates)):
+        for index in tqdm(range(len(rerank_results[0].candidates))):
             prompts, token_counts = self.create_prompt_batched(
                 results=rerank_results, index=index
             )

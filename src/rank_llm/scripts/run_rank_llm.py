@@ -16,6 +16,7 @@ from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 
 def main(args):
     model_path = args.model_path
+    query = ""
     use_azure_openai = args.use_azure_openai
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
@@ -39,6 +40,7 @@ def main(args):
 
     _ = retrieve_and_rerank(
         model_path=model_path,
+        query=query,
         dataset=dataset,
         retrieval_mode=retrieval_mode,
         retrieval_method=retrieval_method,
