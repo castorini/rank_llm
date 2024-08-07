@@ -1,9 +1,7 @@
-from typing import List
-
+from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
-from rank_llm.data import Result, Request
 
 
 class LiT5DistillReranker:
@@ -12,25 +10,25 @@ class LiT5DistillReranker:
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
-        window_size: int = 20
+        window_size: int = 20,
     ) -> None:
         agent = RankFiDDistill(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            window_size=window_size
+            window_size=window_size,
         )
         self._reranker = Reranker(agent)
 
     def rerank(
-            self,
-            request: Request,
-            rank_start: int = 0,
-            rank_end: int = 100,
-            window_size: int = 20,
-            step: int = 10,
-            shuffle_candidates: bool = False,
-            logging: bool = False,
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        window_size: int = 20,
+        step: int = 10,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
     ) -> Result:
         """
         Reranks a request using the Vicuna model.
@@ -74,7 +72,7 @@ class LiT5ScoreReranker:
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            window_size=window_size
+            window_size=window_size,
         )
         self._reranker = Reranker(agent)
 
@@ -86,7 +84,7 @@ class LiT5ScoreReranker:
         window_size: int = 20,
         step: int = 10,
         shuffle_candidates: bool = False,
-        logging: bool = False
+        logging: bool = False,
     ) -> Result:
         """
         Reranks a list of retrieved results using the LiT5-Score model.

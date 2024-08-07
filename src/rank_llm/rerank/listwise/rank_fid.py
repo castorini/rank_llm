@@ -1,20 +1,16 @@
-from typing import List, Union, Dict, Tuple, Optional, Any
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
-from click import prompt
-from dns.resolver import query
 from tqdm import tqdm
 from transformers import T5Tokenizer
 
-from rank_llm.data import Result, Request
-from rank_llm.rerank.listwise import RankListwiseOSLLM
+from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
-from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore, cross_attention_forward
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
+from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore
+from rank_llm.rerank.rankllm import PromptMode
 
 
 class RankFiDDistill(ListwiseRankLLM):
-
     def _post_init(self):
         self._to_precision(self._precision)
 
@@ -25,30 +21,35 @@ class RankFiDDistill(ListwiseRankLLM):
         """
         We don't support python12 for now, after python 12, the code should be changed into
         """
-        if precision == 'float32':
+        if precision == "float32":
             self._llm = self._llm.float()
-        elif precision == 'bfloat16':
+        elif precision == "bfloat16":
             self._llm = self._llm.bfloat16()
-        elif precision == 'float16':
+        elif precision == "float16":
             self._llm = self._llm.float16()
 
     def __init__(
-            self,
-            model: str,
-            context_size: int = 150,
-            prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
-            num_few_shot_examples: int = 0,
-            window_size: int = 20,
-            precision: str = 'bfloat16',
-            device: str = 'cuda',
-            batched: bool = False,
-            batch_size: int = -1
+        self,
+        model: str,
+        context_size: int = 150,
+        prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        num_few_shot_examples: int = 0,
+        window_size: int = 20,
+        precision: str = "bfloat16",
+        device: str = "cuda",
+        batched: bool = False,
+        batch_size: int = -1,
     ) -> None:
         """
-         Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
+        Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
         """
-        super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode,
-                         num_few_shot_examples=num_few_shot_examples, window_size=window_size)
+        super().__init__(
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+            window_size=window_size,
+        )
         # TODO use adaptor for this guy
         self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
@@ -68,7 +69,9 @@ class RankFiDDistill(ListwiseRankLLM):
 
         self._post_init()
 
-    def _run_llm_by_length_unified(self, batch_prompts: List[List[str]]) -> List[Tuple[str, int]]:
+    def _run_llm_by_length_unified(
+        self, batch_prompts: List[List[str]]
+    ) -> List[Tuple[str, int]]:
         if len(batch_prompts) == 0:
             return []
 
@@ -80,12 +83,13 @@ class RankFiDDistill(ListwiseRankLLM):
         # single batch, unsqueeze
         inputs = {
             k: v.reshape(batch_size, -1).to(self._device)
-            for k, v
-            in self._tokenizer([prompt for prompts in batch_prompts for prompt in prompts],
-                               return_tensors='pt',
-                               padding='max_length',
-                               truncation=True,
-                               max_length=self.max_tokens()).items()
+            for k, v in self._tokenizer(
+                [prompt for prompts in batch_prompts for prompt in prompts],
+                return_tensors="pt",
+                padding="max_length",
+                truncation=True,
+                max_length=self.max_tokens(),
+            ).items()
         }
 
         with torch.no_grad():
@@ -93,23 +97,27 @@ class RankFiDDistill(ListwiseRankLLM):
                 **inputs,
                 max_length=self._answer_maxlength,
                 do_sample=False,
-                n_passages=n_passages
+                n_passages=n_passages,
             )
 
-        decoded_outputs = [self._tokenizer.decode(outputs[i],
-                                                  skip_special_tokens=True) for i in range(outputs.shape[0])]
+        decoded_outputs = [
+            self._tokenizer.decode(outputs[i], skip_special_tokens=True)
+            for i in range(outputs.shape[0])
+        ]
 
         # all token size should be equal
-        return [(decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs]
+        return [
+            (decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs
+        ]
 
     def rerank_batch(
-            self,
-            requests: List[Request],
-            rank_start: int = 0,
-            rank_end: int = 100,
-            shuffle_candidates: bool = False,
-            logging: bool = False,
-            **kwargs: Any,
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", 100)
         window_size: int = kwargs.get("window_size", self._window_size)
@@ -154,7 +162,7 @@ class RankFiDDistill(ListwiseRankLLM):
             return results
 
     def run_llm_batched(
-            self, prompts: List[List[Dict[str, str]]], **kwargs
+        self, prompts: List[List[Dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         assert self._batch_size > 0, f"Requires batch_size > 0 for batched run llm"
         if len(prompts) == 0:
@@ -163,18 +171,20 @@ class RankFiDDistill(ListwiseRankLLM):
         # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
         #   (which is commonly the same) then rerank stuff having same passage sizes
 
-        prompt_infos = [list(map(lambda x: x['text'], prompt)) for prompt in prompts]
+        prompt_infos = [list(map(lambda x: x["text"], prompt)) for prompt in prompts]
 
         results = []
 
         for i in range(0, len(prompt_infos), self._batch_size):
-            result_batch = self._run_llm_by_length_unified(prompt_infos[i:min(i + self._batch_size, len(prompt_infos))])
+            result_batch = self._run_llm_by_length_unified(
+                prompt_infos[i : min(i + self._batch_size, len(prompt_infos))]
+            )
             results.extend(result_batch)
 
         return results
 
     def create_prompt_batched(
-            self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+        self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 
@@ -183,10 +193,12 @@ class RankFiDDistill(ListwiseRankLLM):
         Run the target language model with a passed in prompt.
         """
 
-        return self._run_llm_by_length_unified([list(map(lambda x: x['text'], prompts))])[0]
+        return self._run_llm_by_length_unified(
+            [list(map(lambda x: x["text"], prompts))]
+        )[0]
 
     def create_prompt(
-            self, result: Result, rank_start: int, rank_end: int
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
@@ -195,16 +207,18 @@ class RankFiDDistill(ListwiseRankLLM):
         # For now, we concat the prompt, because it seems LiT5 is also concatting the stuff
         prompts = [
             {
-                "text": self._gen_passage(result.query.text, i + 1 - rank_start,
-                                          self.convert_doc_to_prompt_content(
-                                              result.candidates[i].doc,
-                                              self.max_tokens()
-                                          ))
+                "text": self._gen_passage(
+                    result.query.text,
+                    i + 1 - rank_start,
+                    self.convert_doc_to_prompt_content(
+                        result.candidates[i].doc, self.max_tokens()
+                    ),
+                )
             }
             for i in range(rank_start, rank_end)
         ]
 
-        return prompts, sum(self.get_num_tokens(prompt['text']) for prompt in prompts)
+        return prompts, sum(self.get_num_tokens(prompt["text"]) for prompt in prompts)
 
     def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
         """
@@ -213,9 +227,11 @@ class RankFiDDistill(ListwiseRankLLM):
         if isinstance(prompt, str):
             return len(self._tokenizer.encode(prompt))
         elif isinstance(prompt, list):
-            return sum(len(self._tokenizer.encode(item['text'])) for item in prompt)
+            return sum(len(self._tokenizer.encode(item["text"])) for item in prompt)
         else:
-            raise ValueError("Prompt must be a string or a list of dictionaries with a 'text' key.")
+            raise ValueError(
+                "Prompt must be a string or a list of dictionaries with a 'text' key."
+            )
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
@@ -223,13 +239,24 @@ class RankFiDDistill(ListwiseRankLLM):
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        if self._output_token_estimate is not None and self._window_size == current_window_size:
+        if (
+            self._output_token_estimate is not None
+            and self._window_size == current_window_size
+        ):
             return self._output_token_estimate
         else:
             output_token_estimate = (
-                    len(self._tokenizer.encode(" > ".join([f"[{i + 1}]" for i in range(current_window_size)]))) - 1
+                len(
+                    self._tokenizer.encode(
+                        " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
+                    )
+                )
+                - 1
             )
-            if self._output_token_estimate is None and self._window_size == current_window_size:
+            if (
+                self._output_token_estimate is None
+                and self._window_size == current_window_size
+            ):
                 self._output_token_estimate = output_token_estimate
 
             return output_token_estimate
@@ -252,30 +279,35 @@ class RankFiDScore(ListwiseRankLLM):
         """
         We don't support python12 for now, after python 12, the code should be changed into
         """
-        if precision == 'float32':
+        if precision == "float32":
             self._llm = self._llm.float()
-        elif precision == 'bfloat16':
+        elif precision == "bfloat16":
             self._llm = self._llm.bfloat16()
-        elif precision == 'float16':
+        elif precision == "float16":
             self._llm = self._llm.float16()
 
     def __init__(
-            self,
-            model: str,
-            context_size: int = 150,
-            prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
-            num_few_shot_examples: int = 0,
-            window_size: int = 20,
-            precision: str = 'bfloat16',
-            device: str = 'cuda',
-            batched: bool = False,
-            batch_size: int = -1
+        self,
+        model: str,
+        context_size: int = 150,
+        prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        num_few_shot_examples: int = 0,
+        window_size: int = 20,
+        precision: str = "bfloat16",
+        device: str = "cuda",
+        batched: bool = False,
+        batch_size: int = -1,
     ) -> None:
         """
-         Creates instance of the RankFiDScore class, a specialized version of RankLLM designed from Lit5-Score.
+        Creates instance of the RankFiDScore class, a specialized version of RankLLM designed from Lit5-Score.
         """
-        super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode,
-                         num_few_shot_examples=num_few_shot_examples, window_size=window_size)
+        super().__init__(
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+            window_size=window_size,
+        )
         # TODO use adaptor for this guy
         self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
@@ -294,7 +326,9 @@ class RankFiDScore(ListwiseRankLLM):
 
         self._post_init()
 
-    def _run_llm_by_length_unified(self, batch_prompts: List[List[Tuple[str, str]]]) -> List[Tuple[str, int]]:
+    def _run_llm_by_length_unified(
+        self, batch_prompts: List[List[Tuple[str, str]]]
+    ) -> List[Tuple[str, int]]:
         if len(batch_prompts) == 0:
             return []
 
@@ -304,26 +338,24 @@ class RankFiDScore(ListwiseRankLLM):
         n_passages = len(batch_prompts[0])
 
         inputs = {
-            k: v.reshape(batch_size, -1).to(self._device) for k, v in self._tokenizer(
+            k: v.reshape(batch_size, -1).to(self._device)
+            for k, v in self._tokenizer(
                 [prompt for prompts in batch_prompts for (_, prompt) in prompts],
-                return_tensors='pt',
-                padding='max_length',
+                return_tensors="pt",
+                padding="max_length",
                 truncation=True,
-                max_length=self.max_tokens()
+                max_length=self.max_tokens(),
             ).items()
         }
 
-        passage_ids = inputs['input_ids']
-        passage_mask = inputs['attention_mask']
+        passage_ids = inputs["input_ids"]
+        passage_mask = inputs["attention_mask"]
 
         with torch.no_grad():
             self._llm.reset_score_storage()
 
             outputs = self._llm.generate(
-                **inputs,
-                max_length=20,
-                do_sample=False,
-                n_passages=n_passages
+                **inputs, max_length=20, do_sample=False, n_passages=n_passages
             )
 
         output_sequence_lengths = []
@@ -345,32 +377,37 @@ class RankFiDScore(ListwiseRankLLM):
             truncation=True,
             return_tensors="pt",
             add_special_tokens=False,
-        )['attention_mask'].bool()
+        )["attention_mask"].bool()
 
         with torch.no_grad():
-            crossattention_scores = self._llm.get_crossattention_scores(n_passages,
-                                                                        ids=passage_ids.to(self._device),
-                                                                        mask=passage_mask.bool().to(self._device),
-                                                                        mask_query=query_mask_reader.to(self._device),
-                                                                        output_sequence_lengths=output_sequence_lengths)
+            crossattention_scores = self._llm.get_crossattention_scores(
+                n_passages,
+                ids=passage_ids.to(self._device),
+                mask=passage_mask.bool().to(self._device),
+                mask_query=query_mask_reader.to(self._device),
+                output_sequence_lengths=output_sequence_lengths,
+            )
             # only supports normswoquery for now
-            crossattention_score: torch.Tensor = crossattention_scores['normswoquery']
+            crossattention_score: torch.Tensor = crossattention_scores["normswoquery"]
             sorted, idxes = torch.sort(crossattention_score, dim=-1, descending=True)
             idxes = idxes.detach().cpu()
 
         return [
-            (" > ".join([f"[{x + 1}]" for x in idxes[i].tolist()]),
-             output_sequence_lengths[i] + crossattention_score.shape[1]) for i in range(idxes.shape[0])
+            (
+                " > ".join([f"[{x + 1}]" for x in idxes[i].tolist()]),
+                output_sequence_lengths[i] + crossattention_score.shape[1],
+            )
+            for i in range(idxes.shape[0])
         ]
 
     def rerank_batch(
-            self,
-            requests: List[Request],
-            rank_start: int = 0,
-            rank_end: int = 100,
-            shuffle_candidates: bool = False,
-            logging: bool = False,
-            **kwargs: Any,
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", 100)
         window_size: int = kwargs.get("window_size", self._window_size)
@@ -415,7 +452,7 @@ class RankFiDScore(ListwiseRankLLM):
             return results
 
     def run_llm_batched(
-            self, prompts: List[List[Dict[str, str]]], **kwargs
+        self, prompts: List[List[Dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         assert self._batch_size > 0, f"Requires batch_size > 0 for batched run llm"
         if len(prompts) == 0:
@@ -428,8 +465,8 @@ class RankFiDScore(ListwiseRankLLM):
 
         for i in range(0, len(prompts), self._batch_size):
             batch_prompt = [
-                [(x['query'], x['text']) for x in prmpt]
-                for prmpt in prompts[i:min(i + self._batch_size, len(prompts))]
+                [(x["query"], x["text"]) for x in prmpt]
+                for prmpt in prompts[i : min(i + self._batch_size, len(prompts))]
             ]
             result_batch = self._run_llm_by_length_unified(batch_prompt)
             results.extend(result_batch)
@@ -437,15 +474,19 @@ class RankFiDScore(ListwiseRankLLM):
         return results
 
     def create_prompt_batched(
-            self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+        self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 
     def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
         # get arbitrary query (they should be the same)
-        return self._run_llm_by_length_unified([[(x['query'], x['text']) for x in prompts]])[0]
+        return self._run_llm_by_length_unified(
+            [[(x["query"], x["text"]) for x in prompts]]
+        )[0]
 
-    def create_prompt(self, result: Result, rank_start: int, rank_end: int) -> Tuple[List[Dict[str, str]], int]:
+    def create_prompt(
+        self, result: Result, rank_start: int, rank_end: int
+    ) -> Tuple[List[Dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
         """
@@ -455,14 +496,18 @@ class RankFiDScore(ListwiseRankLLM):
         sum_token = 0
 
         for i in range(rank_start, rank_end):
-            results.append({
-                'query': f"question: {query}",
-                'text': self._gen_passage(
-                    query,
-                    self.convert_doc_to_prompt_content(result.candidates[i].doc, self.max_tokens())
-                )
-            })
-            sum_token += len(self._tokenizer.encode(results[-1]['text']))
+            results.append(
+                {
+                    "query": f"question: {query}",
+                    "text": self._gen_passage(
+                        query,
+                        self.convert_doc_to_prompt_content(
+                            result.candidates[i].doc, self.max_tokens()
+                        ),
+                    ),
+                }
+            )
+            sum_token += len(self._tokenizer.encode(results[-1]["text"]))
 
         return results, sum_token
 
@@ -470,18 +515,29 @@ class RankFiDScore(ListwiseRankLLM):
         return len(self._tokenizer.encode(prompt))
 
     def cost_per_1k_token(self, input_token: bool) -> float:
-        return 0.
+        return 0.0
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        if self._output_token_estimate is not None and self._window_size == current_window_size:
+        if (
+            self._output_token_estimate is not None
+            and self._window_size == current_window_size
+        ):
             return self._output_token_estimate
         else:
             output_token_estimate = (
-                    len(self._tokenizer.encode(" > ".join([f"[{i + 1}]" for i in range(current_window_size)]))) - 1
+                len(
+                    self._tokenizer.encode(
+                        " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
+                    )
+                )
+                - 1
             )
-            if self._output_token_estimate is None and self._window_size == current_window_size:
+            if (
+                self._output_token_estimate is None
+                and self._window_size == current_window_size
+            ):
                 self._output_token_estimate = output_token_estimate
 
             return output_token_estimate

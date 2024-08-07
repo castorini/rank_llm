@@ -3,12 +3,12 @@ import types
 
 import torch
 from torch import nn
+from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
 
 from .modeling_t5 import (
     T5ForConditionalGeneration as T5ConditionalGenerationCrossAttentionScore,
-    T5Stack as T5StackCrossAttentionScore
 )
-from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
+from .modeling_t5 import T5Stack as T5StackCrossAttentionScore
 
 
 class FiDStack(T5Stack):
@@ -16,24 +16,26 @@ class FiDStack(T5Stack):
         super().__init__(config, embed_tokens=embed_tokens)
 
     def forward(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            inputs_embeds=None,
-            head_mask=None,
-            cross_attn_head_mask=None,
-            past_key_values=None,
-            use_cache=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            n_passages: int = None
+        self,
+        input_ids=None,
+        attention_mask=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        inputs_embeds=None,
+        head_mask=None,
+        cross_attn_head_mask=None,
+        past_key_values=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+        n_passages: int = None,
     ):
         if not self.is_decoder:
             input_ids = input_ids.view(input_ids.size(0) * n_passages, -1)
-            attention_mask = attention_mask.view(attention_mask.size(0) * n_passages, -1)
+            attention_mask = attention_mask.view(
+                attention_mask.size(0) * n_passages, -1
+            )
 
         output = super().forward(
             input_ids=input_ids,
@@ -54,14 +56,18 @@ class FiDStack(T5Stack):
             bsz = input_ids.size(0) // n_passages
             if not return_dict:
                 last_hidden_states = output[0]
-                last_hidden_state = last_hidden_states.view(bsz, -1, last_hidden_states.size(-1))
+                last_hidden_state = last_hidden_states.view(
+                    bsz, -1, last_hidden_states.size(-1)
+                )
                 output = tuple(
                     last_hidden_state,
                     *output[1:],
                 )
             else:
                 last_hidden_state = output.last_hidden_state
-                output.last_hidden_state = last_hidden_state.view(bsz, -1, last_hidden_state.size(-1))
+                output.last_hidden_state = last_hidden_state.view(
+                    bsz, -1, last_hidden_state.size(-1)
+                )
 
         return output
 
@@ -71,24 +77,26 @@ class FiDStackCrossAttentionScore(T5StackCrossAttentionScore):
         super().__init__(config, embed_tokens=embed_tokens)
 
     def forward(
-            self,
-            input_ids=None,
-            attention_mask=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            inputs_embeds=None,
-            head_mask=None,
-            cross_attn_head_mask=None,
-            past_key_values=None,
-            use_cache=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            n_passages: int = None
+        self,
+        input_ids=None,
+        attention_mask=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        inputs_embeds=None,
+        head_mask=None,
+        cross_attn_head_mask=None,
+        past_key_values=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+        n_passages: int = None,
     ):
         if not self.is_decoder:
             input_ids = input_ids.view(input_ids.size(0) * n_passages, -1)
-            attention_mask = attention_mask.view(attention_mask.size(0) * n_passages, -1)
+            attention_mask = attention_mask.view(
+                attention_mask.size(0) * n_passages, -1
+            )
 
         output = super().forward(
             input_ids=input_ids,
@@ -109,14 +117,18 @@ class FiDStackCrossAttentionScore(T5StackCrossAttentionScore):
             bsz = input_ids.size(0) // n_passages
             if not return_dict:
                 last_hidden_states = output[0]
-                last_hidden_state = last_hidden_states.view(bsz, -1, last_hidden_states.size(-1))
+                last_hidden_state = last_hidden_states.view(
+                    bsz, -1, last_hidden_states.size(-1)
+                )
                 output = tuple(
                     last_hidden_state,
                     *output[1:],
                 )
             else:
                 last_hidden_state = output.last_hidden_state
-                output.last_hidden_state = last_hidden_state.view(bsz, -1, last_hidden_state.size(-1))
+                output.last_hidden_state = last_hidden_state.view(
+                    bsz, -1, last_hidden_state.size(-1)
+                )
 
         return output
 
@@ -179,7 +191,9 @@ class FiD(T5ForConditionalGeneration):
             mod.layer[1].EncDecAttention.normalized_score_storage = None
 
     @torch.no_grad()
-    def get_crossattention_scores(self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=[]):
+    def get_crossattention_scores(
+        self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=[]
+    ):
         """
         Cross-attention scores are aggregated to obtain a single scalar per
         passage. This scalar can be seen as a similarity score between the
@@ -196,12 +210,29 @@ class FiD(T5ForConditionalGeneration):
         norms = torch.stack(norms)
 
         output = {}
-        self.aggregate_value(norms, mask, n_passages, ids, mask_query, output, prefix="norms",
-                             output_sequence_lengths=output_sequence_lengths)
+        self.aggregate_value(
+            norms,
+            mask,
+            n_passages,
+            ids,
+            mask_query,
+            output,
+            prefix="norms",
+            output_sequence_lengths=output_sequence_lengths,
+        )
         return output
 
-    def aggregate_value(self, scores, mask, n_passages, ids, mask_query=None, output={}, prefix="",
-                        output_sequence_lengths=[]):
+    def aggregate_value(
+        self,
+        scores,
+        mask,
+        n_passages,
+        ids,
+        mask_query=None,
+        output={},
+        prefix="",
+        output_sequence_lengths=[],
+    ):
         n_layers, bsz, n_tokens, total_tokens = scores.size()
 
         ids = ids.view(bsz, n_passages, -1)
@@ -214,15 +245,24 @@ class FiD(T5ForConditionalGeneration):
         scores_woquery = None
         # Compute scores based on scores without query
         if not mask_query is None:
-            output[f"{prefix}woquery"] = self.get_woquery_score(scores, mask_query, mask, n_layers,
-                                                                output_sequence_lengths=output_sequence_lengths)
+            output[f"{prefix}woquery"] = self.get_woquery_score(
+                scores,
+                mask_query,
+                mask,
+                n_layers,
+                output_sequence_lengths=output_sequence_lengths,
+            )
 
         return output
 
-    def get_woquery_score(self, scores, mask_query, mask, n_layers, output_sequence_lengths):
+    def get_woquery_score(
+        self, scores, mask_query, mask, n_layers, output_sequence_lengths
+    ):
         if scores.size(-1) > mask_query.size(-1):
             zero_padding = torch.zeros(
-                [mask_query.size(0), scores.size(-1) - mask_query.size(-1)], device=mask_query.device, dtype=torch.bool
+                [mask_query.size(0), scores.size(-1) - mask_query.size(-1)],
+                device=mask_query.device,
+                dtype=torch.bool,
             )
             mask_query = torch.cat([mask_query, zero_padding], dim=-1)
         mask_query = mask * (~mask_query[:, None])
@@ -232,7 +272,7 @@ class FiD(T5ForConditionalGeneration):
 
         # zero out scores after EOS token. This is needed when batching results in sequences with different lengths.
         for i in range(len(scores_woquery)):
-            scores_woquery[i, output_sequence_lengths[i]:, :, :] = 0
+            scores_woquery[i, output_sequence_lengths[i] :, :, :] = 0
 
         scores_woquery = scores_woquery.sum(dim=[1, 3])
         return scores_woquery / ntokens_woquery
@@ -310,7 +350,9 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
             mod.layer[1].EncDecAttention.normalized_score_storage = None
 
     @torch.no_grad()
-    def get_crossattention_scores(self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=[]):
+    def get_crossattention_scores(
+        self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=[]
+    ):
         """
         Cross-attention scores are aggregated to obtain a single scalar per
         passage. This scalar can be seen as a similarity score between the
@@ -327,12 +369,29 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
         norms = torch.stack(norms)
 
         output = {}
-        self.aggregate_value(norms, mask, n_passages, ids, mask_query, output, prefix="norms",
-                             output_sequence_lengths=output_sequence_lengths)
+        self.aggregate_value(
+            norms,
+            mask,
+            n_passages,
+            ids,
+            mask_query,
+            output,
+            prefix="norms",
+            output_sequence_lengths=output_sequence_lengths,
+        )
         return output
 
-    def aggregate_value(self, scores, mask, n_passages, ids, mask_query=None, output={}, prefix="",
-                        output_sequence_lengths=[]):
+    def aggregate_value(
+        self,
+        scores,
+        mask,
+        n_passages,
+        ids,
+        mask_query=None,
+        output={},
+        prefix="",
+        output_sequence_lengths=[],
+    ):
         n_layers, bsz, n_tokens, total_tokens = scores.size()
 
         ids = ids.view(bsz, n_passages, -1)
@@ -345,15 +404,24 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
         scores_woquery = None
         # Compute scores based on scores without query
         if not mask_query is None:
-            output[f"{prefix}woquery"] = self.get_woquery_score(scores, mask_query, mask, n_layers,
-                                                                output_sequence_lengths=output_sequence_lengths)
+            output[f"{prefix}woquery"] = self.get_woquery_score(
+                scores,
+                mask_query,
+                mask,
+                n_layers,
+                output_sequence_lengths=output_sequence_lengths,
+            )
 
         return output
 
-    def get_woquery_score(self, scores, mask_query, mask, n_layers, output_sequence_lengths):
+    def get_woquery_score(
+        self, scores, mask_query, mask, n_layers, output_sequence_lengths
+    ):
         if scores.size(-1) > mask_query.size(-1):
             zero_padding = torch.zeros(
-                [mask_query.size(0), scores.size(-1) - mask_query.size(-1)], device=mask_query.device, dtype=torch.bool
+                [mask_query.size(0), scores.size(-1) - mask_query.size(-1)],
+                device=mask_query.device,
+                dtype=torch.bool,
             )
             mask_query = torch.cat([mask_query, zero_padding], dim=-1)
         mask_query = mask * (~mask_query[:, None])
@@ -363,7 +431,7 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
 
         # zero out scores after EOS token. This is needed when batching results in sequences with different lengths.
         for i in range(len(scores_woquery)):
-            scores_woquery[i, output_sequence_lengths[i]:, :, :] = 0
+            scores_woquery[i, output_sequence_lengths[i] :, :, :] = 0
 
         scores_woquery = scores_woquery.sum(dim=[1, 3])
         return scores_woquery / ntokens_woquery
@@ -384,16 +452,16 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
 
 
 def cross_attention_forward(
-        self,
-        hidden_states,
-        mask=None,
-        key_value_states=None,
-        position_bias=None,
-        past_key_value=None,
-        layer_head_mask=None,
-        query_length=None,
-        use_cache=False,
-        output_attentions=False,
+    self,
+    hidden_states,
+    mask=None,
+    key_value_states=None,
+    position_bias=None,
+    past_key_value=None,
+    layer_head_mask=None,
+    query_length=None,
+    use_cache=False,
+    output_attentions=False,
 ):
     """
     Self-attention (if key_value_states is None) or attention over source sentence (provided by key_value_states).
@@ -407,15 +475,21 @@ def cross_attention_forward(
 
     if past_key_value is not None:
         assert (
-                len(past_key_value) == 2
+            len(past_key_value) == 2
         ), f"past_key_value should have 2 past states: keys and values. Got {len(past_key_value)} past states"
-        real_seq_length += past_key_value[0].shape[2] if query_length is None else query_length
+        real_seq_length += (
+            past_key_value[0].shape[2] if query_length is None else query_length
+        )
 
-    key_length = real_seq_length if key_value_states is None else key_value_states.shape[1]
+    key_length = (
+        real_seq_length if key_value_states is None else key_value_states.shape[1]
+    )
 
     def shape(states):
         """projection"""
-        return states.view(batch_size, -1, self.n_heads, self.key_value_proj_dim).transpose(1, 2)
+        return states.view(
+            batch_size, -1, self.n_heads, self.key_value_proj_dim
+        ).transpose(1, 2)
 
     def unshape(states):
         """reshape"""
@@ -443,14 +517,22 @@ def cross_attention_forward(
         return hidden_states
 
     # get query states
-    query_states = shape(self.q(hidden_states))  # (batch_size, n_heads, seq_length, dim_per_head)
+    query_states = shape(
+        self.q(hidden_states)
+    )  # (batch_size, n_heads, seq_length, dim_per_head)
 
     # get key/value states
     key_states = project(
-        hidden_states, self.k, key_value_states, past_key_value[0] if past_key_value is not None else None
+        hidden_states,
+        self.k,
+        key_value_states,
+        past_key_value[0] if past_key_value is not None else None,
     )
     value_states = project(
-        hidden_states, self.v, key_value_states, past_key_value[1] if past_key_value is not None else None
+        hidden_states,
+        self.v,
+        key_value_states,
+        past_key_value[1] if past_key_value is not None else None,
     )
 
     # compute scores
@@ -461,7 +543,9 @@ def cross_attention_forward(
     if position_bias is None:
         if not self.has_relative_attention_bias:
             position_bias = torch.zeros(
-                (1, self.n_heads, real_seq_length, key_length), device=scores.device, dtype=scores.dtype
+                (1, self.n_heads, real_seq_length, key_length),
+                device=scores.device,
+                dtype=scores.dtype,
             )
             if self.gradient_checkpointing and self.training:
                 position_bias.requires_grad = True
@@ -471,10 +555,12 @@ def cross_attention_forward(
         # if key and values are already calculated
         # we want only the last query position bias
         if past_key_value is not None:
-            position_bias = position_bias[:, :, -hidden_states.size(1):, :]
+            position_bias = position_bias[:, :, -hidden_states.size(1) :, :]
 
         if mask is not None:
-            position_bias = position_bias + mask  # (batch_size, n_heads, seq_length, key_length)
+            position_bias = (
+                position_bias + mask
+            )  # (batch_size, n_heads, seq_length, key_length)
 
     scores += position_bias
 
@@ -483,19 +569,27 @@ def cross_attention_forward(
     if hasattr(self, "normalized_score_storage"):
         with torch.no_grad():
             self.normalized_score_storage = (
-                (torch.norm(value_states.float(), dim=-1)[:, :, None] * attn_weights).detach().mean(dim=1)
+                (torch.norm(value_states.float(), dim=-1)[:, :, None] * attn_weights)
+                .detach()
+                .mean(dim=1)
             )
 
-    attn_weights = nn.functional.dropout(attn_weights.type_as(scores), p=self.dropout, training=self.training)
+    attn_weights = nn.functional.dropout(
+        attn_weights.type_as(scores), p=self.dropout, training=self.training
+    )
 
     # Mask heads if we want to
     if layer_head_mask is not None:
         attn_weights = attn_weights * layer_head_mask
 
-    attn_output = unshape(torch.matmul(attn_weights, value_states))  # (batch_size, seq_length, dim)
+    attn_output = unshape(
+        torch.matmul(attn_weights, value_states)
+    )  # (batch_size, seq_length, dim)
     attn_output = self.o(attn_output)
 
-    present_key_value_state = (key_states, value_states) if (self.is_decoder and use_cache) else None
+    present_key_value_state = (
+        (key_states, value_states) if (self.is_decoder and use_cache) else None
+    )
     outputs = (attn_output,) + (present_key_value_state,) + (position_bias,)
 
     if output_attentions:

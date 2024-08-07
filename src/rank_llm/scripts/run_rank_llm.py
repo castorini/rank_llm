@@ -59,7 +59,7 @@ def main(args):
         step_size=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
-        batch_size=batch_size
+        batch_size=batch_size,
     )
 
 
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         "--batch_size",
         default=-1,
         help="batch size of the non vllm-determined-batch-size models. -1 means not allowed be in batch",
-        type=int
+        type=int,
     )
     args = parser.parse_args()
     main(args)
