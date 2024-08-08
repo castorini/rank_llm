@@ -259,7 +259,6 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("window_size", 20),
                 ("precision", "bfloat16"),
-                # TODO add num_gpus
                 ("device", "cuda"),
                 ("batch_size", -1),
                 # reuse this parameter, but its not for "vllm", but only for "batched"
@@ -286,7 +285,6 @@ class Reranker:
                 precision=precision,
                 device=device,
                 batched=vllm_batched,
-                batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
         elif "lit5-score" in model_path.lower():
@@ -296,7 +294,6 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("window_size", 100),
                 ("precision", "bfloat16"),
-                # TODO add num_gpus
                 ("device", "cuda"),
                 ("batch_size", -1),
                 # reuse this parameter, but its not for "vllm", but only for "batched"
@@ -308,6 +305,7 @@ class Reranker:
                 prompt_mode,
                 num_few_shot_examples,
                 window_size,
+                step_size,
                 precision,
                 device,
                 batch_size,
@@ -323,7 +321,6 @@ class Reranker:
                 precision=precision,
                 device=device,
                 batched=vllm_batched,
-                batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
