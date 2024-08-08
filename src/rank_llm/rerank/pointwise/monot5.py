@@ -23,8 +23,7 @@ class MonoT5(PointwiseRankLLM):
         prompt_mode: str = "monot5",
         context_size: int = 512,
         device: str = "cuda",
-        batch_size: int = 32
-        device: str = "cuda",
+        batch_size: int = 32,
     ):
         super().__init__(
             model=model, 
@@ -63,9 +62,6 @@ class MonoT5(PointwiseRankLLM):
                 truncation=True,
                 return_tensors='pt' 
             ).to(self._device)
-        token_prompts = self._tokenizer(
-            prompts, padding=True, truncation=True, return_tensors="pt"
-        ).to(self._device)
 
             token_prompts = token_prompts["input_ids"]
 
