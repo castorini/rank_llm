@@ -2,10 +2,12 @@ import logging
 from abc import ABC
 from tqdm import tqdm
 import copy
+import re
+from ftfy import fix_text
 from functools import cmp_to_key
 from datetime import datetime
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Dict
 from rank_llm.data import Result, Request, Candidate
 
 try:
@@ -30,11 +32,13 @@ class PointwiseRankLLM(RankLLM, ABC):
         context_size: int,
         prompt_mode: PromptMode,
         device: str = "cuda",
-        filename: str = ""
+        filename: str = "",
+        batch_size: int = 32
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
         self._device = device
         self._filename = filename
+        self._batch_size = batch_size
 
     def rerank_batch(
         self,
@@ -57,12 +61,12 @@ class PointwiseRankLLM(RankLLM, ABC):
             prompts, token_counts = self.create_prompt_batched(
                 results=rerank_results, index=index
             )
-            outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts)
+            outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts, batch_size=self._batch_size)
             for result, score in zip(rerank_results, scores):
                 result.candidates[index].score = score
         
         for result in rerank_results:
-            result.candidates.sort(key=cmp_to_key(self.candidate_comparator))
+            result.candidates.sort(key=cmp_to_key(self.candidate_comparator), reverse=True)
 
         return rerank_results
 
@@ -118,3 +122,27 @@ class PointwiseRankLLM(RankLLM, ABC):
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
+    
+    def _replace_number(self, s: str) -> str:
+        return re.sub(r"\[(\d+)\]", r"(\1)", s)
+
+    def convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
+        if "text" in doc:
+            content = doc["text"]
+        elif "segment" in doc:
+            content = doc["segment"]
+        elif "contents" in doc:
+            content = doc["contents"]
+        elif "body" in doc:
+            content = doc["body"]
+        else:
+            content = doc["passage"]
+        if "title" in doc and doc["title"]:
+            content = "Title: " + doc["title"] + " " + "Content: " + content
+        content = content.strip()
+        content = fix_text(content)
+        # For Japanese should cut by character: content = content[:int(max_length)]
+        content = " ".join(content.split()[: int(max_length)])
+        return self._replace_number(content)
