@@ -24,12 +24,18 @@ class MonoT5(PointwiseRankLLM):
         context_size: int = 512,
         device: str = "cuda",
         batch_size: int = 32
+        device: str = "cuda",
     ):
-        super().__init__(model=model, context_size=context_size, prompt_mode=prompt_mode, device=device, batch_size=batch_size)
+        super().__init__(
+            model=model, 
+            context_size=context_size, 
+            prompt_mode=prompt_mode, 
+            device=device, 
+            batch_size=batch_size
+        )
+        
         self._tokenizer = T5Tokenizer.from_pretrained(model)
-        self._llm = T5ForConditionalGeneration.from_pretrained(
-            model
-        ).to(self._device)
+        self._llm = T5ForConditionalGeneration.from_pretrained(model).to(self._device)
         self._context_size = context_size
 
     def run_llm_batched(
@@ -37,7 +43,6 @@ class MonoT5(PointwiseRankLLM):
         prompts: List[str],
         batch_size: int
     ) -> Tuple[List[str], List[int], List[float]]:
-        
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_new_tokens = self.num_output_tokens()
@@ -58,18 +63,23 @@ class MonoT5(PointwiseRankLLM):
                 truncation=True,
                 return_tensors='pt' 
             ).to(self._device)
+        token_prompts = self._tokenizer(
+            prompts, padding=True, truncation=True, return_tensors="pt"
+        ).to(self._device)
 
-            token_prompts = token_prompts['input_ids']
+            token_prompts = token_prompts["input_ids"]
 
             batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
 
             batch_output_ids = batch_outputs.sequences
             batch_logits = batch_outputs.scores
 
-            batch_outputs = [ 
+            batch_outputs = [
                 self._tokenizer.decode(
-                    single_token_sequence, skip_special_tokens=True, spaces_between_special_tokens=False
-                ) 
+                    single_token_sequence,
+                skip_special_tokens=True,
+                spaces_between_special_tokens=False,
+                )
                 for single_token_sequence in batch_output_ids
             ]
 
@@ -83,11 +93,8 @@ class MonoT5(PointwiseRankLLM):
             all_outputs.extend(batch_outputs)
 
         return all_outputs, all_output_token_counts, all_scores
-        
-    def run_llm(
-        self, prompt: str
-    ) -> Tuple[str, int, float]:
-        
+
+    def run_llm(self, prompt: str) -> Tuple[str, int, float]:
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_new_tokens = self.num_output_tokens()
@@ -118,15 +125,13 @@ class MonoT5(PointwiseRankLLM):
     def num_output_tokens(self) -> int:
         return 1
 
-    def create_prompt(
-        self, result: Result, index: int
-    ) -> Tuple[str, int]:
+    def create_prompt(self, result: Result, index: int) -> Tuple[str, int]:
         query = result.query.text
-        input = (
-            f"Query: {query} Document: {self.convert_doc_to_prompt_content(result.candidates[index].doc, max_length=self._context_size)}"
-        )
+        input = f"Query: {query} Document: {self.convert_doc_to_prompt_content(result.candidates[index].doc, max_length=self._context_size)}"
         prompt = (
-            self._tokenizer.decode(self._tokenizer.encode(input)[:(self._context_size - 32)])[:-4]
+            self._tokenizer.decode(
+                self._tokenizer.encode(input)[: (self._context_size - 32)]
+            )[:-4]
             + " Relevant: "
         )
         prompt = prompt.replace("<unk>", "")
