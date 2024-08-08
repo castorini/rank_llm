@@ -260,7 +260,6 @@ class Reranker:
                 ("window_size", 20),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
-                ("batch_size", -1),
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
@@ -272,7 +271,6 @@ class Reranker:
                 window_size,
                 precision,
                 device,
-                batch_size,
                 vllm_batched,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
@@ -295,7 +293,6 @@ class Reranker:
                 ("window_size", 100),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
-                ("batch_size", -1),
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
@@ -308,7 +305,6 @@ class Reranker:
                 step_size,
                 precision,
                 device,
-                batch_size,
                 vllm_batched,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
