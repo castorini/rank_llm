@@ -38,6 +38,5 @@ class IdentityReranker:
                     rerank_result.candidates[rank_start:rank_end],
                     len(rerank_result.candidates[rank_start:rank_end]),
                 )
-            print(f"rerank result: {rerank_result}")
             results.append(rerank_result)
         return results

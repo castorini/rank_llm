@@ -78,7 +78,7 @@ class TestSafeOpenai(unittest.TestCase):
                     keys=keys,
                 )
 
-    @patch("rank_llm.rerank.rank_gpt.SafeOpenai._call_completion")
+    @patch("rank_llm.rerank.listwise.rank_gpt.SafeOpenai._call_completion")
     def test_run_llm(self, mock_call_completion):
         mock_call_completion.return_value = "mock_response"
         agent = SafeOpenai(

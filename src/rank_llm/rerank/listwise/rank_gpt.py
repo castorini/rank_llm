@@ -12,12 +12,6 @@ from rank_llm.rerank import PromptMode
 from .listwise_rankllm import ListwiseRankLLM
 
 
-class CompletionMode(Enum):
-    UNSPECIFIED = 0
-    CHAT = 1
-    TEXT = 2
-
-
 class SafeOpenai(ListwiseRankLLM):
     def __init__(
         self,
@@ -90,6 +84,11 @@ class SafeOpenai(ListwiseRankLLM):
             openai.api_type = api_type
             openai.api_base = api_base
             self.use_azure_ai = True
+
+    class CompletionMode(Enum):
+        UNSPECIFIED = 0
+        CHAT = 1
+        TEXT = 2
 
     def rerank_batch(
         self,

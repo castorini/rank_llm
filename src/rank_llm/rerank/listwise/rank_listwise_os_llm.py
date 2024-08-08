@@ -29,7 +29,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
         model: str,
-        name: str,
+        name: str = "",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
