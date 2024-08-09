@@ -138,21 +138,23 @@ class RankFiDDistill(ListwiseRankLLM):
 
             result = []
 
-            for i in range(0, len(requests), batch_size):
-                batch = requests[i : min(i + batch_size, len(requests))]
-                batch_result = self.sliding_windows_batched(
-                    batch,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(
-                        rank_end, len(requests[0].candidates)
-                    ),  # TODO: Fails arbitrary hit sizes
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                result.extend(batch_result)
+            with tqdm(range(0, len(requests))) as bar:
+                for i in range(0, len(requests), batch_size):
+                    batch = requests[i : min(i + batch_size, len(requests))]
+                    batch_result = self.sliding_windows_batched(
+                        batch,
+                        rank_start=max(rank_start, 0),
+                        rank_end=min(
+                            rank_end, len(requests[0].candidates)
+                        ),  # TODO: Fails arbitrary hit sizes
+                        window_size=window_size,
+                        step=step,
+                        shuffle_candidates=shuffle_candidates,
+                        logging=logging,
+                        populate_exec_summary=populate_exec_summary,
+                    )
+                    result.extend(batch_result)
+                    bar.update(len(batch))
 
             return result
         else:
@@ -423,21 +425,23 @@ class RankFiDScore(ListwiseRankLLM):
 
             result = []
 
-            for i in range(0, len(requests), batch_size):
-                batch = requests[i : min(i + batch_size, len(requests))]
-                batch_result = self.sliding_windows_batched(
-                    batch,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(
-                        rank_end, len(requests[0].candidates)
-                    ),  # TODO: Fails arbitrary hit sizes
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                result.extend(batch_result)
+            with tqdm(range(0, len(requests))) as bar:
+                for i in range(0, len(requests), batch_size):
+                    batch = requests[i : min(i + batch_size, len(requests))]
+                    batch_result = self.sliding_windows_batched(
+                        batch,
+                        rank_start=max(rank_start, 0),
+                        rank_end=min(
+                            rank_end, len(requests[0].candidates)
+                        ),  # TODO: Fails arbitrary hit sizes
+                        window_size=window_size,
+                        step=step,
+                        shuffle_candidates=shuffle_candidates,
+                        logging=logging,
+                        populate_exec_summary=populate_exec_summary,
+                    )
+                    result.extend(batch_result)
+                    bar.update(len(batch))
 
             return result
         else:
