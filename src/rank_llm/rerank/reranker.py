@@ -302,7 +302,6 @@ class Reranker:
                 prompt_mode,
                 num_few_shot_examples,
                 window_size,
-                step_size,
                 precision,
                 device,
                 vllm_batched,
