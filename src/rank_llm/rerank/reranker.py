@@ -9,6 +9,7 @@ from rank_llm.rerank import (
     get_openai_api_key,
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.rankllm import RankLLM
 
 
@@ -251,6 +252,72 @@ class Reranker:
             )
 
             print(f"Completed loading {model_path}")
+        elif "lit5-distill" in model_path.lower():
+            keys_and_defaults = [
+                ("context_size", 150),
+                ("prompt_mode", PromptMode.LiT5),
+                ("num_few_shot_examples", 0),
+                ("window_size", 20),
+                ("precision", "bfloat16"),
+                ("device", "cuda"),
+                # reuse this parameter, but its not for "vllm", but only for "batched"
+                ("vllm_batched", False),
+            ]
+
+            (
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                window_size,
+                precision,
+                device,
+                vllm_batched,
+            ) = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankFiDDistill(
+                model=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                window_size=window_size,
+                precision=precision,
+                device=device,
+                batched=vllm_batched,
+            )
+            print(f"Completed loading {model_path}")
+        elif "lit5-score" in model_path.lower():
+            keys_and_defaults = [
+                ("context_size", 150),
+                ("prompt_mode", PromptMode.LiT5),
+                ("num_few_shot_examples", 0),
+                ("window_size", 100),
+                ("precision", "bfloat16"),
+                ("device", "cuda"),
+                # reuse this parameter, but its not for "vllm", but only for "batched"
+                ("vllm_batched", False),
+            ]
+
+            (
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                window_size,
+                precision,
+                device,
+                vllm_batched,
+            ) = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankFiDScore(
+                model=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                window_size=window_size,
+                precision=precision,
+                device=device,
+                batched=vllm_batched,
+            )
+            print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None
@@ -274,21 +341,22 @@ def extract_kwargs(
 
     Keyword arguments:
     keys_and_defaults -- List of Tuple(keyname, default)
-    Return: List of extracted kwargs in order provided in keys_and_default
+    Return: List of extracted kwargs in order provided in keys_and_defaults
     """
-
+    # Extract each kwarg using the default if not provided
     extracted_kwargs = [
-        kwargs.get(key_and_default[0], key_and_default[-1])
+        kwargs.get(key_and_default[0], key_and_default[1])
         for key_and_default in keys_and_defaults
     ]
 
     # Check that type of provided kwarg is compatible with the provided default type
-    for i, extracted_kwarg in enumerate(extract_kwargs):
-        if type(keys_and_defaults[i[-1]]) != None and (
-            type(extracted_kwarg) != type(keys_and_defaults[i[-1]])
+    for i, extracted_kwarg in enumerate(extracted_kwargs):
+        default_value = keys_and_defaults[i][1]
+        if default_value is not None and not isinstance(
+            extracted_kwarg, type(default_value)
         ):
             raise ValueError(
-                "Provided kwarg must be compatible with the argument's default type"
+                f"Provided kwarg for {keys_and_defaults[i][0]} must be compatible with the argument's default type {type(default_value)}"
             )
 
     return extracted_kwargs
