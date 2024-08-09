@@ -40,7 +40,6 @@ class MonoT5(PointwiseRankLLM):
     def run_llm_batched(
         self,
         prompts: List[str],
-        batch_size: int
     ) -> Tuple[List[str], List[int], List[float]]:
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
@@ -53,40 +52,39 @@ class MonoT5(PointwiseRankLLM):
         all_output_token_counts = []
         all_scores = []
 
-        for i in range(0, len(prompts), batch_size):
-            batch_prompts = prompts[i:i+batch_size]
+        batch_prompts = prompts
 
-            token_prompts = self._tokenizer(
-                batch_prompts,
-                padding=True,
-                truncation=True,
-                return_tensors='pt' 
-            ).to(self._device)
+        token_prompts = self._tokenizer(
+            batch_prompts,
+            padding=True,
+            truncation=True,
+            return_tensors='pt' 
+        ).to(self._device)
 
-            token_prompts = token_prompts["input_ids"]
+        token_prompts = token_prompts["input_ids"]
 
-            batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
+        batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
 
-            batch_output_ids = batch_outputs.sequences
-            batch_logits = batch_outputs.scores
+        batch_output_ids = batch_outputs.sequences
+        batch_logits = batch_outputs.scores
 
-            batch_outputs = [
-                self._tokenizer.decode(
-                    single_token_sequence,
+        batch_outputs = [
+            self._tokenizer.decode(
+                single_token_sequence,
                 skip_special_tokens=True,
                 spaces_between_special_tokens=False,
-                )
-                for single_token_sequence in batch_output_ids
-            ]
+            )
+            for single_token_sequence in batch_output_ids
+        ]
 
-            for logit_tensor in batch_logits[0]:
-                truth_logit = logit_tensor[1176]
-                false_logit = logit_tensor[6136]
-                score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
-                all_scores.append(score)
-                all_output_token_counts.append(self.num_output_tokens)
+        for logit_tensor in batch_logits[0]:
+            truth_logit = logit_tensor[1176]
+            false_logit = logit_tensor[6136]
+            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
+            all_scores.append(score)
+            all_output_token_counts.append(self.num_output_tokens)
 
-            all_outputs.extend(batch_outputs)
+        all_outputs.extend(batch_outputs)
 
         return all_outputs, all_output_token_counts, all_scores
 

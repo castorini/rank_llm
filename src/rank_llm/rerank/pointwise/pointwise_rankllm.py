@@ -1,8 +1,7 @@
 import copy
 import logging
+import math
 from abc import ABC
-from tqdm import tqdm
-import copy
 import re
 from ftfy import fix_text
 from datetime import datetime
@@ -63,13 +62,30 @@ class PointwiseRankLLM(RankLLM, ABC):
             )
             for request in requests
         ]
-        for index in tqdm(range(len(rerank_results[0].candidates))):
-            prompts, token_counts = self.create_prompt_batched(
-                results=rerank_results, index=index
-            )
-            outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts, batch_size=self._batch_size)
-            for result, score in zip(rerank_results, scores):
-                result.candidates[index].score = score
+        end = len(rerank_results[0].candidates) * len(requests)
+
+        with tqdm(total=end, desc="Progress through (q, d) pairs") as progress_bar:
+            for index in range(0, end, self._batch_size):
+
+                prompts, token_counts = self.create_prompt_batched(
+                    results=rerank_results, index=index
+                )
+
+                outputs, output_tokens, scores = self.run_llm_batched(
+                    prompts=prompts
+                )
+
+                for update_index in range(index, min(index + self._batch_size, len(rerank_results[0].candidates) * len(rerank_results))):
+                    query_number = math.floor(update_index / len(rerank_results[0].candidates))
+                    candidate_number = update_index % len(rerank_results[0].candidates)
+
+                    rerank_results[query_number].candidates[candidate_number].score = scores[update_index - index]
+
+                if index + self._batch_size > end:
+                    progress_bar.update(end - index)
+                else:
+                    progress_bar.update(self._batch_size)
+
 
         for result in rerank_results:
             result.candidates.sort(key=cmp_to_key(self.candidate_comparator), reverse=True)
@@ -82,8 +98,15 @@ class PointwiseRankLLM(RankLLM, ABC):
         prompts = []
         token_counts = []
 
-        for result in results:
-            prompt, token_count = self.create_prompt(result=result, index=index)
+        for index in range(index, min(index + self._batch_size, len(results[0].candidates) * len(results))):
+            query_number = math.floor(index / len(results[0].candidates))
+            candidate_number = index % len(results[0].candidates)
+
+            prompt, token_count = self.create_prompt(
+                result=results[query_number], 
+                index=candidate_number
+            )
+
             prompts.append(prompt)
             token_counts.append(token_count)
 
