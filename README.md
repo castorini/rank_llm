@@ -57,6 +57,32 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o --top_k_candida
 Note that the `--prompt_mode` is set to `rank_GPT_APEER` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
 This can be changed to `rank_GPT` to use the original prompt.
 
+### Run end to end - LiT5
+
+We can run the LiT5-Distill V2 model (which could rerank 100 documents in a single pass) with the following command:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large-v2 --top_k_candidates=100 --dataset=dl19 \
+    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --vllm_batched --batch_size=4 \
+    --variable_passages --window_size=100
+```
+
+We can run the LiT5-Distill original model (which works with a window size of 20) with the following command:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large --top_k_candidates=100 --dataset=dl19 \
+    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --vllm_batched --batch_size=32 \
+    --variable_passages
+```
+
+We can run the LiT5-Score model with the following command:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Score-large --top_k_candidates=100 --dataset=dl19 \
+    --retrieval_method=bm25 --prompt_mode=LiT5 --context_size=150 --vllm_batched --batch_size=8 \
+    --window_size=100 --variable_passages
+```
+
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 
 ## 🦙🐧 Model Zoo
@@ -71,7 +97,23 @@ The following is a table of our models hosted on HuggingFace:
 | RankVicuna 7B - V1 - FP16      | [castorini/rank_vicuna_7b_v1_fp16](https://huggingface.co/castorini/rank_vicuna_7b_v1_fp16)               |
 | RankVicuna 7B - V1 - No Data Augmentation - FP16   | [castorini/rank_vicuna_7b_v1_noda_fp16](https://huggingface.co/castorini/rank_vicuna_7b_v1_noda_fp16)               |
 
+### LiT5 Suite
 
+The following is a table specifically for our LiT5 suite of models hosted on HuggingFace:
+
+| Model Name            | Hugging Face Identifier/Link                            |
+|-----------------------|---------------------------------------------|
+| LiT5 Distill base     | [castorini/LiT5-Distill-base](https://huggingface.co/castorini/LiT5-Distill-base)          |
+| LiT5 Distill large    | [castorini/LiT5-Distill-large](https://huggingface.co/castorini/LiT5-Distill-large)        |
+| LiT5 Distill xl       | [castorini/LiT5-Distill-xl](https://huggingface.co/castorini/LiT5-Distill-xl)              |
+| LiT5 Distill base v2  | [castorini/LiT5-Distill-base-v2](https://huggingface.co/castorini/LiT5-Distill-base-v2)    |
+| LiT5 Distill large v2 | [castorini/LiT5-Distill-large-v2](https://huggingface.co/castorini/LiT5-Distill-large-v2)  |
+| LiT5 Distill xl v2    | [castorini/LiT5-Distill-xl-v2](https://huggingface.co/castorini/LiT5-Distill-xl-v2)        |
+| LiT5 Score base       | [castorini/LiT5-Score-base](https://huggingface.co/castorini/LiT5-Score-base)              |
+| LiT5 Score large      | [castorini/LiT5-Score-large](https://huggingface.co/castorini/LiT5-Score-large)            |
+| LiT5 Score xl         | [castorini/LiT5-Score-xl](https://huggingface.co/castorini/LiT5-Score-xl)                  |
+
+Now you can run top-100 reranking with the v2 model in a single pass while maintaining efficiency!
 
 ## ✨ References
 
@@ -103,6 +145,19 @@ If you use RankLLM, please cite the following relevant papers:
 }
 ```
 <!-- {% endraw %} -->
+
+If you use one of the LiT5 models please cite the following relevant paper:
+
+[[2312.16098] Scaling Down, LiTting Up: Efficient Zero-Shot Listwise Reranking with Seq2seq Encoder-Decoder Models](https://arxiv.org/abs/2312.16098)
+
+```
+@ARTICLE{tamber2023scaling,
+  title   = {Scaling Down, LiTting Up: Efficient Zero-Shot Listwise Reranking with Seq2seq Encoder-Decoder Models},
+  author  = {Manveer Singh Tamber and Ronak Pradeep and Jimmy Lin},
+  year    = {2023},
+  journal = {arXiv preprint arXiv: 2312.16098}
+}
+```
 
 ## 🙏 Acknowledgments
 
