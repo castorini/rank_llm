@@ -26,13 +26,13 @@ class MonoT5(PointwiseRankLLM):
         batch_size: int = 32,
     ):
         super().__init__(
-            model=model, 
-            context_size=context_size, 
-            prompt_mode=prompt_mode, 
-            device=device, 
-            batch_size=batch_size
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            device=device,
+            batch_size=batch_size,
         )
-        
+
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = T5ForConditionalGeneration.from_pretrained(model).to(self._device)
         self._context_size = context_size
@@ -55,10 +55,7 @@ class MonoT5(PointwiseRankLLM):
         batch_prompts = prompts
 
         token_prompts = self._tokenizer(
-            batch_prompts,
-            padding=True,
-            truncation=True,
-            return_tensors='pt' 
+            batch_prompts, padding=True, truncation=True, return_tensors="pt"
         ).to(self._device)
 
         token_prompts = token_prompts["input_ids"]
@@ -80,7 +77,9 @@ class MonoT5(PointwiseRankLLM):
         for logit_tensor in batch_logits[0]:
             truth_logit = logit_tensor[1176]
             false_logit = logit_tensor[6136]
-            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
+            score = math.exp(truth_logit) / (
+                math.exp(truth_logit) + math.exp(false_logit)
+            )
             all_scores.append(score)
             all_output_token_counts.append(self.num_output_tokens)
 
