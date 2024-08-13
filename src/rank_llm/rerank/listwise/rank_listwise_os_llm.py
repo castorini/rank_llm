@@ -208,7 +208,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             _output_token_estimate = (
                 len(
                     self._tokenizer.encode(
-                        " > ".join([f"[{i+1}]" for i in range(current_window_size)])
+                        " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
                     )
                 )
                 - 1
@@ -238,12 +238,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         return conv
 
     def create_prompt(
-        self, result: Result, rank_start: int, rank_end: int
+        self, result: Result, selected_index: List[int]
     ) -> Tuple[str, int]:
         query = result.query.text
         query = self._replace_number(query)
-        num = len(result.candidates[rank_start:rank_end])
-        max_length = 300 * (20 / (rank_end - rank_start))
+        num = len(selected_index)
+        max_length = 300 * (20 / (len(selected_index)))
         while True:
             conv = get_conversation_template(self._model)
             if self._system_message:
@@ -252,7 +252,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
-            for cand in result.candidates[rank_start:rank_end]:
+            for idx in selected_index:
+                cand = result.candidates[idx]
                 rank += 1
                 # For Japanese should cut by character: content = content[:int(max_length)]
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
@@ -265,7 +266,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                rank_end - rank_start
+                len(selected_index)
             ):
                 break
             else:
@@ -274,17 +275,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     (
                         num_tokens
                         - self.max_tokens()
-                        + self.num_output_tokens(rank_end - rank_start)
+                        + self.num_output_tokens(len(selected_index))
                     )
-                    // ((rank_end - rank_start) * 4),
+                    // (len(selected_index) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
         self,
         results: List[Result],
-        rank_start: int,
-        rank_end: int,
+        selected_index: List[int],
         batch_size: int = 32,
     ) -> List[Tuple[str, int]]:
         def chunks(lst, n):
@@ -298,7 +298,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
                 completed_prompts = list(
                     executor.map(
-                        lambda result: self.create_prompt(result, rank_start, rank_end),
+                        lambda result: self.create_prompt(result, selected_index),
                         batch,
                     )
                 )

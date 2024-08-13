@@ -95,7 +95,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompts = []
         logger.info("Loading prompts.")
         prompts = self.create_prompt_batched(
-            results, rank_start, rank_end, batch_size=32
+            results, list(range(rank_start, rank_end)), batch_size=32
         )
         if logging:
             for prompt in prompts:
@@ -142,7 +142,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         Returns:
             Result: The processed result object after applying permutation.
         """
-        prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
+        prompt, in_token_count = self.create_prompt(
+            result, list(range(rank_start, rank_end))
+        )
         if logging:
             logger.info(f"Prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(
@@ -338,7 +340,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             start_pos = rank_end - window_size
             while start_pos >= rank_start:
                 start_pos = max(start_pos, rank_start)
-                prompt, _ = self.create_prompt(result, start_pos, end_pos)
+                prompt, _ = self.create_prompt(result, list(range(start_pos, end_pos)))
                 input_token_count += self.get_num_tokens(prompt)
                 end_pos = end_pos - step
                 start_pos = start_pos - step
