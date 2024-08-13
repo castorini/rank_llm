@@ -95,7 +95,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompts = []
         logger.info("Loading prompts.")
         prompts = self.create_prompt_batched(
-            results, list(range(rank_start, rank_end)), batch_size=32
+            results,
+            [list(range(rank_start, rank_end)) for _ in range(len(results))],
+            batch_size=32,
         )
         if logging:
             for prompt in prompts:

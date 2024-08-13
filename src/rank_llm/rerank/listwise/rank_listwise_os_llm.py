@@ -284,7 +284,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def create_prompt_batched(
         self,
         results: List[Result],
-        selected_index: List[int],
+        selected_indexes: List[List[int]],
         batch_size: int = 32,
     ) -> List[Tuple[str, int]]:
         def chunks(lst, n):
@@ -298,8 +298,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
                 completed_prompts = list(
                     executor.map(
-                        lambda result: self.create_prompt(result, selected_index),
-                        batch,
+                        lambda req: self.create_prompt(req[0], req[1]),
+                        zip(batch, selected_indexes),
                     )
                 )
                 all_completed_prompts.extend(completed_prompts)

@@ -241,10 +241,14 @@ class SafeOpenai(ListwiseRankLLM):
                 self._output_token_estimate = _output_token_estimate
             return _output_token_estimate
 
-    def create_prompt_batched(self):
+    def create_prompt_batched(
+        self, results: List[Result], selected_indexes: List[List[int]], batch_size: int
+    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         pass
 
-    def run_llm_batched(self):
+    def run_llm_batched(
+        self, prompts: List[Union[str, List[Dict[str, str]]]], **kwargs
+    ) -> List[Tuple[str, int]]:
         pass
 
     def create_prompt(

@@ -57,14 +57,14 @@ class RankLLM(ABC):
 
     @abstractmethod
     def create_prompt_batched(
-        self, results: List[Result], selected_index: List[int], batch_size: int
+        self, results: List[Result], selected_indexes: List[List[int]], batch_size: int
     ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         """
         Abstract method to create a batch of prompts based on the results and given ranking range.
 
         Args:
             results (List[Result]): The list of result objects containing data for prompt generation.
-            selected_index: select index for prompt creation
+            selected_indexes: select index for prompt creation
 
         Returns:
             Tuple[List[Union[str, List[Dict[str, str]]], List[int]]: A tuple object containing the list of generated prompts and the list of number of tokens in the generated prompts.

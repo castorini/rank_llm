@@ -3,16 +3,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Tuple, TypeVar, Union
 
-from rank_llm.data import Request, Result
+from rank_llm.data import Result
 
 T = TypeVar("T")
 
 
 @dataclass
 class ModelFunction:
-    # [(Request, SelectIndex)] -> [Prompt]
+    # [(Result, SelectIndex)] -> [Prompt]
     create_prompt: Callable[
-        [List[Tuple[Request, List[int]]]], List[Union[str, Dict[str, str]]]
+        [List[Tuple[Result, List[int]]]], List[Union[str, Dict[str, str]]]
     ]
 
     # [Prompt] -> [Permutation]
@@ -23,7 +23,7 @@ class ReorderExecutor(ABC):
     @abstractmethod
     def reorder(
         self,
-        requests: List[Request],
+        requests: List[Result],
         rank_start: int,
         rank_end: int,
         model: ModelFunction,
@@ -66,7 +66,7 @@ class SlidingWindowReorderExecutor(ReorderExecutor):
 
     def reorder(
         self,
-        requests: List[Request],
+        requests: List[Result],
         rank_start: int,
         rank_end: int,
         model: ModelFunction,

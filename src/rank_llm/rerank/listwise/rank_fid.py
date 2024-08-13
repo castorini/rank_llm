@@ -188,9 +188,9 @@ class RankFiDDistill(ListwiseRankLLM):
         return self._run_llm_by_length_unified(prompt_infos)
 
     def create_prompt_batched(
-        self, results: List[Result], selected_index: List[int], batch_size: int
+        self, results: List[Result], selected_indexes: List[int], batch_size: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
-        return [self.create_prompt(result, selected_index) for result in results]
+        return [self.create_prompt(result, selected_indexes) for result in results]
 
     def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
         """
@@ -477,9 +477,12 @@ class RankFiDScore(ListwiseRankLLM):
         return self._run_llm_by_length_unified(processed_prompts)
 
     def create_prompt_batched(
-        self, results: List[Result], selected_index: List[int], batch_size: int
+        self, results: List[Result], selected_indexes: List[List[int]], batch_size: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
-        return [self.create_prompt(result, selected_index) for result in results]
+        return [
+            self.create_prompt(result, selected_index)
+            for result, selected_index in zip(results, selected_indexes)
+        ]
 
     def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
         # get arbitrary query (they should be the same)
