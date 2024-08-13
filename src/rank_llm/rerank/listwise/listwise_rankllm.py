@@ -4,13 +4,14 @@ import random
 import re
 from abc import ABC
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import RankingExecInfo, Request, Result
 from rank_llm.rerank import PromptMode, RankLLM
+from rank_llm.rerank.listwise.reorder.reorder_executor import ModelFunction
 
 logger = logging.getLogger(__name__)
 
@@ -441,3 +442,33 @@ class ListwiseRankLLM(RankLLM, ABC):
         # For Japanese should cut by character: content = content[:int(max_length)]
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
+
+    def _get_model_function(self, batched: bool = False, **kwargs) -> ModelFunction:
+        # [(Request, SelectIndex)] -> [Prompt]
+        if batched:
+
+            def create_prompt(batch: List[Tuple[Result, List[int]]]):
+                return [
+                    prompt
+                    for prompt, _ in self.create_prompt_batched(
+                        [result for result, selected_index in batch],
+                        [selected_index for result, selected_index in batch],
+                        32,
+                    )
+                ]
+
+            def execute(batch: List[Union[str, Dict[str, str]]]):
+                return [s for s, _ in self.run_llm_batched(batch, **kwargs)]
+
+        else:
+
+            def create_prompt(batch: List[Tuple[Result, List[int]]]):
+                return [
+                    self.create_prompt(result, selected_index)[0]
+                    for result, selected_index in batch
+                ]
+
+            def execute(batch: List[Union[str, Dict[str, str]]]):
+                return [self.run_llm(x, **kwargs)[0] for x in batch]
+
+        return ModelFunction(create_prompt=create_prompt, execute=execute)
