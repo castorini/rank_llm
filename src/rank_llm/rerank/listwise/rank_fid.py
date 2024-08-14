@@ -188,9 +188,11 @@ class RankFiDDistill(ListwiseRankLLM):
         return self._run_llm_by_length_unified(prompt_infos)
 
     def create_prompt_batched(
-        self, results: List[Result], selected_indexes: List[int], batch_size: int
+        self, results: List[Result], selected_indices_batch: List[int], batch_size: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
-        return [self.create_prompt(result, selected_indexes) for result in results]
+        return [
+            self.create_prompt(result, selected_indices_batch) for result in results
+        ]
 
     def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
         """
@@ -202,7 +204,7 @@ class RankFiDDistill(ListwiseRankLLM):
         )[0]
 
     def create_prompt(
-        self, result: Result, selected_index: List[int]
+        self, result: Result, selected_indices: List[int]
     ) -> Tuple[List[Dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
@@ -219,7 +221,7 @@ class RankFiDDistill(ListwiseRankLLM):
                     ),
                 )
             }
-            for loc, idx in enumerate(selected_index)
+            for loc, idx in enumerate(selected_indices)
         ]
 
         return prompts, sum(self.get_num_tokens(prompt["text"]) for prompt in prompts)
@@ -477,11 +479,14 @@ class RankFiDScore(ListwiseRankLLM):
         return self._run_llm_by_length_unified(processed_prompts)
 
     def create_prompt_batched(
-        self, results: List[Result], selected_indexes: List[List[int]], batch_size: int
+        self,
+        results: List[Result],
+        selected_indices_batch: List[List[int]],
+        batch_size: int,
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [
-            self.create_prompt(result, selected_index)
-            for result, selected_index in zip(results, selected_indexes)
+            self.create_prompt(result, selected_indices)
+            for result, selected_indices in zip(results, selected_indices_batch)
         ]
 
     def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
@@ -491,7 +496,7 @@ class RankFiDScore(ListwiseRankLLM):
         )[0]
 
     def create_prompt(
-        self, result: Result, selected_index: List[int]
+        self, result: Result, selected_indices: List[int]
     ) -> Tuple[List[Dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
@@ -501,7 +506,7 @@ class RankFiDScore(ListwiseRankLLM):
 
         sum_token = 0
 
-        for i in selected_index:
+        for i in selected_indices:
             results.append(
                 {
                     "query": f"question: {query}",

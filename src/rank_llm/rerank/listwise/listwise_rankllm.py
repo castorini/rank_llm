@@ -443,6 +443,16 @@ class ListwiseRankLLM(RankLLM, ABC):
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
 
+    def _permutation_to_rank(self, perm_string: str, selected_indices: List[int]):
+        perm = [int(x) - 1 for x in self._clean_response(perm_string).split(" ")]
+        perm = [
+            int(x)
+            for x in self._remove_duplicate(perm)
+            if 0 <= x < len(selected_indices)
+        ]
+        perm = perm + [i for i in range(len(selected_indices)) if i not in perm]
+        return perm
+
     def _get_model_function(self, batched: bool = False, **kwargs) -> ModelFunction:
         # [(Request, SelectIndex)] -> [Prompt]
         if batched:
@@ -451,24 +461,40 @@ class ListwiseRankLLM(RankLLM, ABC):
                 return [
                     prompt
                     for prompt, _ in self.create_prompt_batched(
-                        [result for result, selected_index in batch],
-                        [selected_index for result, selected_index in batch],
+                        [result for result, selected_location in batch],
+                        [selected_indices for result, selected_indices in batch],
                         32,
                     )
                 ]
 
-            def execute(batch: List[Union[str, Dict[str, str]]]):
-                return [s for s, _ in self.run_llm_batched(batch, **kwargs)]
+            def execute(
+                batch: List[Union[str, Dict[str, str]]],
+                selected_indices_batch: List[List[int]],
+            ):
+                return [
+                    self._permutation_to_rank(s, selected_indices)
+                    for (s, _), selected_indices in zip(
+                        self.run_llm_batched(batch, **kwargs), selected_indices_batch
+                    )
+                ]
 
         else:
 
             def create_prompt(batch: List[Tuple[Result, List[int]]]):
                 return [
-                    self.create_prompt(result, selected_index)[0]
-                    for result, selected_index in batch
+                    self.create_prompt(result, selected_indices)[0]
+                    for result, selected_indices in batch
                 ]
 
-            def execute(batch: List[Union[str, Dict[str, str]]]):
-                return [self.run_llm(x, **kwargs)[0] for x in batch]
+            def execute(
+                batch: List[Union[str, Dict[str, str]]],
+                selected_indices_batch: List[List[int]],
+            ):
+                return [
+                    self._permutation_to_rank(
+                        self.run_llm(x, **kwargs)[0], selected_indices
+                    )
+                    for x, selected_indices in zip(batch, selected_indices_batch)
+                ]
 
         return ModelFunction(create_prompt=create_prompt, execute=execute)

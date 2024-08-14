@@ -10,13 +10,15 @@ T = TypeVar("T")
 
 @dataclass
 class ModelFunction:
-    # [(Result, SelectIndex)] -> [Prompt]
+    # [(Result, SelectIndices)] -> [Prompt]
     create_prompt: Callable[
         [List[Tuple[Result, List[int]]]], List[Union[str, Dict[str, str]]]
     ]
 
-    # [Prompt] -> [Permutation]
-    execute: Callable[[List[Union[str, Dict[str, str]]]], List[List[int]]]
+    # [Prompt], [SelectedIndices] -> [Permutation]
+    execute: Callable[
+        [List[Union[str, Dict[str, str]]], List[List[int]]], List[List[int]]
+    ]
 
 
 class ReorderExecutor(ABC):
@@ -97,17 +99,17 @@ class SlidingWindowReorderExecutor(ReorderExecutor):
             #     logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
 
-            index_working_on = [*range(start_pos, end_pos)]
+            indices_working_on = [*range(start_pos, end_pos)]
             prompts = model.create_prompt(
                 [
-                    (request, [request_rank[i] for i in index_working_on])
+                    (request, [request_rank[i] for i in indices_working_on])
                     for request, request_rank in zip(requests, request_ranks)
                 ]
             )
-            orders = model.execute(prompts)
+            orders = model.execute(prompts, [indices_working_on] * len(requests))
 
             for request_rank, order in zip(request_ranks, orders):
-                self._reorder_by_rank(request_rank, index_working_on, order)
+                self._reorder_by_rank(request_rank, indices_working_on, order)
 
             end_pos = end_pos - self._step_size
             start_pos = start_pos - self._step_size

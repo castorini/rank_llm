@@ -238,12 +238,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         return conv
 
     def create_prompt(
-        self, result: Result, selected_index: List[int]
+        self, result: Result, selected_indices: List[int]
     ) -> Tuple[str, int]:
         query = result.query.text
         query = self._replace_number(query)
-        num = len(selected_index)
-        max_length = 300 * (20 / (len(selected_index)))
+        num = len(selected_indices)
+        max_length = 300 * (20 / (len(selected_indices)))
         while True:
             conv = get_conversation_template(self._model)
             if self._system_message:
@@ -252,7 +252,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             prefix = self._add_prefix_prompt(query, num)
             rank = 0
             input_context = f"{prefix}\n"
-            for idx in selected_index:
+            for idx in selected_indices:
                 cand = result.candidates[idx]
                 rank += 1
                 # For Japanese should cut by character: content = content[:int(max_length)]
@@ -266,7 +266,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                len(selected_index)
+                len(selected_indices)
             ):
                 break
             else:
@@ -275,16 +275,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     (
                         num_tokens
                         - self.max_tokens()
-                        + self.num_output_tokens(len(selected_index))
+                        + self.num_output_tokens(len(selected_indices))
                     )
-                    // (len(selected_index) * 4),
+                    // (len(selected_indices) * 4),
                 )
         return prompt, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
         self,
         results: List[Result],
-        selected_indexes: List[List[int]],
+        selected_indices_batch: List[List[int]],
         batch_size: int = 32,
     ) -> List[Tuple[str, int]]:
         def chunks(lst, n):
@@ -299,7 +299,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 completed_prompts = list(
                     executor.map(
                         lambda req: self.create_prompt(req[0], req[1]),
-                        zip(batch, selected_indexes),
+                        zip(batch, selected_indices_batch),
                     )
                 )
                 all_completed_prompts.extend(completed_prompts)

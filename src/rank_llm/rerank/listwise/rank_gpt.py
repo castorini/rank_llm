@@ -242,7 +242,10 @@ class SafeOpenai(ListwiseRankLLM):
             return _output_token_estimate
 
     def create_prompt_batched(
-        self, results: List[Result], selected_indexes: List[List[int]], batch_size: int
+        self,
+        results: List[Result],
+        selected_indices_batch: List[List[int]],
+        batch_size: int,
     ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         pass
 
@@ -252,20 +255,20 @@ class SafeOpenai(ListwiseRankLLM):
         pass
 
     def create_prompt(
-        self, result: Result, selected_index: List[int]
+        self, result: Result, selected_indices: List[int]
     ) -> Tuple[List[Dict[str, str]], int]:
         if self._prompt_mode in [PromptMode.RANK_GPT, PromptMode.RANK_GPT_APEER]:
-            return self.create_rank_gpt_prompt(result, selected_index)
+            return self.create_rank_gpt_prompt(result, selected_indices)
         else:
-            return self.create_LRL_prompt(result, selected_index)
+            return self.create_LRL_prompt(result, selected_indices)
 
     def create_rank_gpt_prompt(
-        self, result: Result, selected_index: List[int]
+        self, result: Result, selected_indices: List[int]
     ) -> Tuple[List[Dict[str, str]], int]:
         query = result.query.text
-        num = len(selected_index)
+        num = len(selected_indices)
 
-        max_length = 300 * (self._window_size / (len(selected_index)))
+        max_length = 300 * (self._window_size / (len(selected_indices)))
         while True:
             messages = (
                 self._get_prefix_for_rank_gpt_apeer_prompt(query, num)
@@ -273,7 +276,7 @@ class SafeOpenai(ListwiseRankLLM):
                 else self._get_prefix_for_rank_gpt_prompt(query, num)
             )
             rank = 0
-            for idx in selected_index:
+            for idx in selected_indices:
                 cand = result.candidates[idx]
                 rank += 1
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
@@ -309,21 +312,21 @@ class SafeOpenai(ListwiseRankLLM):
                 max_length -= max(
                     1,
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // (len(selected_index) * 4),
+                    // (len(selected_indices) * 4),
                 )
         return messages, self.get_num_tokens(messages)
 
     def create_LRL_prompt(
-        self, result: Result, selected_index: List[int]
+        self, result: Result, selected_indices: List[int]
     ) -> Tuple[List[Dict[str, str]], int]:
         query = result.query.text
-        num = len(selected_index)
-        max_length = 300 * (20 / len(selected_index))
+        num = len(selected_indices)
+        max_length = 300 * (20 / len(selected_indices))
         psg_ids = []
         while True:
             message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
             rank = 0
-            for idx in selected_index:
+            for idx in selected_indices:
                 cand = result.candidates[idx]
 
                 rank += 1
@@ -342,7 +345,7 @@ class SafeOpenai(ListwiseRankLLM):
                 max_length -= max(
                     1,
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // (len(selected_index) * 4),
+                    // (len(selected_indices) * 4),
                 )
         return messages, self.get_num_tokens(messages)
 
