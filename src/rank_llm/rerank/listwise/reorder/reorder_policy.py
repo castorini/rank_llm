@@ -21,7 +21,7 @@ class ModelFunction:
     ]
 
 
-class ReorderExecutor(ABC):
+class ReorderPolicy(ABC):
     @abstractmethod
     def reorder(
         self,
@@ -57,7 +57,7 @@ class ReorderExecutor(ABC):
         return items
 
 
-class SlidingWindowReorderExecutor(ReorderExecutor):
+class SlidingWindowReorderPolicy(ReorderPolicy):
     def __init__(
         self, window_size: int, step_size: int, shuffle_candidates: bool = False
     ):

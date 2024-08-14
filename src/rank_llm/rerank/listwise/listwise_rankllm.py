@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from rank_llm.data import RankingExecInfo, Request, Result
 from rank_llm.rerank import PromptMode, RankLLM
-from rank_llm.rerank.listwise.reorder.reorder_executor import ModelFunction
+from rank_llm.rerank.listwise.reorder.reorder_policy import ModelFunction
 
 logger = logging.getLogger(__name__)
 
