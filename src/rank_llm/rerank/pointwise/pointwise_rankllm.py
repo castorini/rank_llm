@@ -13,12 +13,6 @@ from tqdm import tqdm
 from rank_llm.data import Candidate, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
-try:
-    from vllm import LLM, SamplingParams
-except:
-    LLM = None
-    SamplingParams = None
-
 logger = logging.getLogger(__name__)
 
 
@@ -169,6 +163,8 @@ class PointwiseRankLLM(RankLLM, ABC):
             content = doc["segment"]
         elif "contents" in doc:
             content = doc["contents"]
+        elif "content" in doc:
+            content = doc["content"]
         elif "body" in doc:
             content = doc["body"]
         else:

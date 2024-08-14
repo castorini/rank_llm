@@ -8,11 +8,6 @@ from transformers.generation import GenerationConfig
 from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 
-try:
-    from vllm import SamplingParams
-except:
-    LLM = None
-    SamplingParams = None
 logger = logging.getLogger(__name__)
 
 
