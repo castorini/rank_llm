@@ -11,9 +11,15 @@ from tqdm import tqdm
 
 from rank_llm.data import RankingExecInfo, Request, Result
 from rank_llm.rerank import PromptMode, RankLLM
-from rank_llm.rerank.listwise.reorder.reorder_policy import ModelFunction
+from rank_llm.rerank.listwise.reorder.reorder_policy import (
+    ModelFunction,
+    ReorderPolicy,
+    SlidingWindowReorderPolicy,
+)
 
 logger = logging.getLogger(__name__)
+
+SUPPORT_REORDER_POLICIES = [SlidingWindowReorderPolicy]
 
 
 class ListwiseRankLLM(RankLLM, ABC):
@@ -31,15 +37,68 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def __init__(
         self,
+        reorder_policy: ReorderPolicy,
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
-        window_size: int,
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
-        self._window_size = window_size
+
+        self.reorder_policy = reorder_policy
+
+    def rerank_batch(
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        batched: bool = False,
+        **kwargs: Any,
+    ) -> List[Result]:
+        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+
+        batch_size = kwargs.get("batch_size", 1)
+
+        if not batched:
+            batch_size = 1
+
+        reorder_policy = self.reorder_policy
+        model_functions = self._get_model_function(batched)
+
+        # reranking using vllm
+        if len(set([len(req.candidates) for req in requests])) != 1:
+            raise ValueError("Batched requests must have the same number of candidates")
+
+        result: list[Result] = []
+
+        with tqdm(range(0, len(requests))) as bar:
+            for i in range(0, len(requests), batch_size):
+                batch = requests[i : min(i + batch_size, len(requests))]
+                batch_result = reorder_policy.reorder(
+                    requests=[
+                        Result(
+                            query=copy.deepcopy(request.query),
+                            candidates=copy.deepcopy(request.candidates),
+                            ranking_exec_summary=[],
+                        )
+                        for request in batch
+                    ],
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(
+                        rank_end, len(requests[0].candidates)
+                    ),  # TODO: Fails arbitrary hit sizes
+                    model=model_functions,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_exec_summary=populate_exec_summary,
+                )
+                result.extend(batch_result)
+                bar.update(len(batch))
+
+        return result
 
     def get_output_filename(
         self,
@@ -358,7 +417,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         new_response = ""
         for c in response:
             if not c.isdigit():
-                new_response += " "
+                if len(new_response) == 0 or new_response[-1] != " ":
+                    new_response += " "
             else:
                 new_response += c
         new_response = new_response.strip()
@@ -444,11 +504,13 @@ class ListwiseRankLLM(RankLLM, ABC):
         return self._replace_number(content)
 
     def _permutation_to_rank(self, perm_string: str, selected_indices: List[int]):
-        perm = [int(x) - 1 for x in self._clean_response(perm_string).split(" ")]
+        perm = [
+            int(x) - 1 for x in self._clean_response(perm_string).strip().split(" ")
+        ]
         perm = [
             int(x)
             for x in self._remove_duplicate(perm)
-            if 0 <= x < len(selected_indices)
+            if 0 <= int(x) < len(selected_indices)
         ]
         perm = perm + [i for i in range(len(selected_indices)) if i not in perm]
         return perm
@@ -461,7 +523,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 return [
                     prompt
                     for prompt, _ in self.create_prompt_batched(
-                        [result for result, selected_location in batch],
+                        [result for result, selected_indices in batch],
                         [selected_indices for result, selected_indices in batch],
                         32,
                     )
@@ -498,3 +560,10 @@ class ListwiseRankLLM(RankLLM, ABC):
                 ]
 
         return ModelFunction(create_prompt=create_prompt, execute=execute)
+
+    @staticmethod
+    def get_reorder_policy(reorder_policy: str, **kwargs):
+        for policy in SUPPORT_REORDER_POLICIES:
+            if policy.name() == reorder_policy:
+                return policy(**kwargs)
+        raise Exception(f"Cannot find reorder policy {reorder_policy}")

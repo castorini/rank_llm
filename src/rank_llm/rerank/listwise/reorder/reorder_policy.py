@@ -30,14 +30,23 @@ class ReorderPolicy(ABC):
         rank_end: int,
         model: ModelFunction,
         **kwargs,
-    ) -> Result:
+    ) -> list[Result]:
+        pass
+
+    @abstractmethod
+    def max_selected_indices(self) -> int:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def name() -> str:
         pass
 
     @staticmethod
     def _shuffle_and_rescore(
         results: List[Result], select_indexes: List[int]
     ) -> List[Result]:
-        # do nothing for now
+        # TODO: do nothing for now
         return results
 
     @staticmethod
@@ -59,7 +68,11 @@ class ReorderPolicy(ABC):
 
 class SlidingWindowReorderPolicy(ReorderPolicy):
     def __init__(
-        self, window_size: int, step_size: int, shuffle_candidates: bool = False
+        self,
+        window_size: int = 20,
+        step_size: int = 10,
+        shuffle_candidates: bool = False,
+        **kwargs,
     ):
         self._window_size = window_size
         self._step_size = step_size
@@ -72,6 +85,9 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
         rank_start: int,
         rank_end: int,
         model: ModelFunction,
+        shuffle_candidates=False,
+        logging=False,
+        populate_exec_summary=False,
         **kwargs,
     ) -> List[Result]:
         rerank_results = [
@@ -114,7 +130,7 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
             end_pos = end_pos - self._step_size
             start_pos = start_pos - self._step_size
 
-        return [
+        results = [
             Result(
                 query=copy.deepcopy(request.query),
                 candidates=self._reorder_by_rank(
@@ -126,3 +142,16 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
             )
             for request, rank in zip(requests, request_ranks)
         ]
+
+        for result, request in zip(results, requests):
+            for j in range(len(result.candidates)):
+                result.candidates[j].score = request.candidates[j].score
+
+        return results
+
+    @staticmethod
+    def name() -> str:
+        return "reorder_policy.sliding_window"
+
+    def max_selected_indices(self) -> int:
+        return self._window_size

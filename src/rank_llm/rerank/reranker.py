@@ -2,13 +2,9 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
-from rank_llm.rerank import (
-    PromptMode,
-    RankLLM,
-    get_azure_openai_args,
-    get_openai_api_key,
-)
+from rank_llm.rerank import PromptMode, get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.rankllm import RankLLM
 
@@ -156,6 +152,7 @@ class Reranker:
     def get_agent(self) -> RankLLM:
         return self._agent
 
+    @staticmethod
     def create_agent(
         model_path: str,
         default_agent: RankLLM,
@@ -254,10 +251,10 @@ class Reranker:
             print(f"Completed loading {model_path}")
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
+                ("reorder_policy", "reorder_policy.sliding_window"),
                 ("context_size", 150),
                 ("prompt_mode", PromptMode.LiT5),
                 ("num_few_shot_examples", 0),
-                ("window_size", 20),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
                 # reuse this parameter, but its not for "vllm", but only for "batched"
@@ -265,21 +262,23 @@ class Reranker:
             ]
 
             (
+                reorder_policy,
                 context_size,
                 prompt_mode,
                 num_few_shot_examples,
-                window_size,
                 precision,
                 device,
                 vllm_batched,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankFiDDistill(
+                reorder_policy=ListwiseRankLLM.get_reorder_policy(
+                    reorder_policy, **kwargs
+                ),
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
-                window_size=window_size,
                 precision=precision,
                 device=device,
                 batched=vllm_batched,
