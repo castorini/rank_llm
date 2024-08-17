@@ -185,7 +185,7 @@ r = from_dict(
 
 class TestRankListwiseOSLLM(unittest.TestCase):
     def setUp(self):
-        self.patcher = patch("rank_llm.rerank.rank_listwise_os_llm.load_model")
+        self.patcher = patch("rank_llm.rerank.listwise.rank_listwise_os_llm.load_model")
         self.mock_load_model = self.patcher.start()
         self.mock_llm = MagicMock()
         self.mock_tokenizer = MagicMock()
@@ -247,14 +247,17 @@ class TestRankListwiseOSLLM(unittest.TestCase):
                     system_message=system_message,
                 )
 
-    @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens")
+    @patch(
+        "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens"
+    )
     def test_num_output_tokens(self, mock_num_output_tokens):
         # Creating PyseriniRetriever instance
         agent = RankListwiseOSLLM(
-            "castorini/rank_zephyr_7b_v1_full",
-            4096,
-            PromptMode.RANK_GPT,
-            0,
+            model="castorini/rank_zephyr_7b_v1_full",
+            name="rank_zephyr",
+            context_size=4096,
+            prompt_mode=PromptMode.RANK_GPT,
+            num_few_shot_examples=0,
             variable_passages=True,
             window_size=10,
             system_message="",
@@ -266,10 +269,11 @@ class TestRankListwiseOSLLM(unittest.TestCase):
 
         # print(output)
         agent = RankListwiseOSLLM(
-            "castorini/rank_vicuna_7b_v1",
-            4096,
-            PromptMode.RANK_GPT,
-            0,
+            model="castorini/rank_zephyr_7b_v1_full",
+            name="rank_zephyr",
+            context_size=4096,
+            prompt_mode=PromptMode.RANK_GPT,
+            num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
             system_message="",
@@ -279,13 +283,14 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         output = agent.num_output_tokens()
         self.assertEqual(output, 19)
 
-    @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.run_llm")
+    @patch("rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.run_llm")
     def test_run_llm(self, mock_run_llm):
         agent = RankListwiseOSLLM(
-            "castorini/rank_zephyr_7b_v1_full",
-            4096,
-            PromptMode.RANK_GPT,
-            0,
+            model="castorini/rank_zephyr_7b_v1_full",
+            name="rank_zephyr",
+            context_size=4096,
+            prompt_mode=PromptMode.RANK_GPT,
+            num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
             system_message="",
@@ -303,10 +308,11 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self,
     ):
         agent = RankListwiseOSLLM(
-            "castorini/rank_zephyr_7b_v1_full",
-            4096,
-            PromptMode.RANK_GPT,
-            0,
+            model="castorini/rank_zephyr_7b_v1_full",
+            name="rank_zephyr",
+            context_size=4096,
+            prompt_mode=PromptMode.RANK_GPT,
+            num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
             system_message="",
@@ -325,13 +331,16 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             expected_output = min(end, len(r.candidates)) - max(0, start)
             self.assertEqual(get_first_int(prompt), max(expected_output, 0))
 
-    @patch("rank_llm.rerank.rank_listwise_os_llm.RankListwiseOSLLM.get_num_tokens")
+    @patch(
+        "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.get_num_tokens"
+    )
     def test_get_num_tokens(self, mock_get_num_tokens):
         agent = RankListwiseOSLLM(
-            "castorini/rank_zephyr_7b_v1_full",
-            4096,
-            PromptMode.RANK_GPT,
-            0,
+            model="castorini/rank_zephyr_7b_v1_full",
+            name="rank_zephyr",
+            context_size=4096,
+            prompt_mode=PromptMode.RANK_GPT,
+            num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
             system_message="",
