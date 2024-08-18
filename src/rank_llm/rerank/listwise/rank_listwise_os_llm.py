@@ -15,6 +15,7 @@ from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
+from .reorder.reorder_policy import ReorderPolicy
 
 try:
     from vllm import LLM, SamplingParams
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
+        reorder_policy: ReorderPolicy,
         model: str,
         name: str,
         context_size: int = 4096,
@@ -71,7 +73,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         TODO: Make repetition_penalty configurable
         """
         super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, window_size
+            reorder_policy=reorder_policy,
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
         )
         self._device = device
         self._vllm_batched = vllm_batched
@@ -113,47 +119,15 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
-        window_size: int = kwargs.get("window_size", 20)
-        window_size = min(window_size, top_k_retrieve)
-        step: int = kwargs.get("step", 10)
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
-        if self._vllm_batched:
-            # reranking using vllm
-            if len(set([len(req.candidates) for req in requests])) != 1:
-                raise ValueError(
-                    "Batched requests must have the same number of candidates"
-                )
-
-            return self.sliding_windows_batched(
-                requests,
-                rank_start=max(rank_start, 0),
-                rank_end=min(
-                    rank_end, len(requests[0].candidates)
-                ),  # TODO: Fails arbitrary hit sizes
-                window_size=window_size,
-                step=step,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-                populate_exec_summary=populate_exec_summary,
-            )
-        else:
-            # Normal operation mode
-            results = []
-            for request in tqdm(requests):
-                result = self.sliding_windows(
-                    request,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(rank_end, len(request.candidates)),
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                results.append(result)
-            return results
+        return super().rerank_batch(
+            requests=requests,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            batched=self._batched,
+            **kwargs,
+        )
 
     def run_llm_batched(
         self,
