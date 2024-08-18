@@ -124,7 +124,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             rank_end=rank_end,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
-            batched=self._batched,
+            batched=self._vllm_batched,
             **kwargs,
         )
 

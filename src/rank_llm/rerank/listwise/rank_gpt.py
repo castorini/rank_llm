@@ -4,12 +4,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
 import tiktoken
-from tqdm import tqdm
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
+from .reorder.reorder_policy import ReorderPolicy
 
 
 class CompletionMode(Enum):
@@ -21,11 +21,11 @@ class CompletionMode(Enum):
 class SafeOpenai(ListwiseRankLLM):
     def __init__(
         self,
+        reorder_policy: ReorderPolicy,
         model: str,
         context_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
-        window_size: int = 20,
         keys=None,
         key_start_id=None,
         proxy=None,
@@ -61,7 +61,11 @@ class SafeOpenai(ListwiseRankLLM):
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, window_size
+            reorder_policy=reorder_policy,
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
         )
         if isinstance(keys, str):
             keys = [keys]
@@ -100,24 +104,15 @@ class SafeOpenai(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        window_size: int = kwargs.get("window_size", 20)
-        step: int = kwargs.get("step", 10)
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
-        results = []
-        for request in tqdm(requests):
-            result = self.sliding_windows(
-                request,
-                rank_start=max(rank_start, 0),
-                rank_end=min(rank_end, len(request.candidates)),
-                window_size=window_size,
-                step=step,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-                populate_exec_summary=populate_exec_summary,
-            )
-            results.append(result)
-        return results
+        return super().rerank_batch(
+            requests=requests,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            batched=False,  # You never batch in RankGPT
+            **kwargs,
+        )
 
     def _call_completion(
         self,

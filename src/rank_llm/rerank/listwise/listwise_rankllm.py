@@ -5,6 +5,7 @@ import re
 from abc import ABC
 from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
+from warnings import deprecated
 
 from ftfy import fix_text
 from tqdm import tqdm
@@ -132,6 +133,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         return self._context_size
 
+    @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def permutation_pipeline_batched(
         self,
         results: List[Result],
@@ -184,6 +186,7 @@ class ListwiseRankLLM(RankLLM, ABC):
 
         return results
 
+    @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def permutation_pipeline(
         self,
         result: Result,
@@ -244,6 +247,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 cand["score"] = 1.0 / (i + 1)
                 cand["rank"] = i + 1
 
+    @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def sliding_windows_batched(
         self,
         requests: List[Request],
@@ -294,6 +298,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             start_pos = start_pos - step
         return rerank_results
 
+    @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def sliding_windows(
         self,
         request: Request,
