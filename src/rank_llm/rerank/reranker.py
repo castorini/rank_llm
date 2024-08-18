@@ -171,6 +171,13 @@ class Reranker:
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
 
+        keys_reorder_policy = [("reorder_policy", "reorder_policy.sliding_window")]
+        [reorder_policy_name] = extract_kwargs(keys_reorder_policy, **kwargs)
+
+        reorder_policy = ListwiseRankLLM.get_reorder_policy(
+            reorder_policy_name, **kwargs
+        )
+
         if interactive and default_agent is not None:
             # Default rerank agent
             agent = default_agent
@@ -233,6 +240,7 @@ class Reranker:
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
+                reorder_policy=reorder_policy,
                 model=model_full_paths[model_path]
                 if model_path in model_full_paths
                 else model_path,
@@ -243,7 +251,6 @@ class Reranker:
                 device=device,
                 num_gpus=num_gpus,
                 variable_passages=variable_passages,
-                window_size=window_size,
                 system_message=system_message,
                 vllm_batched=vllm_batched,
             )
@@ -262,7 +269,6 @@ class Reranker:
             ]
 
             (
-                reorder_policy,
                 context_size,
                 prompt_mode,
                 num_few_shot_examples,
@@ -272,9 +278,7 @@ class Reranker:
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankFiDDistill(
-                reorder_policy=ListwiseRankLLM.get_reorder_policy(
-                    reorder_policy, **kwargs
-                ),
+                reorder_policy=reorder_policy,
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
@@ -307,11 +311,11 @@ class Reranker:
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankFiDScore(
+                reorder_policy=reorder_policy,
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
-                window_size=window_size,
                 precision=precision,
                 device=device,
                 batched=vllm_batched,

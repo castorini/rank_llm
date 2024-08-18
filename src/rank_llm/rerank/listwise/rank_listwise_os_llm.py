@@ -38,7 +38,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         device: str = "cuda",
         num_gpus: int = 1,
         variable_passages: bool = False,
-        window_size: int = 20,
         system_message: str = None,
         vllm_batched: bool = False,
     ) -> None:

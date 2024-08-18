@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
-from tqdm import tqdm
 from transformers import T5Tokenizer
 
 from rank_llm.data import Request, Result
@@ -252,30 +251,27 @@ class RankFiDScore(ListwiseRankLLM):
 
     def __init__(
         self,
+        reorder_policy: ReorderPolicy,
         model: str,
         context_size: int = 150,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
-        window_size: int = 20,
-        step_size: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
         batched: bool = False,
     ) -> None:
         super().__init__(
+            reorder_policy=reorder_policy,
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
-            window_size=window_size,
         )
         self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = FiDCrossAttentionScore.from_pretrained(model).to(device).eval()
 
         self._device = device
-        self._window_size = window_size
-        self._stride = step_size
 
         self._batched = batched
 
@@ -366,60 +362,15 @@ class RankFiDScore(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        top_k_retrieve: int = kwargs.get("top_k_retrieve", 100)
-
-        window_size: int = kwargs.get("window_size", self._window_size)
-        window_size = min(window_size, top_k_retrieve)
-        step: int = kwargs.get("step_size", self._stride)
-
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
-        batch_size = kwargs.get("batch_size", 1)
-
-        if self._batched:
-            # reranking using vllm
-            if len(set([len(req.candidates) for req in requests])) != 1:
-                raise ValueError(
-                    "Batched requests must have the same number of candidates"
-                )
-
-            result = []
-
-            with tqdm(range(0, len(requests))) as bar:
-                for i in range(0, len(requests), batch_size):
-                    batch = requests[i : min(i + batch_size, len(requests))]
-                    batch_result = self.sliding_windows_batched(
-                        batch,
-                        rank_start=max(rank_start, 0),
-                        rank_end=min(
-                            rank_end, len(requests[0].candidates)
-                        ),  # TODO: Fails arbitrary hit sizes
-                        window_size=window_size,
-                        step=step,
-                        shuffle_candidates=shuffle_candidates,
-                        logging=logging,
-                        populate_exec_summary=populate_exec_summary,
-                    )
-                    result.extend(batch_result)
-                    bar.update(len(batch))
-
-            return result
-        else:
-            # Normal operation mode
-            results = []
-            for request in tqdm(requests):
-                result = self.sliding_windows(
-                    request,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(rank_end, len(request.candidates)),
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                results.append(result)
-            return results
+        return super().rerank_batch(
+            requests=requests,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            batched=self._batched,
+            **kwargs,
+        )
 
     def run_llm_batched(
         self, prompts: List[List[Dict[str, str]]], **kwargs
