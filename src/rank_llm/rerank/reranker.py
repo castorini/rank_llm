@@ -379,11 +379,13 @@ def extract_kwargs(
     # Check that type of provided kwarg is compatible with the provided default type
     for i, extracted_kwarg in enumerate(extracted_kwargs):
         default_value = keys_and_defaults[i][1]
-        if default_value is not None and not isinstance(
-            extracted_kwarg, type(default_value)
+        if (
+            not isinstance(extracted_kwarg, type(default_value))
+            and extracted_kwarg is not None
+            and default_value is not None
         ):
             raise ValueError(
-                f"Provided kwarg for {keys_and_defaults[i][0]} must be compatible with the argument's default type {type(default_value)}"
+                f"Provided kwarg for {keys_and_defaults[i][0]} must be compatible with the argument's default type {type(default_value)}. Got {extracted_kwarg}"
             )
 
     return extracted_kwargs
