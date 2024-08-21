@@ -76,9 +76,9 @@ class PointwiseRankLLM(RankLLM, ABC):
                     )
                     candidate_number = update_index % len(rerank_results[0].candidates)
 
-                    rerank_results[query_number].candidates[
-                        candidate_number
-                    ].score = scores[update_index - index]
+                    rerank_results[query_number].candidates[candidate_number].score = (
+                        scores[update_index - index]
+                    )
 
                 if index + self._batch_size > end:
                     progress_bar.update(end - index)
