@@ -32,7 +32,8 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
 
         self._tokenizer = AutoTokenizer.from_pretrained(
             pretrained_model_name_or_path=self._model,
-            trust_remote_code=True
+            trust_remote_code=True,
+            padding_side="left"
         )
         self._llm = AutoModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=self._model,
@@ -41,6 +42,45 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         ).to(self._device)
         self._llm.eval()
         self._context_size = context_size
+
+    def get_inputs(pairs, tokenizer, prompt=None, max_length=1024):
+        if prompt is None:
+            prompt = "Given a query A and a passage B, determine whether the passage contains an answer to the query by providing a prediction of either 'Yes' or 'No'."
+        sep = "\n"
+        prompt_inputs = tokenizer(prompt, return_tensors=None, add_special_tokens=False)['input_ids']
+        sep_inputs = tokenizer(sep, return_tensors=None, add_special_tokens=False)['input_ids']
+        inputs = []
+        for query, passage in pairs:
+            query_inputs = tokenizer(f'A: {query}',
+                return_tensors=None,
+                add_special_tokens=False,
+                max_length=max_length * 3 // 4,
+                truncation=True)
+            passage_inputs = tokenizer(f'B: {passage}',
+                return_tensors=None,
+                add_special_tokens=False,
+                max_length=max_length,
+                truncation=True)
+            item = tokenizer.prepare_for_model(
+                [tokenizer.bos_token_id] + query_inputs['input_ids'],
+                sep_inputs + passage_inputs['input_ids'],
+                truncation='only_second',
+                max_length=max_length,
+                padding=False,
+                return_attention_mask=False,
+                return_token_type_ids=False,
+                add_special_tokens=False
+            )
+            item['input_ids'] = item['input_ids'] + sep_inputs + prompt_inputs
+            item['attention_mask'] = [1] * len(item['input_ids'])
+            inputs.append(item)
+        return tokenizer.pad(
+            inputs,
+            padding=True,
+            max_length=max_length + len(sep_inputs) + len(prompt_inputs),
+            pad_to_multiple_of=8,
+            return_tensors='pt',
+        )
 
     def run_llm_batched(
         self,
@@ -60,13 +100,28 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         pairs = [[prompt.split("Document: ").pop(0).replace("<s> Query: ", ""), prompt.split("Document: ").pop().replace("Retrieve:", "")] for prompt in prompts]
 
         with torch.no_grad():
-            token_prompts = self._tokenizer(
-                pairs, padding=True, truncation=True, return_tensors="pt", max_length=512
-            ).to(self._device)
+            if "base" in self._model or "large" in self._model or "m3" in self._model:
 
-            token_prompts = token_prompts["input_ids"]
+                token_prompts = self._tokenizer(
+                    pairs, padding=True, truncation=True, return_tensors="pt", max_length=512
+                ).to(self._device)
 
-            batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
+                token_prompts = token_prompts["input_ids"]
+
+                batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
+
+            elif "gemma" in self._model:
+                idk = 0
+
+            elif "minicpm-layerwise" in self._model:
+                inputs = self.get_inputs(pairs, self._tokenizer).to(self._device)
+                all_scores = self._llm(**inputs, return_dict=True, cutoff_layers=[28])
+                #batch_outputs = self._llm.generate(**inputs, generation_config=gen_cfg)
+                
+
+
+            else:
+                raise ValueError("Given bge model doesn't exist or isn't supported in rank_llm.")
 
         batch_output_ids = batch_outputs.sequences
         batch_logits = batch_outputs.scores
@@ -90,7 +145,6 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
             all_output_token_counts.append(self.num_output_tokens)
 
         all_outputs.extend(batch_outputs)
-
         return all_outputs, all_output_token_counts, all_scores
 
     def run_llm(self, prompt: str) -> Tuple[str, int, float]:
