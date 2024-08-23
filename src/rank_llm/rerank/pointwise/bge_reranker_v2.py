@@ -43,21 +43,23 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         self._llm.eval()
         self._context_size = context_size
 
-    def get_inputs(pairs, tokenizer, prompt=None, max_length=1024):
+    def get_inputs(pairs, tokenizer, prompt:str=None, max_length:int=1024):
         if prompt is None:
             prompt = "Given a query A and a passage B, determine whether the passage contains an answer to the query by providing a prediction of either 'Yes' or 'No'."
         sep = "\n"
-        prompt_inputs = tokenizer(prompt, return_tensors=None, add_special_tokens=False)['input_ids']
-        sep_inputs = tokenizer(sep, return_tensors=None, add_special_tokens=False)['input_ids']
+        print(tokenizer)
+        prompt_inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=False)['input_ids']
+        print(prompt_inputs)
+        sep_inputs = tokenizer(sep, return_tensors="pt", add_special_tokens=False)['input_ids']
         inputs = []
         for query, passage in pairs:
             query_inputs = tokenizer(f'A: {query}',
-                return_tensors=None,
+                return_tensors="pt",
                 add_special_tokens=False,
                 max_length=max_length * 3 // 4,
                 truncation=True)
             passage_inputs = tokenizer(f'B: {passage}',
-                return_tensors=None,
+                return_tensors="pt",
                 add_special_tokens=False,
                 max_length=max_length,
                 truncation=True)
@@ -97,7 +99,7 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         all_output_token_counts = []
         all_scores = []
 
-        pairs = [[prompt.split("Document: ").pop(0).replace("<s> Query: ", ""), prompt.split("Document: ").pop().replace("Retrieve:", "")] for prompt in prompts]
+        pairs = [[prompt.split("Document: ").pop(0).replace("<s> Query: ", ""), prompt.split("Document: ").pop().replace("Relevant:", "")] for prompt in prompts]
 
         with torch.no_grad():
             if "base" in self._model or "large" in self._model or "m3" in self._model:
@@ -114,9 +116,10 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
                 idk = 0
 
             elif "minicpm-layerwise" in self._model:
-                inputs = self.get_inputs(pairs, self._tokenizer).to(self._device)
-                all_scores = self._llm(**inputs, return_dict=True, cutoff_layers=[28])
-                #batch_outputs = self._llm.generate(**inputs, generation_config=gen_cfg)
+                inputs = self.get_inputs(pairs, self._tokenizer)
+                inputs = inputs.to(self._device)
+                #all_scores = self._llm(**inputs, return_dict=True, cutoff_layers=[28])
+                batch_outputs = self._llm.generate(**inputs, generation_config=gen_cfg)
                 
 
 
