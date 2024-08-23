@@ -3,8 +3,9 @@ import math
 from typing import List, Tuple
 import torch
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer
 from transformers.generation import GenerationConfig
+from FlagEmbedding import LayerWiseFlagLLMReranker, FlagLLMReranker, FlagReranker
 
 from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
@@ -20,7 +21,7 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         context_size: int = 512,
         device: str = "cuda",
         batch_size: int = 32,
-        use_bf16: bool = False
+        use_fp16: bool = False
     ):
         super().__init__(
             model=model,
@@ -30,126 +31,55 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
             batch_size=batch_size,
         )
 
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            pretrained_model_name_or_path=self._model,
-            trust_remote_code=True,
-            padding_side="left"
-        )
-        self._llm = AutoModelForCausalLM.from_pretrained(
-            pretrained_model_name_or_path=self._model,
-            trust_remote_code=True,
-            torch_dtype=torch.bfloat16 if use_bf16 else torch.float32
-        ).to(self._device)
-        self._llm.eval()
-        self._context_size = context_size
-
-    def get_inputs(pairs, tokenizer, prompt:str=None, max_length:int=1024):
-        if prompt is None:
-            prompt = "Given a query A and a passage B, determine whether the passage contains an answer to the query by providing a prediction of either 'Yes' or 'No'."
-        sep = "\n"
-        print(tokenizer)
-        prompt_inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=False)['input_ids']
-        print(prompt_inputs)
-        sep_inputs = tokenizer(sep, return_tensors="pt", add_special_tokens=False)['input_ids']
-        inputs = []
-        for query, passage in pairs:
-            query_inputs = tokenizer(f'A: {query}',
-                return_tensors="pt",
-                add_special_tokens=False,
-                max_length=max_length * 3 // 4,
-                truncation=True)
-            passage_inputs = tokenizer(f'B: {passage}',
-                return_tensors="pt",
-                add_special_tokens=False,
-                max_length=max_length,
-                truncation=True)
-            item = tokenizer.prepare_for_model(
-                [tokenizer.bos_token_id] + query_inputs['input_ids'],
-                sep_inputs + passage_inputs['input_ids'],
-                truncation='only_second',
-                max_length=max_length,
-                padding=False,
-                return_attention_mask=False,
-                return_token_type_ids=False,
-                add_special_tokens=False
+        if "base" in self._model or "large" in self._model or "m3" in self._model:
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                pretrained_model_name_or_path=self._model,
+                trust_remote_code=True,
+                padding_side="left"
             )
-            item['input_ids'] = item['input_ids'] + sep_inputs + prompt_inputs
-            item['attention_mask'] = [1] * len(item['input_ids'])
-            inputs.append(item)
-        return tokenizer.pad(
-            inputs,
-            padding=True,
-            max_length=max_length + len(sep_inputs) + len(prompt_inputs),
-            pad_to_multiple_of=8,
-            return_tensors='pt',
-        )
+            self._llm = FlagReranker(self._model, use_fp16=use_fp16)
+        elif "minicpm-layerwise" in self._model:
+            self._llm=LayerWiseFlagLLMReranker(self._model, use_fp16=use_fp16)
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                pretrained_model_name_or_path=self._model,
+                trust_remote_code=True,
+                padding_side="left"
+            )
+        elif "gemma" in self._model:
+            self._llm=FlagLLMReranker(self._model, use_fp16=use_fp16)
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                pretrained_model_name_or_path=self._model,
+                trust_remote_code=True,
+                padding_side="left"
+            )
+        else:
+            raise ValueError("Given bge model doesn't exist or isn't supported in rank_llm.")
 
     def run_llm_batched(
         self,
         prompts: List[str],
     ) -> Tuple[List[str], List[int], List[float]]:
-        gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-        gen_cfg.max_new_tokens = self.num_output_tokens()
-        gen_cfg.min_new_tokens = self.num_output_tokens()
-        gen_cfg.output_scores = True
-        gen_cfg.return_dict_in_generate = True
-        gen_cfg.do_sample = False
-
-        all_outputs = []
-        all_output_token_counts = []
+        
+        all_outputs = None
+        all_output_token_counts = None
         all_scores = []
 
         pairs = [[prompt.split("Document: ").pop(0).replace("<s> Query: ", ""), prompt.split("Document: ").pop().replace("Relevant:", "")] for prompt in prompts]
 
         with torch.no_grad():
             if "base" in self._model or "large" in self._model or "m3" in self._model:
-
-                token_prompts = self._tokenizer(
-                    pairs, padding=True, truncation=True, return_tensors="pt", max_length=512
-                ).to(self._device)
-
-                token_prompts = token_prompts["input_ids"]
-
-                batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
+                all_scores = self._llm.compute_score(pairs)
 
             elif "gemma" in self._model:
-                idk = 0
+                all_scores = self._llm.compute_score(pairs)
 
             elif "minicpm-layerwise" in self._model:
-                inputs = self.get_inputs(pairs, self._tokenizer)
-                inputs = inputs.to(self._device)
-                #all_scores = self._llm(**inputs, return_dict=True, cutoff_layers=[28])
-                batch_outputs = self._llm.generate(**inputs, generation_config=gen_cfg)
-                
+                scores = self._llm.compute_score(pairs, cutoff_layers=[28])
+                for score in scores[0]:
+                    all_scores.append(score)
 
-
-            else:
-                raise ValueError("Given bge model doesn't exist or isn't supported in rank_llm.")
-
-        batch_output_ids = batch_outputs.sequences
-        batch_logits = batch_outputs.scores
-
-        batch_outputs = [
-            self._tokenizer.decode(
-                single_token_sequence,
-                skip_special_tokens=True,
-                spaces_between_special_tokens=False,
-            )
-            for single_token_sequence in batch_output_ids
-        ]
-
-        for logit_tensor in batch_logits[0]:
-            truth_logit = logit_tensor[1176]
-            false_logit = logit_tensor[6136]
-            score = math.exp(truth_logit) / (
-                math.exp(truth_logit) + math.exp(false_logit)
-            )
-            all_scores.append(score)
-            all_output_token_counts.append(self.num_output_tokens)
-
-        all_outputs.extend(batch_outputs)
         return all_outputs, all_output_token_counts, all_scores
-
+                
     def run_llm(self, prompt: str) -> Tuple[str, int, float]:
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()

@@ -347,19 +347,19 @@ class Reranker:
             )
             print(f"Completed loading {model_path}")
         
-        elif "bge-reranker-v2" in model_path.lower():
+        elif "bge-reranker" in model_path.lower():
             print(f"Loading {model_path} ...")
 
             keys_and_defaults=[
                 ("device", "cuda"),
-                ("use_bf16", True),
+                ("use_fp16", True),
                 ("prompt_mode", PromptMode.BGE_RERANKER_V2),
                 ("context_size", 512),
                 ("batch_size", 64)
             ]
             (
                 device,
-                use_bf16,
+                use_fp16,
                 prompt_mode,
                 context_size,
                 batch_size
@@ -369,7 +369,7 @@ class Reranker:
                 model=model_path,
                 prompt_mode=prompt_mode,
                 context_size=context_size,
-                use_bf16=use_bf16, 
+                use_fp16=use_fp16, 
                 batch_size=batch_size,
                 device=device
             )
