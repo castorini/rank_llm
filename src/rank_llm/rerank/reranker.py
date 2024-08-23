@@ -11,6 +11,7 @@ from rank_llm.rerank import (
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
+from rank_llm.rerank.pointwise.bge_reranker_v2 import BGE_RERANKER_V2
 from rank_llm.rerank.rankllm import RankLLM
 
 
@@ -345,6 +346,36 @@ class Reranker:
                 batched=vllm_batched,
             )
             print(f"Completed loading {model_path}")
+        
+        elif "bge-reranker-v2" in model_path.lower():
+            print(f"Loading {model_path} ...")
+
+            keys_and_defaults=[
+                ("device", "cuda"),
+                ("use_bf16", True),
+                ("prompt_mode", PromptMode.BGE_RERANKER_V2),
+                ("context_size", 512),
+                ("batch_size", 64)
+            ]
+            (
+                device,
+                use_bf16,
+                prompt_mode,
+                context_size,
+                batch_size
+            ) = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = BGE_RERANKER_V2(
+                model=model_path,
+                prompt_mode=prompt_mode,
+                context_size=context_size,
+                use_bf16=use_bf16, 
+                batch_size=batch_size,
+                device=device
+            )
+
+            print(f"Completed loading {model_path}")
+
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None

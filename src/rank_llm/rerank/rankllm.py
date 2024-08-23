@@ -15,6 +15,7 @@ class PromptMode(Enum):
     LRL = "LRL"
     MONOT5 = "monot5"
     LiT5 = "LiT5"
+    BGE_RERANKER_V2= "bge-reranker-v2"
 
     def __str__(self):
         return self.value
