@@ -57,14 +57,14 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
 
     def run_llm_batched(
         self,
-        prompts: List[str],
-    ) -> Tuple[List[str], List[int], List[float]]:
+        prompts: List[List[str]],
+    ) -> Tuple[None, None, List[float]]:
         
         all_outputs = None
         all_output_token_counts = None
         all_scores = []
 
-        pairs = [[prompt.split("Document: ").pop(0).replace("<s> Query: ", ""), prompt.split("Document: ").pop().replace("Relevant:", "")] for prompt in prompts]
+        pairs = prompts
 
         with torch.no_grad():
             if "base" in self._model or "large" in self._model or "m3" in self._model:
@@ -116,16 +116,9 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
 
     def create_prompt(self, result: Result, index: int) -> Tuple[str, int]:
         query = result.query.text
-        input = f"Query: {query} Document: {self.convert_doc_to_prompt_content(result.candidates[index].doc, max_length=self._context_size)}"
-        prompt = (
-            self._tokenizer.decode(
-                self._tokenizer.encode(input)[: (self._context_size - 32)]
-            )[:-4]
-            + " Relevant: "
-        )
-        prompt = prompt.replace("<unk>", "")
+        prompt = [query, self.convert_doc_to_prompt_content(result.candidates[index].doc, max_length=self._context_size)]
 
-        return prompt, self.get_num_tokens(prompt)
+        return prompt, None
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))
