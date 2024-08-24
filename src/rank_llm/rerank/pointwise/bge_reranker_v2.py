@@ -75,8 +75,11 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
 
             elif "minicpm-layerwise" in self._model:
                 scores = self._llm.compute_score(pairs, cutoff_layers=[28])
-                for score in scores[0]:
-                    all_scores.append(score)
+                if not isinstance(scores[0], float):
+                    for score in scores[0]:
+                        all_scores.append(score)
+                else:
+                    all_scores = scores
 
         return all_outputs, all_output_token_counts, all_scores
                 
