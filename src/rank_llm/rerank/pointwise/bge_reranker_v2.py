@@ -3,8 +3,6 @@ import math
 from typing import List, Tuple
 import torch
 
-from transformers import AutoTokenizer
-from transformers.generation import GenerationConfig
 from FlagEmbedding import LayerWiseFlagLLMReranker, FlagLLMReranker, FlagReranker
 
 from rank_llm.data import Result
@@ -32,26 +30,11 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         )
 
         if "base" in self._model or "large" in self._model or "m3" in self._model:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                pretrained_model_name_or_path=self._model,
-                trust_remote_code=True,
-                padding_side="left"
-            )
             self._llm = FlagReranker(self._model, use_fp16=use_fp16)
         elif "minicpm-layerwise" in self._model:
             self._llm=LayerWiseFlagLLMReranker(self._model, use_fp16=use_fp16)
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                pretrained_model_name_or_path=self._model,
-                trust_remote_code=True,
-                padding_side="left"
-            )
         elif "gemma" in self._model:
             self._llm=FlagLLMReranker(self._model, use_fp16=use_fp16)
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                pretrained_model_name_or_path=self._model,
-                trust_remote_code=True,
-                padding_side="left"
-            )
         else:
             raise ValueError("Given bge model doesn't exist or isn't supported in rank_llm.")
 
@@ -83,33 +66,24 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
 
         return all_outputs, all_output_token_counts, all_scores
                 
-    def run_llm(self, prompt: str) -> Tuple[str, int, float]:
-        gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-        gen_cfg.max_new_tokens = self.num_output_tokens()
-        gen_cfg.min_new_tokens = self.num_output_tokens()
-        gen_cfg.output_scores = True
-        gen_cfg.return_dict_in_generate = True
-        gen_cfg.do_sample = False
+    def run_llm(self, prompt: str) -> Tuple[None, None, float]:
 
-        token_prompt = self._tokenizer.encode(prompt, return_tensors="pt").to(
-            self._device
-        )
-        output = self._llm.generate(token_prompt, generation_config=gen_cfg)
-        output_ids = output.sequences
-        logits = output.scores
+        outputs = None
+        output_ids = None
+        
+        pair=prompt
 
-        if self._llm.config.is_encoder_decoder:
-            output_ids = output_ids[0]
-            output_ids = output_ids[1:]
+        with torch.no_grad():
+            if "base" in self._model or "large" in self._model or "m3" in self._model:
+                score = self._llm.compute_score(pair)
 
-        outputs = self._tokenizer.decode(
-            output_ids, skip_special_tokens=True, spaces_between_special_tokens=False
-        )
-        truth_logit = logits[0][0][1176]
-        false_logit = logits[0][0][6136]
-        score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
+            elif "gemma" in self._model:
+                score = self._llm.compute_score(pair)
 
-        return outputs, output_ids.size(0), score
+            elif "minicpm-layerwise" in self._model:
+                score = self._llm.compute_score(pair, cutoff_layers=[28])
+
+        return outputs, output_ids, score
 
     def num_output_tokens(self) -> int:
         return 1
@@ -121,7 +95,7 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         return prompt, None
 
     def get_num_tokens(self, prompt: str) -> int:
-        return len(self._tokenizer.encode(prompt))
+        return 1
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
