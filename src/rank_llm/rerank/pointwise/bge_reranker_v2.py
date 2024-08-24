@@ -18,7 +18,7 @@ class BGE_RERANKER_V2(PointwiseRankLLM):
         self,
         model: str,
         prompt_mode: str = "bge-reranker-v2",
-        context_size: int = 512,
+        context_size: int = 8192,
         device: str = "cuda",
         batch_size: int = 32,
         use_fp16: bool = False

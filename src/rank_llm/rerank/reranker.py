@@ -354,7 +354,7 @@ class Reranker:
                 ("device", "cuda"),
                 ("use_fp16", True),
                 ("prompt_mode", PromptMode.BGE_RERANKER_V2),
-                ("context_size", 512),
+                ("context_size", 8192),
                 ("batch_size", 64)
             ]
             (
