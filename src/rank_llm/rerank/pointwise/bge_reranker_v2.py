@@ -8,7 +8,7 @@ from FlagEmbedding import LayerWiseFlagLLMReranker, FlagLLMReranker, FlagReranke
 from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__).setLevel(logging.WARNING)
 
 
 class BGE_RERANKER_V2(PointwiseRankLLM):
