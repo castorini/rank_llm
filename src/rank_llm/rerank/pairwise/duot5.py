@@ -2,15 +2,16 @@ import logging
 import math
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import cmp_to_key
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import torch
 from tqdm import tqdm
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers.generation import GenerationConfig
 
-from rank_llm.data import Candidate, Result
+from rank_llm.data import Candidate, Request, Result
 from rank_llm.rerank.pairwise.pairwise_rankllm import PairwiseRankLLM
+from rank_llm.rerank.rankllm import PromptMode
 
 logger = logging.getLogger(__name__)
 
@@ -19,37 +20,32 @@ class DuoT5(PairwiseRankLLM):
     def __init__(
         self,
         model: str,
-        device: str = "cuda",
-        window_size: int = 20,
-        batched: bool = False,
+        context_size: int,
+        prompt_mode: PromptMode,
     ):
-        super.__init(model, device, window_size, batched)
+        super.__init__(model, context_size, prompt_mode)
         self._tokenizer = T5Tokenizer.from_pretrained("castorini/duot5-base-msmarco")
         self._llm = T5ForConditionalGeneration.from_pretrained(
             "castorini/duot5-base-msmarco"
         ).to(self._device)
 
-    def run_llm_batched(
+    # TODO
+    def rerank_batch(
         self,
-        prompts: List[str | List[Dict[str, str]]],
-        current_window_size: Optional[int] = None,
-    ) -> List[Tuple[str, int]]:
-        if SamplingParams is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
-            )
-        logger.info(f"VLLM Generating!")
-        sampling_params = SamplingParams(
-            temperature=0.0,
-            max_tokens=self.num_output_tokens(current_window_size),
-            min_tokens=self.num_output_tokens(current_window_size),
-        )
-        outputs = self._llm.generate(prompts, sampling_params)
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: logging.Any,
+    ) -> List[Result]:
+        return
 
-        return [
-            (output.outputs[0].text, len(output.outputs[0].token_ids))
-            for output in outputs
-        ]
+    # TODO
+    def run_llm_batched(
+        self, prompts: List[str | List[torch.Dict[str, str]]], **kwargs
+    ) -> List[Tuple[str | int]]:
+        return
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
@@ -86,19 +82,6 @@ class DuoT5(PairwiseRankLLM):
         score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
         # print(outputs, output_ids.size(0))
         return outputs, output_ids.size(0), score
-
-    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
-        return 1
-
-    def _add_prefix_prompt(self, query: str, num: int) -> str:
-        return f"Given the query: {query}, output its relevance to the {num} documents."
-
-    def _add_post_prompt(self, query: str, num: int) -> str:
-        return f"Given the query: {query}, output its relevance to the {num} documents."
-
-    def _add_few_shot_examples(self, conv):
-        return 1
-        # unused for now
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
@@ -152,6 +135,9 @@ class DuoT5(PairwiseRankLLM):
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
 
+    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+        return 1
+
     def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
         if x.score < y.score:
             return -1
@@ -159,6 +145,16 @@ class DuoT5(PairwiseRankLLM):
             return 1
         else:
             return 0
+
+    def _add_prefix_prompt(self, query: str, num: int) -> str:
+        return f"Given the query: {query}, output its relevance to the {num} documents."
+
+    def _add_post_prompt(self, query: str, num: int) -> str:
+        return f"Given the query: {query}, output its relevance to the {num} documents."
+
+    def _add_few_shot_examples(self, conv):
+        return 1
+        # unused for now
 
     def permutation_pipeline(
         self,

@@ -21,10 +21,59 @@ class PromptMode(Enum):
 
 
 class RankLLM(ABC):
+    """
+    Abstract base class that all rerankers inherit.
+
+    All concrete children of RankLLM must implement these functions:
+        - rerank_batch
+        - run_llm_batched
+        - run_llm
+        - create_prompt_batched
+        - create_prompt
+        - get_num_tokens
+        - cost_per_1k_tokens
+        - num_output_tokens
+        - get_output_filename
+
+    """
+
     def __init__(self, model: str, context_size: int, prompt_mode: PromptMode) -> None:
         self._model = model
         self._context_size = context_size
         self._prompt_mode = prompt_mode
+
+    @abstractmethod
+    def rerank_batch(
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> List[Result]:
+        """
+        Reranks a list of requests using the RankLLM agent.
+
+        This function applies a sliding window algorithm to rerank the results.
+        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+
+        Args:
+            requests (List[Request]): The list of requests. Each request has a query and a candidates list.
+            rank_start (int, optional): The starting rank for processing. Defaults to 0.
+            rank_end (int, optional): The end rank for processing. Defaults to 100.
+            window_size (int, optional): The size of each sliding window. Defaults to 20.
+            step (int, optional): The step size for moving the window. Defaults to 10.
+            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
+            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+            vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
+            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
+            batched (bool, optional): Whether to use batched processing. Defaults to False.
+
+        Returns:
+            List[Result]: A list containing the reranked candidates.
+        """
+        pass
 
     @abstractmethod
     def run_llm_batched(
@@ -123,39 +172,6 @@ class RankLLM(ABC):
 
         Returns:
             int: The estimated number of output tokens.
-        """
-        pass
-
-    @abstractmethod
-    def rerank_batch(
-        self,
-        requests: List[Request],
-        rank_start: int = 0,
-        rank_end: int = 100,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
-        **kwargs: Any,
-    ) -> List[Result]:
-        """
-        Reranks a list of requests using the RankLLM agent.
-
-        This function applies a sliding window algorithm to rerank the results.
-        Each window of results is processed by the RankLLM agent to obtain a new ranking.
-
-        Args:
-            requests (List[Request]): The list of requests. Each request has a query and a candidates list.
-            rank_start (int, optional): The starting rank for processing. Defaults to 0.
-            rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
-            shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
-            logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-            vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
-            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
-            batched (bool, optional): Whether to use batched processing. Defaults to False.
-
-        Returns:
-            List[Result]: A list containing the reranked candidates.
         """
         pass
 

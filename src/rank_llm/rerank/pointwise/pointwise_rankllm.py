@@ -18,8 +18,15 @@ logger = logging.getLogger(__name__)
 
 class PointwiseRankLLM(RankLLM, ABC):
     """
+    Abstract base class that all pointwise rerankers implement.
+
     All children of PointwiseRankLLM must implement these functions:
-        - currently all abstract functions of RankLLM
+        - run_llm_batched
+        - run_llm
+        - create_prompt
+        - get_num_tokens
+        - cost_per_1k_tokens
+        - num_output_tokens
 
     """
 
@@ -114,14 +121,6 @@ class PointwiseRankLLM(RankLLM, ABC):
 
         return prompts, token_counts
 
-    def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
-        if x.score < y.score:
-            return -1
-        elif x.score > y.score:
-            return 1
-        else:
-            return 0
-
     def get_output_filename(
         self,
         top_k_candidates: int,
@@ -150,6 +149,14 @@ class PointwiseRankLLM(RankLLM, ABC):
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
+
+    def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
+        if x.score < y.score:
+            return -1
+        elif x.score > y.score:
+            return 1
+        else:
+            return 0
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
