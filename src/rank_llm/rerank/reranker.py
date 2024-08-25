@@ -237,9 +237,11 @@ class Reranker:
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
-                model=model_full_paths[model_path]
-                if model_path in model_full_paths
-                else model_path,
+                model=(
+                    model_full_paths[model_path]
+                    if model_path in model_full_paths
+                    else model_path
+                ),
                 name=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
@@ -270,9 +272,11 @@ class Reranker:
             )
 
             agent = MonoT5(
-                model=model_full_paths[model_path]
-                if model_path in model_full_paths
-                else model_path,
+                model=(
+                    model_full_paths[model_path]
+                    if model_path in model_full_paths
+                    else model_path
+                ),
                 prompt_mode=prompt_mode,
                 context_size=context_size,
                 device=device,
