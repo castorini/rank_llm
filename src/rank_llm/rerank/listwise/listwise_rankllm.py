@@ -16,10 +16,13 @@ from rank_llm.rerank.listwise.reorder.reorder_policy import (
     ReorderPolicy,
     SlidingWindowReorderPolicy,
 )
+from rank_llm.rerank.listwise.reorder.tournament_sort_rerank_policy import (
+    TournamentSortReorderPolicy,
+)
 
 logger = logging.getLogger(__name__)
 
-SUPPORT_REORDER_POLICIES = [SlidingWindowReorderPolicy]
+SUPPORT_REORDER_POLICIES = [SlidingWindowReorderPolicy, TournamentSortReorderPolicy]
 
 
 class ListwiseRankLLM(RankLLM, ABC):

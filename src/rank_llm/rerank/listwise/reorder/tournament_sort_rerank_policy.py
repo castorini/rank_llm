@@ -1,5 +1,6 @@
+import copy
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 from rank_llm.data import Result
 
@@ -144,6 +145,14 @@ class TournamentSorter:
     def _unpad_perm(self, inds: List[int], padded: List[int], perm: List[int]):
         return [x for x in perm if x < len(inds)]
 
+    def _fill_up(self, result: List[int]) -> List[int]:
+        result_set = set(result)
+        filled_up_result = [x for x in result]
+        for idx in self._indices:
+            if idx not in result_set:
+                filled_up_result.append(idx)
+        return filled_up_result
+
     def __init__(self, indices: List[int], window_size: int, r: int):
         super().__init__()
         self._window_size = window_size
@@ -151,8 +160,10 @@ class TournamentSorter:
 
         self._n_passage = len(indices)
 
+        self._indices = indices
+
         self._tr, self._all_node, self._idx_to_node = TournamentSortNode.build(
-            list(range(self._n_passage)), window_size=window_size, top_k=r
+            indices, window_size=window_size, top_k=r
         )
 
     def _pop(self, x: int) -> List[TournamentSortNode]:
@@ -194,11 +205,51 @@ class TournamentSorter:
                     )
                     node.resort(cleaned_result)
 
-        return result
+        return self._fill_up(result)
+
+
+def multiple_sort(
+    requests: List[Result],
+    indices_batch: List[List[int]],
+    runner: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]],
+    window_size: int,
+    r: int,
+    top_k: int,
+):
+    batch_size = len(requests)
+    tournament_sorters: List[TournamentSorter] = [
+        TournamentSorter(indices, window_size, r) for indices in indices_batch
+    ]
+    progress = [
+        tournament_sorter.perform(top_k) for tournament_sorter in tournament_sorters
+    ]
+    result = [None for _ in range(batch_size)]
+    left_not_sorted = set(range(batch_size))
+
+    while len(left_not_sorted) > 0:
+        perm_request = []
+
+        finish_requests = []
+        for idx in left_not_sorted:
+            try:
+                req = next(progress[idx])
+                perm_request.append((idx, req))
+            except StopIteration as e:
+                result[idx] = e.value
+                finish_requests.append(idx)
+        for idx in finish_requests:
+            left_not_sorted.remove(idx)
+
+        outputs = runner([(requests[idx], req.indices) for idx, req in perm_request])
+
+        for (idx, req), output in zip(perm_request, outputs):
+            req.result = output
+
+    return result
 
 
 class TournamentSortReorderPolicy(ReorderPolicy):
-    def __init__(self, top_k: int, window_size: int):
+    def __init__(self, window_size: int, top_k: int = 10, **kwargs):
         super().__init__()
         self._top_k = top_k
         self._window_size = window_size
@@ -211,7 +262,39 @@ class TournamentSortReorderPolicy(ReorderPolicy):
         model: ModelFunction,
         **kwargs,
     ) -> list[Result]:
-        pass
+        runner: Callable[
+            [List[Tuple[Result, List[int]]]], List[List[int]]
+        ] = lambda reqs: model.execute(
+            model.create_prompt(reqs), [ind for req, ind in reqs]
+        )
+
+        request_ranks = multiple_sort(
+            requests,
+            [list(range(rank_start, rank_end)) for _ in range(len(requests))],
+            runner=runner,
+            window_size=self._window_size,
+            top_k=self._top_k,
+            r=1,
+        )
+
+        results = [
+            Result(
+                query=copy.deepcopy(request.query),
+                candidates=self._reorder_by_rank(
+                    copy.deepcopy(request.candidates),
+                    [*range(len(request.candidates))],
+                    rank,
+                ),
+                ranking_exec_summary=[],
+            )
+            for request, rank in zip(requests, request_ranks)
+        ]
+
+        for result, request in zip(results, requests):
+            for j in range(len(result.candidates)):
+                result.candidates[j].score = request.candidates[j].score
+
+        return results
 
     @staticmethod
     def name() -> str:

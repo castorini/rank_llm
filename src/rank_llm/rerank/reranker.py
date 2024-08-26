@@ -174,9 +174,7 @@ class Reranker:
         keys_reorder_policy = [("reorder_policy", "reorder_policy.sliding_window")]
         [reorder_policy_name] = extract_kwargs(keys_reorder_policy, **kwargs)
 
-        reorder_policy = ListwiseRankLLM.get_reorder_policy(
-            reorder_policy_name, **kwargs
-        )
+        reorder_policy = ListwiseRankLLM.get_reorder_policy(**kwargs)
 
         if interactive and default_agent is not None:
             # Default rerank agent
@@ -258,7 +256,6 @@ class Reranker:
             print(f"Completed loading {model_path}")
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
-                ("reorder_policy", "reorder_policy.sliding_window"),
                 ("context_size", 150),
                 ("prompt_mode", PromptMode.LiT5),
                 ("num_few_shot_examples", 0),
