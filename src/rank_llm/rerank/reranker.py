@@ -374,20 +374,16 @@ def extract_kwargs(
     keys_and_defaults -- List of Tuple(keyname, default)
     Return: List of extracted kwargs in order provided in keys_and_defaults
     """
-    # Extract each kwarg using the default if not provided
-    extracted_kwargs = [
-        kwargs.get(key_and_default[0], key_and_default[1])
-        for key_and_default in keys_and_defaults
-    ]
-
-    # Check that type of provided kwarg is compatible with the provided default type
-    for i, extracted_kwarg in enumerate(extracted_kwargs):
-        default_value = keys_and_defaults[i][1]
-        if default_value is not None and not isinstance(
-            extracted_kwarg, type(default_value)
+    extracted_kwargs = []
+    for key, default in keys_and_defaults:
+        value = kwargs.get(key, default)
+        if (
+            value is not None
+            and default is not None
+            and not isinstance(value, type(default))
         ):
             raise ValueError(
-                f"Provided kwarg for {keys_and_defaults[i][0]} must be compatible with the argument's default type {type(default_value)}"
+                f"Provided kwarg for {key} must be of type {type(default).__name__}, got {type(value).__name__}"
             )
-
+        extracted_kwargs.append(value)
     return extracted_kwargs
