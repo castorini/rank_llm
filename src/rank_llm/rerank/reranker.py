@@ -11,6 +11,7 @@ from rank_llm.rerank import (
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
+from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.rankllm import RankLLM
 
 
@@ -282,7 +283,33 @@ class Reranker:
                 device=device,
                 batch_size=batch_size,
             )
+        elif "duot5" in model_path:
+            # using monot5
+            print(f"Loading {model_path} ...")
 
+            model_full_paths = {"duot5": "castorini/duot5-3b-med-msmarco"}
+
+            keys_and_defaults = [
+                ("prompt_mode", PromptMode.DUOT5),
+                ("context_size", 512),
+                ("device", "cuda"),
+                ("batch_size", 64),
+            ]
+            [prompt_mode, context_size, device, batch_size] = extract_kwargs(
+                keys_and_defaults, **kwargs
+            )
+
+            agent = DuoT5(
+                model=(
+                    model_full_paths[model_path]
+                    if model_path in model_full_paths
+                    else model_path
+                ),
+                prompt_mode=prompt_mode,
+                context_size=context_size,
+                device=device,
+                batch_size=batch_size,
+            )
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
