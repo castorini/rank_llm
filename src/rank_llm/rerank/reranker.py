@@ -171,10 +171,12 @@ class Reranker:
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
 
-        keys_reorder_policy = [("reorder_policy", "reorder_policy.sliding_window")]
+        keys_reorder_policy = [("reorder_policy", "sliding_window")]
         [reorder_policy_name] = extract_kwargs(keys_reorder_policy, **kwargs)
 
-        reorder_policy = ListwiseRankLLM.get_reorder_policy(**kwargs)
+        reorder_policy = ListwiseRankLLM.get_reorder_policy(
+            reorder_policy=reorder_policy_name
+        )
 
         if interactive and default_agent is not None:
             # Default rerank agent

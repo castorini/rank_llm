@@ -33,6 +33,7 @@ class RankFiDDistill(ListwiseRankLLM):
         reorder_policy: ReorderPolicy,
         model: str,
         context_size: int = 150,
+        window_size: int = 20,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
         precision: str = "bfloat16",
@@ -46,6 +47,7 @@ class RankFiDDistill(ListwiseRankLLM):
             reorder_policy=reorder_policy,
             model=model,
             context_size=context_size,
+            window_size=window_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
         )
@@ -61,7 +63,7 @@ class RankFiDDistill(ListwiseRankLLM):
             " > ".join(
                 map(
                     lambda x: f"[{x}]",
-                    range(1, reorder_policy.max_selected_indices() + 1),
+                    range(1, self._window_size + 1),
                 )
             )
         )
@@ -254,6 +256,7 @@ class RankFiDScore(ListwiseRankLLM):
         reorder_policy: ReorderPolicy,
         model: str,
         context_size: int = 150,
+        window_size: int = 20,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
         precision: str = "bfloat16",
@@ -264,6 +267,7 @@ class RankFiDScore(ListwiseRankLLM):
             reorder_policy=reorder_policy,
             model=model,
             context_size=context_size,
+            window_size=window_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
         )

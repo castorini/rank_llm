@@ -1,4 +1,5 @@
 import copy
+import json
 import logging
 import random
 import re
@@ -16,7 +17,7 @@ from rank_llm.rerank.listwise.reorder.reorder_policy import (
     ReorderPolicy,
     SlidingWindowReorderPolicy,
 )
-from rank_llm.rerank.listwise.reorder.tournament_sort_rerank_policy import (
+from rank_llm.rerank.listwise.reorder.tournament_sort_reorder_policy import (
     TournamentSortReorderPolicy,
 )
 
@@ -43,6 +44,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         reorder_policy: ReorderPolicy,
         model: str,
         context_size: int,
+        window_size: int,
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
     ) -> None:
@@ -50,6 +52,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._num_few_shot_examples = num_few_shot_examples
 
         self.reorder_policy = reorder_policy
+        self._window_size = window_size
 
     def rerank_batch(
         self,
@@ -566,11 +569,27 @@ class ListwiseRankLLM(RankLLM, ABC):
                     for x, selected_indices in zip(batch, selected_indices_batch)
                 ]
 
-        return ModelFunction(create_prompt=create_prompt, execute=execute)
+        return ModelFunction(
+            create_prompt=create_prompt, execute=execute, window_size=self._window_size
+        )
 
     @staticmethod
     def get_reorder_policy(reorder_policy: str, **kwargs):
         for policy in SUPPORT_REORDER_POLICIES:
-            if policy.name() == reorder_policy:
-                return policy(**kwargs)
+            if reorder_policy.startswith(policy.name()):
+                reorder_params = reorder_policy[len(policy.name()) :]
+                if len(reorder_params) <= 1:
+                    return policy()
+                else:
+                    assert reorder_params[0] == ":" and reorder_params[1] == "{"
+                    reorder_params = reorder_params[1:]
+                    try:
+                        reorder_param_dict = json.loads(reorder_params)
+                        if not isinstance(reorder_param_dict, dict):
+                            raise Exception()
+                    except Exception as e:
+                        print(e)
+                        raise Exception(f"Cannot load reorder policy {reorder_policy}")
+                    return policy(**reorder_param_dict)
+
         raise Exception(f"Cannot find reorder policy {reorder_policy}")

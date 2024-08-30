@@ -20,6 +20,9 @@ class ModelFunction:
         [List[Union[str, Dict[str, str]]], List[List[int]]], List[List[int]]
     ]
 
+    # Accepted Window Size
+    window_size: int
+
 
 class ReorderPolicy(ABC):
     @abstractmethod
@@ -31,10 +34,6 @@ class ReorderPolicy(ABC):
         model: ModelFunction,
         **kwargs,
     ) -> list[Result]:
-        pass
-
-    @abstractmethod
-    def max_selected_indices(self) -> int:
         pass
 
     @staticmethod
@@ -69,15 +68,13 @@ class ReorderPolicy(ABC):
 class SlidingWindowReorderPolicy(ReorderPolicy):
     def __init__(
         self,
-        window_size: int = 20,
-        step_size: int = 10,
+        step: int = 10,
         shuffle_candidates: bool = False,
         **kwargs,
     ):
-        self._window_size = window_size
-        self._step_size = step_size
+        self._step_size = step
 
-        self._shuffle_candidates = shuffle_candidates
+        self._shuffle_candidates = bool(shuffle_candidates)
 
     def reorder(
         self,
@@ -90,6 +87,8 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
         populate_exec_summary=False,
         **kwargs,
     ) -> List[Result]:
+        window_size = model.window_size
+
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -106,7 +105,7 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
         request_ranks = [[*range(len(request.candidates))] for request in requests]
 
         end_pos = rank_end
-        start_pos = rank_end - self._window_size
+        start_pos = rank_end - window_size
 
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
         # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
@@ -151,7 +150,4 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
 
     @staticmethod
     def name() -> str:
-        return "reorder_policy.sliding_window"
-
-    def max_selected_indices(self) -> int:
-        return self._window_size
+        return "sliding_window"

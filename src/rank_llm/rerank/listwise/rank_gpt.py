@@ -24,6 +24,7 @@ class SafeOpenai(ListwiseRankLLM):
         reorder_policy: ReorderPolicy,
         model: str,
         context_size: int,
+        window_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
         keys=None,
@@ -64,6 +65,7 @@ class SafeOpenai(ListwiseRankLLM):
             reorder_policy=reorder_policy,
             model=model,
             context_size=context_size,
+            window_size=window_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
         )

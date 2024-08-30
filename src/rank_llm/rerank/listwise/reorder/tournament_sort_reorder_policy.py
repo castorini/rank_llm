@@ -249,10 +249,9 @@ def multiple_sort(
 
 
 class TournamentSortReorderPolicy(ReorderPolicy):
-    def __init__(self, window_size: int, top_k: int = 10, **kwargs):
+    def __init__(self, top_k: int = 10, **kwargs):
         super().__init__()
         self._top_k = top_k
-        self._window_size = window_size
 
     def reorder(
         self,
@@ -262,6 +261,8 @@ class TournamentSortReorderPolicy(ReorderPolicy):
         model: ModelFunction,
         **kwargs,
     ) -> list[Result]:
+        window_size = model.window_size
+
         runner: Callable[
             [List[Tuple[Result, List[int]]]], List[List[int]]
         ] = lambda reqs: model.execute(
@@ -272,7 +273,7 @@ class TournamentSortReorderPolicy(ReorderPolicy):
             requests,
             [list(range(rank_start, rank_end)) for _ in range(len(requests))],
             runner=runner,
-            window_size=self._window_size,
+            window_size=window_size,
             top_k=self._top_k,
             r=1,
         )
@@ -298,7 +299,4 @@ class TournamentSortReorderPolicy(ReorderPolicy):
 
     @staticmethod
     def name() -> str:
-        return "reorder_policy.tournament_sort"
-
-    def max_selected_indices(self) -> int:
-        return self._window_size
+        return "tournament_sort"

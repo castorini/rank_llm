@@ -33,6 +33,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         model: str,
         name: str,
         context_size: int = 4096,
+        window_size: int = 20,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
         device: str = "cuda",
@@ -75,6 +76,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             reorder_policy=reorder_policy,
             model=model,
             context_size=context_size,
+            window_size=window_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
         )

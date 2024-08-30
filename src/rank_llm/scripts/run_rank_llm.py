@@ -32,7 +32,6 @@ def main(args):
     variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
     num_passes = args.num_passes
-    step_size = args.step_size
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
@@ -57,7 +56,6 @@ def main(args):
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
-        step_size=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
         batch_size=batch_size,
@@ -151,13 +149,7 @@ if __name__ == "__main__":
         "--window_size",
         type=int,
         default=20,
-        help="window size for the sliding window approach",
-    )
-    parser.add_argument(
-        "--step_size",
-        type=int,
-        default=10,
-        help="step size for the sliding window approach",
+        help="window size for the LLM",
     )
     parser.add_argument(
         "--system_message",
@@ -178,7 +170,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--reorder_policy",
-        default="reorder_policy.sliding_window",
+        default="sliding_window",
         help="policy in reordering. defaultly to be sliding window",
         type=str,
     )
