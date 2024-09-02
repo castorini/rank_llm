@@ -53,9 +53,10 @@ def retrieve_and_rerank(
         dataset=dataset,
         **kwargs,
     )
-    print(top_k_retrieve)
-    print("Number of candidates per query: ")
-    print(len(requests[0].candidates))
+    
+    for request in requests:
+        request.candidates = request.candidates[:top_k_retrieve]
+
     # Reranking stages
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
     if reranker.get_agent() is None:

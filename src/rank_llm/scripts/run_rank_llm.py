@@ -38,6 +38,7 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
+    interactive = args.interactive
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -62,6 +63,7 @@ def main(args):
         step_size=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
+        interactive=interactive,
     )
 
 
@@ -174,6 +176,12 @@ if __name__ == "__main__":
         "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
+    )
+    parser.add_argument(
+        "--interactive",
+        type=bool,
+        default=False,
+        help="whether retrieval is done from the server or a prebuilt index"
     )
     args = parser.parse_args()
     main(args)
