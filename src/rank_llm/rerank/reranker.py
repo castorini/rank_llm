@@ -294,6 +294,7 @@ class Reranker:
                 ("context_size", 512),
                 ("device", "cuda"),
                 ("batch_size", 64),
+                ("interactive", True)
             ]
             [prompt_mode, context_size, device, batch_size] = extract_kwargs(
                 keys_and_defaults, **kwargs

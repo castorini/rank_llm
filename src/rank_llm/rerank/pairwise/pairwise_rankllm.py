@@ -53,6 +53,11 @@ class PairwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        self._enumerated_indices = []
+
+        for index in range(len(requests) * len(requests[0].candidates) * len(requests[0].candidates)):
+            self._enumerated_indices.append(index)    
+
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -66,8 +71,7 @@ class PairwiseRankLLM(RankLLM, ABC):
             for i in result.candidates:
                 i.score = 0
 
-        
-        end = len(rerank_results[0].candidates) * len(rerank_results[0].candidates) * len(requests)
+        end = len(rerank_results[0].candidates - 1) * len(rerank_results[0].candidates) * len(requests)
         with tqdm(total=end, desc="Progress through (q, d) pairs") as progress_bar:
             for index in range(0, end, self._batch_size):
                 prompts, token_counts = self.create_prompt_batched(
@@ -83,6 +87,7 @@ class PairwiseRankLLM(RankLLM, ABC):
                         end
                     )
                 ):
+                    update_index = self._enumerated_indices[update_index]
                     query_number = math.floor(
                         update_index / (len(rerank_results[0].candidates) ** 2)
                     )
@@ -116,6 +121,7 @@ class PairwiseRankLLM(RankLLM, ABC):
             index,
             min(index + self._batch_size, len(results[0].candidates) * len(results)),
         ):
+            index = self._enumerated_indices[index]
             query_number = math.floor(
                 index / (len(results[0].candidates) ** 2)
             )
