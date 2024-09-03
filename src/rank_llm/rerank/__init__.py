@@ -2,7 +2,8 @@ import logging
 
 from .api_keys import get_azure_openai_args, get_openai_api_key
 from .identity_reranker import IdentityReranker
-from .rankllm import PromptMode, RankLLM
+from .prompt import PromptMode, PromptString
+from .rankllm import RankLLM
 from .reranker import Reranker
 
 logging.basicConfig(
@@ -15,5 +16,6 @@ __all__ = [
     "get_azure_openai_args",
     "get_openai_api_key",
     "PromptMode",
+    "PromptString",
     "Reranker",
 ]

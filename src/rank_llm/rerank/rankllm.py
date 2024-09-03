@@ -1,23 +1,10 @@
 import logging
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import Any, Dict, List, Tuple, Union
 
 from rank_llm.data import Request, Result
 
 logger = logging.getLogger(__name__)
-
-
-class PromptMode(Enum):
-    UNSPECIFIED = "unspecified"
-    RANK_GPT = "rank_GPT"
-    RANK_GPT_APEER = "rank_GPT_APEER"
-    LRL = "LRL"
-    MONOT5 = "monot5"
-    LiT5 = "LiT5"
-
-    def __str__(self):
-        return self.value
 
 
 class RankLLM(ABC):
