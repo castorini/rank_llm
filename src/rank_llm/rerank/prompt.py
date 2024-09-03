@@ -16,7 +16,7 @@ class Prompt(Enum):
 
     def __str__(self):
         return self.value
-    
+
     def prefix(self, *args, **kwargs) -> Union[str, List[Dict[str, str]]]:
         """
         returns the prompt prefix
@@ -61,7 +61,9 @@ class Prompt(Enum):
                     },
                 ]
             case _:
-                raise ValueError(f"Prefix for prompt mode {self.__str__()} is unsupported.")
+                raise ValueError(
+                    f"Prefix for prompt mode {self.__str__()} is unsupported."
+                )
 
     def suffix(self, **kwargs) -> str:
         """
@@ -83,4 +85,6 @@ class Prompt(Enum):
             case self.RANK_GPT_APEER:
                 return f"Given the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
             case _:
-                raise ValueError(f"Suffix for prompt mode {self.__str__()} is unsupported.")
+                raise ValueError(
+                    f"Suffix for prompt mode {self.__str__()} is unsupported."
+                )

@@ -246,15 +246,10 @@ class SafeOpenai(ListwiseRankLLM):
                         {"role": "assistant", "content": f"Received passage [{rank}]."}
                     )
             if self._prompt_mode == Prompt.RANK_GPT_APEER:
-                messages[-1][
-                    "content"
-                ] += f"\n{self._prompt_mode.suffix(query, num)}"
+                messages[-1]["content"] += f"\n{self._prompt_mode.suffix(query, num)}"
             else:
                 messages.append(
-                    {
-                        "role": "user",
-                        "content": self._prompt_mode.suffix(query, num)
-                    }
+                    {"role": "user", "content": self._prompt_mode.suffix(query, num)}
                 )
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():

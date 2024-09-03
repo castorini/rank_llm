@@ -2,12 +2,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
-from rank_llm.rerank import (
-    Prompt,
-    RankLLM,
-    get_azure_openai_args,
-    get_openai_api_key,
-)
+from rank_llm.rerank import Prompt, RankLLM, get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
