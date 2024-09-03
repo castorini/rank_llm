@@ -3,12 +3,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union
 
 from rank_llm.data import Request, Result
+from rank_llm.rerank import Prompt
 
 logger = logging.getLogger(__name__)
 
 
 class RankLLM(ABC):
-    def __init__(self, model: str, context_size: int, prompt_mode: PromptMode) -> None:
+    def __init__(self, model: str, context_size: int, prompt_mode: Prompt) -> None:
         self._model = model
         self._context_size = context_size
         self._prompt_mode = prompt_mode
