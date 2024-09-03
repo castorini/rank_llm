@@ -2,7 +2,7 @@ import logging
 
 from .api_keys import get_azure_openai_args, get_openai_api_key
 from .identity_reranker import IdentityReranker
-from .prompt import Prompt, PromptString
+from .prompt import Prompt
 from .rankllm import RankLLM
 from .reranker import Reranker
 
@@ -16,6 +16,5 @@ __all__ = [
     "get_azure_openai_args",
     "get_openai_api_key",
     "Prompt",
-    "PromptString",
     "Reranker",
 ]
