@@ -3,7 +3,7 @@ import os
 from argparse import ArgumentParser
 
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank import Prompt
 from rank_llm.retrieve import TOPICS, RetrievalMethod
 
 
@@ -97,9 +97,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--prompt_mode",
-        type=PromptMode,
+        type=Prompt,
         required=True,
-        choices=list(PromptMode),
+        choices=list(Prompt),
     )
     parser.add_argument(
         "--rerank_results_dirname",

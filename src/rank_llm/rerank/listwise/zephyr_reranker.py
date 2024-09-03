@@ -1,7 +1,7 @@
 from typing import List
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank import Prompt
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 
 
@@ -10,7 +10,7 @@ class ZephyrReranker:
         self,
         model_path: str = "castorini/rank_zephyr_7b_v1_full",
         context_size: int = 4096,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_mode: Prompt = Prompt.RANK_GPT,
         num_few_shot_examples: int = 0,
         device: str = "cuda",
         num_gpus: int = 1,

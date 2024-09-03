@@ -10,7 +10,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm import retrieve_and_rerank
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank import Prompt
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 
 
@@ -120,9 +120,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--prompt_mode",
-        type=PromptMode,
+        type=Prompt,
         required=True,
-        choices=list(PromptMode),
+        choices=list(Prompt),
     )
     parser.add_argument(
         "--shuffle_candidates",

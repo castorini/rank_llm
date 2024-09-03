@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank import (
-    PromptMode,
+    Prompt,
     RankLLM,
     get_azure_openai_args,
     get_openai_api_key,
@@ -183,7 +183,7 @@ class Reranker:
 
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT),
+                ("prompt_mode", Prompt.RANK_GPT),
                 ("num_few_shot_examples", 0),
                 ("window_size", 20),
             ]
@@ -215,7 +215,7 @@ class Reranker:
 
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT),
+                ("prompt_mode", Prompt.RANK_GPT),
                 ("num_few_shot_examples", 0),
                 ("device", "cuda"),
                 ("num_gpus", 1),
@@ -262,7 +262,7 @@ class Reranker:
             model_full_paths = {"monot5": "castorini/monot5-3b-msmarco-10k"}
 
             keys_and_defaults = [
-                ("prompt_mode", PromptMode.MONOT5),
+                ("prompt_mode", Prompt.MONOT5),
                 ("context_size", 512),
                 ("device", "cuda"),
                 ("batch_size", 64),
@@ -286,7 +286,7 @@ class Reranker:
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
-                ("prompt_mode", PromptMode.LiT5),
+                ("prompt_mode", Prompt.LiT5),
                 ("num_few_shot_examples", 0),
                 ("window_size", 20),
                 ("precision", "bfloat16"),
@@ -319,7 +319,7 @@ class Reranker:
         elif "lit5-score" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
-                ("prompt_mode", PromptMode.LiT5),
+                ("prompt_mode", Prompt.LiT5),
                 ("num_few_shot_examples", 0),
                 ("window_size", 100),
                 ("precision", "bfloat16"),

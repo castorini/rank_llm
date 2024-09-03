@@ -9,7 +9,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.analysis.estimate_costs import EstimationMode
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank import Prompt
 from rank_llm.rerank.listwise import SafeOpenai
 from rank_llm.retrieve import TOPICS, PyseriniRetriever, RetrievalMethod
 
@@ -101,9 +101,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--prompt_mode",
-        type=PromptMode,
+        type=Prompt,
         required=True,
-        choices=list(PromptMode),
+        choices=list(Prompt),
     )
     args = parser.parse_args()
     main(args)
