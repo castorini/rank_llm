@@ -47,7 +47,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
          - context_size (int, optional): Maximum number of tokens that can be handled in a single prompt. Defaults to 4096.
-        - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
+        - prompt_mode (Prompt, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
          indicating that this class is designed primarily for listwise ranking tasks following the RANK_GPT methodology.
          - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
          the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples

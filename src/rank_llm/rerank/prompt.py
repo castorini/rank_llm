@@ -20,6 +20,12 @@ class Prompt(Enum):
     def prefix(self, *args, **kwargs) -> Union[str, List[Dict[str, str]]]:
         """
         returns the prompt prefix
+
+        Positional arguments:
+        [0] query: str
+        [1] top_k: int
+        Keyword arguments:
+        (optional) is_os_llm: bool. This determines whether the Rank_GPT prompt is of the OS_LLM variant
         """
 
         try:
@@ -65,13 +71,22 @@ class Prompt(Enum):
                     f"Prefix for prompt mode {self.__str__()} is unsupported."
                 )
 
-    def suffix(self, **kwargs) -> str:
+    def suffix(self, *args, **kwargs) -> str:
         """
         returns the prompt suffix
+
+        Positional arguments:
+        [0] query: str
+        [1] top_k: int
+        Keyword arguments:
+        (optional) is_os_llm: bool. This determines whether the Rank_GPT prompt is of the OS_LLM variant
         """
 
-        query = kwargs.get("query", "")
-        top_k = kwargs.get("top_k", 0)
+        try:
+            query = args[0]
+            top_k = args[1]
+        except Exception as e:
+            raise ValueError("Missing query or top_k positional arguments")
 
         match self:
             case self.RANK_GPT:

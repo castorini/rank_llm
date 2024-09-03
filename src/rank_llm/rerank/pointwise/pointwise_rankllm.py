@@ -10,7 +10,7 @@ from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import Candidate, Request, Result
-from rank_llm.rerank.rankllm import PromptMode, RankLLM
+from rank_llm.rerank import Prompt, RankLLM
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class PointwiseRankLLM(RankLLM, ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode,
+        prompt_mode: Prompt,
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,

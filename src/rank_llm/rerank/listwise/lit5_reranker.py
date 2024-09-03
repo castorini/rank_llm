@@ -1,6 +1,6 @@
 from rank_llm.data import Request, Result
+from rank_llm.rerank import Prompt
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
-from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
 
 
@@ -9,7 +9,7 @@ class LiT5DistillReranker:
         self,
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
-        prompt_mode: PromptMode = PromptMode.LiT5,
+        prompt_mode: Prompt = Prompt.LiT5,
         window_size: int = 20,
     ) -> None:
         agent = RankFiDDistill(
@@ -64,7 +64,7 @@ class LiT5ScoreReranker:
         self,
         model_path: str = "castorini/LiT5-Score-base",
         context_size: int = 300,
-        prompt_mode: PromptMode = PromptMode.LiT5,
+        prompt_mode: Prompt = Prompt.LiT5,
         window_size: int = 20,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
     ) -> None:
