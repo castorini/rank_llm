@@ -58,6 +58,8 @@ include = [
     "rank_llm.analysis",
     "rank_llm.evaluation",
     "rank_llm.rerank",
+    "rank_llm.rerank.listwise",
+    "rank_llm.rerank.pointwise",
     "rank_llm.retrieve",
 ]
 namespaces = false
