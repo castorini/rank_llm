@@ -10,7 +10,7 @@
 We offer a suite of rerankers - pointwise models like monoT5 and listwise models with a focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.) or [vLLM](https://https://github.com/vllm-project/vllm). We also support RankGPT variants, which are proprietary listwise rerankers. Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
 # Releases
-current_version = 0.20.0
+current_version = 0.20.1
 
 ## 📟 Instructions
 
@@ -83,6 +83,17 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Score-l
     --window_size=100 --variable_passages
 ```
 
+### Run end to end - monoT5
+
+The following runs the 3B variant of monoT5 trained for 10K steps:
+
+```
+python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=1000 --dataset=dl19 \
+  --retrieval_method=bm25 --prompt_mode=monot5 --context_size=512
+```
+
+Note that we usually rerank 1K candidates with monoT5.
+
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 
 ## 🦙🐧 Model Zoo
@@ -117,22 +128,22 @@ The following is a table specifically for our LiT5 suite of models hosted on Hug
 
 Now you can run top-100 reranking with the v2 model in a single pass while maintaining efficiency!
 
-### MonoT5 Suite - Pointwise Rerankers
+### monoT5 Suite - Pointwise Rerankers
 
-The following is a table specifically for our MonoT5 suite of models hosted on HuggingFace:
+The following is a table specifically for our monoT5 suite of models hosted on HuggingFace:
 
 | Model Name                        | Hugging Face Identifier/Link                            |
 |-----------------------------------|--------------------------------------------------------|
-| MonoT5 Small MSMARCO 10K          | [castorini/monot5-small-msmarco-10k](https://huggingface.co/castorini/monot5-small-msmarco-10k)       |
-| MonoT5 Small MSMARCO 100K         | [castorini/monot5-small-msmarco-100k](https://huggingface.co/castorini/monot5-small-msmarco-100k)     |
-| MonoT5 Base MSMARCO               | [castorini/monot5-base-msmarco](https://huggingface.co/castorini/monot5-base-msmarco)                 |
-| MonoT5 Base MSMARCO 10K           | [castorini/monot5-base-msmarco-10k](https://huggingface.co/castorini/monot5-base-msmarco-10k)         |
-| MonoT5 Large MSMARCO 10K          | [castorini/monot5-large-msmarco-10k](https://huggingface.co/castorini/monot5-large-msmarco-10k)       |
-| MonoT5 Large MSMARCO              | [castorini/monot5-large-msmarco](https://huggingface.co/castorini/monot5-large-msmarco)               |
-| MonoT5 3B MSMARCO 10K             | [castorini/monot5-3b-msmarco-10k](https://huggingface.co/castorini/monot5-3b-msmarco-10k)             |
-| MonoT5 3B MSMARCO                 | [castorini/monot5-3b-msmarco](https://huggingface.co/castorini/monot5-3b-msmarco)                     |
-| MonoT5 Base Med MSMARCO           | [castorini/monot5-base-med-msmarco](https://huggingface.co/castorini/monot5-base-med-msmarco)         |
-| MonoT5 3B Med MSMARCO             | [castorini/monot5-3b-med-msmarco](https://huggingface.co/castorini/monot5-3b-med-msmarco)             |
+| monoT5 Small MSMARCO 10K          | [castorini/monot5-small-msmarco-10k](https://huggingface.co/castorini/monot5-small-msmarco-10k)       |
+| monoT5 Small MSMARCO 100K         | [castorini/monot5-small-msmarco-100k](https://huggingface.co/castorini/monot5-small-msmarco-100k)     |
+| monoT5 Base MSMARCO               | [castorini/monot5-base-msmarco](https://huggingface.co/castorini/monot5-base-msmarco)                 |
+| monoT5 Base MSMARCO 10K           | [castorini/monot5-base-msmarco-10k](https://huggingface.co/castorini/monot5-base-msmarco-10k)         |
+| monoT5 Large MSMARCO 10K          | [castorini/monot5-large-msmarco-10k](https://huggingface.co/castorini/monot5-large-msmarco-10k)       |
+| monoT5 Large MSMARCO              | [castorini/monot5-large-msmarco](https://huggingface.co/castorini/monot5-large-msmarco)               |
+| monoT5 3B MSMARCO 10K             | [castorini/monot5-3b-msmarco-10k](https://huggingface.co/castorini/monot5-3b-msmarco-10k)             |
+| monoT5 3B MSMARCO                 | [castorini/monot5-3b-msmarco](https://huggingface.co/castorini/monot5-3b-msmarco)                     |
+| monoT5 Base Med MSMARCO           | [castorini/monot5-base-med-msmarco](https://huggingface.co/castorini/monot5-base-med-msmarco)         |
+| monoT5 3B Med MSMARCO             | [castorini/monot5-3b-med-msmarco](https://huggingface.co/castorini/monot5-3b-med-msmarco)             |
 
 We recommend the Med models for biomedical retrieval. We also provide both 10K (generally better OOD effectiveness) and 100K checkpoints (better in-domain).
 
