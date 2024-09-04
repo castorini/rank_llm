@@ -4,7 +4,7 @@ import torch
 from flask import Flask, jsonify, request
 
 from rank_llm import retrieve_and_rerank
-from rank_llm.rerank import PromptMode, get_azure_openai_args, get_openai_api_key
+from rank_llm.rerank import Prompt, get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode
 
@@ -31,7 +31,7 @@ def create_app(model, port, use_azure_openai=False):
             model=f"castorini/{model}_7b_v1_full",
             name=model,
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_mode=Prompt.RANK_GPT,
             num_few_shot_examples=0,
             device="cuda",
             num_gpus=1,
@@ -45,7 +45,7 @@ def create_app(model, port, use_azure_openai=False):
             model=f"castorini/{model}_7b_v1",
             name=model,
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_mode=Prompt.RANK_GPT,
             num_few_shot_examples=0,
             device="cuda",
             num_gpus=1,
@@ -59,7 +59,7 @@ def create_app(model, port, use_azure_openai=False):
         default_agent = SafeOpenai(
             model=model,
             context_size=8192,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_mode=Prompt.RANK_GPT,
             num_few_shot_examples=0,
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),

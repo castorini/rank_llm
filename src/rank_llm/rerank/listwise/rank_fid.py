@@ -5,9 +5,9 @@ from tqdm import tqdm
 from transformers import T5Tokenizer
 
 from rank_llm.data import Request, Result
+from rank_llm.rerank import Prompt
 from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
 from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore
-from rank_llm.rerank.rankllm import PromptMode
 
 
 class RankFiDDistill(ListwiseRankLLM):
@@ -32,7 +32,7 @@ class RankFiDDistill(ListwiseRankLLM):
         self,
         model: str,
         context_size: int = 150,
-        prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        prompt_mode: Prompt = Prompt.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
         window_size: int = 20,
         step_size: int = 10,
@@ -294,7 +294,7 @@ class RankFiDScore(ListwiseRankLLM):
         self,
         model: str,
         context_size: int = 150,
-        prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        prompt_mode: Prompt = Prompt.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
         window_size: int = 20,
         step_size: int = 10,

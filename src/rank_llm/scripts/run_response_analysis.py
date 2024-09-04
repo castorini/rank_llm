@@ -8,11 +8,11 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank import Prompt
 
 
 def main(args):
-    response_analyzer = ResponseAnalyzer(args.files, 100, PromptMode.RANK_GPT)
+    response_analyzer = ResponseAnalyzer(args.files, 100, Prompt.RANK_GPT)
     responses, num_passages = response_analyzer.read_saved_responses()
     print("Normalized scores:")
 

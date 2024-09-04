@@ -1,33 +1,33 @@
 import unittest
 from unittest.mock import patch
 
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank import Prompt
 from rank_llm.rerank.listwise import SafeOpenai
 
 # model, context_size, prompt_mode, num_few_shot_examples, keys, key_start_id
 valid_inputs = [
-    ("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
-    ("gpt-3.5-turbo", 4096, PromptMode.LRL, 0, "OPEN_AI_API_KEY", 3),
-    ("gpt-4", 4096, PromptMode.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
-    ("gpt-4", 4096, PromptMode.LRL, 0, "OPEN_AI_API_KEY", 3),
+    ("gpt-3.5-turbo", 4096, Prompt.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
+    ("gpt-3.5-turbo", 4096, Prompt.LRL, 0, "OPEN_AI_API_KEY", 3),
+    ("gpt-4", 4096, Prompt.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
+    ("gpt-4", 4096, Prompt.LRL, 0, "OPEN_AI_API_KEY", 3),
 ]
 
 failure_inputs = [
-    ("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0, None),  # missing key
-    ("gpt-3.5-turbo", 4096, PromptMode.LRL, 0, None),  # missing key
+    ("gpt-3.5-turbo", 4096, Prompt.RANK_GPT, 0, None),  # missing key
+    ("gpt-3.5-turbo", 4096, Prompt.LRL, 0, None),  # missing key
     (
         "gpt-3.5-turbo",
         4096,
-        PromptMode.UNSPECIFIED,
+        Prompt.UNSPECIFIED,
         0,
         "OPEN_AI_API_KEY",
     ),  # unpecified prompt mode
-    ("gpt-4", 4096, PromptMode.RANK_GPT, 0, None),  # missing key
-    ("gpt-4", 4096, PromptMode.LRL, 0, None),  # missing key
+    ("gpt-4", 4096, Prompt.RANK_GPT, 0, None),  # missing key
+    ("gpt-4", 4096, Prompt.LRL, 0, None),  # missing key
     (
         "gpt-4",
         4096,
-        PromptMode.UNSPECIFIED,
+        Prompt.UNSPECIFIED,
         0,
         "OPEN_AI_API_KEY",
     ),  # unpecified prompt mode
@@ -84,7 +84,7 @@ class TestSafeOpenai(unittest.TestCase):
         agent = SafeOpenai(
             model="gpt-3.5",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_mode=Prompt.RANK_GPT,
             num_few_shot_examples=0,
             keys="OPEN_AI_API_KEY",
         )
@@ -97,7 +97,7 @@ class TestSafeOpenai(unittest.TestCase):
         agent = SafeOpenai(
             model="gpt-3.5",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_mode=Prompt.RANK_GPT,
             num_few_shot_examples=0,
             keys="OPEN_AI_API_KEY",
         )

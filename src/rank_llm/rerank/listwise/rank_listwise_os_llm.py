@@ -12,7 +12,7 @@ from tqdm import tqdm
 from transformers.generation import GenerationConfig
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank import Prompt
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -31,7 +31,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         model: str,
         name: str = "",
         context_size: int = 4096,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_mode: Prompt = Prompt.RANK_GPT,
         num_few_shot_examples: int = 0,
         device: str = "cuda",
         num_gpus: int = 1,
@@ -47,7 +47,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
          - context_size (int, optional): Maximum number of tokens that can be handled in a single prompt. Defaults to 4096.
-        - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
+        - prompt_mode (Prompt, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
          indicating that this class is designed primarily for listwise ranking tasks following the RANK_GPT methodology.
          - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
          the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
@@ -86,9 +86,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         if self._device == "cuda":
             assert torch.cuda.is_available()
 
-        if prompt_mode != PromptMode.RANK_GPT:
+        if prompt_mode != Prompt.RANK_GPT:
             raise ValueError(
-                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
+                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {Prompt.RANK_GPT} prompt."
             )
         if vllm_batched and LLM is None:
             raise ImportError(
@@ -220,13 +220,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 self._output_token_estimate = _output_token_estimate
             return _output_token_estimate
 
-    def _add_prefix_prompt(self, query: str, num: int) -> str:
-        return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
-
-    def _add_post_prompt(self, query: str, num: int) -> str:
-        example_ordering = "[2] > [1]" if self._variable_passages else "[4] > [2]"
-        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Only respond with the ranking results, do not say any word or explain."
-
     def _add_few_shot_examples(self, conv):
         for _ in range(self._num_few_shot_examples):
             ex = random.choice(self._examples)
@@ -249,7 +242,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             if self._system_message:
                 conv.set_system_message(self._system_message)
             conv = self._add_few_shot_examples(conv)
-            prefix = self._add_prefix_prompt(query, num)
+            prefix = self._prompt_mode.prefix(query, num)
             rank = 0
             input_context = f"{prefix}\n"
             for cand in result.candidates[rank_start:rank_end]:
@@ -258,7 +251,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 input_context += f"[{rank}] {self._replace_number(content)}\n"
 
-            input_context += self._add_post_prompt(query, num)
+            input_context += self._prompt_mode.suffix(query, num)
             conv.append_message(conv.roles[0], input_context)
             conv.append_message(conv.roles[1], None)
             prompt = conv.get_prompt()

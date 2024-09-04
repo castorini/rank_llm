@@ -10,7 +10,7 @@ from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import RankingExecInfo, Request, Result
-from rank_llm.rerank import PromptMode, RankLLM
+from rank_llm.rerank import Prompt, RankLLM
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode,
+        prompt_mode: Prompt,
         num_few_shot_examples: int,
         window_size: int,
     ) -> None:
