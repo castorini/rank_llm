@@ -12,6 +12,7 @@ RankLLM Contribution flow
     - Run the following command in the project root to set up pre-commit hooks (all commits through git UI will automatically be formatted): ```pre-commit install```
     - To manually make sure your code is correctly formatted, the following can be run: ```pre-commit run --all-files```
 6. Run from the root directory the unit tests with `python -m unittest discover test`
+7. Update the `pyproject.toml` if applicable
 
 ## Issues
 
