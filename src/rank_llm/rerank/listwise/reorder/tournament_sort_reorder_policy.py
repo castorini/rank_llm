@@ -249,9 +249,10 @@ def multiple_sort(
 
 
 class TournamentSortReorderPolicy(ReorderPolicy):
-    def __init__(self, top_k: int = 10, **kwargs):
+    def __init__(self, top_k: int = 10, r: int = 1, **kwargs):
         super().__init__()
         self._top_k = top_k
+        self._r = r
 
     def reorder(
         self,
@@ -275,7 +276,7 @@ class TournamentSortReorderPolicy(ReorderPolicy):
             runner=runner,
             window_size=window_size,
             top_k=self._top_k,
-            r=1,
+            r=self._r,
         )
 
         results = [
