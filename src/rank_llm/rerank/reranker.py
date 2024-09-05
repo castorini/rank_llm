@@ -246,6 +246,7 @@ class Reranker:
                 else model_path,
                 name=model_path,
                 context_size=context_size,
+                window_size=window_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
                 device=device,
@@ -259,6 +260,7 @@ class Reranker:
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
+                ("window_size", 20),
                 ("prompt_mode", PromptMode.LiT5),
                 ("num_few_shot_examples", 0),
                 ("precision", "bfloat16"),
@@ -269,6 +271,7 @@ class Reranker:
 
             (
                 context_size,
+                window_size,
                 prompt_mode,
                 num_few_shot_examples,
                 precision,
@@ -280,6 +283,7 @@ class Reranker:
                 reorder_policy=reorder_policy,
                 model=model_path,
                 context_size=context_size,
+                window_size=window_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
                 precision=precision,
@@ -313,6 +317,7 @@ class Reranker:
                 reorder_policy=reorder_policy,
                 model=model_path,
                 context_size=context_size,
+                window_size=window_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
                 precision=precision,
