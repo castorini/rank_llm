@@ -2,13 +2,9 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
-from rank_llm.rerank import (
-    PromptMode,
-    RankLLM,
-    get_azure_openai_args,
-    get_openai_api_key,
-)
+from rank_llm.rerank import PromptMode, get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
@@ -157,6 +153,7 @@ class Reranker:
     def get_agent(self) -> RankLLM:
         return self._agent
 
+    @staticmethod
     def create_agent(
         model_path: str,
         default_agent: RankLLM,
@@ -174,6 +171,13 @@ class Reranker:
         Return: rerank agent -- Option<RankLLM>
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
+
+        keys_reorder_policy = [("reorder_policy", "sliding_window")]
+        [reorder_policy_name] = extract_kwargs(keys_reorder_policy, **kwargs)
+
+        reorder_policy = ListwiseRankLLM.get_reorder_policy(
+            reorder_policy=reorder_policy_name
+        )
 
         if interactive and default_agent is not None:
             # Default rerank agent
@@ -242,14 +246,18 @@ class Reranker:
                     if model_path in model_full_paths
                     else model_path
                 ),
+                reorder_policy=reorder_policy,
+                model=model_full_paths[model_path]
+                if model_path in model_full_paths
+                else model_path,
                 name=model_path,
                 context_size=context_size,
+                window_size=window_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
                 device=device,
                 num_gpus=num_gpus,
                 variable_passages=variable_passages,
-                window_size=window_size,
                 system_message=system_message,
                 vllm_batched=vllm_batched,
             )
@@ -286,9 +294,9 @@ class Reranker:
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
+                ("window_size", 20),
                 ("prompt_mode", PromptMode.LiT5),
                 ("num_few_shot_examples", 0),
-                ("window_size", 20),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
                 # reuse this parameter, but its not for "vllm", but only for "batched"
@@ -297,20 +305,21 @@ class Reranker:
 
             (
                 context_size,
+                window_size,
                 prompt_mode,
                 num_few_shot_examples,
-                window_size,
                 precision,
                 device,
                 vllm_batched,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankFiDDistill(
+                reorder_policy=reorder_policy,
                 model=model_path,
                 context_size=context_size,
+                window_size=window_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
-                window_size=window_size,
                 precision=precision,
                 device=device,
                 batched=vllm_batched,
@@ -339,11 +348,12 @@ class Reranker:
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankFiDScore(
+                reorder_policy=reorder_policy,
                 model=model_path,
                 context_size=context_size,
+                window_size=window_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
-                window_size=window_size,
                 precision=precision,
                 device=device,
                 batched=vllm_batched,

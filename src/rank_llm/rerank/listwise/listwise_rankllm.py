@@ -1,18 +1,29 @@
 import copy
+import json
 import logging
 import random
 import re
 from abc import ABC
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import RankingExecInfo, Request, Result
 from rank_llm.rerank import PromptMode, RankLLM
+from rank_llm.rerank.listwise.reorder.reorder_policy import (
+    ModelFunction,
+    ReorderPolicy,
+    SlidingWindowReorderPolicy,
+)
+from rank_llm.rerank.listwise.reorder.tournament_sort_reorder_policy import (
+    TournamentSortReorderPolicy,
+)
 
 logger = logging.getLogger(__name__)
+
+SUPPORT_REORDER_POLICIES = [SlidingWindowReorderPolicy, TournamentSortReorderPolicy]
 
 
 class ListwiseRankLLM(RankLLM, ABC):
@@ -30,15 +41,70 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def __init__(
         self,
+        reorder_policy: ReorderPolicy,
         model: str,
         context_size: int,
+        window_size: int,
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
-        window_size: int,
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
+
+        self.reorder_policy = reorder_policy
         self._window_size = window_size
+
+    def rerank_batch(
+        self,
+        requests: List[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        batched: bool = False,
+        **kwargs: Any,
+    ) -> List[Result]:
+        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+
+        batch_size = kwargs.get("batch_size", 1)
+
+        if not batched:
+            batch_size = 1
+
+        reorder_policy = self.reorder_policy
+        model_functions = self._get_model_function(batched)
+
+        # reranking using vllm
+        if len(set([len(req.candidates) for req in requests])) != 1:
+            raise ValueError("Batched requests must have the same number of candidates")
+
+        result: list[Result] = []
+
+        with tqdm(range(0, len(requests))) as bar:
+            for i in range(0, len(requests), batch_size):
+                batch = requests[i : min(i + batch_size, len(requests))]
+                batch_result = reorder_policy.reorder(
+                    requests=[
+                        Result(
+                            query=copy.deepcopy(request.query),
+                            candidates=copy.deepcopy(request.candidates),
+                            ranking_exec_summary=[],
+                        )
+                        for request in batch
+                    ],
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(
+                        rank_end, len(requests[0].candidates)
+                    ),  # TODO: Fails arbitrary hit sizes
+                    model=model_functions,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_exec_summary=populate_exec_summary,
+                )
+                result.extend(batch_result)
+                bar.update(len(batch))
+
+        return result
 
     def get_output_filename(
         self,
@@ -72,6 +138,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         return self._context_size
 
+    # @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def permutation_pipeline_batched(
         self,
         results: List[Result],
@@ -95,7 +162,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompts = []
         logger.info("Loading prompts.")
         prompts = self.create_prompt_batched(
-            results, rank_start, rank_end, batch_size=32
+            results,
+            [list(range(rank_start, rank_end)) for _ in range(len(results))],
+            batch_size=32,
         )
         if logging:
             for prompt in prompts:
@@ -122,6 +191,7 @@ class ListwiseRankLLM(RankLLM, ABC):
 
         return results
 
+    # @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def permutation_pipeline(
         self,
         result: Result,
@@ -142,7 +212,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         Returns:
             Result: The processed result object after applying permutation.
         """
-        prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
+        prompt, in_token_count = self.create_prompt(
+            result, list(range(rank_start, rank_end))
+        )
         if logging:
             logger.info(f"Prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(
@@ -180,6 +252,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 cand["score"] = 1.0 / (i + 1)
                 cand["rank"] = i + 1
 
+    # @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def sliding_windows_batched(
         self,
         requests: List[Request],
@@ -230,6 +303,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             start_pos = start_pos - step
         return rerank_results
 
+    # @deprecated("old sliding window pipeline is deprecated. please use reorder policy")
     def sliding_windows(
         self,
         request: Request,
@@ -338,7 +412,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             start_pos = rank_end - window_size
             while start_pos >= rank_start:
                 start_pos = max(start_pos, rank_start)
-                prompt, _ = self.create_prompt(result, start_pos, end_pos)
+                prompt, _ = self.create_prompt(result, list(range(start_pos, end_pos)))
                 input_token_count += self.get_num_tokens(prompt)
                 end_pos = end_pos - step
                 start_pos = start_pos - step
@@ -353,7 +427,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         new_response = ""
         for c in response:
             if not c.isdigit():
-                new_response += " "
+                if len(new_response) == 0 or new_response[-1] != " ":
+                    new_response += " "
             else:
                 new_response += c
         new_response = new_response.strip()
@@ -439,3 +514,84 @@ class ListwiseRankLLM(RankLLM, ABC):
         # For Japanese should cut by character: content = content[:int(max_length)]
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
+
+    def _permutation_to_rank(self, perm_string: str, selected_indices: List[int]):
+        perm = [
+            int(x) - 1 for x in self._clean_response(perm_string).strip().split(" ")
+        ]
+        perm = [
+            int(x)
+            for x in self._remove_duplicate(perm)
+            if 0 <= int(x) < len(selected_indices)
+        ]
+        perm = perm + [i for i in range(len(selected_indices)) if i not in perm]
+        return perm
+
+    def _get_model_function(self, batched: bool = False, **kwargs) -> ModelFunction:
+        # [(Request, SelectIndex)] -> [Prompt]
+        if batched:
+
+            def create_prompt(batch: List[Tuple[Result, List[int]]]):
+                return [
+                    prompt
+                    for prompt, _ in self.create_prompt_batched(
+                        [result for result, selected_indices in batch],
+                        [selected_indices for result, selected_indices in batch],
+                        32,
+                    )
+                ]
+
+            def execute(
+                batch: List[Union[str, Dict[str, str]]],
+                selected_indices_batch: List[List[int]],
+            ):
+                return [
+                    self._permutation_to_rank(s, selected_indices)
+                    for (s, _), selected_indices in zip(
+                        self.run_llm_batched(batch, **kwargs), selected_indices_batch
+                    )
+                ]
+
+        else:
+
+            def create_prompt(batch: List[Tuple[Result, List[int]]]):
+                return [
+                    self.create_prompt(result, selected_indices)[0]
+                    for result, selected_indices in batch
+                ]
+
+            def execute(
+                batch: List[Union[str, Dict[str, str]]],
+                selected_indices_batch: List[List[int]],
+            ):
+                return [
+                    self._permutation_to_rank(
+                        self.run_llm(x, **kwargs)[0], selected_indices
+                    )
+                    for x, selected_indices in zip(batch, selected_indices_batch)
+                ]
+
+        return ModelFunction(
+            create_prompt=create_prompt, execute=execute, window_size=self._window_size
+        )
+
+    @staticmethod
+    def get_reorder_policy(reorder_policy: str, **kwargs):
+        for policy in SUPPORT_REORDER_POLICIES:
+            if reorder_policy.startswith(policy.name()):
+                reorder_params = reorder_policy[len(policy.name()) :]
+                if len(reorder_params) <= 1:
+                    return policy()
+                else:
+                    assert reorder_params[0] == ":" and reorder_params[1] == "{"
+                    reorder_params = reorder_params[1:]
+                    try:
+                        reorder_param_dict = json.loads(reorder_params)
+                        if not isinstance(reorder_param_dict, dict):
+                            raise Exception()
+                    except Exception as e:
+                        print(e)
+                        raise Exception(f"Cannot load reorder policy {reorder_policy}")
+                    return policy(**reorder_param_dict)
+
+        raise Exception(f"Cannot find reorder policy {reorder_policy}")
