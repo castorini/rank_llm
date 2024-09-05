@@ -31,7 +31,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self,
         reorder_policy: ReorderPolicy,
         model: str,
-        name: str,
+        name: str = "",
         context_size: int = 4096,
         window_size: int = 20,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,

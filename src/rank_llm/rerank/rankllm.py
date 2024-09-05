@@ -13,6 +13,7 @@ class PromptMode(Enum):
     RANK_GPT = "rank_GPT"
     RANK_GPT_APEER = "rank_GPT_APEER"
     LRL = "LRL"
+    MONOT5 = "monot5"
     LiT5 = "LiT5"
 
     def __str__(self):

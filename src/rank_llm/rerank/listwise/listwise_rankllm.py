@@ -501,6 +501,8 @@ class ListwiseRankLLM(RankLLM, ABC):
             content = doc["segment"]
         elif "contents" in doc:
             content = doc["contents"]
+        elif "content" in doc:
+            content = doc["content"]
         elif "body" in doc:
             content = doc["body"]
         else:

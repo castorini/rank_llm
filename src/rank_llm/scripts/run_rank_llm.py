@@ -16,6 +16,8 @@ from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 
 def main(args):
     model_path = args.model_path
+    query = ""
+    batch_size = args.batch_size
     use_azure_openai = args.use_azure_openai
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
@@ -40,6 +42,8 @@ def main(args):
 
     _ = retrieve_and_rerank(
         model_path=model_path,
+        query=query,
+        batch_size=batch_size,
         dataset=dataset,
         retrieval_mode=retrieval_mode,
         retrieval_method=retrieval_method,
@@ -73,6 +77,12 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="Path to the model. If `use_azure_ai`, pass your deployment name.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=32,
+        help="Size of each batch for batched inference.",
     )
     parser.add_argument(
         "--use_azure_openai",
@@ -148,6 +158,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--window_size",
         type=int,
+        help="window size for the sliding window approach",
+    )
+    parser.add_argument(
+        "--step_size",
+        type=int,
+        default=10,
+        help="step size for the sliding window approach",
         default=20,
         help="window size for the LLM",
     )
