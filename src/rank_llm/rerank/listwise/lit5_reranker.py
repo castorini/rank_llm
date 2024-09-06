@@ -1,6 +1,9 @@
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
-from rank_llm.rerank.listwise.reorder.reorder_policy import ReorderPolicy, SlidingWindowReorderPolicy
+from rank_llm.rerank.listwise.reorder.reorder_policy import (
+    ReorderPolicy,
+    SlidingWindowReorderPolicy,
+)
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
 
@@ -12,7 +15,7 @@ class LiT5DistillReranker:
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
         window_size: int = 20,
-        reorder_policy: ReorderPolicy = None
+        reorder_policy: ReorderPolicy = None,
     ) -> None:
         if reorder_policy is None:
             reorder_policy = SlidingWindowReorderPolicy()
@@ -21,7 +24,7 @@ class LiT5DistillReranker:
             context_size=context_size,
             prompt_mode=prompt_mode,
             window_size=window_size,
-            reorder_policy=reorder_policy
+            reorder_policy=reorder_policy,
         )
         self._reranker = Reranker(agent)
 

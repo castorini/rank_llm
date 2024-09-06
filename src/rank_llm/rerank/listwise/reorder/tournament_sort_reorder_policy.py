@@ -17,7 +17,7 @@ class ResortRequest:
 class TournamentSortNode:
     @staticmethod
     def build(
-            inds: List[int], window_size: int, top_k: int
+        inds: List[int], window_size: int, top_k: int
     ) -> Tuple[
         "TournamentSortNode",
         List["TournamentSortNode"],
@@ -36,7 +36,6 @@ class TournamentSortNode:
         dq = deque(all_cs)
 
         while len(dq) > 1:
-
             cnt = 0
             children = []
 
@@ -56,11 +55,11 @@ class TournamentSortNode:
         return dq[0], all_cs, base_nodes
 
     def __init__(
-            self,
-            top_k: int,
-            *,
-            children: Union[List["TournamentSortNode"]] = None,
-            index: int = None,
+        self,
+        top_k: int,
+        *,
+        children: Union[List["TournamentSortNode"]] = None,
+        index: int = None,
     ):
         super().__init__()
 
@@ -133,7 +132,7 @@ class TournamentSortNode:
 
 class TournamentSorter:
     def _get_random_indices(
-            self, expect_size: int, ind_choices: List[int]
+        self, expect_size: int, ind_choices: List[int]
     ) -> List[int]:
         choices = set(ind_choices)
         result = []
@@ -231,12 +230,12 @@ class TournamentSorter:
 
 
 def multiple_sort(
-        requests: List[Result],
-        indices_batch: List[List[int]],
-        runner: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]],
-        window_size: int,
-        r: int,
-        top_k: int,
+    requests: List[Result],
+    indices_batch: List[List[int]],
+    runner: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]],
+    window_size: int,
+    r: int,
+    top_k: int,
 ):
     batch_size = len(requests)
     tournament_sorters: List[TournamentSorter] = [
@@ -277,12 +276,12 @@ class TournamentSortReorderPolicy(ReorderPolicy):
         self._r = r
 
     def reorder(
-            self,
-            requests: List[Result],
-            rank_start: int,
-            rank_end: int,
-            model: ModelFunction,
-            **kwargs,
+        self,
+        requests: List[Result],
+        rank_start: int,
+        rank_end: int,
+        model: ModelFunction,
+        **kwargs,
     ) -> list[Result]:
         window_size = model.window_size
 

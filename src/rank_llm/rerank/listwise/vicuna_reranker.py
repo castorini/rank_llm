@@ -3,7 +3,10 @@ from typing import List
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise import RankListwiseOSLLM
-from rank_llm.rerank.listwise.reorder.reorder_policy import ReorderPolicy, SlidingWindowReorderPolicy
+from rank_llm.rerank.listwise.reorder.reorder_policy import (
+    ReorderPolicy,
+    SlidingWindowReorderPolicy,
+)
 
 
 class VicunaReranker:
@@ -20,7 +23,6 @@ class VicunaReranker:
         reorder_policy: ReorderPolicy = None,
         system_message: str = None,
     ) -> None:
-
         if reorder_policy is None:
             reorder_policy = SlidingWindowReorderPolicy()
 
