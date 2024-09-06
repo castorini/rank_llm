@@ -62,7 +62,6 @@ def main(args):
         window_size=window_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
-        batch_size=batch_size,
         reorder_policy=reorder_policy,
     )
 
@@ -163,8 +162,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--step_size",
         type=int,
-        default=10,
-        help="step size for the sliding window approach",
         default=20,
         help="window size for the LLM",
     )
@@ -178,12 +175,6 @@ if __name__ == "__main__":
         "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
-    )
-    parser.add_argument(
-        "--batch_size",
-        default=-1,
-        help="batch size of the non vllm-determined-batch-size models. -1 means not allowed be in batch",
-        type=int,
     )
     parser.add_argument(
         "--reorder_policy",

@@ -1,4 +1,5 @@
 import copy
+from collections import deque
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Tuple, Union
 
@@ -16,14 +17,13 @@ class ResortRequest:
 class TournamentSortNode:
     @staticmethod
     def build(
-        inds: List[int], window_size: int, top_k: int
+            inds: List[int], window_size: int, top_k: int
     ) -> Tuple[
         "TournamentSortNode",
         List["TournamentSortNode"],
         Dict[int, "TournamentSortNode"],
     ]:
         assert window_size % top_k == 0
-        children_size = window_size // top_k
 
         cs: List["TournamentSortNode"] = [
             TournamentSortNode(top_k=top_k, index=x) for x in inds
@@ -33,26 +33,34 @@ class TournamentSortNode:
         all_cs: List["TournamentSortNode"] = []
         all_cs.extend(cs)
 
-        while len(cs) > 1:
-            nxt = []
-            for c in range(0, len(cs), children_size):
-                children = cs[c : min(len(cs), c + children_size)]
-                if len(children) == 1:
-                    nxt.append(children[0])
-                else:
-                    nxt.append(TournamentSortNode(top_k=top_k, children=children))
-                    all_cs.append(nxt[-1])
+        dq = deque(all_cs)
 
-            cs = nxt
+        while len(dq) > 1:
 
-        return cs[0], all_cs, base_nodes
+            cnt = 0
+            children = []
+
+            while (len(dq) != 0) and (cnt + dq[0].estimate_size() <= window_size):
+                children.append(dq[0])
+                cnt += dq[0].estimate_size()
+                dq.popleft()
+
+            if len(children) == 1:
+                child = children[0]
+                dq.append(child)
+            else:
+                nd = TournamentSortNode(top_k=top_k, children=children)
+                all_cs.append(nd)
+                dq.append(nd)
+
+        return dq[0], all_cs, base_nodes
 
     def __init__(
-        self,
-        top_k: int,
-        *,
-        children: Union[List["TournamentSortNode"]] = None,
-        index: int = None,
+            self,
+            top_k: int,
+            *,
+            children: Union[List["TournamentSortNode"]] = None,
+            index: int = None,
     ):
         super().__init__()
 
@@ -110,6 +118,12 @@ class TournamentSortNode:
         assert self._top is not None
         return self._top[: min(len(self._top), self._top_k)]
 
+    def estimate_size(self) -> int:
+        if self._n == -1:
+            return 1
+        else:
+            return self._top_k
+
     def __str__(self):
         if self._n == -1:
             return f"[{self._index}]"
@@ -119,7 +133,7 @@ class TournamentSortNode:
 
 class TournamentSorter:
     def _get_random_indices(
-        self, expect_size: int, ind_choices: List[int]
+            self, expect_size: int, ind_choices: List[int]
     ) -> List[int]:
         choices = set(ind_choices)
         result = []
@@ -166,6 +180,8 @@ class TournamentSorter:
             indices, window_size=window_size, top_k=r
         )
 
+        self.count_inference = 0
+
     def _pop(self, x: int) -> List[TournamentSortNode]:
         on: TournamentSortNode = self._idx_to_node[x]
         lst = []
@@ -186,6 +202,7 @@ class TournamentSorter:
                 padded = self._pad_size(resort_param)
                 request = ResortRequest(padded, [])
                 yield request
+                self.count_inference += 1
                 cleaned_result = self._unpad_perm(resort_param, padded, request.result)
                 nd.resort(cleaned_result)
 
@@ -193,12 +210,17 @@ class TournamentSorter:
             tpv = self._tr.top()[0]
             result.append(tpv)
             nodes = self._pop(tpv)
+
+            if len(result) >= top_k:
+                break
+
             for node in nodes:
                 resort_param = node.get_resort_param()
                 if resort_param is not None:
                     padded = self._pad_size(resort_param)
                     request = ResortRequest(padded, [])
                     yield request
+                    self.count_inference += 1
                     assert len(request.result) > 0
                     cleaned_result = self._unpad_perm(
                         resort_param, padded, request.result
@@ -209,12 +231,12 @@ class TournamentSorter:
 
 
 def multiple_sort(
-    requests: List[Result],
-    indices_batch: List[List[int]],
-    runner: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]],
-    window_size: int,
-    r: int,
-    top_k: int,
+        requests: List[Result],
+        indices_batch: List[List[int]],
+        runner: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]],
+        window_size: int,
+        r: int,
+        top_k: int,
 ):
     batch_size = len(requests)
     tournament_sorters: List[TournamentSorter] = [
@@ -255,12 +277,12 @@ class TournamentSortReorderPolicy(ReorderPolicy):
         self._r = r
 
     def reorder(
-        self,
-        requests: List[Result],
-        rank_start: int,
-        rank_end: int,
-        model: ModelFunction,
-        **kwargs,
+            self,
+            requests: List[Result],
+            rank_start: int,
+            rank_end: int,
+            model: ModelFunction,
+            **kwargs,
     ) -> list[Result]:
         window_size = model.window_size
 

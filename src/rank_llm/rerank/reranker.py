@@ -247,9 +247,6 @@ class Reranker:
                     else model_path
                 ),
                 reorder_policy=reorder_policy,
-                model=model_full_paths[model_path]
-                if model_path in model_full_paths
-                else model_path,
                 name=model_path,
                 context_size=context_size,
                 window_size=window_size,
