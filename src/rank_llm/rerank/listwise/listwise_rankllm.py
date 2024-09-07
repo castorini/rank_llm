@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
+    Abstract base class that all listwise rerankers inherit.
+
     All children of ListwiseRankLLM must implement these functions:
         - rerank_batched
         - run_llm_batched
