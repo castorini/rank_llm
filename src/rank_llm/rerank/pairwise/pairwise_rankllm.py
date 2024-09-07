@@ -55,9 +55,6 @@ class PairwiseRankLLM(RankLLM, ABC):
     ) -> List[Result]:
         self._enumerated_indices = []
 
-        for index in range(len(requests) * len(requests[0].candidates) * len(requests[0].candidates)):
-            self._enumerated_indices.append(index)    
-
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -70,6 +67,14 @@ class PairwiseRankLLM(RankLLM, ABC):
         for result in rerank_results:
             for i in result.candidates:
                 i.score = 0
+
+        for index in range(len(requests) * len(requests[0].candidates) * len(requests[0].candidates)):
+            candidate_1 = math.floor(
+                (index % (len(rerank_results[0].candidates) ** 2)) / len(rerank_results[0].candidates)
+            )
+            candidate_2 = index % len(rerank_results[0].candidates)
+            if candidate_1 != candidate_2:
+                self._enumerated_indices.append(index)    
 
         end = (len(rerank_results[0].candidates) - 1) * len(rerank_results[0].candidates) * len(requests)
         with tqdm(total=end, desc="Progress through (q, d) pairs") as progress_bar:
@@ -95,10 +100,10 @@ class PairwiseRankLLM(RankLLM, ABC):
                         (update_index_copy % (len(rerank_results[0].candidates) ** 2)) / len(rerank_results[0].candidates)
                     )
                     candidate_2 = update_index_copy % len(rerank_results[0].candidates)
-
+                
                     rerank_results[query_number].candidates[candidate_1].score += scores[update_index - index]
                     rerank_results[query_number].candidates[candidate_2].score += 1 - scores[update_index - index]
-
+                
                 if index + self._batch_size > end:
                     progress_bar.update(end - index)
                 else:
