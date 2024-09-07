@@ -3,10 +3,10 @@ import argparse
 import torch
 from flask import Flask, jsonify, request
 
-from rank_llm import retrieve_and_rerank
 from rank_llm.rerank import PromptMode, get_azure_openai_args, get_openai_api_key
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode
+from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 """ API URL FORMAT
 

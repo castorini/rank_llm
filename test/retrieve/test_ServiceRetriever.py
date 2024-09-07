@@ -1,8 +1,8 @@
 import unittest
 
-from rank_llm import retrieve_and_rerank
 from rank_llm.data import Candidate, Query, Request
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode, ServiceRetriever
+from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 
 class TestServiceRetriever(unittest.TestCase):
