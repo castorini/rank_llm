@@ -9,9 +9,9 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm import retrieve_and_rerank
 from rank_llm.rerank import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
+from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 
 def main(args):

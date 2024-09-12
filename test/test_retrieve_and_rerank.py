@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from rank_llm import retrieve_and_rerank
+from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 
 # Anserini API must be hosted at 8081
