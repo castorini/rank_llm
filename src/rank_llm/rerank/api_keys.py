@@ -3,10 +3,20 @@ from typing import Dict
 
 from dotenv import load_dotenv
 
+# Common OpenAI API key paths
+paths = [
+    "OPENAI_API_KEY",
+    "OPEN_AI_API_KEY",
+]
+
 
 def get_openai_api_key() -> str:
     load_dotenv(dotenv_path=f".env.local")
-    return os.getenv("OPEN_AI_API_KEY")
+
+    for path in paths:
+        if os.getenv(path) is not None:
+            return os.getenv(path)
+    return None
 
 
 def get_azure_openai_args() -> Dict[str, str]:

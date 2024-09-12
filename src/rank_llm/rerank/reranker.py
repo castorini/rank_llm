@@ -383,7 +383,9 @@ def extract_kwargs(
     """
     extracted_kwargs = []
     for key, default in keys_and_defaults:
-        value = kwargs.get(key, default)
+        value = kwargs.get(key, None)
+        if value is None:
+            value = default
         if (
             value is not None
             and default is not None

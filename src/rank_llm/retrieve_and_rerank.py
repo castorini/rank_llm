@@ -2,7 +2,6 @@ import copy
 from typing import Any, Dict, List, Union
 
 from rank_llm.data import Query, Request
-from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
@@ -104,6 +103,8 @@ def retrieve_and_rerank(
             and dataset not in ["dl22", "dl22-passage", "news"]
             and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
         ):
+            from rank_llm.evaluation.trec_eval import EvalFunction
+
             print("Evaluating:")
             EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
             EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
