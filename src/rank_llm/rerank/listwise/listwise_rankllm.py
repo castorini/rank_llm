@@ -4,6 +4,7 @@ import logging
 import random
 import re
 from abc import ABC
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
 
@@ -17,13 +18,26 @@ from rank_llm.rerank.listwise.reorder.reorder_policy import (
     ReorderPolicy,
     SlidingWindowReorderPolicy,
 )
+from rank_llm.rerank.listwise.reorder.top_down_reorder_policy import (
+    TopDownReorderPolicy,
+)
 from rank_llm.rerank.listwise.reorder.tournament_sort_reorder_policy import (
     TournamentSortReorderPolicy,
 )
 
 logger = logging.getLogger(__name__)
 
-SUPPORT_REORDER_POLICIES = [SlidingWindowReorderPolicy, TournamentSortReorderPolicy]
+SUPPORT_REORDER_POLICIES = [
+    SlidingWindowReorderPolicy,
+    TournamentSortReorderPolicy,
+    TopDownReorderPolicy,
+]
+
+
+@dataclass
+class RerankConsumption:
+    consumption_reference_by_batch: int
+    consumption_reference_by_item: int
 
 
 class ListwiseRankLLM(RankLLM, ABC):
@@ -51,7 +65,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
 
-        self.reorder_policy = reorder_policy
+        self.reorder_policy = (
+            SlidingWindowReorderPolicy() if reorder_policy is None else reorder_policy
+        )
         self._window_size = window_size
 
     def rerank_batch(
@@ -72,7 +88,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             batch_size = 1
 
         reorder_policy = self.reorder_policy
-        model_functions = self._get_model_function(batched)
+        model_functions, consumption = self._get_model_function(batched)
 
         # reranking using vllm
         if len(set([len(req.candidates) for req in requests])) != 1:
@@ -80,7 +96,7 @@ class ListwiseRankLLM(RankLLM, ABC):
 
         result: list[Result] = []
 
-        with tqdm(range(0, len(requests))) as bar:
+        with tqdm(range(0, len(requests)), leave=False) as bar:
             for i in range(0, len(requests), batch_size):
                 batch = requests[i : min(i + batch_size, len(requests))]
                 batch_result = reorder_policy.reorder(
@@ -527,8 +543,13 @@ class ListwiseRankLLM(RankLLM, ABC):
         perm = perm + [i for i in range(len(selected_indices)) if i not in perm]
         return perm
 
-    def _get_model_function(self, batched: bool = False, **kwargs) -> ModelFunction:
+    def _get_model_function(
+        self, batched: bool = False, **kwargs
+    ) -> Tuple[ModelFunction, RerankConsumption]:
         # [(Request, SelectIndex)] -> [Prompt]
+
+        consumption = RerankConsumption(0, 0)
+
         if batched:
 
             def create_prompt(batch: List[Tuple[Result, List[int]]]):
@@ -545,6 +566,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                 batch: List[Union[str, Dict[str, str]]],
                 selected_indices_batch: List[List[int]],
             ):
+                consumption.consumption_reference_by_batch += 1
+                consumption.consumption_reference_by_item += len(batch)
+
                 return [
                     self._permutation_to_rank(s, selected_indices)
                     for (s, _), selected_indices in zip(
@@ -564,6 +588,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                 batch: List[Union[str, Dict[str, str]]],
                 selected_indices_batch: List[List[int]],
             ):
+                consumption.consumption_reference_by_batch += 1
+                consumption.consumption_reference_by_item += len(batch)
+
                 return [
                     self._permutation_to_rank(
                         self.run_llm(x, **kwargs)[0], selected_indices
@@ -571,8 +598,13 @@ class ListwiseRankLLM(RankLLM, ABC):
                     for x, selected_indices in zip(batch, selected_indices_batch)
                 ]
 
-        return ModelFunction(
-            create_prompt=create_prompt, execute=execute, window_size=self._window_size
+        return (
+            ModelFunction(
+                create_prompt=create_prompt,
+                execute=execute,
+                window_size=self._window_size,
+            ),
+            consumption,
         )
 
     @staticmethod
