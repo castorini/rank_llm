@@ -203,6 +203,35 @@ If you use one of the monoT5 models please cite the following relevant paper:
   journal = {arXiv:2101.05667}, 
 }
 ```
+
+If you use `reorder_policy=tournament_sort`, please cite the following paper:
+
+```
+@misc{yoon2024listt5listwisererankingfusionindecoder,
+      title={ListT5: Listwise Reranking with Fusion-in-Decoder Improves Zero-shot Retrieval}, 
+      author={Soyoung Yoon and Eunbi Choi and Jiyeon Kim and Hyeongu Yun and Yireun Kim and Seung-won Hwang},
+      year={2024},
+      eprint={2402.15838},
+      archivePrefix={arXiv},
+      primaryClass={cs.IR},
+      url={https://arxiv.org/abs/2402.15838}, 
+}
+```
+
+If you use `reorder_policy=top_down`, please cite the following paper:
+
+```
+@misc{parry2024topdownpartitioningefficientlistwise,
+      title={Top-Down Partitioning for Efficient List-Wise Ranking}, 
+      author={Andrew Parry and Sean MacAvaney and Debasis Ganguly},
+      year={2024},
+      eprint={2405.14589},
+      archivePrefix={arXiv},
+      primaryClass={cs.IR},
+      url={https://arxiv.org/abs/2405.14589}, 
+}
+```
+
 ## 🙏 Acknowledgments
 
 This research is supported in part by the Natural Sciences and Engineering Research Council (NSERC) of Canada.
