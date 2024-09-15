@@ -179,8 +179,6 @@ class TournamentSorter:
             indices, window_size=window_size, top_k=r
         )
 
-        self.count_inference = 0
-
     def _pop(self, x: int) -> List[TournamentSortNode]:
         on: TournamentSortNode = self._idx_to_node[x]
         lst = []
@@ -201,7 +199,6 @@ class TournamentSorter:
                 padded = self._pad_size(resort_param)
                 request = ResortRequest(padded, [])
                 yield request
-                self.count_inference += 1
                 cleaned_result = self._unpad_perm(resort_param, padded, request.result)
                 nd.resort(cleaned_result)
 
@@ -219,7 +216,6 @@ class TournamentSorter:
                     padded = self._pad_size(resort_param)
                     request = ResortRequest(padded, [])
                     yield request
-                    self.count_inference += 1
                     assert len(request.result) > 0
                     cleaned_result = self._unpad_perm(
                         resort_param, padded, request.result
@@ -281,6 +277,7 @@ class TournamentSortReorderPolicy(ReorderPolicy):
         rank_start: int,
         rank_end: int,
         model: ModelFunction,
+        shuffle_candidates: bool = False,
         **kwargs,
     ) -> list[Result]:
         window_size = model.window_size
@@ -291,9 +288,17 @@ class TournamentSortReorderPolicy(ReorderPolicy):
             model.create_prompt(reqs), [ind for req, ind in reqs]
         )
 
+        if shuffle_candidates:
+            indices = [
+                self._shuffle_indices(list(range(len(request.candidates))))
+                for request in requests
+            ]
+        else:
+            indices = [list(range(rank_start, rank_end)) for _ in range(len(requests))]
+
         request_ranks = multiple_sort(
             requests,
-            [list(range(rank_start, rank_end)) for _ in range(len(requests))],
+            indices,
             runner=runner,
             window_size=window_size,
             top_k=self._top_k,

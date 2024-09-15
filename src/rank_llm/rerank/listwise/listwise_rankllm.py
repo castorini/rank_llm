@@ -120,6 +120,10 @@ class ListwiseRankLLM(RankLLM, ABC):
                 result.extend(batch_result)
                 bar.update(len(batch))
 
+        logger.info(
+            f"Average consumption per request: {consumption.consumption_reference_by_item / len(requests) : .2f}"
+        )
+
         return result
 
     def get_output_filename(

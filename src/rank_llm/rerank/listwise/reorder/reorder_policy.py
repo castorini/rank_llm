@@ -1,7 +1,10 @@
 import copy
+import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Tuple, TypeVar, Union
+
+import numpy as np
 
 from rank_llm.data import Result
 
@@ -42,11 +45,39 @@ class ReorderPolicy(ABC):
         pass
 
     @staticmethod
-    def _shuffle_and_rescore(
-        results: List[Result], select_indexes: List[int]
-    ) -> List[Result]:
-        # TODO: do nothing for now
-        return results
+    def _shuffle_indices(indices: List[int]) -> List[int]:
+        indices = list(indices)
+        random.shuffle(indices)
+        return indices
+
+    @staticmethod
+    def _shuffled(
+        func: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]]
+    ) -> Callable[[List[Tuple[Result, List[int]]]], List[List[int]]]:
+        def fun(batch: List[Tuple[Result, List[int]]]) -> List[List[int]]:
+            perms = []
+            perms_back = []
+            batch_feed = []
+            for res, ind in batch:
+                perm = np.random.permutation(len(ind)).tolist()
+                perm_back = [0 for _ in range(len(perm))]
+                perms.append(perm)
+
+                for i in range(len(perm)):
+                    perm_back[perm[i]] = i
+
+                batch_feed.append((res, [ind[x] for x in perm]))
+                perms_back.append(perm_back)
+
+            result_raw = func(batch)
+
+            results = []
+            for result, perm_back in zip(result_raw, perms_back):
+                results.append([result[perm_back[x]] for x in range(len(result))])
+
+            return results
+
+        return fun
 
     @staticmethod
     def _reorder_by_rank(items: List[T], idxes: List[int], rank: List[int]) -> List[T]:
@@ -69,12 +100,9 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
     def __init__(
         self,
         step: int = 10,
-        shuffle_candidates: bool = False,
         **kwargs,
     ):
         self._step_size = step
-
-        self._shuffle_candidates = bool(shuffle_candidates)
 
     def reorder(
         self,
@@ -89,20 +117,16 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
     ) -> List[Result]:
         window_size = model.window_size
 
-        rerank_results = [
-            Result(
-                query=copy.deepcopy(request.query),
-                candidates=copy.deepcopy(request.candidates),
-                ranking_exec_summary=[],
-            )
-            for request in requests
-        ]
-
-        if self._shuffle_candidates:
-            self._shuffle_and_rescore(rerank_results, [*range(rank_start, rank_end)])
-
         # order of requests
-        request_ranks = [[*range(len(request.candidates))] for request in requests]
+        if shuffle_candidates:
+            request_ranks = [
+                self._shuffle_indices(list(range(len(request.candidates))))
+                for request in requests
+            ]
+        else:
+            request_ranks = [
+                list(range(len(request.candidates))) for request in requests
+            ]
 
         end_pos = rank_end
         start_pos = rank_end - window_size

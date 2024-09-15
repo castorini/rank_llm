@@ -1,6 +1,5 @@
 import copy
 import logging
-import random
 from dataclasses import dataclass
 from typing import Callable, List, Tuple
 
@@ -61,11 +60,6 @@ class TopDownReorderProcess:
     def _remove_from_occ(self, lst: List[int], inds: List[int]):
         st = set(inds)
         return [x for x in lst if x not in st]
-
-    def _shuffle(self, lst: List[int]) -> List[int]:
-        l = [x for x in lst]
-        random.shuffle(l)
-        return l
 
     def perform(self):
         top_k = self._top_k
@@ -186,6 +180,7 @@ class TopDownReorderPolicy(ReorderPolicy):
         rank_start: int,
         rank_end: int,
         model: ModelFunction,
+        shuffle_candidates: bool = False,
         **kwargs,
     ) -> list[Result]:
         window_size = model.window_size
@@ -197,9 +192,17 @@ class TopDownReorderPolicy(ReorderPolicy):
             model.create_prompt(reqs), [ind for req, ind in reqs]
         )
 
+        if shuffle_candidates:
+            indices = [
+                self._shuffle_indices(list(range(len(request.candidates))))
+                for request in requests
+            ]
+        else:
+            indices = [list(range(rank_start, rank_end)) for _ in range(len(requests))]
+
         request_ranks = multiple_sort(
             requests,
-            [list(range(rank_start, rank_end)) for _ in range(len(requests))],
+            indices,
             runner=runner,
             top_k=self._top_k,
             pivot=pivot,

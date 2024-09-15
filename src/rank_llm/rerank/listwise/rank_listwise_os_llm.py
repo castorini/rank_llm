@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
-        reorder_policy: ReorderPolicy,
         model: str,
+        reorder_policy: ReorderPolicy = None,
         name: str = "",
         context_size: int = 4096,
         window_size: int = 20,
@@ -270,7 +270,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         all_completed_prompts = []
 
         with ThreadPoolExecutor() as executor:
-            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
+            for batch in tqdm(
+                chunks(results, batch_size), desc="Processing batches", leave=False
+            ):
                 completed_prompts = list(
                     executor.map(
                         lambda req: self.create_prompt(req[0], req[1]),
