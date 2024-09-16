@@ -103,7 +103,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             )
         elif vllm_batched:
             self._llm = LLM(
-                model, download_dir=os.getenv("HF_HOME"), enforce_eager=False
+                model,
+                download_dir=os.getenv("HF_HOME"),
+                enforce_eager=False,
             )
             self._tokenizer = self._llm.get_tokenizer()
         else:
@@ -133,26 +135,31 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def run_llm_batched(
         self,
         prompts: List[str | List[Dict[str, str]]],
+        silence: bool = False,
         current_window_size: Optional[int] = None,
+        **kwargs,
     ) -> List[Tuple[str, int]]:
         if SamplingParams is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
-        logger.info(f"VLLM Generating!")
         sampling_params = SamplingParams(
             temperature=0.0,
             max_tokens=self.num_output_tokens(current_window_size),
             min_tokens=self.num_output_tokens(current_window_size),
         )
-        outputs = self._llm.generate(prompts, sampling_params)
+        outputs = self._llm.generate(prompts, sampling_params, use_tqdm=not silence)
         return [
             (output.outputs[0].text, len(output.outputs[0].token_ids))
             for output in outputs
         ]
 
     def run_llm(
-        self, prompt: str, current_window_size: Optional[int] = None
+        self,
+        prompt: str,
+        silence: bool = False,
+        current_window_size: Optional[int] = None,
+        **kwargs,
     ) -> Tuple[str, int]:
         if current_window_size is None:
             current_window_size = self._window_size
@@ -163,7 +170,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
         # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
-        output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
+        output_ids = self._llm.generate(
+            **inputs, use_tqdm=not silence, generation_config=gen_cfg
+        )
 
         if self._llm.config.is_encoder_decoder:
             output_ids = output_ids[0]

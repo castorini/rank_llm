@@ -39,6 +39,7 @@ def main(args):
     vllm_batched = args.vllm_batched
     batch_size = args.batch_size
     reorder_policy = args.reorder_policy
+    silence = args.silence
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -63,6 +64,7 @@ def main(args):
         system_message=system_message,
         vllm_batched=vllm_batched,
         reorder_policy=reorder_policy,
+        silence=silence,
     )
 
 
@@ -181,6 +183,12 @@ if __name__ == "__main__":
         default="sliding_window",
         help="policy in reordering. defaultly to be sliding window",
         type=str,
+    )
+    parser.add_argument(
+        "--silence",
+        default=False,
+        action="store_true",
+        help="Whether or not omitting some unbeautiful tqdm bars that is unavoidable (not able to set leave=False)",
     )
     args = parser.parse_args()
     main(args)

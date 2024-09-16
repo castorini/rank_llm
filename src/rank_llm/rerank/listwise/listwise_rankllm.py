@@ -88,7 +88,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             batch_size = 1
 
         reorder_policy = self.reorder_policy
-        model_functions, consumption = self._get_model_function(batched)
+        model_functions, consumption = self._get_model_function(batched, **kwargs)
 
         # reranking using vllm
         if len(set([len(req.candidates) for req in requests])) != 1:
@@ -549,7 +549,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return perm
 
     def _get_model_function(
-        self, batched: bool = False, **kwargs
+        self, batched: bool = False, silence: bool = False, **kwargs
     ) -> Tuple[ModelFunction, RerankConsumption]:
         # [(Request, SelectIndex)] -> [Prompt]
 
@@ -577,7 +577,8 @@ class ListwiseRankLLM(RankLLM, ABC):
                 return [
                     self._permutation_to_rank(s, selected_indices)
                     for (s, _), selected_indices in zip(
-                        self.run_llm_batched(batch, **kwargs), selected_indices_batch
+                        self.run_llm_batched(batch, silence=silence, **kwargs),
+                        selected_indices_batch,
                     )
                 ]
 
@@ -598,7 +599,7 @@ class ListwiseRankLLM(RankLLM, ABC):
 
                 return [
                     self._permutation_to_rank(
-                        self.run_llm(x, **kwargs)[0], selected_indices
+                        self.run_llm(x, silence=silence, **kwargs)[0], selected_indices
                     )
                     for x, selected_indices in zip(batch, selected_indices_batch)
                 ]
