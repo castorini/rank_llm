@@ -39,6 +39,10 @@ class ReorderPolicy(ABC):
     ) -> list[Result]:
         pass
 
+    @abstractmethod
+    def param_name(self):
+        pass
+
     @staticmethod
     @abstractmethod
     def name() -> str:
@@ -171,6 +175,9 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
                 result.candidates[j].score = request.candidates[j].score
 
         return results
+
+    def param_name(self):
+        return f"slidingwindow_stp{self._step_size}"
 
     @staticmethod
     def name() -> str:

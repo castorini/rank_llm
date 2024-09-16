@@ -228,6 +228,9 @@ class TopDownReorderPolicy(ReorderPolicy):
 
         return results
 
+    def param_name(self):
+        return f"topdown_tpk{self._top_k}_pvt{self._pivot}"
+
     @staticmethod
     def name() -> str:
         return "top_down"

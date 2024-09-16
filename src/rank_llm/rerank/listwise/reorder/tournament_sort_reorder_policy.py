@@ -324,6 +324,9 @@ class TournamentSortReorderPolicy(ReorderPolicy):
 
         return results
 
+    def param_name(self):
+        return f"tournamentsort_tpk{self._top_k}_r{self._r}"
+
     @staticmethod
     def name() -> str:
         return "tournament_sort"

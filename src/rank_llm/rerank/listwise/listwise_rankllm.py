@@ -143,6 +143,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             name = f"{name}_{dataset_name}"
         if self._num_few_shot_examples > 0:
             name += f"_{self._num_few_shot_examples}_shot"
+        name += f"_{self.reorder_policy.param_name()}"
         return (
             f"{name}_shuffled_{datetime.isoformat(datetime.now())}"
             if shuffle_candidates
