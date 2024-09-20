@@ -107,6 +107,7 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
         **kwargs,
     ):
         self._step_size = step
+        self.coll = 0
 
     def reorder(
         self,
@@ -142,14 +143,16 @@ class SlidingWindowReorderPolicy(ReorderPolicy):
             #     logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
 
-            indices_working_on = [*range(start_pos, end_pos)]
+            indices_working_on = list(range(start_pos, end_pos))
             prompts = model.create_prompt(
                 [
                     (request, [request_rank[i] for i in indices_working_on])
                     for request, request_rank in zip(requests, request_ranks)
                 ]
             )
-            orders = model.execute(prompts, [indices_working_on] * len(requests))
+            orders = model.execute(
+                prompts, [list(indices_working_on) for _ in requests]
+            )
 
             for request_rank, order in zip(request_ranks, orders):
                 self._reorder_by_rank(request_rank, indices_working_on, order)

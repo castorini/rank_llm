@@ -280,13 +280,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         with ThreadPoolExecutor() as executor:
             for batch in tqdm(
-                chunks(results, batch_size), desc="Processing batches", leave=False
+                chunks(list(zip(results, selected_indices_batch)), batch_size),
+                desc="Processing batches",
+                leave=False,
             ):
                 completed_prompts = list(
-                    executor.map(
-                        lambda req: self.create_prompt(req[0], req[1]),
-                        zip(batch, selected_indices_batch),
-                    )
+                    executor.map(lambda req: self.create_prompt(req[0], req[1]), batch)
                 )
                 all_completed_prompts.extend(completed_prompts)
         return all_completed_prompts
