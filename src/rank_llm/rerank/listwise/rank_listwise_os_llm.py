@@ -171,7 +171,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
         output_ids = self._llm.generate(
-            **inputs, use_tqdm=not silence, generation_config=gen_cfg
+            **inputs, generation_config=gen_cfg
         )
 
         if self._llm.config.is_encoder_decoder:
