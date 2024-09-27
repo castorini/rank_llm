@@ -81,7 +81,7 @@ class TopDownReorderProcess:
                 # base
                 base = indices[: min(window_size, len(indices))]
                 request = ReorderRequest(self._pad(base), None)
-                yield request
+                yield [request]
                 base = [base[i] for i in self._unpad(base, request.result)]
 
                 if len(base) < window_size:
@@ -95,11 +95,20 @@ class TopDownReorderProcess:
                 for i in range(pivot - 1):
                     result.append(base[i])
 
+                requests = []
+                req_inds = []
+
                 # then sort others
                 for i in range(window_size, len(indices), window_size - 1):
                     request_indices = indices[i : i + window_size - 1] + [piv_item]
+                    req_inds.append(request_indices)
                     request = ReorderRequest(self._pad(request_indices), None)
-                    yield request
+                    requests.append(request)
+
+                yield requests
+
+                for request, request_indices, i \
+                        in zip(requests, req_inds, range(window_size, len(indices), window_size - 1)):
                     request_indices = [
                         request_indices[i]
                         for i in self._unpad(request_indices, request.result)
@@ -121,7 +130,7 @@ class TopDownReorderProcess:
         # here len(indices) == top_k
         request_indices = indices
         request = ReorderRequest(self._pad(request_indices), None)
-        yield request
+        yield [request]
         indices = [
             request_indices[i] for i in self._unpad(request_indices, request.result)
         ]
@@ -152,8 +161,8 @@ def multiple_sort(
         finish_requests = []
         for idx in left_not_sorted:
             try:
-                req = next(progress[idx])
-                perm_request.append((idx, req))
+                reqs = next(progress[idx])
+                perm_request.extend([(idx, req) for req in reqs])
             except StopIteration as e:
                 result[idx] = e.value
                 finish_requests.append(idx)
