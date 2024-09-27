@@ -107,8 +107,11 @@ class TopDownReorderProcess:
 
                 yield requests
 
-                for request, request_indices, i \
-                        in zip(requests, req_inds, range(window_size, len(indices), window_size - 1)):
+                for request, request_indices, i in zip(
+                    requests,
+                    req_inds,
+                    range(window_size, len(indices), window_size - 1),
+                ):
                     request_indices = [
                         request_indices[i]
                         for i in self._unpad(request_indices, request.result)
