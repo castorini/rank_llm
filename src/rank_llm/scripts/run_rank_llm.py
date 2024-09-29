@@ -156,6 +156,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--window_size",
         type=int,
+        default=20,
         help="window size for the sliding window approach",
     )
     parser.add_argument(
