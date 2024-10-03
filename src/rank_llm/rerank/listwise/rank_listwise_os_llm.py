@@ -41,6 +41,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         variable_passages: bool = False,
         system_message: str = None,
         vllm_batched: bool = False,
+        vllm_chunked_prefill: bool = False
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -106,6 +107,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 model,
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
+                enable_chunked_prefill=vllm_chunked_prefill,
+                disable_sliding_window=vllm_chunked_prefill
             )
             self._tokenizer = self._llm.get_tokenizer()
         else:
@@ -170,9 +173,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
         # gen_cfg.temperature = 0
         gen_cfg.do_sample = False
-        output_ids = self._llm.generate(
-            **inputs, generation_config=gen_cfg
-        )
+        output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
 
         if self._llm.config.is_encoder_decoder:
             output_ids = output_ids[0]

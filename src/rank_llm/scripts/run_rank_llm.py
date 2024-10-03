@@ -37,6 +37,7 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
+    vllm_chunked_prefill = args.vllm_chunked_prefill
     batch_size = args.batch_size
     reorder_policy = args.reorder_policy
     silence = args.silence
@@ -63,6 +64,7 @@ def main(args):
         window_size=window_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
+        vllm_chunked_prefill=vllm_chunked_prefill,
         reorder_policy=reorder_policy,
         silence=silence,
     )
@@ -177,6 +179,11 @@ if __name__ == "__main__":
         "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
+    )
+    parser.add_argument(
+        "--vllm_chunked_prefill",
+        action="store_true",
+        help="whether to run the model in vllm chunked prefill. no function if vllm_batched is not on",
     )
     parser.add_argument(
         "--reorder_policy",
