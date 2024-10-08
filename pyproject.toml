@@ -30,6 +30,11 @@ dependencies = {file = ["requirements.txt"]}
 vllm = [
     "vllm>=0.4.0"
 ]
+sglang = [
+    "sglang>=0.3.0",
+    "flashinfer>=0.1.0"
+    "python-multipart>=0.0.12"
+]
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"

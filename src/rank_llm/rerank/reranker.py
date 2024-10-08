@@ -42,6 +42,7 @@ class Reranker:
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
+            sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
             populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
 
@@ -223,6 +224,7 @@ class Reranker:
                 ("window_size", 20),
                 ("system_message", None),
                 ("vllm_batched", False),
+                ("sglang_batched", False),
             ]
             [
                 context_size,
@@ -234,6 +236,7 @@ class Reranker:
                 window_size,
                 system_message,
                 vllm_batched,
+                sglang_batched,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
@@ -252,6 +255,7 @@ class Reranker:
                 window_size=window_size,
                 system_message=system_message,
                 vllm_batched=vllm_batched,
+                sglang_batched=sglang_batched,
             )
 
             print(f"Completed loading {model_path}")
@@ -294,7 +298,6 @@ class Reranker:
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
-
             (
                 context_size,
                 prompt_mode,
@@ -327,7 +330,6 @@ class Reranker:
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
-
             (
                 context_size,
                 prompt_mode,
