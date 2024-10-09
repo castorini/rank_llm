@@ -99,6 +99,8 @@ class Reranker:
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
         ranking_execution_summary_dirname: str = "ranking_execution_summary",
+        vllm_batched: bool = False,
+        sglang_batched: bool = False,
         **kwargs,
     ) -> str:
         """
@@ -115,6 +117,8 @@ class Reranker:
             pass_ct (int, optional): Pass count, if applicable. Defaults to None.
             window_size (int, optional): The window size used in reranking. Defaults to None.
             dataset_name (str, optional): The name of the dataset used. Defaults to None.
+            vllm_batched (bool, optional): Indicates if vLLM inference backend used. Defaults to False.
+            sglang_batched (bool, optional): Indicates if SGLang inference backend used. Defaults to False.
 
         Returns:
             str: The file name of the saved reranked results in TREC Eval format.
@@ -134,6 +138,13 @@ class Reranker:
             name += f"_window_{window_size}"
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
+
+        # Add vllm or sglang to rerank result file name if they are used
+        if vllm_batched:
+            name += "_vllm"
+        if sglang_batched:
+            name += "_sglang"
+
         # write rerank results
         writer = DataWriter(results)
         Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
