@@ -103,16 +103,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
         elif vllm_batched:
-            self._llm = LLM(
-                model, download_dir=os.getenv("HF_HOME"), enforce_eager=False, max_model_len=10000, gpu_memory_utilization=0.8
-            )
+            # TODO: find max_model_len given gpu
+            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"), enforce_eager=False)
             self._tokenizer = self._llm.get_tokenizer()
         elif sglang_batched and LLM is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
             )
         elif sglang_batched:
-            self._llm = Engine(model)
+            port = random.randint(30000, 35000)
+            self._llm = Engine(model, port=port)
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -180,7 +180,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
 
-        if isinstance(self._llm, LLM) :
+        if isinstance(self._llm, LLM):
             logger.info(f"VLLM Generating!")
             sampling_params = SamplingParams(
                 temperature=0.0,
@@ -197,8 +197,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             logger.info(f"SGLang Generating!")
             sampling_params = {
                 "temperature": 0.0,
-                # "max_tokens": self.num_output_tokens(current_window_size),
-                # "min_tokens": self.num_output_tokens(current_window_size),
+                "max_new_tokens": self.num_output_tokens(current_window_size),
+                "min_new_tokens": self.num_output_tokens(current_window_size),
             }
             outputs = self._llm.generate(prompts, sampling_params)
             return [
