@@ -173,12 +173,13 @@ if __name__ == "__main__":
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
     )
-    parser.add_argument(
+    infer_backend_group = parser.add_mutually_exclusive_group()
+    infer_backend_group.add_argument(
         "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
     )
-    parser.add_argument(
+    infer_backend_group.add_argument(
         "--sglang_batched",
         action="store_true",
         help="whether to run the model in batches using sglang backend",

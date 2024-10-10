@@ -104,9 +104,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             )
         elif vllm_batched:
             # TODO: find max_model_len given gpu
-            self._llm = LLM(model, download_dir=os.getenv("HF_HOME"), enforce_eager=False)
+            self._llm = LLM(
+                model,
+                download_dir=os.getenv("HF_HOME"),
+                enforce_eager=False,
+            )
             self._tokenizer = self._llm.get_tokenizer()
-        elif sglang_batched and LLM is None:
+        elif sglang_batched and Engine is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
             )
