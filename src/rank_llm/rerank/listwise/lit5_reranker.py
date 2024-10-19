@@ -1,5 +1,9 @@
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
+from rank_llm.rerank.listwise.reorder.reorder_policy import (
+    ReorderPolicy,
+    SlidingWindowReorderPolicy,
+)
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
 
@@ -11,12 +15,16 @@ class LiT5DistillReranker:
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
         window_size: int = 20,
+        reorder_policy: ReorderPolicy = None,
     ) -> None:
+        if reorder_policy is None:
+            reorder_policy = SlidingWindowReorderPolicy()
         agent = RankFiDDistill(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             window_size=window_size,
+            reorder_policy=reorder_policy,
         )
         self._reranker = Reranker(agent)
 
@@ -62,6 +70,7 @@ class LiT5DistillReranker:
 class LiT5ScoreReranker:
     def __init__(
         self,
+        reorder_policy: ReorderPolicy,
         model_path: str = "castorini/LiT5-Score-base",
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
@@ -69,6 +78,7 @@ class LiT5ScoreReranker:
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
     ) -> None:
         agent = RankFiDScore(
+            reorder_policy=reorder_policy,
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
