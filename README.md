@@ -203,8 +203,6 @@ If you use one of the monoT5 models please cite the following relevant paper:
   journal = {arXiv:2101.05667}, 
 }
 ```
-
-
 ## 🙏 Acknowledgments
 
 This research is supported in part by the Natural Sciences and Engineering Research Council (NSERC) of Canada.
