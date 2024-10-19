@@ -35,6 +35,7 @@ def main(args):
     retrieval_mode = RetrievalMode.DATASET
     num_passes = args.num_passes
     window_size = args.window_size
+    step_size = args.step_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
     vllm_chunked_prefill = args.vllm_chunked_prefill
@@ -62,6 +63,7 @@ def main(args):
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
+        step_size=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
         vllm_chunked_prefill=vllm_chunked_prefill,
@@ -166,8 +168,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--step_size",
         type=int,
-        default=20,
-        help="window size for the LLM",
+        default=10,
+        help="step size for the sliding window approach",
     )
     parser.add_argument(
         "--system_message",

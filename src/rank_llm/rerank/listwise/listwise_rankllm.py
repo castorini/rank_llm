@@ -630,6 +630,6 @@ class ListwiseRankLLM(RankLLM, ABC):
                     except Exception as e:
                         print(e)
                         raise Exception(f"Cannot load reorder policy {reorder_policy}")
-                    return policy(**reorder_param_dict)
+                    return policy(**reorder_param_dict, extra_args=dict(**kwargs))
 
         raise Exception(f"Cannot find reorder policy {reorder_policy}")

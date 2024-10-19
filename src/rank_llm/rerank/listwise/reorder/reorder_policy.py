@@ -103,10 +103,17 @@ class ReorderPolicy(ABC):
 class SlidingWindowReorderPolicy(ReorderPolicy):
     def __init__(
         self,
-        step: int = 10,
+        step: int = None,
+        extra_args: dict = None,
         **kwargs,
     ):
-        self._step_size = step
+        self._step_size = (
+            step
+            if step is not None
+            else extra_args.get("step_size", 10)
+            if extra_args is not None
+            else 10
+        )
         self.coll = 0
 
     def reorder(

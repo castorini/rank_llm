@@ -227,7 +227,7 @@ class Reranker:
                 ("window_size", 20),
                 ("system_message", None),
                 ("vllm_batched", False),
-                ("vllm_chunked_prefill", False)
+                ("vllm_chunked_prefill", False),
             ]
             [
                 context_size,
@@ -239,7 +239,7 @@ class Reranker:
                 window_size,
                 system_message,
                 vllm_batched,
-                vllm_chunked_prefill
+                vllm_chunked_prefill,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
@@ -259,7 +259,7 @@ class Reranker:
                 variable_passages=variable_passages,
                 system_message=system_message,
                 vllm_batched=vllm_batched,
-                vllm_chunked_prefill=vllm_chunked_prefill
+                vllm_chunked_prefill=vllm_chunked_prefill,
             )
 
             print(f"Completed loading {model_path}")
