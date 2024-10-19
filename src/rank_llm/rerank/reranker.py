@@ -25,6 +25,8 @@ class Reranker:
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        use_logits: bool = False,
+        use_alpha: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
         """
@@ -49,7 +51,7 @@ class Reranker:
             List[Result]: A list containing the reranked candidates.
         """
         return self._agent.rerank_batch(
-            requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
+            requests, rank_start, rank_end, shuffle_candidates, logging, use_logits, use_alpha, **kwargs
         )
 
     def rerank(
