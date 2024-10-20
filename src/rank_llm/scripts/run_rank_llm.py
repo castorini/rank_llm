@@ -38,6 +38,8 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
+    use_logits = args.use_logits
+    use_alpha = args.use_alpha
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -62,6 +64,8 @@ def main(args):
         step_size=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
+        use_logits=use_logits,
+        use_alpha=use_alpha
     )
 
 
@@ -175,6 +179,16 @@ if __name__ == "__main__":
         "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
+    )
+    parser.add_argument(
+        "--use_logits",
+        action="store_true",
+        help="whether to rerank using the logits of the first identifier only. Only supported if vllm_batched is True",
+    )
+    parser.add_argument(
+        "--use_alpha",
+        action="store_true",
+        help="whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True",
     )
     args = parser.parse_args()
     main(args)

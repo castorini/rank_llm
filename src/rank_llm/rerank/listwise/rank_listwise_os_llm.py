@@ -97,7 +97,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             )
         elif vllm_batched:
             self._llm = LLM(
-                model, download_dir=os.getenv("HF_HOME"), enforce_eager=False
+                model,
+                download_dir=os.getenv("HF_HOME"),
+                enforce_eager=False,
+                max_logprobs=30,
+                tensor_parallel_size=num_gpus
             )
             self._tokenizer = self._llm.get_tokenizer()
         else:
@@ -144,6 +148,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 use_alpha=use_alpha
             )
         else:
+            if use_logits:
+                raise TypeError("Reranking using logits of first identifier is currently only supported when vllm_batch=True")
+
             # Normal operation mode
             results = []
             for request in tqdm(requests):
@@ -277,13 +284,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         return _output_token_estimate
 
-    def _add_prefix_prompt(self, use_alpha, query: str, num: int) -> str:
+    def _add_prefix_prompt(self, query: str, num: int, use_alpha: bool = False) -> str:
         if use_alpha:
             return f"I will provide you with {num} passages, each indicated by a alphabetical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
         else:
             return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
-    def _add_post_prompt(self, use_alpha, query: str, num: int) -> str:
+    def _add_post_prompt(self, query: str, num: int, use_alpha: bool = False) -> str:
         if use_alpha:
             example_ordering = "[B] > [A]" if self._variable_passages else "[D] > [B]"
         else:
@@ -318,41 +325,77 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         while True:
-            conv = get_conversation_template(self._model)
-            if self._system_message:
-                conv.set_system_message(self._system_message)
-            conv = self._add_few_shot_examples(conv)
-            prefix = self._add_prefix_prompt(use_alpha, query, num)
-            rank = 0
-            input_context = f"{prefix}\n"
-            for cand in result.candidates[rank_start:rank_end]:
-                rank += 1
-                # For Japanese should cut by character: content = content[:int(max_length)]
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
+            if self._vllm_batched:
+                messages = list()
+                if self._system_message:
+                    messages.append({"role": "system", "content": self._system_message})
+                messages = self._add_few_shot_examples_messages(messages)
+                prefix = self._add_prefix_prompt(query, num, use_alpha=use_alpha)
+                rank = 0
+                input_context = f"{prefix}\n"
+                for cand in result.candidates[rank_start:rank_end]:
+                    rank += 1
+                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
+                    
+                    identifier = chr(ALPH_START_IDX + rank) if use_alpha else str(rank)
+                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
 
-                identifier = chr(ALPH_START_IDX + rank) if use_alpha else str(rank)
-                input_context += f"[{identifier}] {self._replace_number(content)}\n"
+                input_context += self._add_post_prompt(query, num, use_alpha=use_alpha)
+                messages.append({"role": "user", "content": input_context})
 
-            input_context += self._add_post_prompt(use_alpha, query, num)
-            conv.append_message(conv.roles[0], input_context)
-            conv.append_message(conv.roles[1], None)
-            prompt = conv.get_prompt()
-            prompt = fix_text(prompt)
-            num_tokens = self.get_num_tokens(prompt)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                rank_end - rank_start, use_alpha
-            ):
-                break
-            else:
-                max_length -= max(
-                    1,
-                    (
-                        num_tokens
-                        - self.max_tokens()
-                        + self.num_output_tokens(rank_end - rank_start, use_alpha)
+                prompt = self._tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+                prompt = fix_text(prompt)
+                num_tokens = self.get_num_tokens(prompt)
+                if num_tokens <= self.max_tokens() - self.num_output_tokens(
+                    rank_end - rank_start, use_alpha
+                ):
+                    break
+                else:
+                    max_length -= max(
+                        1,
+                        (
+                            num_tokens
+                            - self.max_tokens()
+                            + self.num_output_tokens(rank_end - rank_start, use_alpha)
+                        )
+                        // ((rank_end - rank_start) * 4),
                     )
-                    // ((rank_end - rank_start) * 4),
-                )
+            else:
+                conv = get_conversation_template(self._model)
+                if self._system_message:
+                    conv.set_system_message(self._system_message)
+                conv = self._add_few_shot_examples(conv)
+                prefix = self._add_prefix_prompt(query, num, use_alpha=use_alpha)
+                rank = 0
+                input_context = f"{prefix}\n"
+                for cand in result.candidates[rank_start:rank_end]:
+                    rank += 1
+                    # For Japanese should cut by character: content = content[:int(max_length)]
+                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
+
+                    identifier = chr(ALPH_START_IDX + rank) if use_alpha else str(rank)
+                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
+
+                input_context += self._add_post_prompt(query, num, use_alpha=use_alpha)
+                conv.append_message(conv.roles[0], input_context)
+                conv.append_message(conv.roles[1], None)
+                prompt = conv.get_prompt()
+                prompt = fix_text(prompt)
+                num_tokens = self.get_num_tokens(prompt)
+                if num_tokens <= self.max_tokens() - self.num_output_tokens(
+                    rank_end - rank_start, use_alpha
+                ):
+                    break
+                else:
+                    max_length -= max(
+                        1,
+                        (
+                            num_tokens
+                            - self.max_tokens()
+                            + self.num_output_tokens(rank_end - rank_start, use_alpha)
+                        )
+                        // ((rank_end - rank_start) * 4),
+                    )
         return prompt, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
@@ -374,7 +417,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
                 completed_prompts = list(
                     executor.map(
-                        lambda result: self.create_prompt(result, use_alpha, rank_start, rank_end),
+                        lambda result: self.create_prompt(result, rank_start, rank_end, use_alpha=use_alpha),
                         batch,
                     )
                 )

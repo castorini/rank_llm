@@ -37,7 +37,7 @@ def retrieve_and_rerank(
 
     # Get reranking agent
     reranker = Reranker(
-        Reranker.create_agent(model_path.lower(), default_agent, interactive, **kwargs)
+        Reranker.create_agent(model_path, default_agent, interactive, **kwargs)
     )
 
     # Retrieve initial candidates

@@ -14,6 +14,7 @@ from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
+ALPH_START_IDX = ord('A') - 1
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
