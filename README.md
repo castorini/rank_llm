@@ -12,6 +12,8 @@ We offer a suite of rerankers - pointwise models like monoT5 and listwise models
 # Releases
 current_version = 0.20.2
 
+**Note for Mac Users:** RankLLM is not compatible with Apple Silicon (M1/M2) chips. However, you can still run it by using the Intel-based version of Anaconda and launching your terminal through Rosetta 2.
+
 ## 📟 Instructions
 
 ### Create Conda Environment
@@ -21,9 +23,14 @@ conda create -n rankllm python=3.10
 conda activate rankllm
 ```
 
-### Install Pytorch with CUDA
+### Install Pytorch with CUDA (Windows/Linux)
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
+### Install Pytorch with MPS (Mac)
+```bash
+pip3 install torch torchvision torchaudio
 ```
 
 ### Install openjdk with maven if you want to use the retriever
