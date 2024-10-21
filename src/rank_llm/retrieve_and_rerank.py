@@ -97,6 +97,8 @@ def retrieve_and_rerank(
             pass_ct=None if num_passes == 1 else pass_ct,
             window_size=kwargs.get("window_size", None),
             dataset_name=dataset,
+            vllm_batched=kwargs.get("vllm_batched", False),
+            sglang_batched=kwargs.get("sglang_batched", False),
         )
         if (
             dataset in TOPICS

@@ -42,6 +42,7 @@ class Reranker:
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
+            sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
             populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
 
@@ -98,6 +99,8 @@ class Reranker:
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
         ranking_execution_summary_dirname: str = "ranking_execution_summary",
+        vllm_batched: bool = False,
+        sglang_batched: bool = False,
         **kwargs,
     ) -> str:
         """
@@ -114,6 +117,8 @@ class Reranker:
             pass_ct (int, optional): Pass count, if applicable. Defaults to None.
             window_size (int, optional): The window size used in reranking. Defaults to None.
             dataset_name (str, optional): The name of the dataset used. Defaults to None.
+            vllm_batched (bool, optional): Indicates if vLLM inference backend used. Defaults to False.
+            sglang_batched (bool, optional): Indicates if SGLang inference backend used. Defaults to False.
 
         Returns:
             str: The file name of the saved reranked results in TREC Eval format.
@@ -133,6 +138,13 @@ class Reranker:
             name += f"_window_{window_size}"
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
+
+        # Add vllm or sglang to rerank result file name if they are used
+        if vllm_batched:
+            name += "_vllm"
+        if sglang_batched:
+            name += "_sglang"
+
         # write rerank results
         writer = DataWriter(results)
         Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
@@ -223,6 +235,7 @@ class Reranker:
                 ("window_size", 20),
                 ("system_message", None),
                 ("vllm_batched", False),
+                ("sglang_batched", False),
             ]
             [
                 context_size,
@@ -234,6 +247,7 @@ class Reranker:
                 window_size,
                 system_message,
                 vllm_batched,
+                sglang_batched,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
@@ -252,6 +266,7 @@ class Reranker:
                 window_size=window_size,
                 system_message=system_message,
                 vllm_batched=vllm_batched,
+                sglang_batched=sglang_batched,
             )
 
             print(f"Completed loading {model_path}")
@@ -294,7 +309,6 @@ class Reranker:
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
-
             (
                 context_size,
                 prompt_mode,
@@ -327,7 +341,6 @@ class Reranker:
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
-
             (
                 context_size,
                 prompt_mode,
