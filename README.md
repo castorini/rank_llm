@@ -52,7 +52,7 @@ pip install rank-llm[sglang]  # pip installation
 pip install -e .[sglang]      # or local installation for development
 ```
 
-you need to install flashinfer separately to use `SGLang` backend.
+Remember to install flashinfer to use `SGLang` backend.
 
 ```bash
 pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
