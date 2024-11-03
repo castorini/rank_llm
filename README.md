@@ -43,6 +43,8 @@ conda install -c conda-forge openjdk=21 maven -y
 pip install -r requirements.txt
 ```
 
+If building `nmslib` failed during installation, try manually installing the library with `conda install -c conda-forge nmslib` and following it up with `pip install -r requirements.txt` again.
+
 ### Install vLLM or SGLang (Optional)
 
 #### vLLM
