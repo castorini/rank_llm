@@ -11,6 +11,7 @@ from rank_llm.rerank import (
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
+from rank_llm.rerank.pointwise.bge_reranker_v2 import BGE_RERANKER_V2
 from rank_llm.rerank.rankllm import RankLLM
 
 
@@ -298,6 +299,32 @@ class Reranker:
                 batch_size=batch_size,
             )
 
+        elif "mt5" in model_path:
+            # using monot5
+            print(f"Loading {model_path} ...")
+
+            model_full_paths = {"mt5": "unicamp-dl/mt5-13b-mmarco-100k"}
+
+            keys_and_defaults = [
+                ("prompt_mode", PromptMode.MONOT5),
+                ("context_size", 512),
+                ("device", "cuda"),
+                ("batch_size", 64),
+            ]
+            [prompt_mode, context_size, device, batch_size] = extract_kwargs(
+                keys_and_defaults, **kwargs
+            )
+
+            agent = MonoT5(
+                model=model_full_paths["mt5"]
+                if model_path in model_full_paths
+                else model_path,
+                prompt_mode=prompt_mode,
+                context_size=context_size,
+                device=device,
+                batch_size=batch_size,
+            )
+
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
@@ -362,6 +389,36 @@ class Reranker:
                 batched=vllm_batched,
             )
             print(f"Completed loading {model_path}")
+        
+        elif "bge-reranker" in model_path.lower():
+            print(f"Loading {model_path} ...")
+
+            keys_and_defaults=[
+                ("device", "cuda"),
+                ("use_fp16", True),
+                ("prompt_mode", PromptMode.BGE_RERANKER_V2),
+                ("context_size", 8192),
+                ("batch_size", 64)
+            ]
+            (
+                device,
+                use_fp16,
+                prompt_mode,
+                context_size,
+                batch_size
+            ) = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = BGE_RERANKER_V2(
+                model=model_path,
+                prompt_mode=prompt_mode,
+                context_size=context_size,
+                use_fp16=use_fp16, 
+                batch_size=batch_size,
+                device=device
+            )
+
+            print(f"Completed loading {model_path}")
+
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None
