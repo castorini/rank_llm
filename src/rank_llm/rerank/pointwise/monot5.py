@@ -1,8 +1,8 @@
 import logging
 import math
 from typing import List, Tuple
-
-from transformers import T5ForConditionalGeneration, MT5ForConditionalGeneration, T5Tokenizer, MT5Tokenizer
+import torch
+from transformers import T5ForConditionalGeneration, MT5ForConditionalGeneration, T5Tokenizer
 from transformers.generation import GenerationConfig
 
 from rank_llm.data import Result
@@ -19,6 +19,7 @@ class MonoT5(PointwiseRankLLM):
         context_size: int = 512,
         device: str = "cuda",
         batch_size: int = 32,
+        dtype: str = "float16"
     ):
         super().__init__(
             model=model,
@@ -29,9 +30,10 @@ class MonoT5(PointwiseRankLLM):
         )
 
         if model.split("/")[1].startswith("mt5"):
-            self._tokenizer = MT5Tokenizer.from_pretrained(model)
-            self._llm = MT5ForConditionalGeneration.from_pretrained(model).to(self._device)
-        elif model.split("/")[1].startswith("monot5"):
+            self._tokenizer = T5Tokenizer.from_pretrained(model)
+            dtype = torch.float16 if dtype == "float16" else torch.float32
+            self._llm = MT5ForConditionalGeneration.from_pretrained(model, torch_dtype=dtype).to(self._device)
+        elif model.split("/")[1].startswith("monot5-3b"):
             self._tokenizer = T5Tokenizer.from_pretrained(model)
             self._llm = T5ForConditionalGeneration.from_pretrained(model).to(self._device)
         self._context_size = context_size
