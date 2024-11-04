@@ -254,7 +254,7 @@ class Reranker:
             )
 
             print(f"Completed loading {model_path}")
-        elif "monot5-3b" in model_path:
+        elif "monot5" in model_path:
             # using monot5
             print(f"Loading {model_path} ...")
 
@@ -280,31 +280,28 @@ class Reranker:
                 batch_size=batch_size,
             )
 
-        elif "mt5-" in model_path:
+        elif "mt5" in model_path:
             # using monot5
             print(f"Loading {model_path} ...")
-
-            model_full_paths = {"monot5": "unicamp-dl/mt5-base-mmarco-v2"}
 
             keys_and_defaults = [
                 ("prompt_mode", PromptMode.MONOT5),
                 ("context_size", 512),
                 ("device", "cuda"),
                 ("batch_size", 64),
+                ("dtype", "float32"),
             ]
-            [prompt_mode, context_size, device, batch_size] = extract_kwargs(
+            [prompt_mode, context_size, device, batch_size, dtype] = extract_kwargs(
                 keys_and_defaults, **kwargs
             )
 
             agent = MonoT5(
-                model=model_full_paths[model_path]
-                if model_path in model_full_paths
-                else model_path,
+                model=model_path,
                 prompt_mode=prompt_mode,
                 context_size=context_size,
                 device=device,
                 batch_size=batch_size,
-                dtype=kwargs.get("dtype", "float16")
+                dtype=dtype
             )
 
         elif "lit5-distill" in model_path.lower():

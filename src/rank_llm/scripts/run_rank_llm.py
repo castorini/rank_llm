@@ -181,7 +181,7 @@ if __name__ == "__main__":
         "--dtype",
         default="float16",
         type=str,
-        help="whether which floating To inference with either float16 or int8",
+        help="determine which dtype to do inference with, either float16 or float32",
     )
     args = parser.parse_args()
     main(args)

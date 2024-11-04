@@ -2,7 +2,7 @@ import logging
 import math
 from typing import List, Tuple
 import torch
-from transformers import T5ForConditionalGeneration, MT5ForConditionalGeneration, T5Tokenizer
+from transformers import T5ForConditionalGeneration, T5Tokenizer, MT5Tokenizer, MT5ForConditionalGeneration
 from transformers.generation import GenerationConfig
 
 from rank_llm.data import Result
@@ -29,11 +29,11 @@ class MonoT5(PointwiseRankLLM):
             batch_size=batch_size,
         )
 
-        if model.split("/")[1].startswith("mt5"):
-            self._tokenizer = T5Tokenizer.from_pretrained(model)
+        if model.find("mt5") != -1:
+            self._tokenizer = MT5Tokenizer.from_pretrained(model)
             dtype = torch.float16 if dtype == "float16" else torch.float32
             self._llm = MT5ForConditionalGeneration.from_pretrained(model, torch_dtype=dtype).to(self._device)
-        elif model.split("/")[1].startswith("monot5-3b"):
+        elif model.find("monot5") != -1:
             self._tokenizer = T5Tokenizer.from_pretrained(model)
             self._llm = T5ForConditionalGeneration.from_pretrained(model).to(self._device)
         self._context_size = context_size
