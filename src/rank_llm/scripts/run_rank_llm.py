@@ -66,7 +66,7 @@ def main(args):
         system_message=system_message,
         vllm_batched=vllm_batched,
         use_logits=use_logits,
-        use_alpha=use_alpha
+        use_alpha=use_alpha,
         sglang_batched=sglang_batched,
     )
 

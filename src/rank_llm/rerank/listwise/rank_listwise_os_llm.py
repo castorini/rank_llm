@@ -221,34 +221,44 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         use_logits: bool = False,
         use_alpha: bool = False,
     ) -> List[Tuple[str, int]]:
-        if SamplingParams is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
-            )
         
-        logger.info(f"VLLM Generating!")
-        if current_window_size is None:
-            current_window_size = self._window_size
+        if isinstance(self._llm, LLM):
+            logger.info(f"VLLM Generating!")
+            if current_window_size is None:
+                current_window_size = self._window_size
 
-        if use_logits:
-            params = SamplingParams(
-                min_tokens=2,
-                max_tokens=2, 
-                temperature=0.0,
-                logprobs=30,
-            )
-            outputs = self._llm.generate(prompts, sampling_params=params)
-            arr = [self._get_logits_single_digit(output, use_alpha=use_alpha) for output in outputs]
-            return [(s, len(s)) for s, __ in arr]
+            if use_logits:
+                params = SamplingParams(
+                    min_tokens=2,
+                    max_tokens=2, 
+                    temperature=0.0,
+                    logprobs=30,
+                )
+                outputs = self._llm.generate(prompts, sampling_params=params)
+                arr = [self._get_logits_single_digit(output, use_alpha=use_alpha) for output in outputs]
+                return [(s, len(s)) for s, __ in arr]
+            else:
+                sampling_params = SamplingParams(
+                    temperature=0.0,
+                    max_tokens=self.num_output_tokens(current_window_size, use_alpha),
+                    min_tokens=self.num_output_tokens(current_window_size, use_alpha),
+                )
+                outputs = self._llm.generate(prompts, sampling_params)
+                return [
+                    (output.outputs[0].text, len(output.outputs[0].token_ids))
+                    for output in outputs
+                ]
         else:
-            sampling_params = SamplingParams(
-                temperature=0.0,
-                max_tokens=self.num_output_tokens(current_window_size, use_alpha),
-                min_tokens=self.num_output_tokens(current_window_size, use_alpha),
-            )
+            logger.info(f"SGLang Generating!")
+            sampling_params = {
+                "temperature": 0.0,
+                "max_new_tokens": self.num_output_tokens(current_window_size, use_alpha),
+                "min_new_tokens": self.num_output_tokens(current_window_size, use_alpha),
+            }
             outputs = self._llm.generate(prompts, sampling_params)
             return [
-                (output.outputs[0].text, len(output.outputs[0].token_ids))
+                # completion_tokens counts stop token
+                (output["text"], output["meta_info"]["completion_tokens"] - 1)
                 for output in outputs
             ]
 
