@@ -252,6 +252,8 @@ If you use one of the monoT5 models please cite the following relevant paper:
 
 If you use the FirstMistral model, please consider citing:
 
+[[2411.05508] An Early FIRST Reproduction and Improvements to Single-Token Decoding for Fast Listwise Reranking](https://arxiv.org/abs/2411.05508)
+
 ```
 @ARTICLE{chen2024firstrepro,
   title   = title={An Early FIRST Reproduction and Improvements to Single-Token Decoding for Fast Listwise Reranking},
@@ -262,6 +264,8 @@ If you use the FirstMistral model, please consider citing:
 ```
 
 If you would like to cite the FIRST methodology, please consider citing:
+
+[[2406.15657] FIRST: Faster Improved Listwise Reranking with Single Token Decoding](https://arxiv.org/abs/2406.15657)
 
 ```
 @ARTICLE{reddy2024first,
