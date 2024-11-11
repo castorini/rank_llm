@@ -100,8 +100,8 @@ def retrieve_and_rerank(
         )
         if (
             dataset in TOPICS
-            and dataset not in ["dl22", "dl22-passage", "news"]
-            and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
+            and dataset not in ["news"]
+            and TOPICS[dataset] not in ["news"]
         ):
             from rank_llm.evaluation.trec_eval import EvalFunction
 
