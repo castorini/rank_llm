@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
@@ -13,7 +14,6 @@ from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
-
 class Reranker:
     def __init__(self, agent: Optional[RankLLM]) -> None:
         self._agent = agent
@@ -25,6 +25,8 @@ class Reranker:
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        use_logits: bool = False,
+        use_alpha: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
         """
@@ -49,8 +51,12 @@ class Reranker:
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
+        if use_logits and not isinstance(self._agent, RankListwiseOSLLM):
+            raise TypeError("Reranking using logits of first identifier is currently only supported by RankListwiseOSLLM.")
+        if use_logits and not use_alpha:
+            warnings.warn("You are reranking with the logits of the first identifier only but using numerical identifiers. It is recommended that you use alphabetical identifiers instead.", UserWarning)
         return self._agent.rerank_batch(
-            requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
+            requests, rank_start, rank_end, shuffle_candidates, logging, use_logits, use_alpha, **kwargs
         )
 
     def rerank(
@@ -186,6 +192,7 @@ class Reranker:
         Return: rerank agent -- Option<RankLLM>
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
+        vllm_batched: bool = kwargs.get("vllm_batched", False)
 
         if interactive and default_agent is not None:
             # Default rerank agent
@@ -216,6 +223,51 @@ class Reranker:
                 keys=openai_keys,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
+        elif vllm_batched:
+            # supports loading models from huggingface
+            print(f"Loading {model_path} ...")
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                ("num_few_shot_examples", 0),
+                ("device", "cuda"),
+                ("num_gpus", 1),
+                ("variable_passages", False),
+                ("window_size", 20),
+                ("system_message", None),
+                ("vllm_batched", True),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                device,
+                num_gpus,
+                variable_passages,
+                window_size,
+                system_message,
+                vllm_batched,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankListwiseOSLLM(
+                model=(
+                    model_path
+                ),
+                name=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                device=device,
+                num_gpus=num_gpus,
+                variable_passages=variable_passages,
+                window_size=window_size,
+                system_message=system_message,
+                vllm_batched=vllm_batched,
+            )
+
+            print(f"Completed loading {model_path}")
+
+
         elif "vicuna" in model_path or "zephyr" in model_path:
             # RankVicuna or RankZephyr model suite
             print(f"Loading {model_path} ...")

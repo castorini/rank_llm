@@ -14,6 +14,7 @@ from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
+ALPH_START_IDX = ord('A') - 1
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
@@ -79,6 +80,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_end: int,
         logging: bool = False,
         populate_exec_summary: bool = False,
+        use_logits: bool = False,
+        use_alpha: bool = False
     ) -> List[Result]:
         """
         Runs the permutation pipeline on a batch of result objects within the passed in rank range.
@@ -95,14 +98,14 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompts = []
         logger.info("Loading prompts.")
         prompts = self.create_prompt_batched(
-            results, rank_start, rank_end, batch_size=32
+            results, rank_start, rank_end, batch_size=32, use_alpha=use_alpha
         )
         if logging:
             for prompt in prompts:
                 logger.debug(f"Prompt: {prompt[0]}\n")
         logger.info("Prompts loaded.")
         batched_results = self.run_llm_batched(
-            [prompt for prompt, _ in prompts], current_window_size=rank_end - rank_start
+            [prompt for prompt, _ in prompts], current_window_size=rank_end - rank_start, use_logits=use_logits, use_alpha=use_alpha
         )
 
         for index, (result, (prompt, in_token_count)) in enumerate(
@@ -118,7 +121,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                     prompt, permutation, in_token_count, out_token_count
                 )
                 result.ranking_exec_summary.append(ranking_exec_info)
-            result = self.receive_permutation(result, permutation, rank_start, rank_end)
+            result = self.receive_permutation(result, permutation, rank_start, rank_end, use_alpha)
 
         return results
 
@@ -129,6 +132,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_end: int,
         logging: bool = False,
         populate_exec_summary: bool = True,
+        use_logits: bool = False,
+        use_alpha: bool = False
     ) -> Result:
         """
         Runs the permutation pipeline on the passed in result set within the passed in rank range.
@@ -142,11 +147,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         Returns:
             Result: The processed result object after applying permutation.
         """
-        prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
+        prompt, in_token_count = self.create_prompt(result, rank_start, rank_end, use_alpha)
         if logging:
             logger.info(f"Prompt: {prompt}\n")
         permutation, out_token_count = self.run_llm(
-            prompt, current_window_size=rank_end - rank_start
+            prompt, current_window_size=rank_end - rank_start, use_logits=use_logits, use_alpha=use_alpha
         )
         if logging:
             print(f"Output: {permutation}")
@@ -155,7 +160,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 prompt, permutation, in_token_count, out_token_count
             )
             result.ranking_exec_summary.append(ranking_exec_info)
-        result = self.receive_permutation(result, permutation, rank_start, rank_end)
+        result = self.receive_permutation(result, permutation, rank_start, rank_end, use_alpha)
         return result
 
     def shuffle_and_rescore(
@@ -190,6 +195,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_exec_summary: bool = False,
+        use_logits: bool = False,
+        use_alpha: bool = False
     ) -> List[Result]:
         """
         Applies the sliding window algorithm to the reranking process for a batch of result objects.
@@ -224,7 +231,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
             rerank_results = self.permutation_pipeline_batched(
-                rerank_results, start_pos, end_pos, logging, populate_exec_summary
+                rerank_results, start_pos, end_pos, logging, populate_exec_summary, use_logits, use_alpha
             )
             end_pos = end_pos - step
             start_pos = start_pos - step
@@ -240,6 +247,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_exec_summary: bool = True,
+        use_logits: bool = False,
+        use_alpha: bool = False
     ) -> Result:
         """
         Applies the sliding window algorithm to the reranking process.
@@ -275,6 +284,8 @@ class ListwiseRankLLM(RankLLM, ABC):
                 end_pos,
                 logging,
                 populate_exec_summary=populate_exec_summary,
+                use_logits=use_logits,
+                use_alpha=use_alpha
             )
             end_pos = end_pos - step
             start_pos = start_pos - step
@@ -349,14 +360,23 @@ class ListwiseRankLLM(RankLLM, ABC):
         ) / 1000.0
         return (cost, input_token_count + output_token_count)
 
-    def _clean_response(self, response: str) -> str:
+    def _clean_response(self, response: str, use_alpha: bool = False) -> str:
         new_response = ""
-        for c in response:
-            if not c.isdigit():
-                new_response += " "
-            else:
-                new_response += c
-        new_response = new_response.strip()
+        if use_alpha:
+            for c in response:
+                if not c.isalpha():
+                    new_response += " "
+                else:
+                    new_response += str(ord(c) - ALPH_START_IDX)
+            new_response = new_response.strip()
+        else:
+            for c in response:
+                if not c.isdigit():
+                    new_response += " "
+                else:
+                    new_response += c
+            new_response = new_response.strip()
+            
         return new_response
 
     def _remove_duplicate(self, response: List[int]) -> List[int]:
@@ -367,7 +387,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return new_response
 
     def receive_permutation(
-        self, result: Result, permutation: str, rank_start: int, rank_end: int
+        self, result: Result, permutation: str, rank_start: int, rank_end: int, use_alpha: bool = False
     ) -> Result:
         """
         Processes and applies a permutation to the ranking results.
@@ -396,7 +416,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
 
         # Parse and normalize the permutation indices
-        response = self._clean_response(permutation)
+        response = self._clean_response(permutation, use_alpha)
         response = [int(x) - 1 for x in response.split()]
         response = self._remove_duplicate(response)
 
