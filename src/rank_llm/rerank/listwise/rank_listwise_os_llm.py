@@ -22,6 +22,11 @@ except:
     LLM = None
     SamplingParams = None
 
+try:
+    from sglang import Engine
+except:
+    Engine = None
+
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord('A') - 1
@@ -40,6 +45,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         window_size: int = 20,
         system_message: str = None,
         vllm_batched: bool = False,
+        sglang_batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -60,6 +66,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
          - vllm_batched (bool, optional): Indicates whether batched inference using VLLM is leveraged. Defaults to False.
+         - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -76,6 +83,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         )
         self._device = device
         self._vllm_batched = vllm_batched
+        self._sglang_batched = sglang_batched
         self._name = name
         self._variable_passages = variable_passages
         self._system_message = system_message
@@ -96,6 +104,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
         elif vllm_batched:
+            # TODO: find max_model_len given gpu
             self._llm = LLM(
                 model,
                 download_dir=os.getenv("HF_HOME"),
@@ -103,6 +112,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 max_logprobs=30,
                 tensor_parallel_size=num_gpus
             )
+            self._tokenizer = self._llm.get_tokenizer()
+        elif sglang_batched and Engine is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
+            )
+        elif sglang_batched:
+            port = random.randint(30000, 35000)
+            self._llm = Engine(model, port=port)
             self._tokenizer = self._llm.get_tokenizer()
         else:
             self._llm, self._tokenizer = load_model(
@@ -126,8 +143,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         step: int = kwargs.get("step", 10)
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
 
-        if self._vllm_batched:
-            # reranking using vllm
+        if self._vllm_batched or self._sglang_batched:
+            # reranking using vllm or sglang
             if len(set([len(req.candidates) for req in requests])) != 1:
                 raise ValueError(
                     "Batched requests must have the same number of candidates"
