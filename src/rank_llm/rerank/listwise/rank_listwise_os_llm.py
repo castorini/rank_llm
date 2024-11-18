@@ -41,7 +41,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         variable_passages: bool = False,
         system_message: str = None,
         vllm_batched: bool = False,
-        vllm_chunked_prefill: bool = False
+        vllm_chunked_prefill: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -108,7 +108,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
                 enable_chunked_prefill=vllm_chunked_prefill,
-                disable_sliding_window=vllm_chunked_prefill
+                disable_sliding_window=vllm_chunked_prefill,
             )
             self._tokenizer = self._llm.get_tokenizer()
         else:
@@ -142,16 +142,20 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         current_window_size: Optional[int] = None,
         **kwargs,
     ) -> List[Tuple[str, int]]:
+        prompts_s = [prompt["prompt"] for prompt in prompts]
+        num_passages = [int(prompt["num_passages"]) for prompt in prompts]
+
         if SamplingParams is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
-        sampling_params = SamplingParams(
+        sampling_params = [
+            SamplingParams(
             temperature=0.0,
-            max_tokens=self.num_output_tokens(current_window_size),
-            min_tokens=self.num_output_tokens(current_window_size),
-        )
-        outputs = self._llm.generate(prompts, sampling_params, use_tqdm=not silence)
+            max_tokens=self.num_output_tokens(x),
+            min_tokens=0,
+        ) for x in num_passages]
+        outputs = self._llm.generate(prompts_s, sampling_params, use_tqdm=not silence)
         return [
             (output.outputs[0].text, len(output.outputs[0].token_ids))
             for output in outputs
@@ -159,14 +163,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def run_llm(
         self,
-        prompt: str,
+        prompt: Dict[str, str],
         silence: bool = False,
         current_window_size: Optional[int] = None,
         **kwargs,
     ) -> Tuple[str, int]:
+        prompt_s, num_passage_s = prompt["prompt"], prompt["num_passages"]
+        num_passage = int(num_passage_s)
         if current_window_size is None:
-            current_window_size = self._window_size
-        inputs = self._tokenizer([prompt])
+            current_window_size = num_passage
+        inputs = self._tokenizer([prompt_s])
         inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size)
@@ -224,7 +230,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def create_prompt(
         self, result: Result, selected_indices: List[int]
-    ) -> Tuple[str, int]:
+    ) -> Tuple[Dict[str, str], int]:
         query = result.query.text
         query = self._replace_number(query)
         num = len(selected_indices)
@@ -264,14 +270,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     )
                     // (len(selected_indices) * 4),
                 )
-        return prompt, self.get_num_tokens(prompt)
+        return {"prompt": prompt, "num_passages": str(len(selected_indices))}, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
         self,
         results: List[Result],
         selected_indices_batch: List[List[int]],
         batch_size: int = 32,
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[Dict[str, str], int]]:
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
