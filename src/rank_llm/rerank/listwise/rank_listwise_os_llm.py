@@ -44,6 +44,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         variable_passages: bool = False,
         window_size: int = 20,
         system_message: str = None,
+        use_logits: bool = False,
+        use_alpha: bool = False,
         vllm_batched: bool = False,
         sglang_batched: bool = False,
     ) -> None:
@@ -79,7 +81,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         TODO: Make repetition_penalty configurable
         """
         super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, window_size
+            model, context_size, prompt_mode, num_few_shot_examples, window_size, use_alpha=use_alpha
         )
         self._device = device
         self._vllm_batched = vllm_batched
@@ -88,6 +90,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._variable_passages = variable_passages
         self._system_message = system_message
         self._output_token_estimate = None
+        self._use_logits = use_logits
 
         if num_few_shot_examples > 0:
             with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
@@ -133,8 +136,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        use_logits: bool = False,
-        use_alpha: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
@@ -160,12 +161,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 step=step,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
-                populate_exec_summary=populate_exec_summary,
-                use_logits=use_logits,
-                use_alpha=use_alpha
+                populate_exec_summary=populate_exec_summary
             )
         else:
-            if use_logits:
+            if self._use_logits:
                 raise TypeError("Reranking using logits of first identifier is currently only supported when vllm_batch=True")
 
             # Normal operation mode
@@ -179,15 +178,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     step=step,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                    use_logits=use_logits,
-                    use_alpha=use_alpha
+                    populate_exec_summary=populate_exec_summary
                 )
                 results.append(result)
             return results
 
-    def _evaluate_logits(self, logits: Dict[str, 'Logit'], use_alpha: bool, total: Tuple[int, int]) -> Tuple[str, Dict[int, float]]:
-        if use_alpha:
+    def _evaluate_logits(self, logits: Dict[str, 'Logit'], total: Tuple[int, int]) -> Tuple[str, Dict[int, float]]:
+        if self._use_alpha:
             evaluations = {
                 ord(logit.decoded_token): logit.logprob
                 for logit in logits.values()
@@ -210,16 +207,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         return result_string, evaluations
 
-    def _get_logits_single_digit(self, output: RequestOutput, use_alpha: bool = False, effective_location: int = 1, total: Tuple[int, int] = (1, 9)):
+    def _get_logits_single_digit(self, output: RequestOutput, effective_location: int = 1, total: Tuple[int, int] = (1, 9)):
         logits = output.outputs[0].logprobs[effective_location]
-        return self._evaluate_logits(logits, use_alpha, total)
+        return self._evaluate_logits(logits, total)
 
     def run_llm_batched(
         self,
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
-        use_logits: bool = False,
-        use_alpha: bool = False,
     ) -> List[Tuple[str, int]]:
         
         if isinstance(self._llm, LLM):
@@ -227,21 +222,21 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             if current_window_size is None:
                 current_window_size = self._window_size
 
-            if use_logits:
+            if self._use_logits:
                 params = SamplingParams(
                     min_tokens=2,
                     max_tokens=2, 
                     temperature=0.0,
-                    logprobs=30,
+                    logprobs=30
                 )
                 outputs = self._llm.generate(prompts, sampling_params=params)
-                arr = [self._get_logits_single_digit(output, use_alpha=use_alpha) for output in outputs]
+                arr = [self._get_logits_single_digit(output) for output in outputs]
                 return [(s, len(s)) for s, __ in arr]
             else:
                 sampling_params = SamplingParams(
                     temperature=0.0,
-                    max_tokens=self.num_output_tokens(current_window_size, use_alpha),
-                    min_tokens=self.num_output_tokens(current_window_size, use_alpha),
+                    max_tokens=self.num_output_tokens(current_window_size),
+                    min_tokens=self.num_output_tokens(current_window_size),
                 )
                 outputs = self._llm.generate(prompts, sampling_params)
                 return [
@@ -252,8 +247,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             logger.info(f"SGLang Generating!")
             sampling_params = {
                 "temperature": 0.0,
-                "max_new_tokens": self.num_output_tokens(current_window_size, use_alpha),
-                "min_new_tokens": self.num_output_tokens(current_window_size, use_alpha),
+                "max_new_tokens": self.num_output_tokens(current_window_size),
+                "min_new_tokens": self.num_output_tokens(current_window_size),
             }
             outputs = self._llm.generate(prompts, sampling_params)
             return [
@@ -263,22 +258,22 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             ]
 
     def run_llm(
-        self, prompt: str, current_window_size: Optional[int] = None, use_logits: bool = False, use_alpha: bool = False
+        self, prompt: str, current_window_size: Optional[int] = None
     ) -> Tuple[str, int]:
         if current_window_size is None:
             current_window_size = self._window_size
 
-        if use_logits:
+        if self._use_logits:
             params = SamplingParams(min_tokens=1, max_tokens=1, temperature=0.0, logprobs=30)
             output = self._llm.generate([prompt+"["], sampling_params=params, use_tqdm=False)[0]
-            s, _ = self._get_logits_single_digit(output, effective_location=0, use_alpha=use_alpha)
+            s, _ = self._get_logits_single_digit(output, effective_location=0)
             return s, len(s)
         else:
             inputs = self._tokenizer([prompt])
             inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
             gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-            gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size, use_alpha)
-            gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size, use_alpha)
+            gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size)
+            gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
             # gen_cfg.temperature = 0
             gen_cfg.do_sample = False
             output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
@@ -292,14 +287,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             )
             return outputs, output_ids.size(0)
 
-    def num_output_tokens(self, current_window_size: Optional[int] = None, use_alpha : bool = False) -> int:
+    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
 
         if self._output_token_estimate and self._window_size == current_window_size:
             return self._output_token_estimate
 
-        if use_alpha:
+        if self._use_alpha:
             token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
         else:
             token_str = " > ".join([f"[{chr(ALPH_START_IDX+i+1)}]" for i in range(current_window_size)])
@@ -311,14 +306,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         return _output_token_estimate
 
-    def _add_prefix_prompt(self, query: str, num: int, use_alpha: bool = False) -> str:
-        if use_alpha:
+    def _add_prefix_prompt(self, query: str, num: int) -> str:
+        if self._use_alpha:
             return f"I will provide you with {num} passages, each indicated by a alphabetical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
         else:
             return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
-    def _add_post_prompt(self, query: str, num: int, use_alpha: bool = False) -> str:
-        if use_alpha:
+    def _add_post_prompt(self, query: str, num: int) -> str:
+        if self._use_alpha:
             example_ordering = "[B] > [A]" if self._variable_passages else "[D] > [B]"
         else:
             example_ordering = "[2] > [1]" if self._variable_passages else "[4] > [2]"
@@ -345,7 +340,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         return messages
 
     def create_prompt(
-        self, result: Result, rank_start: int, rank_end: int, use_alpha: bool = False
+        self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
         query = result.query.text
         query = self._replace_number(query)
@@ -357,24 +352,24 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 if self._system_message:
                     messages.append({"role": "system", "content": self._system_message})
                 messages = self._add_few_shot_examples_messages(messages)
-                prefix = self._add_prefix_prompt(query, num, use_alpha=use_alpha)
+                prefix = self._add_prefix_prompt(query, num)
                 rank = 0
                 input_context = f"{prefix}\n"
                 for cand in result.candidates[rank_start:rank_end]:
                     rank += 1
                     content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                     
-                    identifier = chr(ALPH_START_IDX + rank) if use_alpha else str(rank)
+                    identifier = chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
                     input_context += f"[{identifier}] {self._replace_number(content)}\n"
 
-                input_context += self._add_post_prompt(query, num, use_alpha=use_alpha)
+                input_context += self._add_post_prompt(query, num)
                 messages.append({"role": "user", "content": input_context})
 
                 prompt = self._tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
                 prompt = fix_text(prompt)
                 num_tokens = self.get_num_tokens(prompt)
                 if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    rank_end - rank_start, use_alpha
+                    rank_end - rank_start, self._use_alpha
                 ):
                     break
                 else:
@@ -383,7 +378,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                         (
                             num_tokens
                             - self.max_tokens()
-                            + self.num_output_tokens(rank_end - rank_start, use_alpha)
+                            + self.num_output_tokens(rank_end - rank_start, self._use_alpha)
                         )
                         // ((rank_end - rank_start) * 4),
                     )
@@ -392,7 +387,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 if self._system_message:
                     conv.set_system_message(self._system_message)
                 conv = self._add_few_shot_examples(conv)
-                prefix = self._add_prefix_prompt(query, num, use_alpha=use_alpha)
+                prefix = self._add_prefix_prompt(query, num)
                 rank = 0
                 input_context = f"{prefix}\n"
                 for cand in result.candidates[rank_start:rank_end]:
@@ -400,17 +395,17 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     # For Japanese should cut by character: content = content[:int(max_length)]
                     content = self.convert_doc_to_prompt_content(cand.doc, max_length)
 
-                    identifier = chr(ALPH_START_IDX + rank) if use_alpha else str(rank)
+                    identifier = chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
                     input_context += f"[{identifier}] {self._replace_number(content)}\n"
 
-                input_context += self._add_post_prompt(query, num, use_alpha=use_alpha)
+                input_context += self._add_post_prompt(query, num)
                 conv.append_message(conv.roles[0], input_context)
                 conv.append_message(conv.roles[1], None)
                 prompt = conv.get_prompt()
                 prompt = fix_text(prompt)
                 num_tokens = self.get_num_tokens(prompt)
                 if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    rank_end - rank_start, use_alpha
+                    rank_end - rank_start, self._use_alpha
                 ):
                     break
                 else:
@@ -419,7 +414,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                         (
                             num_tokens
                             - self.max_tokens()
-                            + self.num_output_tokens(rank_end - rank_start, use_alpha)
+                            + self.num_output_tokens(rank_end - rank_start, self._use_alpha)
                         )
                         // ((rank_end - rank_start) * 4),
                     )
@@ -430,8 +425,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         results: List[Result],
         rank_start: int,
         rank_end: int,
-        batch_size: int = 32,
-        use_alpha: bool = False
+        batch_size: int = 32
     ) -> List[Tuple[str, int]]:
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
@@ -444,7 +438,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
                 completed_prompts = list(
                     executor.map(
-                        lambda result: self.create_prompt(result, rank_start, rank_end, use_alpha=use_alpha),
+                        lambda result: self.create_prompt(result, rank_start, rank_end),
                         batch,
                     )
                 )
