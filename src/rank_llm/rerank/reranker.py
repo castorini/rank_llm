@@ -14,6 +14,7 @@ from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
+
 class Reranker:
     def __init__(self, agent: Optional[RankLLM]) -> None:
         self._agent = agent
@@ -238,7 +239,7 @@ class Reranker:
                 ("vllm_batched", False),
                 ("sglang_batched", False),
                 ("use_logits", False),
-                ("use_alpha", False)
+                ("use_alpha", False),
             ]
             [
                 context_size,
@@ -252,7 +253,7 @@ class Reranker:
                 vllm_batched,
                 sglang_batched,
                 use_logits,
-                use_alpha
+                use_alpha,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
@@ -273,7 +274,7 @@ class Reranker:
                 vllm_batched=vllm_batched,
                 sglang_batched=sglang_batched,
                 use_logits=use_logits,
-                use_alpha=use_alpha
+                use_alpha=use_alpha,
             )
 
             print(f"Completed loading {model_path}")
@@ -396,9 +397,7 @@ class Reranker:
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
-                model=(
-                    model_path
-                ),
+                model=(model_path),
                 name=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,

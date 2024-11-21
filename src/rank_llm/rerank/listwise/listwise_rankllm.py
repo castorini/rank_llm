@@ -14,7 +14,8 @@ from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
-ALPH_START_IDX = ord('A') - 1
+ALPH_START_IDX = ord("A") - 1
+
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
@@ -36,7 +37,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
         window_size: int,
-        use_alpha: bool = False
+        use_alpha: bool = False,
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
@@ -81,7 +82,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         logging: bool = False,
-        populate_exec_summary: bool = False
+        populate_exec_summary: bool = False,
     ) -> List[Result]:
         """
         Runs the permutation pipeline on a batch of result objects within the passed in rank range.
@@ -192,7 +193,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        populate_exec_summary: bool = False
+        populate_exec_summary: bool = False,
     ) -> List[Result]:
         """
         Applies the sliding window algorithm to the reranking process for a batch of result objects.
@@ -242,7 +243,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        populate_exec_summary: bool = True
+        populate_exec_summary: bool = True,
     ) -> Result:
         """
         Applies the sliding window algorithm to the reranking process.
@@ -277,7 +278,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 start_pos,
                 end_pos,
                 logging,
-                populate_exec_summary=populate_exec_summary
+                populate_exec_summary=populate_exec_summary,
             )
             end_pos = end_pos - step
             start_pos = start_pos - step
@@ -368,7 +369,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 else:
                     new_response += c
             new_response = new_response.strip()
-            
+
         return new_response
 
     def _remove_duplicate(self, response: List[int]) -> List[int]:

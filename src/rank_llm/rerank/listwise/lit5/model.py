@@ -462,7 +462,7 @@ def cross_attention_forward(
     query_length=None,
     use_cache=False,
     output_attentions=False,
-    cache_position=None
+    cache_position=None,
 ):
     """
     Self-attention (if key_value_states is None) or attention over source sentence (provided by key_value_states).
