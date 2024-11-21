@@ -151,10 +151,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             )
         sampling_params = [
             SamplingParams(
-            temperature=0.0,
-            max_tokens=self.num_output_tokens(x),
-            min_tokens=0,
-        ) for x in num_passages]
+                temperature=0.0,
+                max_tokens=self.num_output_tokens(x),
+                min_tokens=0,
+            )
+            for x in num_passages
+        ]
         outputs = self._llm.generate(prompts_s, sampling_params, use_tqdm=not silence)
         return [
             (output.outputs[0].text, len(output.outputs[0].token_ids))
@@ -270,7 +272,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     )
                     // (len(selected_indices) * 4),
                 )
-        return {"prompt": prompt, "num_passages": str(len(selected_indices))}, self.get_num_tokens(prompt)
+        return {
+            "prompt": prompt,
+            "num_passages": str(len(selected_indices)),
+        }, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
         self,

@@ -16,7 +16,14 @@ class ReorderRequest:
 
 
 class TopDownReorderProcess:
-    def __init__(self, top_k: int, window_size: int, pivot: int, indices: List[int], early_stop: int):
+    def __init__(
+        self,
+        top_k: int,
+        window_size: int,
+        pivot: int,
+        indices: List[int],
+        early_stop: int,
+    ):
         super().__init__()
         self._window_size = window_size
         self._pivot = pivot
@@ -83,7 +90,7 @@ class TopDownReorderProcess:
 
             while len(result) < top_k:
                 # base
-                base = indices[: window_size]
+                base = indices[:window_size]
                 request = ReorderRequest(self._pad(base), None)
                 yield [request]
                 base = [base[i] for i in self._unpad(base, request.result)]
@@ -99,15 +106,17 @@ class TopDownReorderProcess:
                 for i in range(pivot - 1):
                     result.append(base[i])
 
-
                 if self._early_stop != -1:
                     # early stop, then it won't directly feed all elements parallel
 
                     for i in range(window_size, len(indices), window_size - 1):
-                        request_indices = indices[i: i + window_size - 1] + [piv_item]
+                        request_indices = indices[i : i + window_size - 1] + [piv_item]
                         request = ReorderRequest(self._pad(request_indices), None)
                         yield [request]
-                        request = [request_indices[j] for j in self._unpad(request_indices, request.result)]
+                        request = [
+                            request_indices[j]
+                            for j in self._unpad(request_indices, request.result)
+                        ]
                         loc = self._find_pivot(request, piv_item)
                         result.extend(request_indices[:loc])
 
@@ -121,12 +130,12 @@ class TopDownReorderProcess:
 
                     # then sort others
                     for i in range(window_size, len(indices), window_size - 1):
-                        request_indices = indices[i: i + window_size - 1] + [piv_item]
+                        request_indices = indices[i : i + window_size - 1] + [piv_item]
                         req_inds.append(request_indices)
                         request = ReorderRequest(self._pad(request_indices), None)
                         requests.append(request)
                         yield requests
-                    
+
                     for request, request_indices, i in zip(
                         requests,
                         req_inds,
@@ -136,7 +145,7 @@ class TopDownReorderProcess:
                             request_indices[i]
                             for i in self._unpad(request_indices, request.result)
                         ]
-                    
+
                         # reordered
                         loc = self._find_pivot(request_indices, piv_item)
                         result.extend(request_indices[:loc])
@@ -161,13 +170,13 @@ class TopDownReorderProcess:
 
 
 def multiple_sort(
-        requests: List[Result],
-        indices_batch: List[List[int]],
-        runner: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]],
-        window_size: int,
-        pivot: int,
-        top_k: int,
-        early_stop: int
+    requests: List[Result],
+    indices_batch: List[List[int]],
+    runner: Callable[[List[Tuple[Result, List[int]]]], List[List[int]]],
+    window_size: int,
+    pivot: int,
+    top_k: int,
+    early_stop: int,
 ) -> List[List[int]]:
     batch_size = len(requests)
     top_down_sorters = [
@@ -201,20 +210,22 @@ def multiple_sort(
 
 
 class TopDownReorderPolicy(ReorderPolicy):
-    def __init__(self, top_k: int = 10, pivot: int = -1, early_stop: int = -1, **kwargs):
+    def __init__(
+        self, top_k: int = 10, pivot: int = -1, early_stop: int = -1, **kwargs
+    ):
         super().__init__()
         self._top_k = top_k
         self._pivot = pivot
         self._early_stop = early_stop
 
     def reorder(
-            self,
-            requests: List[Result],
-            rank_start: int,
-            rank_end: int,
-            model: ModelFunction,
-            shuffle_candidates: bool = False,
-            **kwargs,
+        self,
+        requests: List[Result],
+        rank_start: int,
+        rank_end: int,
+        model: ModelFunction,
+        shuffle_candidates: bool = False,
+        **kwargs,
     ) -> list[Result]:
         window_size = model.window_size
         pivot = window_size // 2 if self._pivot < 0 else self._pivot
@@ -240,7 +251,7 @@ class TopDownReorderPolicy(ReorderPolicy):
             top_k=self._top_k,
             pivot=pivot,
             window_size=window_size,
-            early_stop=self._early_stop
+            early_stop=self._early_stop,
         )
 
         results = [
