@@ -69,6 +69,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
+         - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
+         - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - vllm_batched (bool, optional): Indicates whether batched inference using VLLM is leveraged. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
 

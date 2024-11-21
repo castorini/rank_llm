@@ -382,6 +382,8 @@ class Reranker:
                 ("window_size", 20),
                 ("system_message", None),
                 ("vllm_batched", True),
+                ("use_logits", False),
+                ("use_alpha", False)
             ]
             [
                 context_size,
@@ -393,6 +395,8 @@ class Reranker:
                 window_size,
                 system_message,
                 vllm_batched,
+                use_logits,
+                use_alpha
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
@@ -406,6 +410,8 @@ class Reranker:
                 variable_passages=variable_passages,
                 window_size=window_size,
                 system_message=system_message,
+                use_logits=use_logits,
+                use_alpha=use_alpha,
                 vllm_batched=vllm_batched,
             )
 
