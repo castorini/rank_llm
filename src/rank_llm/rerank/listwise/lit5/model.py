@@ -14,6 +14,10 @@ from .modeling_t5 import T5Stack as T5StackCrossAttentionScore
 class FiDStack(T5Stack):
     def __init__(self, config, embed_tokens=None):
         super().__init__(config, embed_tokens=embed_tokens)
+        self._n_passages = None
+    
+    def reset_n_passages(self, n_passages: int):
+        self._n_passages = n_passages
 
     def forward(
         self,
@@ -29,12 +33,12 @@ class FiDStack(T5Stack):
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None,
-        n_passages: int = None,
+        cache_position=None
     ):
         if not self.is_decoder:
-            input_ids = input_ids.view(input_ids.size(0) * n_passages, -1)
+            input_ids = input_ids.view(input_ids.size(0) * self._n_passages, -1)
             attention_mask = attention_mask.view(
-                attention_mask.size(0) * n_passages, -1
+                attention_mask.size(0) * self._n_passages, -1
             )
 
         output = super().forward(
@@ -50,71 +54,11 @@ class FiDStack(T5Stack):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            cache_position=cache_position
         )
 
         if not self.is_decoder:
-            bsz = input_ids.size(0) // n_passages
-            if not return_dict:
-                last_hidden_states = output[0]
-                last_hidden_state = last_hidden_states.view(
-                    bsz, -1, last_hidden_states.size(-1)
-                )
-                output = tuple(
-                    last_hidden_state,
-                    *output[1:],
-                )
-            else:
-                last_hidden_state = output.last_hidden_state
-                output.last_hidden_state = last_hidden_state.view(
-                    bsz, -1, last_hidden_state.size(-1)
-                )
-
-        return output
-
-
-class FiDStackCrossAttentionScore(T5StackCrossAttentionScore):
-    def __init__(self, config, embed_tokens=None):
-        super().__init__(config, embed_tokens=embed_tokens)
-
-    def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        inputs_embeds=None,
-        head_mask=None,
-        cross_attn_head_mask=None,
-        past_key_values=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        n_passages: int = None,
-    ):
-        if not self.is_decoder:
-            input_ids = input_ids.view(input_ids.size(0) * n_passages, -1)
-            attention_mask = attention_mask.view(
-                attention_mask.size(0) * n_passages, -1
-            )
-
-        output = super().forward(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            encoder_hidden_states=encoder_hidden_states,
-            encoder_attention_mask=encoder_attention_mask,
-            inputs_embeds=inputs_embeds,
-            head_mask=head_mask,
-            cross_attn_head_mask=cross_attn_head_mask,
-            past_key_values=past_key_values,
-            use_cache=use_cache,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-
-        if not self.is_decoder:
-            bsz = input_ids.size(0) // n_passages
+            bsz = input_ids.size(0) // self._n_passages
             if not return_dict:
                 last_hidden_states = output[0]
                 last_hidden_state = last_hidden_states.view(
@@ -173,6 +117,10 @@ class FiD(T5ForConditionalGeneration):
         # Model parallel
         self.model_parallel = False
         self.device_map = None
+    
+    def reset_n_passages(self, n_passages: int):
+        self.encoder.reset_n_passages(n_passages)
+        self.decoder.reset_n_passages(n_passages)
 
     def set_checkpoint(self, use_checkpoint):
         """
@@ -290,6 +238,67 @@ class FiD(T5ForConditionalGeneration):
         for mod in self.decoder.block:
             xattn = mod.layer[1].EncDecAttention
             xattn.normalized_score_storage = None
+
+
+class FiDStackCrossAttentionScore(T5StackCrossAttentionScore):
+    def __init__(self, config, embed_tokens=None):
+        super().__init__(config, embed_tokens=embed_tokens)
+
+    def forward(
+        self,
+        input_ids=None,
+        attention_mask=None,
+        encoder_hidden_states=None,
+        encoder_attention_mask=None,
+        inputs_embeds=None,
+        head_mask=None,
+        cross_attn_head_mask=None,
+        past_key_values=None,
+        use_cache=None,
+        output_attentions=None,
+        output_hidden_states=None,
+        return_dict=None,
+        n_passages: int = None,
+    ):
+        if not self.is_decoder:
+            input_ids = input_ids.view(input_ids.size(0) * n_passages, -1)
+            attention_mask = attention_mask.view(
+                attention_mask.size(0) * n_passages, -1
+            )
+
+        output = super().forward(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            encoder_hidden_states=encoder_hidden_states,
+            encoder_attention_mask=encoder_attention_mask,
+            inputs_embeds=inputs_embeds,
+            head_mask=head_mask,
+            cross_attn_head_mask=cross_attn_head_mask,
+            past_key_values=past_key_values,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+
+        if not self.is_decoder:
+            bsz = input_ids.size(0) // n_passages
+            if not return_dict:
+                last_hidden_states = output[0]
+                last_hidden_state = last_hidden_states.view(
+                    bsz, -1, last_hidden_states.size(-1)
+                )
+                output = tuple(
+                    last_hidden_state,
+                    *output[1:],
+                )
+            else:
+                last_hidden_state = output.last_hidden_state
+                output.last_hidden_state = last_hidden_state.view(
+                    bsz, -1, last_hidden_state.size(-1)
+                )
+
+        return output
 
 
 class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
