@@ -315,14 +315,14 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
         encoder_config.use_cache = False
         encoder_config.is_encoder_decoder = False
 
-        self.encoder = FiDStack(encoder_config, self.shared)
+        self.encoder = FiDStackCrossAttentionScore(encoder_config, self.shared)
 
         decoder_config = copy.deepcopy(config)
         decoder_config.is_decoder = True
         decoder_config.is_encoder_decoder = False
         decoder_config.use_cache = True
         decoder_config.num_layers = config.num_decoder_layers
-        self.decoder = FiDStack(decoder_config, self.shared)
+        self.decoder = FiDStackCrossAttentionScore(decoder_config, self.shared)
 
         self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
