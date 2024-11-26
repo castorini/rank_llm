@@ -3,7 +3,12 @@ import argparse
 import torch
 from flask import Flask, jsonify, request
 
-from rank_llm.rerank import PromptMode, get_azure_openai_args, get_openai_api_key
+from rank_llm.rerank import (
+    IdentityReranker,
+    PromptMode,
+    get_azure_openai_args,
+    get_openai_api_key,
+)
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
@@ -23,9 +28,26 @@ def create_app(model, port, use_azure_openai=False):
 
     global default_agent
     default_agent = None
-
+    print(model)
     # Load specified model upon server initialization
-    if model == "rank_zephyr":
+    if model == "first_mistral":
+        print(f"Loading {model} model...")
+        default_agent = RankListwiseOSLLM(
+            model=f"castorini/first_mistral",
+            name=model,
+            context_size=8192,
+            prompt_mode=PromptMode.RANK_GPT,
+            num_few_shot_examples=0,
+            device="cuda",
+            num_gpus=1,
+            variable_passages=True,
+            window_size=20,
+            system_message="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
+            use_alpha=True,
+            use_logits=True,
+            vllm_batched=True,
+        )
+    elif model == "rank_zephyr":
         print(f"Loading {model} model...")
         default_agent = RankListwiseOSLLM(
             model=f"castorini/{model}_7b_v1_full",
@@ -37,6 +59,7 @@ def create_app(model, port, use_azure_openai=False):
             num_gpus=1,
             variable_passages=True,
             window_size=20,
+            vllm_batched=True,
             system_message="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         )
     elif model == "rank_vicuna":
@@ -51,6 +74,7 @@ def create_app(model, port, use_azure_openai=False):
             num_gpus=1,
             variable_passages=False,
             window_size=20,
+            vllm_batched=True,
         )
     elif "gpt" in model:
         print(f"Loading {model} model...")
@@ -64,6 +88,9 @@ def create_app(model, port, use_azure_openai=False):
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
         )
+    elif model == "identity_reranker":
+        print(f"Loading {model} model...")
+        default_agent = IdentityReranker()
     else:
         raise ValueError(f"Unsupported model: {model}")
 

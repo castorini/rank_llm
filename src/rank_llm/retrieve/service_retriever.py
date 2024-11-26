@@ -60,8 +60,8 @@ class ServiceRetriever:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
 
-        url = f"{host}/api/collection/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
-
+        url = f"{host}/api/v1.0/indexes/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
+        print(url)
         try:
             response = requests.get(url, timeout=timeout)
             response.raise_for_status()
