@@ -123,7 +123,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 enforce_eager=False,
                 max_logprobs=30,
                 tensor_parallel_size=num_gpus,
-                gpu_memory_utilization=0.93
+                gpu_memory_utilization=0.93,
             )
             self._tokenizer = self._llm.get_tokenizer()
         elif sglang_batched and Engine is None:

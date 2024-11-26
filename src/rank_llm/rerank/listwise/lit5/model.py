@@ -15,7 +15,7 @@ class FiDStack(T5Stack):
     def __init__(self, config, embed_tokens=None):
         super().__init__(config, embed_tokens=embed_tokens)
         self._n_passages = None
-    
+
     def reset_n_passages(self, n_passages: int):
         self._n_passages = n_passages
 
@@ -33,7 +33,7 @@ class FiDStack(T5Stack):
         output_attentions=None,
         output_hidden_states=None,
         return_dict=None,
-        cache_position=None
+        cache_position=None,
     ):
         if not self.is_decoder:
             input_ids = input_ids.view(input_ids.size(0) * self._n_passages, -1)
@@ -54,7 +54,7 @@ class FiDStack(T5Stack):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-            cache_position=cache_position
+            cache_position=cache_position,
         )
 
         if not self.is_decoder:
@@ -117,7 +117,7 @@ class FiD(T5ForConditionalGeneration):
         # Model parallel
         self.model_parallel = False
         self.device_map = None
-    
+
     def reset_n_passages(self, n_passages: int):
         self.encoder.reset_n_passages(n_passages)
         self.decoder.reset_n_passages(n_passages)
