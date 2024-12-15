@@ -121,7 +121,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 bar.update(len(batch))
 
         logger.info(
-            f"Average consumption per request: {consumption.consumption_reference_by_item / len(requests) : .2f}"
+            f"\n\nAverage consumption per request: {consumption.consumption_reference_by_item / len(requests) : .2f}\n\n"
         )
 
         return result

@@ -1,7 +1,8 @@
 import copy
 import logging
 from dataclasses import dataclass
-from typing import Callable, List, Tuple
+from typing import Callable, List, Literal, Tuple
+import uuid
 
 from rank_llm.data import Result
 from rank_llm.rerank.listwise.reorder.reorder_policy import ModelFunction, ReorderPolicy
@@ -23,6 +24,7 @@ class TopDownReorderProcess:
         pivot: int,
         indices: List[int],
         early_stop: int,
+        padding: Literal["pad", "unpad"] = "pad",
     ):
         super().__init__()
         self._window_size = window_size
@@ -31,6 +33,8 @@ class TopDownReorderProcess:
         self._indices = indices
 
         self._early_stop = early_stop
+
+        self._padding = padding
 
     def _find_pivot(self, lst: List[int], piv: int) -> int:
         for i in range(len(lst)):
@@ -48,25 +52,29 @@ class TopDownReorderProcess:
         return lst
 
     def _pad(self, lst: List[int]):
-        return lst
-        st = set(lst)
-        results = [x for x in lst]
-        for i in reversed(self._indices):
-            if len(results) >= self._window_size:
-                break
-            if i not in st:
+        if self._padding == "pad":
+            st = set(lst)
+            results = [x for x in lst]
+            for i in reversed(self._indices):
+                if len(results) >= self._window_size:
+                    break
+                if i not in st:
+                    results.append(i)
+
+            for i in reversed(self._indices):
+                if len(results) >= self._window_size:
+                    break
                 results.append(i)
 
-        for i in reversed(self._indices):
-            if len(results) >= self._window_size:
-                break
-            results.append(i)
-
-        return results
+            return results
+        else:
+            return [x for x in lst]
 
     def _unpad(self, lst: List[int], result_perm: List[int]):
-        return result_perm
-        return [x for x in result_perm if x < len(lst)]
+        if os.environ.get("PADDING", "pad") == "pad":
+            return [x for x in result_perm if x < len(lst)]
+        else:
+            return result_perm
 
     def _remove_from_occ(self, lst: List[int], inds: List[int]):
         st = set(inds)
@@ -89,7 +97,7 @@ class TopDownReorderProcess:
             result = []
 
             while len(result) < top_k:
-                # base
+                # base, find a pivot and do topdown
                 base = indices[:window_size]
                 request = ReorderRequest(self._pad(base), None)
                 yield [request]
@@ -106,21 +114,21 @@ class TopDownReorderProcess:
                 for i in range(pivot - 1):
                     result.append(base[i])
 
-                if self._early_stop != -1:
+                if self._early_stop != -1 and self._early_stop < len(indices):
                     # early stop, then it won't directly feed all elements parallel
 
                     for i in range(window_size, len(indices), window_size - 1):
-                        request_indices = indices[i : i + window_size - 1] + [piv_item]
+                        request_indices = [piv_item] + indices[i : i + window_size - 1]
                         request = ReorderRequest(self._pad(request_indices), None)
                         yield [request]
-                        request = [
+                        request_indices = [
                             request_indices[j]
                             for j in self._unpad(request_indices, request.result)
                         ]
-                        loc = self._find_pivot(request, piv_item)
+                        loc = self._find_pivot(request_indices, piv_item)
                         result.extend(request_indices[:loc])
 
-                        if len(result) > self._early_stop:
+                        if len(result) >= self._early_stop:
                             break
 
                 else:
@@ -130,11 +138,12 @@ class TopDownReorderProcess:
 
                     # then sort others
                     for i in range(window_size, len(indices), window_size - 1):
-                        request_indices = indices[i : i + window_size - 1] + [piv_item]
+                        request_indices = [piv_item] + indices[i : i + window_size - 1]
                         req_inds.append(request_indices)
                         request = ReorderRequest(self._pad(request_indices), None)
                         requests.append(request)
-                        yield requests
+                    
+                    yield requests
 
                     for request, request_indices, i in zip(
                         requests,
@@ -259,7 +268,7 @@ class TopDownReorderPolicy(ReorderPolicy):
                 query=copy.deepcopy(request.query),
                 candidates=self._reorder_by_rank(
                     copy.deepcopy(request.candidates),
-                    [*range(len(request.candidates))],
+                    list(range(len(request.candidates))),
                     rank,
                 ),
                 ranking_exec_summary=[],
