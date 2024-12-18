@@ -37,7 +37,7 @@ def retrieve_and_rerank(
 
     # Get reranking agent
     reranker = Reranker(
-        Reranker.create_agent(model_path.lower(), default_agent, interactive, **kwargs)
+        Reranker.create_agent(model_path, default_agent, interactive, **kwargs)
     )
 
     # Retrieve initial candidates
@@ -102,8 +102,8 @@ def retrieve_and_rerank(
         )
         if (
             dataset in TOPICS
-            and dataset not in ["dl22", "dl22-passage", "news"]
-            and TOPICS[dataset] not in ["dl22", "dl22-passage", "news"]
+            and dataset not in ["news"]
+            and TOPICS[dataset] not in ["news"]
         ):
             from rank_llm.evaluation.trec_eval import EvalFunction
 

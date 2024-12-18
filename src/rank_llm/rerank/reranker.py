@@ -186,6 +186,7 @@ class Reranker:
         Return: rerank agent -- Option<RankLLM>
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
+        vllm_batched: bool = kwargs.get("vllm_batched", False)
 
         if interactive and default_agent is not None:
             # Default rerank agent
@@ -236,6 +237,8 @@ class Reranker:
                 ("system_message", None),
                 ("vllm_batched", False),
                 ("sglang_batched", False),
+                ("use_logits", False),
+                ("use_alpha", False),
             ]
             [
                 context_size,
@@ -248,6 +251,8 @@ class Reranker:
                 system_message,
                 vllm_batched,
                 sglang_batched,
+                use_logits,
+                use_alpha,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             agent = RankListwiseOSLLM(
@@ -267,6 +272,8 @@ class Reranker:
                 system_message=system_message,
                 vllm_batched=vllm_batched,
                 sglang_batched=sglang_batched,
+                use_logits=use_logits,
+                use_alpha=use_alpha,
             )
 
             print(f"Completed loading {model_path}")
@@ -361,6 +368,53 @@ class Reranker:
                 device=device,
                 batched=vllm_batched,
             )
+            print(f"Completed loading {model_path}")
+        elif vllm_batched:
+            # supports loading models from huggingface
+            print(f"Loading {model_path} ...")
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                ("num_few_shot_examples", 0),
+                ("device", "cuda"),
+                ("num_gpus", 1),
+                ("variable_passages", False),
+                ("window_size", 20),
+                ("system_message", None),
+                ("vllm_batched", True),
+                ("use_logits", False),
+                ("use_alpha", False),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                device,
+                num_gpus,
+                variable_passages,
+                window_size,
+                system_message,
+                vllm_batched,
+                use_logits,
+                use_alpha,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankListwiseOSLLM(
+                model=(model_path),
+                name=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                device=device,
+                num_gpus=num_gpus,
+                variable_passages=variable_passages,
+                window_size=window_size,
+                system_message=system_message,
+                use_logits=use_logits,
+                use_alpha=use_alpha,
+                vllm_batched=vllm_batched,
+            )
+
             print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker

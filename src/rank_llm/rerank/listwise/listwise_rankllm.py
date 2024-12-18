@@ -14,6 +14,8 @@ from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
+ALPH_START_IDX = ord("A") - 1
+
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
@@ -35,10 +37,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
         window_size: int,
+        use_alpha: bool = False,
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
         self._window_size = window_size
+        self._use_alpha = use_alpha
 
     def get_output_filename(
         self,
@@ -351,12 +355,21 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def _clean_response(self, response: str) -> str:
         new_response = ""
-        for c in response:
-            if not c.isdigit():
-                new_response += " "
-            else:
-                new_response += c
-        new_response = new_response.strip()
+        if self._use_alpha:
+            for c in response:
+                if not c.isalpha():
+                    new_response += " "
+                else:
+                    new_response += str(ord(c) - ALPH_START_IDX)
+            new_response = new_response.strip()
+        else:
+            for c in response:
+                if not c.isdigit():
+                    new_response += " "
+                else:
+                    new_response += c
+            new_response = new_response.strip()
+
         return new_response
 
     def _remove_duplicate(self, response: List[int]) -> List[int]:
