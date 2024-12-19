@@ -412,9 +412,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                         (
                             num_tokens
                             - self.max_tokens()
-                            + self.num_output_tokens(
-                                rank_end - rank_start, self._use_alpha
-                            )
+                            + self.num_output_tokens(rank_end - rank_start)
                         )
                         // ((rank_end - rank_start) * 4),
                     )
@@ -443,7 +441,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 prompt = fix_text(prompt)
                 num_tokens = self.get_num_tokens(prompt)
                 if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    rank_end - rank_start, self._use_alpha
+                    rank_end - rank_start
                 ):
                     break
                 else:
@@ -452,9 +450,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                         (
                             num_tokens
                             - self.max_tokens()
-                            + self.num_output_tokens(
-                                rank_end - rank_start, self._use_alpha
-                            )
+                            + self.num_output_tokens(rank_end - rank_start)
                         )
                         // ((rank_end - rank_start) * 4),
                     )
