@@ -69,7 +69,7 @@ def main(args):
         use_logits=use_logits,
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
-        tensorrt_batched=tensorrt_batched
+        tensorrt_batched=tensorrt_batched,
     )
 
 

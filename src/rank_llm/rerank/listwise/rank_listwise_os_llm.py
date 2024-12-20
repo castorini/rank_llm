@@ -22,12 +22,12 @@ try:
 except:
     LLM = None
     SamplingParams = None
-    
+
 try:
     from sglang import Engine
 except:
     Engine = None
-    
+
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
@@ -139,12 +139,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._tokenizer = self._llm.get_tokenizer()
         elif tensorrt_batched:
             try:
-                from tensorrt_llm import LLM as TRTLLM, BuildConfig
+                from tensorrt_llm import LLM as TRTLLM
+                from tensorrt_llm import BuildConfig
             except Exception:
                 raise ImportError(
                     "Please install rank-llm with `pip install rank-llm[tensorrt_llm]` to use tensorrt batch inference."
-                )       
-            build_config = BuildConfig(max_seq_len= 4096)
+                )
+            build_config = BuildConfig(max_seq_len=4096)
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
@@ -276,9 +277,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     for output in outputs
                 ]
         elif self._tensorrt_batched:
-            from tensorrt_llm import SamplingParams as TRTSamplingParams
             import tensorrt_llm.hlapi.llm
-            
+            from tensorrt_llm import SamplingParams as TRTSamplingParams
+
             if isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM):
                 logger.info(f"TensorRT LLM Generating!")
                 sampling_params = TRTSamplingParams(
@@ -288,8 +289,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 outputs = self._llm.generate(prompts, sampling_params)
                 return [
-                    (output.outputs[0].text, len(output.outputs[0].token_ids)) 
-                    for output in outputs 
+                    (output.outputs[0].text, len(output.outputs[0].token_ids))
+                    for output in outputs
                 ]
         else:
             logger.info(f"SGLang Generating!")

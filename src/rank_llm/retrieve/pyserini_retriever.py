@@ -206,9 +206,7 @@ class PyseriniRetriever:
             topics_key = TOPICS[dataset]
         self._topics = get_topics(topics_key)
         self._qrels = get_qrels(TOPICS[dataset])
-        self._index_reader = IndexReader.from_prebuilt_index(
-            self._get_index("bm25")
-        )
+        self._index_reader = IndexReader.from_prebuilt_index(self._get_index("bm25"))
 
     def _get_index(self, key: str = None) -> str:
         if not key:
