@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from pyserini.index import LuceneIndexReader
+from pyserini.index.lucene import IndexReader
 from pyserini.prebuilt_index_info import (
     FAISS_INDEX_INFO,
     IMPACT_INDEX_INFO,
@@ -169,12 +169,12 @@ class PyseriniRetriever:
 
     def _init_custom_index_reader(self, index_path: str, topics_path: str):
         if os.path.exists(index_path):
-            self._index_reader = LuceneIndexReader(index_path)
+            self._index_reader = IndexReader(index_path)
         elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
-            self._index_reader = LuceneIndexReader.from_prebuilt_index(index_path)
+            self._index_reader = IndexReader.from_prebuilt_index(index_path)
         elif index_path in FAISS_INDEX_INFO:
             base_index = FAISS_INDEX_INFO[index_path]["texts"]
-            self._index_reader = LuceneIndexReader.from_prebuilt_index(base_index)
+            self._index_reader = IndexReader.from_prebuilt_index(base_index)
         else:
             raise ValueError(
                 f"Could not build LuceneIndexReader from topics: {topics_path}"
@@ -206,7 +206,7 @@ class PyseriniRetriever:
             topics_key = TOPICS[dataset]
         self._topics = get_topics(topics_key)
         self._qrels = get_qrels(TOPICS[dataset])
-        self._index_reader = LuceneIndexReader.from_prebuilt_index(
+        self._index_reader = IndexReader.from_prebuilt_index(
             self._get_index("bm25")
         )
 

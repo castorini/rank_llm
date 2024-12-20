@@ -22,12 +22,12 @@ try:
 except:
     LLM = None
     SamplingParams = None
-
+    
 try:
     from sglang import Engine
 except:
     Engine = None
-
+    
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
@@ -50,6 +50,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         use_alpha: bool = False,
         vllm_batched: bool = False,
         sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -73,6 +74,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - vllm_batched (bool, optional): Indicates whether batched inference using VLLM is leveraged. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
+         - tensorrt_batched (bool, optional): Indicates whether batched inference using TensorRT-LLM is leveraged. Defaults to False.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -95,6 +97,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._device = device
         self._vllm_batched = vllm_batched
         self._sglang_batched = sglang_batched
+        self._tensorrt_batched = tensorrt_batched
         self._name = name
         self._variable_passages = variable_passages
         self._system_message = system_message
@@ -134,6 +137,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             port = random.randint(30000, 35000)
             self._llm = Engine(model, port=port)
             self._tokenizer = self._llm.get_tokenizer()
+        elif tensorrt_batched:
+            try:
+                from tensorrt_llm import LLM as TRTLLM, BuildConfig
+            except Exception:
+                raise ImportError(
+                    "Please install rank-llm with `pip install rank-llm[tensorrt_llm]` to use tensorrt batch inference."
+                )       
+            build_config = BuildConfig(max_seq_len= 4096)
+            self._llm = TRTLLM(model=model, build_config=build_config)
+            self._tokenizer = self._llm.tokenizer
         else:
             self._llm, self._tokenizer = load_model(
                 model, device=device, num_gpus=num_gpus
@@ -154,8 +167,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         step: int = kwargs.get("step", 10)
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
 
-        if self._vllm_batched or self._sglang_batched:
-            # reranking using vllm or sglang
+        if self._vllm_batched or self._sglang_batched or self._tensorrt_batched:
+            # reranking using vllm or sglang or tensorrtllm
             if len(set([len(req.candidates) for req in requests])) != 1:
                 raise ValueError(
                     "Batched requests must have the same number of candidates"
@@ -239,7 +252,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
     ) -> List[Tuple[str, int]]:
-        if isinstance(self._llm, LLM):
+        if isinstance(self._llm, LLM) and self._vllm_batched:
             logger.info(f"VLLM Generating!")
             if current_window_size is None:
                 current_window_size = self._window_size
@@ -261,6 +274,22 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 return [
                     (output.outputs[0].text, len(output.outputs[0].token_ids))
                     for output in outputs
+                ]
+        elif self._tensorrt_batched:
+            from tensorrt_llm import SamplingParams as TRTSamplingParams
+            import tensorrt_llm.hlapi.llm
+            
+            if isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM):
+                logger.info(f"TensorRT LLM Generating!")
+                sampling_params = TRTSamplingParams(
+                    temperature=0.0,
+                    max_tokens=self.num_output_tokens(current_window_size),
+                    min_tokens=self.num_output_tokens(current_window_size),
+                )
+                outputs = self._llm.generate(prompts, sampling_params)
+                return [
+                    (output.outputs[0].text, len(output.outputs[0].token_ids)) 
+                    for output in outputs 
                 ]
         else:
             logger.info(f"SGLang Generating!")

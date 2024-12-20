@@ -33,6 +33,9 @@ vllm = [
 sglang = [
     "sglang[all]>=0.3.4"
 ]
+tensorrt_llm = [
+    "tensorrt_llm[all]>=0.14.0"
+]
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
