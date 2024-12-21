@@ -41,6 +41,7 @@ def main(args):
     use_logits = args.use_logits
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
+    tensorrt_batched = args.tensorrt_batched
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -68,6 +69,7 @@ def main(args):
         use_logits=use_logits,
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
+        tensorrt_batched=tensorrt_batched,
     )
 
 
@@ -197,6 +199,11 @@ if __name__ == "__main__":
         "--sglang_batched",
         action="store_true",
         help="whether to run the model in batches using sglang backend",
+    )
+    infer_backend_group.add_argument(
+        "--tensorrt_batched",
+        action="store_true",
+        help="whether to run the model in batches using tensorrtllm backend",
     )
     args = parser.parse_args()
     main(args)
