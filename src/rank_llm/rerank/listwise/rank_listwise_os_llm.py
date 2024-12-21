@@ -21,6 +21,7 @@ try:
     from vllm import LLM, RequestOutput, SamplingParams
 except:
     LLM = None
+    RequestOutput = None
     SamplingParams = None
 
 try:
