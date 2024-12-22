@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from pyserini.index.lucene import IndexReader
+from pyserini.index.lucene import LuceneIndexReader
 from pyserini.prebuilt_index_info import (
     FAISS_INDEX_INFO,
     IMPACT_INDEX_INFO,
