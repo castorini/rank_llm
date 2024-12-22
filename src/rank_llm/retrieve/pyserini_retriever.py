@@ -171,7 +171,7 @@ class PyseriniRetriever:
         if os.path.exists(index_path):
             self._index_reader = IndexReader(index_path)
         elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
-            self._index_reader = IndexReader.from_prebuilt_index(index_path)
+            self._index_reader = LuceneIndexReader.from_prebuilt_index(index_path)
         elif index_path in FAISS_INDEX_INFO:
             base_index = FAISS_INDEX_INFO[index_path]["texts"]
             self._index_reader = LuceneIndexReader.from_prebuilt_index(base_index)
