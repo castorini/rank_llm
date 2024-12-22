@@ -174,7 +174,7 @@ class PyseriniRetriever:
             self._index_reader = IndexReader.from_prebuilt_index(index_path)
         elif index_path in FAISS_INDEX_INFO:
             base_index = FAISS_INDEX_INFO[index_path]["texts"]
-            self._index_reader = IndexReader.from_prebuilt_index(base_index)
+            self._index_reader = LuceneIndexReader.from_prebuilt_index(base_index)
         else:
             raise ValueError(
                 f"Could not build LuceneIndexReader from topics: {topics_path}"
