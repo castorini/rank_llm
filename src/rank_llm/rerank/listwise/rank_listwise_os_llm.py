@@ -4,7 +4,7 @@ import os
 import random
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, TypeAlias, Union
 
 import numba
 import torch
@@ -34,8 +34,12 @@ logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
 
+# TODO Type alias for inference backend, should be changed into type alias when update to 3.12
+InferenceBackend: TypeAlias = Literal["vllm", "sglang", "transformers"]
+
 
 class RankListwiseOSLLM(ListwiseRankLLM):
+
     def __init__(
         self,
         model: str,
@@ -116,12 +120,18 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
+
+        # case of Any is the transformers load_model
+        self._llm_inference_mode: InferenceBackend = None
+        self._llm: Union[LLM, Engine, Any] = None
+
         if vllm_batched and LLM is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
         elif vllm_batched:
             # TODO: find max_model_len given gpu
+            self._llm_inference_mode = "vllm"
             self._llm = LLM(
                 model,
                 download_dir=os.getenv("HF_HOME"),
@@ -130,7 +140,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 disable_sliding_window=vllm_chunked_prefill,
                 max_logprobs=30,
                 tensor_parallel_size=num_gpus,
-                gpu_memory_utilization=0.93,
+                gpu_memory_utilization=0.93,  # TODO do we need to fix this?
             )
             self._tokenizer = self._llm.get_tokenizer()
         elif sglang_batched and Engine is None:
@@ -138,10 +148,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
             )
         elif sglang_batched:
+            self._llm_inference_mode = "sglang"
             port = random.randint(30000, 35000)
             self._llm = Engine(model, port=port)
             self._tokenizer = self._llm.get_tokenizer()
         else:
+            self._llm_inference_mode = "transformers"
             self._llm, self._tokenizer = load_model(
                 model, device=device, num_gpus=num_gpus
             )
@@ -153,6 +165,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        batched: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
         return super().rerank_batch(
@@ -161,55 +174,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             rank_end=rank_end,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
-            batched=self._vllm_batched,
+            batched=self._vllm_batched or batched,
             **kwargs,
         )
-        # top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
-        # window_size: int = kwargs.get("window_size", 20)
-        # window_size = min(window_size, top_k_retrieve)
-        # step: int = kwargs.get("step", 10)
-        # populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
-        # if self._vllm_batched or self._sglang_batched:
-        #     # reranking using vllm or sglang
-        #     if len(set([len(req.candidates) for req in requests])) != 1:
-        #         raise ValueError(
-        #             "Batched requests must have the same number of candidates"
-        #         )
-
-        #     return self.sliding_windows_batched(
-        #         requests,
-        #         rank_start=max(rank_start, 0),
-        #         rank_end=min(
-        #             rank_end, len(requests[0].candidates)
-        #         ),  # TODO: Fails arbitrary hit sizes
-        #         window_size=window_size,
-        #         step=step,
-        #         shuffle_candidates=shuffle_candidates,
-        #         logging=logging,
-        #         populate_exec_summary=populate_exec_summary,
-        #     )
-        # else:
-        #     if self._use_logits:
-        #         raise TypeError(
-        #             "Reranking using logits of first identifier is currently only supported when vllm_batch=True"
-        #         )
-
-        #     # Normal operation mode
-        #     results = []
-        #     for request in tqdm(requests):
-        #         result = self.sliding_windows(
-        #             request,
-        #             rank_start=max(rank_start, 0),
-        #             rank_end=min(rank_end, len(request.candidates)),
-        #             window_size=window_size,
-        #             step=step,
-        #             shuffle_candidates=shuffle_candidates,
-        #             logging=logging,
-        #             populate_exec_summary=populate_exec_summary,
-        #         )
-        #         results.append(result)
-        #     return results
 
     def _evaluate_logits(
         self, logits: Dict[str, "Logit"], total: Tuple[int, int]
@@ -254,85 +221,76 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self,
         prompts: List[str | List[Dict[str, str]]],
         silence: bool = False,
-        current_window_size: Optional[int] = None,
         **kwargs,
     ) -> List[Tuple[str, int]]:
-        if self._vllm_batched:
-            prompts_s = [prompt["prompt"] for prompt in prompts]
-            num_passages = [int(prompt["num_passages"]) for prompt in prompts]
+        # ensure everyone is a json string
+        for prompt in prompts:
+            assert isinstance(prompt, str)
+        # load the json
+        prompt_datas = [
+            json.loads(prompt) for prompt in prompts if isinstance(prompt, str)
+        ]
+        prompts_s: List[str] = [prompt["prompt"] for prompt in prompt_datas]
+        num_passages: List[int] = [prompt["num_passages"] for prompt in prompt_datas]
+        match self._llm_inference_mode:
+            case "vllm":
+                logger.info("Use VLLM Generating Mode")
 
-            if SamplingParams is None:
-                raise ImportError(
-                    "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+                if SamplingParams is None:
+                    raise ImportError(
+                        "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+                    )
+                sampling_params = [
+                    SamplingParams(
+                        temperature=0.0,
+                        max_tokens=self.num_output_tokens(x),
+                        min_tokens=0,
+                    )
+                    for x in num_passages
+                ]
+                outputs = self._llm.generate(
+                    prompts_s, sampling_params, use_tqdm=not silence
                 )
-            sampling_params = [
-                SamplingParams(
-                    temperature=0.0,
-                    max_tokens=self.num_output_tokens(x),
-                    min_tokens=0,
+                return [
+                    (output.outputs[0].text, len(output.outputs[0].token_ids))
+                    for output in outputs
+                ]
+            case "sglang":
+                logger.info(f"Use SGLang Generating Mode")
+                sampling_params = [
+                    {
+                        "temperature": 0.0,
+                        "max_new_tokens": self.num_output_tokens(psg),
+                        "min_new_tokens": self.num_output_tokens(psg),
+                    }
+                    for psg in num_passages
+                ]
+                outputs = self._llm.generate(prompts, sampling_params)
+                return [
+                    # completion_tokens counts stop token
+                    (output["text"], output["meta_info"]["completion_tokens"] - 1)
+                    for output in outputs
+                ]
+            case _:
+                raise ValueError(
+                    f"Invalid batched inference configuration: {self._llm_inference_mode} for LLM"
                 )
-                for x in num_passages
-            ]
-            outputs = self._llm.generate(
-                prompts_s, sampling_params, use_tqdm=not silence
-            )
-            return [
-                (output.outputs[0].text, len(output.outputs[0].token_ids))
-                for output in outputs
-            ]
-
-        # if isinstance(self._llm, LLM):
-        #     logger.info(f"VLLM Generating!")
-        #     if current_window_size is None:
-        #         current_window_size = self._window_size
-
-        #     if self._use_logits:
-        #         params = SamplingParams(
-        #             min_tokens=2, max_tokens=2, temperature=0.0, logprobs=30
-        #         )
-        #         outputs = self._llm.generate(prompts, sampling_params=params)
-        #         arr = [self._get_logits_single_digit(output) for output in outputs]
-        #         return [(s, len(s)) for s, __ in arr]
-        #     else:
-        #         sampling_params = SamplingParams(
-        #             temperature=0.0,
-        #             max_tokens=self.num_output_tokens(current_window_size),
-        #             min_tokens=self.num_output_tokens(current_window_size),
-        #         )
-        #         outputs = self._llm.generate(prompts, sampling_params)
-        #         return [
-        #             (output.outputs[0].text, len(output.outputs[0].token_ids))
-        #             for output in outputs
-        #         ]
-        elif self._sglang_batched:
-            logger.info(f"SGLang Generating!")
-            sampling_params = {
-                "temperature": 0.0,
-                "max_new_tokens": self.num_output_tokens(current_window_size),
-                "min_new_tokens": self.num_output_tokens(current_window_size),
-            }
-            outputs = self._llm.generate(prompts, sampling_params)
-            return [
-                # completion_tokens counts stop token
-                (output["text"], output["meta_info"]["completion_tokens"] - 1)
-                for output in outputs
-            ]
-        else:
-            raise ValueError("Invalid batched inference configuration for LLM")
 
     def run_llm(
         self,
-        prompt: Dict[str, str],
+        prompt: Union[str, List[Dict[str, str]]],
         silence: bool = False,
-        current_window_size: Optional[int] = None,
         **kwargs,
     ) -> Tuple[str, int]:
-        prompt_s, num_passage_s = prompt["prompt"], prompt["num_passages"]
+        assert isinstance(prompt, str)
+        prompt_data = json.loads(prompt)
+        prompt_s, num_passage_s = prompt_data["prompt"], prompt_data["num_passages"]
         num_passage = int(num_passage_s)
-        if current_window_size is None:
-            current_window_size = num_passage
 
         if self._use_logits:
+            assert (
+                self._llm_inference_mode == "vllm"
+            ), "Logits are only supported with VLLM"
             params = SamplingParams(
                 min_tokens=1, max_tokens=1, temperature=0.0, logprobs=30
             )
@@ -345,8 +303,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             inputs = self._tokenizer([prompt_s])
             inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
             gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-            gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size)
-            gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
+            gen_cfg.max_new_tokens = self.num_output_tokens(num_passage)
+            gen_cfg.min_new_tokens = self.num_output_tokens(num_passage)
             # gen_cfg.temperature = 0
             gen_cfg.do_sample = False
             output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
@@ -421,7 +379,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def create_prompt(
         self, result: Result, selected_indices: List[int]
-    ) -> Tuple[Dict[str, str], int]:
+    ) -> Tuple[str, int]:
         query = result.query.text
         query = self._replace_number(query)
         num = len(selected_indices)
@@ -504,14 +462,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                         )
                         // ((num) * 4),
                     )
-        return prompt, self.get_num_tokens(prompt)
+        return json.dumps(
+            {"prompt": prompt, "num_passages": str(num)}
+        ), self.get_num_tokens(prompt)
 
     def create_prompt_batched(
         self,
         results: List[Result],
         selected_indices_batch: List[List[int]],
         batch_size: int = 32,
-    ) -> List[Tuple[Dict[str, str], int]]:
+    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
@@ -531,7 +491,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 all_completed_prompts.extend(completed_prompts)
         return all_completed_prompts
 
-    def get_num_tokens(self, prompt: str) -> int:
+    def get_num_tokens(self, prompt: Union[str, Dict[str, str]]) -> int:
+        assert isinstance(prompt, str), "Prompt should be a string in RankListwiseOSLLM"
         return len(self._tokenizer.encode(prompt))
 
     def cost_per_1k_token(self, input_token: bool) -> float:

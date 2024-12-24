@@ -132,62 +132,6 @@ class ListwiseRankLLM(RankLLM, ABC):
 
         return result
 
-    def rerank_batch(
-        self,
-        requests: List[Request],
-        rank_start: int = 0,
-        rank_end: int = 100,
-        shuffle_candidates: bool = False,
-        logging: bool = False,
-        batched: bool = False,
-        **kwargs: Any,
-    ) -> List[Result]:
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
-        batch_size = kwargs.get("batch_size", 1)
-
-        if not batched:
-            batch_size = 1
-
-        reorder_policy = self.reorder_policy
-        model_functions, consumption = self._get_model_function(batched, **kwargs)
-
-        # reranking using vllm
-        if len(set([len(req.candidates) for req in requests])) != 1:
-            raise ValueError("Batched requests must have the same number of candidates")
-
-        result: list[Result] = []
-
-        with tqdm(range(0, len(requests)), leave=False) as bar:
-            for i in range(0, len(requests), batch_size):
-                batch = requests[i : min(i + batch_size, len(requests))]
-                batch_result = reorder_policy.reorder(
-                    requests=[
-                        Result(
-                            query=copy.deepcopy(request.query),
-                            candidates=copy.deepcopy(request.candidates),
-                            ranking_exec_summary=[],
-                        )
-                        for request in batch
-                    ],
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(
-                        rank_end, len(requests[0].candidates)
-                    ),  # TODO: Fails arbitrary hit sizes
-                    model=model_functions,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                result.extend(batch_result)
-                bar.update(len(batch))
-
-        logger.info(
-            f"\n\nAverage consumption per request: {consumption.consumption_reference_by_item / len(requests) : .2f}\n\n"
-        )
-
-        return result
-
     def get_output_filename(
         self,
         top_k_candidates: int,
