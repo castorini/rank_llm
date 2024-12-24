@@ -11,16 +11,10 @@ from pyserini.prebuilt_index_info import (
     TF_INDEX_INFO,
 )
 from pyserini.query_iterator import DefaultQueryIterator
-from pyserini.search import (
-    get_qrels,
-    get_topics,
-)
+from pyserini.search import get_qrels, get_topics
 from pyserini.search.faiss import FaissSearcher
 from pyserini.search.faiss._searcher import QueryEncoder
-from pyserini.search.lucene import (
-    LuceneImpactSearcher,
-    LuceneSearcher
-)
+from pyserini.search.lucene import LuceneImpactSearcher, LuceneSearcher
 from tqdm import tqdm
 
 from rank_llm.data import Candidate, DataWriter, Query, Request
@@ -182,7 +176,9 @@ class PyseriniRetriever:
             base_index = FAISS_INDEX_INFO[index_path]["texts"]
             self._index_reader = LuceneIndexReader.from_prebuilt_index(base_index)
         else:
-            raise ValueError(f"Could not build LuceneIndexReader from topics: {topics_path}")
+            raise ValueError(
+                f"Could not build LuceneIndexReader from topics: {topics_path}"
+            )
 
     def _init_custom_topics(self, topics_path: str, index_path: str):
         self._topics = DefaultQueryIterator.from_topics(topics_path).topics
@@ -210,7 +206,9 @@ class PyseriniRetriever:
             topics_key = TOPICS[dataset]
         self._topics = get_topics(topics_key)
         self._qrels = get_qrels(TOPICS[dataset])
-        self._index_reader = LuceneIndexReader.from_prebuilt_index(self._get_index("bm25"))
+        self._index_reader = LuceneIndexReader.from_prebuilt_index(
+            self._get_index("bm25")
+        )
 
     def _get_index(self, key: str = None) -> str:
         if not key:

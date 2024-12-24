@@ -1,6 +1,7 @@
 import copy
 import random
-from typing import List
+from datetime import datetime
+from typing import Any, List
 
 from rank_llm.data import Request, Result
 
@@ -12,6 +13,8 @@ class IdentityReranker:
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
     ) -> List[Result]:
         """
         A trivial reranker that returns a subsection of the retrieved candidates list as-is or shuffled.
@@ -40,3 +43,15 @@ class IdentityReranker:
                 )
             results.append(rerank_result)
         return results
+
+    def get_name(self) -> str:
+        return "identity_reranker"
+
+    def get_output_filename(
+        self,
+        top_k_candidates: int,
+        dataset_name: str,
+        shuffle_candidates: bool,
+        **kwargs: Any,
+    ) -> str:
+        return f"identity_{datetime.isoformat(datetime.now())}"

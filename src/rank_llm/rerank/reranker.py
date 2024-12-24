@@ -38,6 +38,7 @@ class Reranker:
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
+            sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
             populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
 
@@ -94,6 +95,8 @@ class Reranker:
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
         ranking_execution_summary_dirname: str = "ranking_execution_summary",
+        vllm_batched: bool = False,
+        sglang_batched: bool = False,
         **kwargs,
     ) -> str:
         """
@@ -110,6 +113,8 @@ class Reranker:
             pass_ct (int, optional): Pass count, if applicable. Defaults to None.
             window_size (int, optional): The window size used in reranking. Defaults to None.
             dataset_name (str, optional): The name of the dataset used. Defaults to None.
+            vllm_batched (bool, optional): Indicates if vLLM inference backend used. Defaults to False.
+            sglang_batched (bool, optional): Indicates if SGLang inference backend used. Defaults to False.
 
         Returns:
             str: The file name of the saved reranked results in TREC Eval format.
@@ -129,6 +134,13 @@ class Reranker:
             name += f"_window_{window_size}"
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
+
+        # Add vllm or sglang to rerank result file name if they are used
+        if vllm_batched:
+            name += "_vllm"
+        if sglang_batched:
+            name += "_sglang"
+
         # write rerank results
         writer = DataWriter(results)
         Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
@@ -178,6 +190,7 @@ class Reranker:
         reorder_policy = ListwiseRankLLM.get_reorder_policy(
             reorder_policy=reorder_policy_name
         )
+        vllm_batched: bool = kwargs.get("vllm_batched", False)
 
         if interactive and default_agent is not None:
             # Default rerank agent
@@ -227,6 +240,9 @@ class Reranker:
                 ("window_size", 20),
                 ("system_message", None),
                 ("vllm_batched", False),
+                ("sglang_batched", False),
+                ("use_logits", False),
+                ("use_alpha", False),
                 ("vllm_chunked_prefill", False),
             ]
             [
@@ -239,6 +255,9 @@ class Reranker:
                 window_size,
                 system_message,
                 vllm_batched,
+                sglang_batched,
+                use_logits,
+                use_alpha,
                 vllm_chunked_prefill,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
@@ -259,6 +278,9 @@ class Reranker:
                 variable_passages=variable_passages,
                 system_message=system_message,
                 vllm_batched=vllm_batched,
+                sglang_batched=sglang_batched,
+                use_logits=use_logits,
+                use_alpha=use_alpha,
                 vllm_chunked_prefill=vllm_chunked_prefill,
             )
 
@@ -302,7 +324,6 @@ class Reranker:
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
-
             (
                 context_size,
                 window_size,
@@ -336,7 +357,6 @@ class Reranker:
                 # reuse this parameter, but its not for "vllm", but only for "batched"
                 ("vllm_batched", False),
             ]
-
             (
                 context_size,
                 prompt_mode,
@@ -358,6 +378,53 @@ class Reranker:
                 device=device,
                 batched=vllm_batched,
             )
+            print(f"Completed loading {model_path}")
+        elif vllm_batched:
+            # supports loading models from huggingface
+            print(f"Loading {model_path} ...")
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                ("num_few_shot_examples", 0),
+                ("device", "cuda"),
+                ("num_gpus", 1),
+                ("variable_passages", False),
+                ("window_size", 20),
+                ("system_message", None),
+                ("vllm_batched", True),
+                ("use_logits", False),
+                ("use_alpha", False),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                device,
+                num_gpus,
+                variable_passages,
+                window_size,
+                system_message,
+                vllm_batched,
+                use_logits,
+                use_alpha,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            agent = RankListwiseOSLLM(
+                model=(model_path),
+                name=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                device=device,
+                num_gpus=num_gpus,
+                variable_passages=variable_passages,
+                window_size=window_size,
+                system_message=system_message,
+                use_logits=use_logits,
+                use_alpha=use_alpha,
+                vllm_batched=vllm_batched,
+            )
+
             print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker

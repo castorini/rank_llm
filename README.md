@@ -7,10 +7,12 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 
-We offer a suite of rerankers - pointwise models like monoT5 and listwise models with a focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.) or [vLLM](https://https://github.com/vllm-project/vllm). We also support RankGPT variants, which are proprietary listwise rerankers. Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
+We offer a suite of rerankers - pointwise models like monoT5 and listwise models with a focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.), [vLLM](https://https://github.com/vllm-project/vllm) or [SGLang](https://github.com/sgl-project/sglang). We also support RankGPT variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
 # Releases
 current_version = 0.20.2
+
+**Note for Mac Users:** RankLLM is not compatible with Apple Silicon (M1/M2) chips. However, you can still run it by using the Intel-based version of Anaconda and launching your terminal through Rosetta 2.
 
 ## 📟 Instructions
 
@@ -21,9 +23,14 @@ conda create -n rankllm python=3.10
 conda activate rankllm
 ```
 
-### Install Pytorch with CUDA
+### Install Pytorch with CUDA (Windows/Linux)
 ```bash
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+```
+
+### Install Pytorch with MPS (Mac)
+```bash
+pip3 install torch torchvision torchaudio
 ```
 
 ### Install openjdk with maven if you want to use the retriever
@@ -36,6 +43,30 @@ conda install -c conda-forge openjdk=21 maven -y
 pip install -r requirements.txt
 ```
 
+If building `nmslib` failed during installation, try manually installing the library with `conda install -c conda-forge nmslib` and following it up with `pip install -r requirements.txt` again.
+
+### Install vLLM or SGLang (Optional)
+
+#### vLLM
+
+```bash
+pip install rank-llm[vllm]  # pip installation
+pip install -e .[vllm]      # or local installation for development
+```
+
+#### SGLang
+
+```bash
+pip install rank-llm[sglang]  # pip installation
+pip install -e .[sglang]      # or local installation for development
+```
+
+Remember to install flashinfer to use `SGLang` backend.
+
+```bash
+pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
+```
+
 ### Run end to end - RankZephyr
 
 We can run the RankZephyr model with the following command:
@@ -44,7 +75,10 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 ```
 
-Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vllm` library.
+Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library.
+
+Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
+
 If you want to run multiple passes of the model, you can use the `--num_passes` flag.
 
 ### Run end to end - RankGPT4-o
@@ -94,11 +128,23 @@ python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msm
 
 Note that we usually rerank 1K candidates with monoT5.
 
+### Run end to end - FirstMistral
+
+We can run the FirstMistral model, reranking using the first-token logits only with the following command:
+
+```
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --vllm_batched --num_gpus 1
+```
+
+Omit `--use_logits` if you wish to perform traditional listwise reranking.
+
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 
 ## 🦙🐧 Model Zoo
 
 The following is a table of the listwise models our repository was primarily built to handle (with the models hosted on HuggingFace):
+
+`vLLM` and `SGLang` backends are only supported for `RankZephyr` and `RankVicuna` models.
 
 | Model Name        | Hugging Face Identifier/Link                            |
 |-------------------|---------------------------------------------|
@@ -149,7 +195,7 @@ We recommend the Med models for biomedical retrieval. We also provide both 10K (
 
 ## ✨ References
 
-If you use RankLLM, please cite the following relevant papers: 
+If you use RankLLM, please cite the following relevant papers:
 
 [[2309.15088] RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models](https://arxiv.org/abs/2309.15088)
 
@@ -200,9 +246,36 @@ If you use one of the monoT5 models please cite the following relevant paper:
   title = {The Expando-Mono-Duo Design Pattern for Text Ranking with Pretrained Sequence-to-Sequence Models},
   author = {Ronak Pradeep and Rodrigo Nogueira and Jimmy Lin},
   year = {2021},
-  journal = {arXiv:2101.05667}, 
+  journal = {arXiv:2101.05667},
 }
 ```
+
+If you use the FirstMistral model, please consider citing:
+
+[[2411.05508] An Early FIRST Reproduction and Improvements to Single-Token Decoding for Fast Listwise Reranking](https://arxiv.org/abs/2411.05508)
+
+```
+@ARTICLE{chen2024firstrepro,
+  title   = title={An Early FIRST Reproduction and Improvements to Single-Token Decoding for Fast Listwise Reranking},
+  author  = {Zijian Chen and Ronak Pradeep and Jimmy Lin},
+  year    = {2024},
+  journal = {arXiv:2411.05508}
+}
+```
+
+If you would like to cite the FIRST methodology, please consider citing:
+
+[[2406.15657] FIRST: Faster Improved Listwise Reranking with Single Token Decoding](https://arxiv.org/abs/2406.15657)
+
+```
+@ARTICLE{reddy2024first,
+  title   = {FIRST: Faster Improved Listwise Reranking with Single Token Decoding},
+  author  = {Reddy, Revanth Gangi and Doo, JaeHyeok and Xu, Yifei and Sultan, Md Arafat and Swain, Deevya and Sil, Avirup and Ji, Heng},
+  year    = {2024}
+  journal = {arXiv:2406.15657},
+}
+```
+
 ## 🙏 Acknowledgments
 
 This research is supported in part by the Natural Sciences and Engineering Research Council (NSERC) of Canada.

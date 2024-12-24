@@ -96,11 +96,11 @@ class RankFiDDistill(ListwiseRankLLM):
         }
 
         with torch.no_grad():
+            self._llm.reset_n_passages(n_passages=n_passages)
             outputs = self._llm.generate(
                 **inputs,
                 max_length=self._answer_maxlength,
                 do_sample=False,
-                n_passages=n_passages,
             )
 
         decoded_outputs = [

@@ -38,10 +38,13 @@ def main(args):
     step_size = args.step_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
+    sglang_batched = args.sglang_batched
     vllm_chunked_prefill = args.vllm_chunked_prefill
     batch_size = args.batch_size
     reorder_policy = args.reorder_policy
     silence = args.silence
+    use_logits = args.use_logits
+    use_alpha = args.use_alpha
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -66,9 +69,12 @@ def main(args):
         step_size=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
+        sglang_batched=sglang_batched,
         vllm_chunked_prefill=vllm_chunked_prefill,
         reorder_policy=reorder_policy,
         silence=silence,
+        use_logits=use_logits,
+        use_alpha=use_alpha,
     )
 
 
@@ -163,6 +169,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--window_size",
         type=int,
+        default=20,
         help="window size for the sliding window approach",
     )
     parser.add_argument(
@@ -177,10 +184,16 @@ if __name__ == "__main__":
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
     )
-    parser.add_argument(
+    infer_backend_group = parser.add_mutually_exclusive_group()
+    infer_backend_group.add_argument(
         "--vllm_batched",
         action="store_true",
         help="whether to run the model in batches",
+    )
+    infer_backend_group.add_argument(
+        "--sglang_batched",
+        action="store_true",
+        help="whether to run the model in batches using sglang backend",
     )
     parser.add_argument(
         "--vllm_chunked_prefill",
@@ -198,6 +211,18 @@ if __name__ == "__main__":
         default=False,
         action="store_true",
         help="Whether or not omitting some unbeautiful tqdm bars that is unavoidable (not able to set leave=False)",
+    )
+
+    parser.add_argument(
+        "--use_logits",
+        action="store_true",
+        help="whether to rerank using the logits of the first identifier only. Only supported if vllm_batched is True",
+    )
+
+    parser.add_argument(
+        "--use_alpha",
+        action="store_true",
+        help="whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True",
     )
     args = parser.parse_args()
     main(args)
