@@ -95,7 +95,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             window_size=window_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
-            use_alpha=use_alpha
+            use_alpha=use_alpha,
         )
         self._device = device
         self._vllm_batched = vllm_batched
@@ -273,12 +273,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 for x in num_passages
             ]
-            outputs = self._llm.generate(prompts_s, sampling_params, use_tqdm=not silence)
+            outputs = self._llm.generate(
+                prompts_s, sampling_params, use_tqdm=not silence
+            )
             return [
                 (output.outputs[0].text, len(output.outputs[0].token_ids))
                 for output in outputs
             ]
-        
+
         # if isinstance(self._llm, LLM):
         #     logger.info(f"VLLM Generating!")
         #     if current_window_size is None:
@@ -329,7 +331,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         num_passage = int(num_passage_s)
         if current_window_size is None:
             current_window_size = num_passage
-        
+
         if self._use_logits:
             params = SamplingParams(
                 min_tokens=1, max_tokens=1, temperature=0.0, logprobs=30
@@ -451,9 +453,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 prompt = fix_text(prompt)
                 num_tokens = self.get_num_tokens(prompt)
-                if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    num
-                ):
+                if num_tokens <= self.max_tokens() - self.num_output_tokens(num):
                     break
                 else:
                     max_length -= max(
@@ -461,9 +461,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                         (
                             num_tokens
                             - self.max_tokens()
-                            + self.num_output_tokens(
-                                num, self._use_alpha
-                            )
+                            + self.num_output_tokens(num, self._use_alpha)
                         )
                         // ((num) * 4),
                     )
@@ -502,9 +500,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                         (
                             num_tokens
                             - self.max_tokens()
-                            + self.num_output_tokens(
-                                num, self._use_alpha
-                            )
+                            + self.num_output_tokens(num, self._use_alpha)
                         )
                         // ((num) * 4),
                     )

@@ -1,8 +1,8 @@
 import copy
 import logging
+import uuid
 from dataclasses import dataclass
 from typing import Callable, List, Literal, Tuple
-import uuid
 
 from rank_llm.data import Result
 from rank_llm.rerank.listwise.reorder.reorder_policy import ModelFunction, ReorderPolicy
@@ -142,7 +142,7 @@ class TopDownReorderProcess:
                         req_inds.append(request_indices)
                         request = ReorderRequest(self._pad(request_indices), None)
                         requests.append(request)
-                    
+
                     yield requests
 
                     for request, request_indices, i in zip(

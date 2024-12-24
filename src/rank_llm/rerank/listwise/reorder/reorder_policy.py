@@ -88,7 +88,9 @@ class ReorderPolicy(ABC):
         """
         Provide items, indexes, ranks, returns an ordered items, specifically ordered on idxes locations by rank
         """
-        assert len(idxes) == len(rank), f"Length incorrect, gotten {len(idxes)}, {len(rank)}"
+        assert len(idxes) == len(
+            rank
+        ), f"Length incorrect, gotten {len(idxes)}, {len(rank)}"
 
         n = len(idxes)
 
