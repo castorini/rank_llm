@@ -7,7 +7,7 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 
-We offer a suite of rerankers - pointwise models like monoT5 and listwise models with a focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.), [vLLM](https://https://github.com/vllm-project/vllm) or [SGLang](https://github.com/sgl-project/sglang). We also support RankGPT variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
+We offer a suite of rerankers - pointwise models like monoT5 and listwise models with a focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.), [vLLM](https://https://github.com/vllm-project/vllm) or [SGLang](https://github.com/sgl-project/sglang) or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
 # Releases
 current_version = 0.20.2
@@ -67,6 +67,15 @@ Remember to install flashinfer to use `SGLang` backend.
 pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
 ```
 
+#### TensorRT-LLM
+
+Ensure [OpenMIP](https://www.open-mpi.org/software/ompi/v5.0/) is installed
+
+```bash
+pip install rank-llm[tensorrt-llm]  # pip installation
+pip install -e .[tensorrt-llm]      # or local installation for development
+```
+
 ### Run end to end - RankZephyr
 
 We can run the RankZephyr model with the following command:
@@ -78,6 +87,8 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library.
 
 Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
+
+Including the `--tensorrt_batched` flag will allow you to run the model in batched mode using the `TensorRT-LLM` library.
 
 If you want to run multiple passes of the model, you can use the `--num_passes` flag.
 
@@ -144,7 +155,7 @@ If you would like to contribute to the project, please refer to the [contributio
 
 The following is a table of the listwise models our repository was primarily built to handle (with the models hosted on HuggingFace):
 
-`vLLM` and `SGLang` backends are only supported for `RankZephyr` and `RankVicuna` models.
+`vLLM`, `SGLang`, and `TensorRT-LLM` backends are only supported for `RankZephyr` and `RankVicuna` models.
 
 | Model Name        | Hugging Face Identifier/Link                            |
 |-------------------|---------------------------------------------|
