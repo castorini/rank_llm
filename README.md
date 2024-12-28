@@ -10,7 +10,7 @@
 We offer a suite of rerankers - pointwise models like monoT5 and listwise models with a focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.), [vLLM](https://https://github.com/vllm-project/vllm) or [SGLang](https://github.com/sgl-project/sglang) or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
 # Releases
-current_version = 0.20.2
+current_version = 0.20.3
 
 **Note for Mac Users:** RankLLM is not compatible with Apple Silicon (M1/M2) chips. However, you can still run it by using the Intel-based version of Anaconda and launching your terminal through Rosetta 2.
 
