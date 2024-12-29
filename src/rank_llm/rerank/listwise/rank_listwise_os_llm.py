@@ -117,7 +117,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             )
         if vllm_batched and LLM is None:
             raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+                "Please install rank-llm with `pip install -e .[vllm]` to use batch inference."
             )
         elif vllm_batched:
             # TODO: find max_model_len given gpu
@@ -132,7 +132,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._tokenizer = self._llm.get_tokenizer()
         elif sglang_batched and Engine is None:
             raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
+                "Please install rank-llm with `pip install -e .[sglang]` to use sglang batch inference."
             )
         elif sglang_batched:
             port = random.randint(30000, 35000)
@@ -144,7 +144,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 from tensorrt_llm import BuildConfig
             except Exception:
                 raise ImportError(
-                    "Please install rank-llm with `pip install rank-llm[tensorrt_llm]` to use tensorrt batch inference."
+                    "Please install rank-llm with `pip install -e .[tensorrt-llm]` to use tensorrt batch inference."
                 )
             build_config = BuildConfig(max_seq_len=4096)
             self._llm = TRTLLM(model=model, build_config=build_config)
