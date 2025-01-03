@@ -23,6 +23,7 @@ try:
     from vllm import LLM, RequestOutput, SamplingParams
 except:
     LLM = None
+    RequestOutput = None
     SamplingParams = None
 
 try:
@@ -33,12 +34,18 @@ except:
     sglang = None
     Engine = None
 
+try:
+    import tensorrt_llm
+except:
+    tensorrt_llm = None
+
+
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
 
 # TODO Type alias for inference backend, should be changed into type alias when update to 3.12
-InferenceBackend: TypeAlias = Literal["vllm", "sglang", "transformers"]
+InferenceBackend: TypeAlias = Literal["vllm", "sglang", "tensorrt", "transformers"]
 
 ReorderMethod: TypeAlias = Literal["logits", "order"]
 
@@ -60,8 +67,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         use_logits: bool = False,
         use_alpha: bool = False,
         vllm_batched: bool = False,
-        sglang_batched: bool = False,
         vllm_chunked_prefill: bool = False,
+        sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -85,6 +93,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - vllm_batched (bool, optional): Indicates whether batched inference using VLLM is leveraged. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
+         - tensorrt_batched (bool, optional): Indicates whether batched inference using TensorRT-LLM is leveraged. Defaults to False.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -108,6 +117,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._device = device
         self._vllm_batched = vllm_batched
         self._sglang_batched = sglang_batched
+        self._tensorrt_batched = tensorrt_batched
         self._name = name
         self._variable_passages = variable_passages
         self._system_message = system_message
@@ -133,7 +143,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if vllm_batched and LLM is None:
             raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+                "Please install rank-llm with `pip install -e .[vllm]` to use batch inference."
             )
         elif vllm_batched:
             # TODO: find max_model_len given gpu
@@ -152,7 +162,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._tokenizer = self._llm.get_tokenizer()
         elif sglang_batched and Engine is None:
             raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
+                "Please install rank-llm with `pip install -e .[sglang]` to use sglang batch inference."
             )
         elif sglang_batched:
             assert Engine is not None
@@ -160,6 +170,15 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             port = random.randint(30000, 35000)
             self._llm = Engine(model_path=model, port=port)
             self._tokenizer = self._llm.get_tokenizer()
+        elif tensorrt_batched and tensorrt_llm is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install -e .[tensorrt-llm]` to use tensorrt batch inference."
+            )
+        elif tensorrt_batched:
+            assert tensorrt_llm is not None
+            build_config = tensorrt_llm.BuildConfig(max_seq_len=4096)
+            self._llm = tensorrt_llm.LLM(model=model, build_config=build_config)
+            self._tokenizer = self._llm.tokenizer
         else:
             self._llm_inference_mode = "transformers"
             self._llm, self._tokenizer = load_model(
@@ -252,7 +271,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     raise ImportError(
                         "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
                     )
-
                 assert LLM is not None and isinstance(self._llm, LLM)
 
                 if not self._use_logits:
@@ -300,6 +318,24 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 return [
                     # completion_tokens counts stop token
                     (output["text"], output["meta_info"]["completion_tokens"] - 1)
+                    for output in outputs
+                ]
+            case "tensorrt":
+                import tensorrt_llm.hlapi.llm
+                from tensorrt_llm import SamplingParams as TRTSamplingParams
+
+                assert isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM)
+                sampling_params = [
+                    TRTSamplingParams(
+                        temperature=0.0,
+                        max_tokens=self.num_output_tokens(x),
+                        min_tokens=self.num_output_tokens(x),
+                    )
+                    for x in num_passages
+                ]
+                outputs = self._llm.generate(prompts_s, sampling_params)
+                return [
+                    (output.outputs[0].text, len(output.outputs[0].token_ids))
                     for output in outputs
                 ]
             case _:

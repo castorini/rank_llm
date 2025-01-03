@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rank-llm"
-version = "0.20.2"
+version = "0.20.3"
 description = "A Package for running prompt decoders like RankVicuna"
 readme = "README.md"
 authors = [
@@ -33,12 +33,15 @@ vllm = [
 sglang = [
     "sglang[all]>=0.3.4"
 ]
+tensorrt_llm = [
+    "tensorrt_llm[all]>=0.14.0"
+]
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
 
 [tool.bumpver]
-current_version = "0.20.2"
+current_version = "0.20.3"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true

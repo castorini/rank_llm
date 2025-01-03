@@ -153,6 +153,7 @@ class RankLLM(ABC):
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
             sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
+            tensorrt_batched (bool, optional): Whether to use TensorRT-LLM batches processing. Defaults to False.
             populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
 
