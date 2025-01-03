@@ -92,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=32,
+        default=None,
         help="Size of each batch for batched inference.",
     )
     parser.add_argument(

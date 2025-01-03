@@ -62,6 +62,7 @@ class SafeOpenai(ListwiseRankLLM):
             window_size=window_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
+            use_alpha=False,  # Alphabet is not supported in OpenAI for now
         )
         if isinstance(keys, str):
             keys = [keys]
@@ -103,6 +104,7 @@ class SafeOpenai(ListwiseRankLLM):
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        batched: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
         return super().rerank_batch(
@@ -130,7 +132,7 @@ class SafeOpenai(ListwiseRankLLM):
                         *args, **kwargs, timeout=30
                     )
                 elif completion_mode == self.CompletionMode.TEXT:
-                    completion = openai.Completion.create(*args, **kwargs)
+                    completion = openaiCompletion.create(*args, **kwargs)
                 else:
                     raise ValueError(
                         "Unsupported completion mode: %V" % completion_mode

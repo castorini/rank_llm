@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
 
 from ftfy import fix_text
+from gguf import Optional
 from tqdm import tqdm
 
 from rank_llm.data import RankingExecInfo, Request, Result
@@ -58,7 +59,7 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def __init__(
         self,
-        reorder_policy: ReorderPolicy,
+        reorder_policy: Optional[ReorderPolicy],
         model: str,
         context_size: int,
         window_size: int,
@@ -74,7 +75,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         )
         self._window_size = window_size
         self._use_alpha = use_alpha
-    
 
     def rerank_batch(
         self,
@@ -88,7 +88,7 @@ class ListwiseRankLLM(RankLLM, ABC):
     ) -> List[Result]:
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
 
-        batch_size = kwargs.get("batch_size", 1)
+        batch_size = kwargs.get("batch_size") or len(requests)
 
         if not batched:
             batch_size = 1
@@ -96,8 +96,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         reorder_policy = self.reorder_policy
         model_functions, consumption = self._get_model_function(batched, **kwargs)
 
-        # reranking using vllm
-        if len(set([len(req.candidates) for req in requests])) != 1:
+        # reranking using batched mode
+        if batched and len(set([len(req.candidates) for req in requests])) != 1:
             raise ValueError("Batched requests must have the same number of candidates")
 
         result: list[Result] = []
@@ -462,12 +462,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         else:
             for c in response:
                 if not c.isdigit():
-                    if len(new_response) == 0 or new_response[-1] != " ":
                     new_response += " "
                 else:
                     new_response += c
             new_response = new_response.strip()
-
+        new_response = re.sub(r"\s+", " ", new_response)
         return new_response
 
     def _remove_duplicate(self, response: List[int]) -> List[int]:
