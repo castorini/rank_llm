@@ -6,7 +6,6 @@ import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Literal, Optional, Tuple, TypeAlias, Union
 
-import numba
 import torch
 from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
