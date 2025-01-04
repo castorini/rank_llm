@@ -225,7 +225,7 @@ class Reranker:
                 keys=openai_keys,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
-        elif "vicuna" in model_path or "zephyr" in model_path:
+        elif "vicuna" in model_path or "zephyr" in model_path or "first" in model_path:
             # RankVicuna or RankZephyr model suite
             print(f"Loading {model_path} ...")
 

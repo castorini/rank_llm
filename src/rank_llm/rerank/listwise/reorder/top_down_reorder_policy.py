@@ -71,7 +71,7 @@ class TopDownReorderProcess:
             return [x for x in lst]
 
     def _unpad(self, lst: List[int], result_perm: List[int]):
-        if os.environ.get("PADDING", "pad") == "pad":
+        if self._padding == "pad":
             return [x for x in result_perm if x < len(lst)]
         else:
             return result_perm

@@ -35,8 +35,9 @@ except:
     Engine = None
 
 try:
-    import tensorrt_llm
-except:
+    # import tensorrt_llm
+    tensorrt_llm = None
+except Exception as e:
     tensorrt_llm = None
 
 

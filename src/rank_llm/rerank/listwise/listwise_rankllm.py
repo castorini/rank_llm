@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
 
+import json_repair
 from ftfy import fix_text
 from gguf import Optional
 from tqdm import tqdm
@@ -71,7 +72,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._num_few_shot_examples = num_few_shot_examples
 
         self.reorder_policy = (
-            SlidingWindowReorderPolicy() if reorder_policy is None else reorder_policy
+            reorder_policy or SlidingWindowReorderPolicy()
         )
         self._window_size = window_size
         self._use_alpha = use_alpha
@@ -628,19 +629,22 @@ class ListwiseRankLLM(RankLLM, ABC):
         )
 
     @staticmethod
-    def get_reorder_policy(reorder_policy: str, **kwargs):
+    def get_reorder_policy(reorder_policy: str, **kwargs) -> ReorderPolicy:
         for policy in SUPPORT_REORDER_POLICIES:
             if reorder_policy.startswith(policy.name()):
                 reorder_params = reorder_policy[len(policy.name()) :]
+                reorder_params = reorder_params.strip()
                 if len(reorder_params) <= 1:
                     return policy()
                 else:
                     assert reorder_params[0] == ":" and reorder_params[1] == "{"
                     reorder_params = reorder_params[1:]
                     try:
-                        reorder_param_dict = json.loads(reorder_params)
+                        reorder_param_dict = json_repair.repair_json(reorder_params)
+                        if isinstance(reorder_param_dict, str):
+                            reorder_param_dict = json.loads(reorder_param_dict)
                         if not isinstance(reorder_param_dict, dict):
-                            raise Exception()
+                            raise Exception(f"Didn't successfully parse reorder parameter into a dict, right now it is {reorder_param_dict} with type {(type(reorder_param_dict))}")
                     except Exception as e:
                         print(e)
                         raise Exception(f"Cannot load reorder policy {reorder_policy}")

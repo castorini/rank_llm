@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, List, Tuple, TypeVar, Union
 
 import numpy as np
+from gguf import Optional
 
 from rank_llm.data import Result
 
@@ -40,7 +41,7 @@ class ReorderPolicy(ABC):
         pass
 
     @abstractmethod
-    def param_name(self):
+    def param_name(self) -> str:
         pass
 
     @staticmethod
@@ -105,17 +106,11 @@ class ReorderPolicy(ABC):
 class SlidingWindowReorderPolicy(ReorderPolicy):
     def __init__(
         self,
-        step: int = None,
-        extra_args: dict = None,
+        step: Optional[int] = None,
+        extra_args: Optional[dict] = None,
         **kwargs,
     ):
-        self._step_size = (
-            step
-            if step is not None
-            else extra_args.get("step_size", 10)
-            if extra_args is not None
-            else 10
-        )
+        self._step_size = step or (extra_args or {}).get("step_size", 10) or 10
         self.coll = 0
 
     def reorder(
