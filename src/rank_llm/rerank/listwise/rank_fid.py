@@ -138,7 +138,7 @@ class RankFiDDistill(ListwiseRankLLM):
     ) -> List[Tuple[str, int]]:
         if len(prompts) == 0:
             return []
-        
+
         for prompt in prompts:
             assert isinstance(prompt, str)
 
@@ -150,14 +150,19 @@ class RankFiDDistill(ListwiseRankLLM):
         return self._run_llm_by_length_unified(prompt_infos)
 
     def create_prompt_batched(
-        self, results: List[Result], selected_indices_batch: List[List[int]], batch_size: int
+        self,
+        results: List[Result],
+        selected_indices_batch: List[List[int]],
+        batch_size: int,
     ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         return [
             self.create_prompt(result, selected_indices)
             for result, selected_indices in zip(results, selected_indices_batch)
         ]
 
-    def run_llm(self, prompt: Union[str, List[Dict[str, str]]], silence: bool = False, **kwargs) -> Tuple[str, int]:
+    def run_llm(
+        self, prompt: Union[str, List[Dict[str, str]]], silence: bool = False, **kwargs
+    ) -> Tuple[str, int]:
         """
         Run the target language model with a passed in prompt.
         """

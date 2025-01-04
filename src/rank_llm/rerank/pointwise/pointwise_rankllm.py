@@ -4,7 +4,7 @@ import re
 from abc import ABC
 from datetime import datetime
 from functools import cmp_to_key
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from ftfy import fix_text
 from tqdm import tqdm
@@ -61,11 +61,22 @@ class PointwiseRankLLM(RankLLM, ABC):
         ) as progress_bar:
             index = 0
             while index < total_candidates:
-                prompts, token_counts = self.create_prompt_batched(
-                    results=rerank_results, index=index
+                indexes = [
+                    self.get_query_and_candidate_index(rerank_results, i)
+                    for i in range(
+                        index, min(index + self._batch_size, total_candidates)
+                    )
+                ]
+
+                prompts = self.create_prompt_batched(
+                    [rerank_results[i] for i, _, in indexes],
+                    [[j] for _, j in indexes],
+                    self._batch_size,
                 )
 
-                outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts)
+                outputs, output_tokens, scores = self.run_llm_batched(
+                    prompts=[prompt for prompt, token in prompts]
+                )
 
                 for i, score in enumerate(scores):
                     query_number, candidate_number = self.get_query_and_candidate_index(
@@ -96,29 +107,23 @@ class PointwiseRankLLM(RankLLM, ABC):
         raise IndexError("Index out of range in get_query_and_candidate_index")
 
     def create_prompt_batched(
-        self, results: List[Result], index: int
-    ) -> Tuple[List[str], List[int]]:
-        prompts = []
-        token_counts = []
+        self,
+        results: List[Result],
+        selected_indices_batch: List[List[int]],
+        batch_size: int,
+    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
+        ret: List[Tuple[str | List[Dict[str, str]], int]] = []
 
-        for i in range(
-            index,
-            min(
-                index + self._batch_size,
-                sum(len(result.candidates) for result in results),
-            ),
-        ):
-            query_number, candidate_number = self.get_query_and_candidate_index(
-                results, i
-            )
+        for result, indices in zip(results, selected_indices_batch):
+            assert len(indices) == 1
+
             prompt, token_count = self.create_prompt(
-                result=results[query_number], index=candidate_number
+                result=result, selected_indices=indices
             )
 
-            prompts.append(prompt)
-            token_counts.append(token_count)
+            ret.append((prompt, token_count))
 
-        return prompts, token_counts
+        return ret
 
     def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
         if x.score < y.score:
