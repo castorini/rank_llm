@@ -388,7 +388,7 @@ class RankFiDScore(ListwiseRankLLM):
         )
 
     def run_llm_batched(
-        self, prompts: List[List[Dict[str, str]]], **kwargs
+        self, prompts: List[str | List[Dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         if len(prompts) == 0:
             return []
@@ -407,16 +407,16 @@ class RankFiDScore(ListwiseRankLLM):
         results: List[Result],
         selected_indices_batch: List[List[int]],
         batch_size: int,
-    ) -> List[Tuple[List[Dict[str, str]], int]]:
+    ) -> List[Tuple[str | List[Dict[str, str]], int]]:
         return [
             self.create_prompt(result, selected_indices)
             for result, selected_indices in zip(results, selected_indices_batch)
         ]
 
-    def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
+    def run_llm(self, prompt: str | List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
         # get arbitrary query (they should be the same)
         return self._run_llm_by_length_unified(
-            [[(x["query"], x["text"]) for x in prompts]]
+            [[(x["query"], x["text"]) for x in prompt]]
         )[0]
 
     def create_prompt(
@@ -446,7 +446,7 @@ class RankFiDScore(ListwiseRankLLM):
 
         return results, sum_token
 
-    def get_num_tokens(self, prompt: str) -> int:
+    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
         return len(self._tokenizer.encode(prompt))
 
     def cost_per_1k_token(self, input_token: bool) -> float:
