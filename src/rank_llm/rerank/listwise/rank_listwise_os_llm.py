@@ -35,9 +35,8 @@ except:
     Engine = None
 
 try:
-    # import tensorrt_llm
-    tensorrt_llm = None
-except Exception as e:
+    import tensorrt_llm
+except:
     tensorrt_llm = None
 
 
@@ -176,6 +175,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             )
         elif tensorrt_batched:
             assert tensorrt_llm is not None
+            self._llm_inference_mode = "tensorrt"
             build_config = tensorrt_llm.BuildConfig(max_seq_len=4096)
             self._llm = tensorrt_llm.LLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
@@ -207,7 +207,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             rank_end=rank_end,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
-            batched=(self._llm_inference_mode in ("vllm", "sglang")) or batched,
+            batched=(self._llm_inference_mode in ("vllm", "sglang", "tensorrt"))
+            or batched,
             **kwargs,
         )
 

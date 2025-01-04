@@ -71,9 +71,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         super().__init__(model, context_size, prompt_mode)
         self._num_few_shot_examples = num_few_shot_examples
 
-        self.reorder_policy = (
-            reorder_policy or SlidingWindowReorderPolicy()
-        )
+        self.reorder_policy = reorder_policy or SlidingWindowReorderPolicy()
         self._window_size = window_size
         self._use_alpha = use_alpha
 
@@ -644,7 +642,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                         if isinstance(reorder_param_dict, str):
                             reorder_param_dict = json.loads(reorder_param_dict)
                         if not isinstance(reorder_param_dict, dict):
-                            raise Exception(f"Didn't successfully parse reorder parameter into a dict, right now it is {reorder_param_dict} with type {(type(reorder_param_dict))}")
+                            raise Exception(
+                                f"Didn't successfully parse reorder parameter into a dict, right now it is {reorder_param_dict} with type {(type(reorder_param_dict))}"
+                            )
                     except Exception as e:
                         print(e)
                         raise Exception(f"Cannot load reorder policy {reorder_policy}")
