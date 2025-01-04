@@ -120,6 +120,7 @@ class RankFiDDistill(ListwiseRankLLM):
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        batched: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
         return super().rerank_batch(
@@ -128,15 +129,18 @@ class RankFiDDistill(ListwiseRankLLM):
             rank_end=rank_end,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
-            batched=self._batched,
+            batched=self._batched or batched,
             **kwargs,
         )
 
     def run_llm_batched(
-        self, prompts: List[List[Dict[str, str]]], **kwargs
+        self, prompts: List[str | List[Dict[str, str]]], silence: bool = False, **kwargs
     ) -> List[Tuple[str, int]]:
         if len(prompts) == 0:
             return []
+        
+        for prompt in prompts:
+            assert isinstance(prompt, str)
 
         # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
         #   (which is commonly the same) then rerank stuff having same passage sizes
@@ -146,25 +150,26 @@ class RankFiDDistill(ListwiseRankLLM):
         return self._run_llm_by_length_unified(prompt_infos)
 
     def create_prompt_batched(
-        self, results: List[Result], selected_indices_batch: List[int], batch_size: int
-    ) -> List[Tuple[List[Dict[str, str]], int]]:
+        self, results: List[Result], selected_indices_batch: List[List[int]], batch_size: int
+    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         return [
             self.create_prompt(result, selected_indices)
             for result, selected_indices in zip(results, selected_indices_batch)
         ]
 
-    def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
+    def run_llm(self, prompt: Union[str, List[Dict[str, str]]], silence: bool = False, **kwargs) -> Tuple[str, int]:
         """
         Run the target language model with a passed in prompt.
         """
+        assert isinstance(prompt, list)
 
         return self._run_llm_by_length_unified(
-            [list(map(lambda x: x["text"], prompts))]
+            [list(map(lambda x: x["text"], prompt))]
         )[0]
 
     def create_prompt(
         self, result: Result, selected_indices: List[int]
-    ) -> Tuple[List[Dict[str, str]], int]:
+    ) -> Tuple[Union[str, List[Dict[str, str]]], int]:
         """
         Create a prompt based on the result and given ranking range.
         """
@@ -364,6 +369,7 @@ class RankFiDScore(ListwiseRankLLM):
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        batched: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
         return super().rerank_batch(
@@ -372,7 +378,7 @@ class RankFiDScore(ListwiseRankLLM):
             rank_end=rank_end,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
-            batched=self._batched,
+            batched=self._batched or batched,
             **kwargs,
         )
 

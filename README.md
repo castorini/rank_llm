@@ -147,6 +147,18 @@ Omit `--use_logits` if you wish to perform traditional listwise reranking.
 
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 
+### Run end to end - Rank Zephyr with [Tournament Sort](https://arxiv.org/abs/2402.15838) (`top_k = 10, r = 1`)
+
+* Other LLM reranker method, like 
+
+```
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
+    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages \
+    --reorder_policy="tournament_sort:{top_k: 10, r: 1}"
+```
+
+### Run end to end - Rank Zephyr with [Top Down](https://)
+
 ## 🦙🐧 Model Zoo
 
 The following is a table of the listwise models our repository was primarily built to handle (with the models hosted on HuggingFace):
@@ -280,6 +292,34 @@ If you would like to cite the FIRST methodology, please consider citing:
   author  = {Reddy, Revanth Gangi and Doo, JaeHyeok and Xu, Yifei and Sultan, Md Arafat and Swain, Deevya and Sil, Avirup and Ji, Heng},
   year    = {2024}
   journal = {arXiv:2406.15657},
+}
+```
+
+If you woud like to cite the ListT5's tournament sort methodology, please consider citing
+
+[[2402.15838] ListT5: Listwise Reranking with Fusion-in-Decoder Improves Zero-shot Retrieval](https://arxiv.org/abs/2405.14589)
+
+```
+@ARTICLE{yoon2024listt5,
+  title = {Listt5: Listwise reranking with fusion-in-decoder improves zero-shot retrieval},
+  author = {Yoon, Soyoung and Choi, Eunbi and Kim, Jiyeon and Yun, Hyeongu and Kim, Yireun and Hwang, Seung-won},
+  journal = {arXiv preprint arXiv:2402.15838},
+  year={2024}
+  journal = {arXiv:2402.15838}
+}
+```
+
+If you would like to cite the Top Down Paritioning methodology, please consider citing
+
+[[2405.14589] Top-Down Partitioning for Efficient List-Wise Ranking](https://arxiv.org/abs/2405.14589)
+
+```
+@ARTICLE{parry2024top,
+  title = {Top-Down Partitioning for Efficient List-Wise Ranking},
+  author = {Parry, Andrew and MacAvaney, Sean and Ganguly, Debasis},
+  journal = {arXiv preprint arXiv:2405.14589},
+  year = {2024}
+  journal = {arXiv:2405.14589}
 }
 ```
 
