@@ -158,7 +158,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 disable_sliding_window=vllm_chunked_prefill,
                 max_logprobs=30,
                 tensor_parallel_size=num_gpus,
-                gpu_memory_utilization=0.93,  # TODO do we need to fix this?
             )
             self._tokenizer = self._llm.get_tokenizer()
         elif sglang_batched and Engine is None:
