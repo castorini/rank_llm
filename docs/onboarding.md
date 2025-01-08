@@ -43,7 +43,7 @@ Listwise reranking is very straightforward in intuition: present the LLM with th
 
 The conceptual idea is not far from directly asking the LLM with a prompt like this:
 ```
-I will provide you with 20 passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: what is the most influential band of all time?
+I will provide you with 3 passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: what is the most influential band of all time?
 
 [1] The electric guitar's transformation from rhythm instrument to lead voice began with pioneering blues players, but truly exploded in the mid-1960s. Innovative playing techniques - from feedback to distortion to wah-wah pedals - became fundamental building blocks of rock music.
 
@@ -63,16 +63,16 @@ The actual implementation has a little more nuance, but nothing complicated.
 
 However, there's a practical challenge: LLMs have a context length limitation (typically 4096 tokens). Unlike the toy example above, in practice we have many, much longer documents to rank. Consequently, we can't feed everything to the model at once; this is where the sliding window approach comes in.
 
-Let's understand this with a concrete example. Suppose we have 10 documents [A, B, C, D, E, F, G, H, I, J] to rank, where the true ranking we want to obtain is [J, I, H, G, F, E, D, C, B, A]. Suppose we cannot fit all 10 documents into the context length, and decide to use the sliding window approach with **window size** 5 and **step size** 3. Sliding window will proceed from the back of the list to the front, scanning 5 documents at a time, and advancing the window by 3 documents at a time:
+Let's understand this with a concrete example. Suppose we have 10 documents `[A, B, C, D, E, F, G, H, I, J]` to rank, where the true ranking we want to obtain is `[J, I, H, G, F, E, D, C, B, A]`. Suppose we cannot fit all 10 documents into the context length, and decide to use the sliding window approach with **window size** 5 and **step size** 3. Sliding window will proceed from the back of the list to the front, scanning 5 documents at a time, and advancing the window by 3 documents at a time:
 
 #### Iteration 1
-Our current ranking is: [A, B, C, D, E, F, G, H, I, J]. The LLM examines the documents [F, G, H, I, J] and orders them as [J, I, H, G, F]. Our ranking becomes: [A, B, C, D, E, J, I, H, G, F].
+Our current ranking is: `[A, B, C, D, E, F, G, H, I, J]`. The LLM examines the documents `[F, G, H, I, J]` and orders them as `[J, I, H, G, F]`. Our ranking becomes: `[A, B, C, D, E, J, I, H, G, F]`.
 
 #### Iteration 2
-Our current ranking is: [A, B, C, D, E, J, I, H, G, F]. The LLM examines the documents [C, D, E, J, I] and orders them as [J, I, E, D, C]. Our ranking becomes: [A, B, J, I, E, D, C, H, G, F].
+Our current ranking is: `[A, B, C, D, E, J, I, H, G, F]`. The LLM examines the documents `[C, D, E, J, I]` and orders them as `[J, I, E, D, C]`. Our ranking becomes: `[A, B, J, I, E, D, C, H, G, F]`.
 
 #### Iteration 3
-Our current ranking is: [A, B, J, I, E, D, C, H, G, F]. The LLM examines the documents [A, B, J, I, E] and orders them as [J, I, E, B, A]. Our ranking becomes: [J, I, E, B, A, D, C, H, G, F]. This completes the sliding window process.
+Our current ranking is: `[A, B, J, I, E, D, C, H, G, F]`. The LLM examines the documents `[A, B, J, I, E]` and orders them as `[J, I, E, B, A]`. Our ranking becomes: `[J, I, E, B, A, D, C, H, G, F]`. This completes the sliding window process.
 
 Notice how the final ranking is not exactly the same as the true ranking, but the top documents (the ones that are closer to the beginning of the list) are close to the true ranking.
 
