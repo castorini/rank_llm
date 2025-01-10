@@ -25,7 +25,7 @@ of texts _C_ = {_d<sub>i</sub>_} that maximizes a metric of interest, for exampl
 
 ## Multi-stage retrieval
 
-At this point of the onboarding path, we are already fairly familiar with the "core retrieval" problem above, and implemented sparse and dense retrieval in Pyserini that obtains such a ranked list $\{d_1, \cdots, d_k\}$ given a query $q$. However, what if we want to further improve the quality of the retrieved list? Intuitively, to achieve a better ranking, the algorithms we run will also be more computationally expensive, which quickly becomes impractical as the number of documents scale (e.g. 8,841,823 documents in the MS MARCO passage ranking corpus).
+At this point of the onboarding path, we are already fairly familiar with the "core retrieval" problem above, and implemented sparse and dense retrieval in Pyserini that obtains such a ranked list {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} given a query $q$. However, what if we want to further improve the quality of the retrieved list? Intuitively, to achieve a better ranking, the algorithms we run will also be more computationally expensive, which quickly becomes impractical as the number of documents scale (e.g. 8,841,823 documents in the MS MARCO passage ranking corpus).
 
 To mitigate this, we can still proceed with the "cheaper" methods we've used before to get an "initial" ranked list, narrowing down the number of documents to a manageable number, say from 8,841,823 to 1000. On top of this initial list, we can then apply more computationally expensive algorithms on just these 1000 documents to further improve the quality of the retrieved list.
 
@@ -35,7 +35,7 @@ This is the idea of **multi-stage retrieval**. Obtaining the initial list is ref
 
 There are many ways we can leverage LLMs to perform reranking. Generally, the approaches can be divided into three categories: pointwise (scoring documents individually), pairwise (comparing documents in pairs), and listwise (considering multiple documents together). In this guide, we will focus on the listwise approach. For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
 
-> Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025. 
+> Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed, this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025. 
 
 ### Understanding Listwise Reranking
 
@@ -83,7 +83,11 @@ In practice, we often use a window size of 20 and a step size of 10.
 ### Reranking with RankZephyr
 
 [RankZephyr](https://huggingface.co/castorini/rank_zephyr_7b_v1_full) is an LLM specifically fine-tuned for listwise reranking, led by [Pradeep et. al (2023)](https://arxiv.org/abs/2312.02724) at the University of Waterloo. We will run end-to-end multi-stage retrieval pipeline with RankZephyr, realizing the listwise reranking with sliding window mechanism as described above. Note that this will require a GPU with **at least 16GB of VRAM**.
-> If you are short of GPU, we recommend purchasing a [Google Colab Pro](https://colab.research.google.com/) for $13.99 CAD.
+> If you are short of GPUs, we recommend purchasing a [Google Colab Pro](https://colab.research.google.com/) for $13.99 CAD.
+
+#### ❗ JDK 21 Warning
+
+As rank_llm relies on [anserini](https://github.com/castorini/anserini), it is required that you have JDK 21 installed. Please note that using JDK 11 is not supported and may lead to errors for the following steps.
 
 #### Create Conda Environment
 
@@ -119,9 +123,15 @@ We can run the RankZephyr model with the following command:
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 ```
-Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library.
+The results should be something like:
+```
+Results:
+ndcg_cut_10             all     0.8201
+```
 
-Where is the first-stage retrieval? It is hidden in the `--retrieval_method=SPLADE++_EnsembleDistil_ONNX` flag. We are using the [SPLADE](https://www.pinecone.io/learn/splade/) model as our sparse first-stage retriever, retrieving the top 100 candidates, followed by the RankZephyr model to rerank these 100 candidates.
+Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library. Note that the result you get may vary slightly with the number above. 
+
+_Where is the first-stage retrieval?_ It is hidden in the `--retrieval_method=SPLADE++_EnsembleDistil_ONNX` flag. We are using the [SPLADE](https://www.pinecone.io/learn/splade/) model as our sparse first-stage retriever, retrieving the top 100 candidates, followed by the RankZephyr model to rerank these 100 candidates.
 
 ## FIRST: First-token Reranking
 
@@ -130,7 +140,7 @@ FIRST (Faster Improved Listwise Reranking with Single Token Decoding) is a novel
 At a high level, instead of prompting the LLM to generate a full ranking of the documents (e.g. "[3] > [1] > [2]"), we examine the probability that each document will be ranked as the top document by the LLM, and infer the ranking from these probabilities. For example, if the probabilities of ranking documents 1, 2, 3 as the top document are 0.2, 0.1, 0.7, respectively, then we hypothesize that the true ranking is [3] > [1] > [2] without having to wait for the LLM to generate the full ranking in text, avoiding a major bottleneck in inference efficiency.
 > How do we obtain such probabilities? We use the logits of generating each identifier as the top document. If you need more information on logits in transformers, [The Annotated Transformer](https://nlp.seas.harvard.edu/2018/04/03/attention.html) is a good entry point.
 
-For more information, refer to [Reddy et al. (2024)](https://arxiv.org/abs/2406.15657) if you are interested.
+For more information about FIRST, refer to [Reddy et al. (2024)](https://arxiv.org/abs/2406.15657) if you are interested.
 
 ### Reranking with FirstMistral
 [FirstMistral](https://arxiv.org/abs/2411.05508) is an LLM fine-tuned for listwise reranking using the FIRST approach. Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with FirstMistral.
@@ -147,10 +157,16 @@ pip install rank-llm[vllm]  # or pip installation
 ```
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --vllm_batched --num_gpus 1
 ```
+The results should be something like:
+```
+Results:
+ndcg_cut_10             all     0.7851
+```
+
 This above performs first-stage retrieval with SPLADE to get the initial 100 candidates, followed by listwise reranking using FIRST with FirstMistral.
 
 If you wish to compare FIRST's speed with traditional listwise reranking, omit the `--use_logits` and `--use_alpha` flags to perform traditional listwise reranking.
 
-That is all for this guide! A reminder that this is just a gentle introduction to reranking with LLMs, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
+That is all for this guide! A reminder that this is just a gentle introduction, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
