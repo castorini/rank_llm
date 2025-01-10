@@ -43,6 +43,7 @@ class Reranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
             sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
+            tensorrt_batched (bool, optional): Whether to use TensorRT-LLM batched processing. Defaults to False.
             populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
 
@@ -101,6 +102,7 @@ class Reranker:
         ranking_execution_summary_dirname: str = "ranking_execution_summary",
         vllm_batched: bool = False,
         sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
         **kwargs,
     ) -> str:
         """
@@ -144,6 +146,8 @@ class Reranker:
             name += "_vllm"
         if sglang_batched:
             name += "_sglang"
+        if tensorrt_batched:
+            name += "_tensorrt"
 
         # write rerank results
         writer = DataWriter(results)
@@ -237,6 +241,7 @@ class Reranker:
                 ("system_message", None),
                 ("vllm_batched", False),
                 ("sglang_batched", False),
+                ("tensorrt_batched", False),
                 ("use_logits", False),
                 ("use_alpha", False),
             ]
@@ -251,6 +256,7 @@ class Reranker:
                 system_message,
                 vllm_batched,
                 sglang_batched,
+                tensorrt_batched,
                 use_logits,
                 use_alpha,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
@@ -272,6 +278,7 @@ class Reranker:
                 system_message=system_message,
                 vllm_batched=vllm_batched,
                 sglang_batched=sglang_batched,
+                tensorrt_batched=tensorrt_batched,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
             )
