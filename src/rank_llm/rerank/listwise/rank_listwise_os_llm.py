@@ -130,7 +130,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     "Please install rank-llm with `pip install -e .[sglang]` to use sglang batch inference."
                 )
             port = random.randint(30000, 35000)
-            self._llm = Engine(model_path=model, port=port, download_dir=os.getenv("HF_HOME"))
+            self._llm = Engine(
+                model_path=model,
+                port=port,
+                download_dir=os.getenv("HF_HOME")
+            )
             self._tokenizer = self._llm.get_tokenizer()
         elif tensorrt_batched:
             try:
