@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
 
+
 class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
@@ -131,9 +132,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
             port = random.randint(30000, 35000)
             self._llm = Engine(
-                model_path=model,
-                port=port,
-                download_dir=os.getenv("HF_HOME")
+                model_path=model, port=port, download_dir=os.getenv("HF_HOME")
             )
             self._tokenizer = self._llm.get_tokenizer()
         elif tensorrt_batched:
