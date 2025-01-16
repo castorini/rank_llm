@@ -31,7 +31,7 @@ vllm = [
     "vllm>=0.4.0"
 ]
 sglang = [
-    "sglang[all]>=0.3.4"
+    "sglang[all]~=0.4.0"
 ]
 tensorrt_llm = [
     "tensorrt_llm[all]>=0.14.0"
