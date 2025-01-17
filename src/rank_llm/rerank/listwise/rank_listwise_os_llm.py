@@ -38,7 +38,6 @@ try:
 except:
     tensorrt_llm = None
 
-
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
@@ -158,15 +157,17 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 tensor_parallel_size=num_gpus,
             )
             self._tokenizer = self._llm.get_tokenizer()
-        elif sglang_batched and Engine is None:
+        elif sglang_batched and sglang is None:
             raise ImportError(
-                "Please install rank-llm with `pip install -e .[sglang]` to use sglang batch inference."
+                "Please install rank-llm with `pip install -e .[sglang]` to use batch inference."
             )
         elif sglang_batched:
             assert Engine is not None
             self._llm_inference_mode = "sglang"
             port = random.randint(30000, 35000)
-            self._llm = Engine(model_path=model, port=port)
+            self._llm = Engine(
+                model_path=model, port=port, download_dir=os.getenv("HF_HOME")
+            )
             self._tokenizer = self._llm.get_tokenizer()
         elif tensorrt_batched and tensorrt_llm is None:
             raise ImportError(
