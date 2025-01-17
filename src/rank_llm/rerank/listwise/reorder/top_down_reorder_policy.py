@@ -92,9 +92,11 @@ class TopDownReorderProcess:
         Algorithm is O(N^2) here, we can eliminate it to O(N) by split result into result and result_this_turn
         """
 
-        while len(indices) > window_size:
+        while len(indices) > window_size: 
             result = []
 
+            # Notice this step will always only being run for 1 time, if pivot >= top_k
+            #   which is also a parameter we want to control
             while len(result) < top_k:
                 # base, find a pivot and do topdown
                 base = indices[:window_size]
