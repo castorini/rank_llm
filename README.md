@@ -16,6 +16,11 @@ current_version = 0.20.3
 
 ## 📟 Instructions
 
+### ❗ JDK 21 Warning
+
+As rank_llm relies on [anserini](https://github.com/castorini/anserini), it is required that you have JDK 21 installed.
+Please note that using JDK 11 is not supported and may lead to errors.
+
 ### Create Conda Environment
 
 ```bash
