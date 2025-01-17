@@ -295,20 +295,6 @@ If you would like to cite the FIRST methodology, please consider citing:
 }
 ```
 
-If you woud like to cite the ListT5's tournament sort methodology, please consider citing
-
-[[2402.15838] ListT5: Listwise Reranking with Fusion-in-Decoder Improves Zero-shot Retrieval](https://arxiv.org/abs/2405.14589)
-
-```
-@ARTICLE{yoon2024listt5,
-  title = {Listt5: Listwise reranking with fusion-in-decoder improves zero-shot retrieval},
-  author = {Yoon, Soyoung and Choi, Eunbi and Kim, Jiyeon and Yun, Hyeongu and Kim, Yireun and Hwang, Seung-won},
-  journal = {arXiv preprint arXiv:2402.15838},
-  year={2024}
-  journal = {arXiv:2402.15838}
-}
-```
-
 If you would like to cite the Top Down Paritioning methodology, please consider citing
 
 [[2405.14589] Top-Down Partitioning for Efficient List-Wise Ranking](https://arxiv.org/abs/2405.14589)
