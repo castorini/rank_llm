@@ -92,7 +92,7 @@ class TopDownReorderProcess:
         Algorithm is O(N^2) here, we can eliminate it to O(N) by split result into result and result_this_turn
         """
 
-        while len(indices) > window_size: 
+        while len(indices) > window_size:
             result = []
 
             # Notice this step will always only being run for 1 time, if pivot >= top_k
