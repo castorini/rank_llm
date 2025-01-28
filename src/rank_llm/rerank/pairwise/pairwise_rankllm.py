@@ -1,5 +1,6 @@
 import copy
 import logging
+import math
 import re
 from abc import ABC
 from datetime import datetime
@@ -14,19 +15,19 @@ from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
-
-class PointwiseRankLLM(RankLLM, ABC):
+class PairwiseRankLLM(RankLLM, ABC):
     """
-    Abstract base class that all pointwise rerankers implement.
+    Abstract base class that all pairwise rerankers implement.
 
-    All children of PointwiseRankLLM must implement these functions:
+    All concrete children of RankLLM must implement these functions:
+        - rerank_batch
         - run_llm_batched
         - run_llm
+        - create_prompt_batched
         - create_prompt
         - get_num_tokens
         - cost_per_1k_tokens
         - num_output_tokens
-
     """
 
     def __init__(
@@ -52,6 +53,8 @@ class PointwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        self._enumerated_indices = []
+
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -61,29 +64,51 @@ class PointwiseRankLLM(RankLLM, ABC):
             for request in requests
         ]
 
-        total_candidates = sum(len(result.candidates) for result in rerank_results)
+        for result in rerank_results:
+            for i in result.candidates:
+                i.score = 0
 
-        with tqdm(
-            total=total_candidates, desc="Progress through (q, d) pairs"
-        ) as progress_bar:
-            index = 0
-            while index < total_candidates:
+        for index in range(len(requests) * len(requests[0].candidates) * len(requests[0].candidates)):
+            candidate_1 = math.floor(
+                (index % (len(rerank_results[0].candidates) ** 2)) / len(rerank_results[0].candidates)
+            )
+            candidate_2 = index % len(rerank_results[0].candidates)
+            if candidate_1 != candidate_2:
+                self._enumerated_indices.append(index)    
+
+        end = (len(rerank_results[0].candidates) - 1) * len(rerank_results[0].candidates) * len(requests)
+        with tqdm(total=end, desc="Progress through (q, d) pairs") as progress_bar:
+            for index in range(0, end, self._batch_size):
                 prompts, token_counts = self.create_prompt_batched(
                     results=rerank_results, index=index
                 )
 
                 outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts)
 
-                for i, score in enumerate(scores):
-                    query_number, candidate_number = self.get_query_and_candidate_index(
-                        rerank_results, index + i
+                for update_index in range (
+                    index,
+                    min(
+                        index + self._batch_size, 
+                        end
                     )
-                    rerank_results[query_number].candidates[
-                        candidate_number
-                    ].score = score
+                ):
+                    update_index_copy = self._enumerated_indices[update_index]
+                    query_number = math.floor(
+                        update_index_copy / (len(rerank_results[0].candidates) ** 2)
+                    )
+                    candidate_1 = math.floor(
+                        (update_index_copy % (len(rerank_results[0].candidates) ** 2)) / len(rerank_results[0].candidates)
+                    )
+                    candidate_2 = update_index_copy % len(rerank_results[0].candidates)
+                
+                    rerank_results[query_number].candidates[candidate_1].score += scores[update_index - index]
+                    rerank_results[query_number].candidates[candidate_2].score += 1 - scores[update_index - index]
+                
+                if index + self._batch_size > end:
+                    progress_bar.update(end - index)
+                else:
+                    progress_bar.update(self._batch_size)
 
-                progress_bar.update(len(scores))
-                index += self._batch_size
 
         for result in rerank_results:
             result.candidates.sort(
@@ -92,39 +117,31 @@ class PointwiseRankLLM(RankLLM, ABC):
 
         return rerank_results
 
-    def get_query_and_candidate_index(
-        self, results: List[Result], global_index: int
-    ) -> Tuple[int, int]:
-        cumulative_count = 0
-        for query_index, result in enumerate(results):
-            if global_index < cumulative_count + len(result.candidates):
-                return query_index, global_index - cumulative_count
-            cumulative_count += len(result.candidates)
-        raise IndexError("Index out of range in get_query_and_candidate_index")
-
     def create_prompt_batched(
-        self, results: List[Result], index: int
+        self, results: List[Result], index
     ) -> Tuple[List[str], List[int]]:
         prompts = []
         token_counts = []
 
-        for i in range(
+        for current_index in range(
             index,
-            min(
-                index + self._batch_size,
-                sum(len(result.candidates) for result in results),
-            ),
+            min(index + self._batch_size, len(results[0].candidates) * (len(results[0].candidates) - 1) * len(results)),
         ):
-            query_number, candidate_number = self.get_query_and_candidate_index(
-                results, i
+            current_index = self._enumerated_indices[current_index]
+            query_number = math.floor(
+                current_index / (len(results[0].candidates) ** 2)
             )
+            candidate_1 = math.floor(
+                (current_index % (len(results[0].candidates) ** 2)) / len(results[0].candidates)
+            )
+            candidate_2 = current_index % len(results[0].candidates)
+
             prompt, token_count = self.create_prompt(
-                result=results[query_number], index=candidate_number
+                result=results[query_number], index1=candidate_1, index2=candidate_2
             )
 
             prompts.append(prompt)
             token_counts.append(token_count)
-
         return prompts, token_counts
 
     def get_output_filename(
