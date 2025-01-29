@@ -33,8 +33,6 @@ def get_azure_openai_args() -> Dict[str, str]:
     ), "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
     return azure_args
 
-# edit required here to get gemini keys
-# add function to get gemini key similar to get openai_api_key()
 gemini_path = "GEMINI_API_KEY"
 def get_gemini_api_key(gemini_path=gemini_path) -> str:
     load_dotenv(dotenv_path=f".env.local")

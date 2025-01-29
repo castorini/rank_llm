@@ -9,7 +9,7 @@ from rank_llm.rerank import (
     get_openai_api_key,
     get_gemini_api_key
 )
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai, SafeGemini
+from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai, GeminiReranker
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
@@ -237,7 +237,7 @@ class Reranker:
             ] = extract_kwargs(keys_and_defaults, **kwargs)
             
             gemini_keys = get_gemini_api_key()
-            agent = SafeGemini(
+            agent = GeminiReranker(
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,

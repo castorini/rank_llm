@@ -23,7 +23,7 @@ pip install -U -q "google-generativeai>=0.8.2"
 ## 
 
 
-class SafeGemini(ListwiseRankLLM):
+class GeminiReranker(ListwiseRankLLM):
     
     def __init__(
         self,
@@ -69,9 +69,15 @@ class SafeGemini(ListwiseRankLLM):
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}, # ask how to block civic integrity and add here
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
         ]
         self.system_instruction = "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
+        self.model = genai.GenerativeModel(
+                    model_name=self.model_name,
+                    generation_config=self.generation_config,
+                    system_instruction=self.system_instruction,
+                    safety_settings=self.safety_settings
+                    )
         genai.configure(api_key=self._keys[self._cur_key_id])
     
     class CompletionMode(Enum):
@@ -120,13 +126,7 @@ class SafeGemini(ListwiseRankLLM):
         while True:
             try:
                 if completion_mode == self.CompletionMode.CHAT:
-                    model = genai.GenerativeModel(
-                    model_name=self.model_name,
-                    generation_config=self.generation_config,
-                    system_instruction=self.system_instruction,
-                    safety_settings=self.safety_settings
-                    )
-                    chat_session = model.start_chat(
+                    chat_session = self.model.start_chat(
                     history=[
                     ]
                     )
@@ -162,12 +162,11 @@ class SafeGemini(ListwiseRankLLM):
         response = self._call_completion(
             messages=prompt,
             temperature=1,
-            completion_mode=SafeGemini.CompletionMode.CHAT,
+            completion_mode=GeminiReranker.CompletionMode.CHAT,
             return_text=True,
             **{model_key: self._model},
         )
-        token_counter = genai.GenerativeModel(self.model_name)
-        return response, token_counter.count_tokens(response).total_tokens
+        return response, self.model.count_tokens(response).total_tokens
 
 
     def create_prompt(
@@ -186,9 +185,7 @@ class SafeGemini(ListwiseRankLLM):
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 message += f'{psg_id} = "{self._replace_number(content)}"\n'
                 psg_ids.append(psg_id)
-            message += f'QUESTION = "{query}"\n'
-            message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
-            message += "SORTED_PASSAGES = [\n"
+            message += f'QUESTION = "{query}"\n' + "PASSAGES = [" + ", ".join(psg_ids) + "]\n SORTED_PASSAGES = [\n"
             message = {
                         "parts": [
                             {
@@ -196,7 +193,6 @@ class SafeGemini(ListwiseRankLLM):
                             }
                         ]
                         }
-            #message = [{"role": "user", "content": message}]
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -214,9 +210,8 @@ class SafeGemini(ListwiseRankLLM):
         if self._output_token_estimate and self._window_size == current_window_size:
             return self._output_token_estimate
         else:
-            token_counter = genai.GenerativeModel(self.model_name)
 
-            _output_token_estimate = token_counter.count_tokens("[rankstart] " + " > ".join([f"[{i+1}]" for i in range(current_window_size)]) + " [rankend]").total_tokens - 1
+            _output_token_estimate = self.model.count_tokens("[rankstart] " + " > ".join([f"[{i+1}]" for i in range(current_window_size)]) + " [rankend]").total_tokens - 1
             if (
                 self._output_token_estimate is None
                 and self._window_size == current_window_size
@@ -233,16 +228,15 @@ class SafeGemini(ListwiseRankLLM):
     def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""
         num_tokens = 0
-        model = genai.GenerativeModel(self.model_name)
         if isinstance(prompt, list):
             for message in prompt:
                 for key, value in message.items():
-                    response = model.count_tokens(value).total_tokens
+                    response = self.model.count_tokens(value).total_tokens
                     num_tokens += response
         else:
-                response = model.count_tokens(prompt).total_tokens
+                response = self.model.count_tokens(prompt).total_tokens
                 num_tokens += response
-        # num_tokens += 3  # every reply is primed with <|start|>assistant<|message|> check later for how to approch this issue
+        num_tokens += 3
         return num_tokens
     
     
