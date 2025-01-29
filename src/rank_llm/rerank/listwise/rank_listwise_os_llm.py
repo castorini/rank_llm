@@ -4,7 +4,7 @@ import os
 import random
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, TypeAlias, Union
 
 import torch
 from fastchat.model import get_conversation_template, load_model
@@ -16,6 +16,7 @@ from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
+from .reorder.reorder_policy import ReorderPolicy
 
 try:
     from vllm import LLM, RequestOutput, SamplingParams
@@ -24,27 +25,47 @@ except:
     RequestOutput = None
     SamplingParams = None
 
+try:
+    import sglang
+    import sglang.srt.server
+    from sglang import Engine
+except:
+    sglang = None
+    Engine = None
+
+try:
+    import tensorrt_llm
+except:
+    tensorrt_llm = None
+
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
+
+# TODO Type alias for inference backend, should be changed into type alias when update to 3.12
+InferenceBackend: TypeAlias = Literal["vllm", "sglang", "tensorrt", "transformers"]
+
+ReorderMethod: TypeAlias = Literal["logits", "order"]
 
 
 class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
         model: str,
+        reorder_policy: Optional[ReorderPolicy] = None,
         name: str = "",
         context_size: int = 4096,
+        window_size: int = 20,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
         device: str = "cuda",
         num_gpus: int = 1,
         variable_passages: bool = False,
-        window_size: int = 20,
         system_message: str = None,
         use_logits: bool = False,
         use_alpha: bool = False,
         vllm_batched: bool = False,
+        vllm_chunked_prefill: bool = False,
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
     ) -> None:
@@ -83,11 +104,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         TODO: Make repetition_penalty configurable
         """
         super().__init__(
-            model,
-            context_size,
-            prompt_mode,
-            num_few_shot_examples,
-            window_size,
+            reorder_policy=reorder_policy,
+            model=model,
+            context_size=context_size,
+            window_size=window_size,
+            prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
             use_alpha=use_alpha,
         )
         self._device = device
@@ -110,46 +132,64 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
+
+        # ============ Model Loading ==========
+
+        # case of Any is the transformers load_model
+        self._llm_inference_mode: InferenceBackend = None
+        self._llm: Union[LLM, Engine, Any] = None
+
         if vllm_batched and LLM is None:
             raise ImportError(
                 "Please install rank-llm with `pip install -e .[vllm]` to use batch inference."
             )
         elif vllm_batched:
+            # TODO: find max_model_len given gpu
+            assert LLM is not None
+            self._llm_inference_mode = "vllm"
             self._llm = LLM(
                 model,
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
+                enable_chunked_prefill=vllm_chunked_prefill,
+                disable_sliding_window=vllm_chunked_prefill,
                 max_logprobs=30,
                 tensor_parallel_size=num_gpus,
             )
             self._tokenizer = self._llm.get_tokenizer()
+        elif sglang_batched and sglang is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install -e .[sglang]` to use batch inference."
+            )
         elif sglang_batched:
-            try:
-                from sglang import Engine
-            except Exception:
-                raise ImportError(
-                    "Please install rank-llm with `pip install -e .[sglang]` to use sglang batch inference."
-                )
+            assert Engine is not None
+            self._llm_inference_mode = "sglang"
             port = random.randint(30000, 35000)
             self._llm = Engine(
                 model_path=model, port=port, download_dir=os.getenv("HF_HOME")
             )
             self._tokenizer = self._llm.get_tokenizer()
+        elif tensorrt_batched and tensorrt_llm is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install -e .[tensorrt-llm]` to use tensorrt batch inference."
+            )
         elif tensorrt_batched:
-            try:
-                from tensorrt_llm import LLM as TRTLLM
-                from tensorrt_llm import BuildConfig
-            except Exception:
-                raise ImportError(
-                    "Please install rank-llm with `pip install -e .[tensorrt-llm]` to use tensorrt batch inference."
-                )
-            build_config = BuildConfig(max_seq_len=4096)
-            self._llm = TRTLLM(model=model, build_config=build_config)
+            assert tensorrt_llm is not None
+            self._llm_inference_mode = "tensorrt"
+            build_config = tensorrt_llm.BuildConfig(max_seq_len=4096)
+            self._llm = tensorrt_llm.LLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
+            self._llm_inference_mode = "transformers"
             self._llm, self._tokenizer = load_model(
                 model, device=device, num_gpus=num_gpus
             )
+
+        # ============ Logits ==========
+
+        self._logits_mode: ReorderMethod = "logits" if self._use_logits else "order"
+
+        # ============ Order chars ==========
 
     def rerank_batch(
         self,
@@ -158,54 +198,19 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        batched: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
-        window_size: int = kwargs.get("window_size", 20)
-        window_size = min(window_size, top_k_retrieve)
-        step: int = kwargs.get("step", 10)
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
-        if self._vllm_batched or self._sglang_batched or self._tensorrt_batched:
-            # reranking using vllm or sglang or tensorrtllm
-            if len(set([len(req.candidates) for req in requests])) != 1:
-                raise ValueError(
-                    "Batched requests must have the same number of candidates"
-                )
-
-            return self.sliding_windows_batched(
-                requests,
-                rank_start=max(rank_start, 0),
-                rank_end=min(
-                    rank_end, len(requests[0].candidates)
-                ),  # TODO: Fails arbitrary hit sizes
-                window_size=window_size,
-                step=step,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-                populate_exec_summary=populate_exec_summary,
-            )
-        else:
-            if self._use_logits:
-                raise TypeError(
-                    "Reranking using logits of first identifier is currently only supported when vllm_batch=True"
-                )
-
-            # Normal operation mode
-            results = []
-            for request in tqdm(requests):
-                result = self.sliding_windows(
-                    request,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(rank_end, len(request.candidates)),
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                results.append(result)
-            return results
+        return super().rerank_batch(
+            requests=requests,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            batched=(self._llm_inference_mode in ("vllm", "sglang", "tensorrt"))
+            or batched,
+            **kwargs,
+        )
 
     def _evaluate_logits(
         self, logits: Dict[str, "Logit"], total: Tuple[int, int]
@@ -249,68 +254,114 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def run_llm_batched(
         self,
         prompts: List[str | List[Dict[str, str]]],
-        current_window_size: Optional[int] = None,
+        silence: bool = False,
+        **kwargs,
     ) -> List[Tuple[str, int]]:
-        if isinstance(self._llm, LLM) and self._vllm_batched:
-            logger.info(f"VLLM Generating!")
-            if current_window_size is None:
-                current_window_size = self._window_size
+        # ensure everyone is a json string
+        for prompt in prompts:
+            assert isinstance(prompt, str)
+        # load the json
+        prompt_datas = [
+            json.loads(prompt) for prompt in prompts if isinstance(prompt, str)
+        ]
+        prompts_s: List[str] = [prompt["prompt"] for prompt in prompt_datas]
+        num_passages: List[int] = [prompt["num_passages"] for prompt in prompt_datas]
+        match self._llm_inference_mode:
+            case "vllm":
+                if SamplingParams is None:
+                    raise ImportError(
+                        "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+                    )
+                assert LLM is not None and isinstance(self._llm, LLM)
 
-            if self._use_logits:
-                params = SamplingParams(
-                    min_tokens=2, max_tokens=2, temperature=0.0, logprobs=30
+                if not self._use_logits:
+                    sampling_params = [
+                        SamplingParams(
+                            temperature=0.0,
+                            max_tokens=self.num_output_tokens(x),
+                            min_tokens=0,
+                        )
+                        for x in num_passages
+                    ]
+                    outputs = self._llm.generate(
+                        prompts_s, sampling_params, use_tqdm=not silence
+                    )
+                    return [
+                        (output.outputs[0].text, len(output.outputs[0].token_ids))
+                        for output in outputs
+                    ]
+                else:
+                    sampling_params = [
+                        SamplingParams(
+                            temperature=0.0, max_tokens=2, min_tokens=2, logprobs=30
+                        )
+                        for _ in num_passages
+                    ]
+                    outputs = self._llm.generate(
+                        prompts_s, sampling_params, use_tqdm=not silence
+                    )
+                    arr = [self._get_logits_single_digit(output) for output in outputs]
+                    return [(s, len(s)) for s, _ in arr]
+            case "sglang":
+                assert sglang is not None and isinstance(
+                    self._llm, sglang.srt.server.Engine
                 )
-                outputs = self._llm.generate(prompts, sampling_params=params)
-                arr = [self._get_logits_single_digit(output) for output in outputs]
-                return [(s, len(s)) for s, __ in arr]
-            else:
-                sampling_params = SamplingParams(
-                    temperature=0.0,
-                    max_tokens=self.num_output_tokens(current_window_size),
-                    min_tokens=self.num_output_tokens(current_window_size),
-                )
-                outputs = self._llm.generate(prompts, sampling_params)
+
+                sampling_params = [
+                    {
+                        "temperature": 0.0,
+                        "max_new_tokens": self.num_output_tokens(psg),
+                        "min_new_tokens": self.num_output_tokens(psg),
+                    }
+                    for psg in num_passages
+                ]
+                outputs = self._llm.generate(prompts_s, sampling_params)
+                return [
+                    # completion_tokens counts stop token
+                    (output["text"], output["meta_info"]["completion_tokens"] - 1)
+                    for output in outputs
+                ]
+            case "tensorrt":
+                import tensorrt_llm.hlapi.llm
+                from tensorrt_llm import SamplingParams as TRTSamplingParams
+
+                assert isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM)
+                sampling_params = [
+                    TRTSamplingParams(
+                        temperature=0.0,
+                        max_tokens=self.num_output_tokens(x),
+                        min_tokens=self.num_output_tokens(x),
+                    )
+                    for x in num_passages
+                ]
+                outputs = self._llm.generate(prompts_s, sampling_params)
                 return [
                     (output.outputs[0].text, len(output.outputs[0].token_ids))
                     for output in outputs
                 ]
-        elif self._tensorrt_batched:
-            import tensorrt_llm.hlapi.llm
-            from tensorrt_llm import SamplingParams as TRTSamplingParams
-
-            if isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM):
-                logger.info(f"TensorRT LLM Generating!")
-                sampling_params = TRTSamplingParams(
-                    temperature=0.0,
-                    max_tokens=self.num_output_tokens(current_window_size),
-                    min_tokens=self.num_output_tokens(current_window_size),
+            case _:
+                raise ValueError(
+                    f"Invalid batched inference configuration: {self._llm_inference_mode} for LLM"
                 )
-                outputs = self._llm.generate(prompts, sampling_params)
-                return [
-                    (output.outputs[0].text, len(output.outputs[0].token_ids))
-                    for output in outputs
-                ]
-        else:
-            logger.info(f"SGLang Generating!")
-            sampling_params = {
-                "temperature": 0.0,
-                "max_new_tokens": self.num_output_tokens(current_window_size),
-                "min_new_tokens": self.num_output_tokens(current_window_size),
-            }
-            outputs = self._llm.generate(prompts, sampling_params)
-            return [
-                # completion_tokens counts stop token
-                (output["text"], output["meta_info"]["completion_tokens"] - 1)
-                for output in outputs
-            ]
 
     def run_llm(
-        self, prompt: str, current_window_size: Optional[int] = None
+        self,
+        prompt: Union[str, List[Dict[str, str]]],
+        silence: bool = False,
+        **kwargs,
     ) -> Tuple[str, int]:
-        if current_window_size is None:
-            current_window_size = self._window_size
+        assert isinstance(prompt, str)
+        prompt_data = json.loads(prompt)
+        prompt_s, num_passage_s = prompt_data["prompt"], prompt_data["num_passages"]
+        num_passage = int(num_passage_s)
 
         if self._use_logits:
+            assert (
+                self._llm_inference_mode == "vllm"
+                and SamplingParams is not None
+                and LLM is not None
+                and isinstance(self._llm, LLM)
+            ), "Logits are only supported with VLLM"
             params = SamplingParams(
                 min_tokens=1, max_tokens=1, temperature=0.0, logprobs=30
             )
@@ -320,11 +371,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             s, _ = self._get_logits_single_digit(output, effective_location=0)
             return s, len(s)
         else:
-            inputs = self._tokenizer([prompt])
+            inputs = self._tokenizer([prompt_s])
             inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
             gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-            gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size)
-            gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
+            gen_cfg.max_new_tokens = self.num_output_tokens(num_passage)
+            gen_cfg.min_new_tokens = self.num_output_tokens(num_passage)
             # gen_cfg.temperature = 0
             gen_cfg.do_sample = False
             output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
@@ -347,7 +398,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         if self._output_token_estimate and self._window_size == current_window_size:
             return self._output_token_estimate
 
-        if self._use_alpha:
+        if not self._use_alpha:
             token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
         else:
             token_str = " > ".join(
@@ -398,99 +449,109 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         return messages
 
     def create_prompt(
-        self, result: Result, rank_start: int, rank_end: int
+        self, result: Result, selected_indices: List[int]
     ) -> Tuple[str, int]:
         query = result.query.text
         query = self._replace_number(query)
-        num = len(result.candidates[rank_start:rank_end])
-        max_length = 300 * (20 / (rank_end - rank_start))
+        num = len(selected_indices)
+        max_length = int(300 * (20 / (len(selected_indices))))
         while True:
-            if self._vllm_batched:
-                messages = list()
-                if self._system_message:
-                    messages.append({"role": "system", "content": self._system_message})
-                messages = self._add_few_shot_examples_messages(messages)
-                prefix = self._add_prefix_prompt(query, num)
-                rank = 0
-                input_context = f"{prefix}\n"
-                for cand in result.candidates[rank_start:rank_end]:
-                    rank += 1
-                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-
-                    identifier = (
-                        chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
-                    )
-                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
-
-                input_context += self._add_post_prompt(query, num)
-                messages.append({"role": "user", "content": input_context})
-
-                prompt = self._tokenizer.apply_chat_template(
-                    messages, tokenize=False, add_generation_prompt=True
-                )
-                prompt = fix_text(prompt)
-                num_tokens = self.get_num_tokens(prompt)
-                if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    rank_end - rank_start
-                ):
-                    break
-                else:
-                    max_length -= max(
-                        1,
-                        (
-                            num_tokens
-                            - self.max_tokens()
-                            + self.num_output_tokens(rank_end - rank_start)
+            match self._llm_inference_mode:
+                case "vllm":
+                    messages = list()
+                    if self._system_message:
+                        messages.append(
+                            {"role": "system", "content": self._system_message}
                         )
-                        // ((rank_end - rank_start) * 4),
-                    )
-            else:
-                conv = get_conversation_template(self._model)
-                if self._system_message:
-                    conv.set_system_message(self._system_message)
-                conv = self._add_few_shot_examples(conv)
-                prefix = self._add_prefix_prompt(query, num)
-                rank = 0
-                input_context = f"{prefix}\n"
-                for cand in result.candidates[rank_start:rank_end]:
-                    rank += 1
-                    # For Japanese should cut by character: content = content[:int(max_length)]
-                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-
-                    identifier = (
-                        chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
-                    )
-                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
-
-                input_context += self._add_post_prompt(query, num)
-                conv.append_message(conv.roles[0], input_context)
-                conv.append_message(conv.roles[1], None)
-                prompt = conv.get_prompt()
-                prompt = fix_text(prompt)
-                num_tokens = self.get_num_tokens(prompt)
-                if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    rank_end - rank_start
-                ):
-                    break
-                else:
-                    max_length -= max(
-                        1,
-                        (
-                            num_tokens
-                            - self.max_tokens()
-                            + self.num_output_tokens(rank_end - rank_start)
+                    messages = self._add_few_shot_examples_messages(messages)
+                    prefix = self._add_prefix_prompt(query, num)
+                    rank = 0
+                    input_context = f"{prefix}\n"
+                    for idx in selected_indices:
+                        cand = result.candidates[idx]
+                        rank += 1
+                        content = self.convert_doc_to_prompt_content(
+                            cand.doc, max_length
                         )
-                        // ((rank_end - rank_start) * 4),
+
+                        identifier = (
+                            chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
+                        )
+                        input_context += (
+                            f"[{identifier}] {self._replace_number(content)}\n"
+                        )
+
+                    input_context += self._add_post_prompt(query, num)
+                    messages.append({"role": "user", "content": input_context})
+
+                    prompt = self._tokenizer.apply_chat_template(
+                        messages, tokenize=False, add_generation_prompt=True
                     )
-        return prompt, self.get_num_tokens(prompt)
+                    prompt = fix_text(prompt)
+                    num_tokens = self.get_num_tokens(prompt)
+                    if num_tokens <= self.max_tokens() - self.num_output_tokens(num):
+                        break
+                    else:
+                        max_length -= max(
+                            1,
+                            (
+                                num_tokens
+                                - self.max_tokens()
+                                + self.num_output_tokens(num)
+                            )
+                            // ((num) * 4),
+                        )
+                case _:
+                    conv = get_conversation_template(self._model)
+                    if self._system_message:
+                        conv.set_system_message(self._system_message)
+                    conv = self._add_few_shot_examples(conv)
+                    prefix = self._add_prefix_prompt(query, num)
+                    rank = 0
+                    input_context = f"{prefix}\n"
+                    for cand in selected_indices:
+                        cand = result.candidates[cand]
+                        rank += 1
+                        # For Japanese should cut by character: content = content[:int(max_length)]
+                        content = self.convert_doc_to_prompt_content(
+                            cand.doc, max_length
+                        )
+
+                        identifier = (
+                            chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
+                        )
+                        input_context += (
+                            f"[{identifier}] {self._replace_number(content)}\n"
+                        )
+
+                    input_context += self._add_post_prompt(query, num)
+                    conv.append_message(conv.roles[0], input_context)
+                    conv.append_message(conv.roles[1], None)
+                    prompt = conv.get_prompt()
+                    prompt = fix_text(prompt)
+                    num_tokens = self.get_num_tokens(prompt)
+                    if num_tokens <= self.max_tokens() - self.num_output_tokens(num):
+                        break
+                    else:
+                        max_length -= max(
+                            1,
+                            (
+                                num_tokens
+                                - self.max_tokens()
+                                + self.num_output_tokens(num)
+                            )
+                            // ((num) * 4),
+                        )
+        return json.dumps({"prompt": prompt, "num_passages": num}), self.get_num_tokens(
+            prompt
+        )
 
     def create_prompt_batched(
         self,
         results: List[Result],
-        rank_start: int,
-        rank_end: int,
+        selected_indices_batch: List[List[int]],
         batch_size: int = 32,
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
@@ -499,17 +560,19 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         all_completed_prompts = []
 
         with ThreadPoolExecutor() as executor:
-            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
+            for batch in tqdm(
+                chunks(list(zip(results, selected_indices_batch)), batch_size),
+                desc="Processing batches",
+                leave=False,
+            ):
                 completed_prompts = list(
-                    executor.map(
-                        lambda result: self.create_prompt(result, rank_start, rank_end),
-                        batch,
-                    )
+                    executor.map(lambda req: self.create_prompt(req[0], req[1]), batch)
                 )
                 all_completed_prompts.extend(completed_prompts)
         return all_completed_prompts
 
-    def get_num_tokens(self, prompt: str) -> int:
+    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+        assert isinstance(prompt, str), "Prompt should be a string in RankListwiseOSLLM"
         return len(self._tokenizer.encode(prompt))
 
     def cost_per_1k_token(self, input_token: bool) -> float:
