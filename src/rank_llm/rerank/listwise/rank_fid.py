@@ -112,6 +112,12 @@ class RankFiDDistill(ListwiseRankLLM):
         return [
             (decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs
         ]
+    
+    def _is_correct_prompt(self, prompt: Union[str, List[Dict[str, str]]]) -> bool:
+        return isinstance(prompt, list) and all(
+            isinstance(item, dict) and "text" in item and isinstance(item["text"], str)
+            for item in prompt
+        )
 
     def rerank_batch(
         self,
@@ -139,8 +145,7 @@ class RankFiDDistill(ListwiseRankLLM):
         if len(prompts) == 0:
             return []
 
-        for prompt in prompts:
-            assert isinstance(prompt, str)
+        assert all(self._is_correct_prompt(prompt) for prompt in prompts)
 
         # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
         #   (which is commonly the same) then rerank stuff having same passage sizes
