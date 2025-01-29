@@ -112,7 +112,7 @@ class RankFiDDistill(ListwiseRankLLM):
         return [
             (decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs
         ]
-    
+
     def _is_correct_prompt(self, prompt: Union[str, List[Dict[str, str]]]) -> bool:
         return isinstance(prompt, list) and all(
             isinstance(item, dict) and "text" in item and isinstance(item["text"], str)
