@@ -34,14 +34,18 @@ def main(args):
     variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
     num_passes = args.num_passes
-    step_size = args.step_size
     window_size = args.window_size
+    step_size = args.step_size
     system_message = args.system_message
     vllm_batched = args.vllm_batched
-    use_logits = args.use_logits
-    use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
+    vllm_chunked_prefill = args.vllm_chunked_prefill
+    batch_size = args.batch_size
+    reorder_policy = args.reorder_policy
+    silence = args.silence
+    use_logits = args.use_logits
+    use_alpha = args.use_alpha
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -66,10 +70,13 @@ def main(args):
         step_size=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
-        use_logits=use_logits,
-        use_alpha=use_alpha,
         sglang_batched=sglang_batched,
         tensorrt_batched=tensorrt_batched,
+        vllm_chunked_prefill=vllm_chunked_prefill,
+        reorder_policy=reorder_policy,
+        silence=silence,
+        use_logits=use_logits,
+        use_alpha=use_alpha,
     )
 
 
@@ -87,7 +94,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=32,
+        default=None,
         help="Size of each batch for batched inference.",
     )
     parser.add_argument(
@@ -179,21 +186,39 @@ if __name__ == "__main__":
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
     )
-    infer_backend_group = parser.add_mutually_exclusive_group()
-    infer_backend_group.add_argument(
-        "--vllm_batched",
+    parser.add_argument(
+        "--reorder_policy",
+        default="sliding_window",
+        help="policy in reordering. defaultly to be sliding window",
+        type=str,
+    )
+    parser.add_argument(
+        "--silence",
+        default=False,
         action="store_true",
-        help="whether to run the model in batches",
+        help="Whether or not omitting some unbeautiful tqdm bars that is unavoidable (not able to set leave=False)",
     )
     parser.add_argument(
         "--use_logits",
         action="store_true",
         help="whether to rerank using the logits of the first identifier only. Only supported if vllm_batched is True",
     )
+
     parser.add_argument(
         "--use_alpha",
         action="store_true",
         help="whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True",
+    )
+    infer_backend_group = parser.add_mutually_exclusive_group()
+    infer_backend_group.add_argument(
+        "--vllm_batched",
+        action="store_true",
+        help="whether to run the model in batches",
+    )
+    infer_backend_group.add_argument(
+        "--vllm_chunked_prefill",
+        action="store_true",
+        help="whether to run the model in vllm chunked prefill. no function if vllm_batched is not on",
     )
     infer_backend_group.add_argument(
         "--sglang_batched",

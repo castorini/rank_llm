@@ -33,8 +33,7 @@ class MonoT5(PointwiseRankLLM):
         self._context_size = context_size
 
     def run_llm_batched(
-        self,
-        prompts: List[str],
+        self, prompts: List[str], **kwargs
     ) -> Tuple[List[str], List[int], List[float]]:
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
@@ -82,7 +81,7 @@ class MonoT5(PointwiseRankLLM):
 
         return all_outputs, all_output_token_counts, all_scores
 
-    def run_llm(self, prompt: str) -> Tuple[str, int, float]:
+    def run_llm(self, prompt: str, **kwargs) -> Tuple[str, int, float]:
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_new_tokens = self.num_output_tokens()
@@ -113,9 +112,12 @@ class MonoT5(PointwiseRankLLM):
     def num_output_tokens(self) -> int:
         return 1
 
-    def create_prompt(self, result: Result, index: int) -> Tuple[str, int]:
+    def create_prompt(
+        self, result: Result, selected_indices: List[int]
+    ) -> Tuple[str, int]:
+        assert len(selected_indices) == 1
         query = result.query.text
-        input = f"Query: {query} Document: {self.convert_doc_to_prompt_content(result.candidates[index].doc, max_length=self._context_size)}"
+        input = f"Query: {query} Document: {self.convert_doc_to_prompt_content(result.candidates[selected_indices[0]].doc, max_length=self._context_size)}"
         prompt = (
             self._tokenizer.decode(
                 self._tokenizer.encode(input)[: (self._context_size - 32)]
