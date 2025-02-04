@@ -99,10 +99,12 @@ class SafeOpenai(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
+        rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", 20)
+        window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step", 10)
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
         results = []
         for request in tqdm(requests):
             result = self.sliding_windows(

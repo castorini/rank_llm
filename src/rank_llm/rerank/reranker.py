@@ -37,16 +37,13 @@ class Reranker:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-            vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
-            sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
-            tensorrt_batched (bool, optional): Whether to use TensorRT-LLM batched processing. Defaults to False.
-            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
-            batched (bool, optional): Whether to use batched processing. Defaults to False.
-
+            **kwargs: Additional keyword arguments including:
+                populate_exec_summary (bool): Whether to populate the exec summary. Defaults to False.
+                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
+                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window_size.
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
@@ -73,11 +70,13 @@ class Reranker:
             request (Request): The reranking request which has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-
+            **kwargs: Additional keyword arguments including:
+                populate_exec_summary (bool): Whether to populate the exec summary. Defaults to False.
+                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
+                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size. 
         Returns:
             Result: the rerank result which contains the reranked candidates.
         """

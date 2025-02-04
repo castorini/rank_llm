@@ -76,9 +76,10 @@ request_dict = {
 
 request = from_dict(data_class=Request, data=request_dict)
 reranker = ZephyrReranker()
-rerank_results = reranker.rerank(request=request)
+kwargs = {"populate_exec_summary": True}
+rerank_results = reranker.rerank(request=request, **kwargs)
 reranker = VicunaReranker()
-rerank_results = reranker.rerank(request=request)
+rerank_results = reranker.rerank(request=request, **kwargs)
 print(rerank_results)
 
 # write rerank results
