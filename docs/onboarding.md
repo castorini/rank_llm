@@ -166,3 +166,4 @@ A reminder that this is just a gentle introduction, and the field is still large
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
 + Results reproduced by [@b8zhong](https://github.com/b8zhong) on 2025-02-03 (commit [`c908de0`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
++ Results reproduced by [@vincent-4](https://github.com/vincent-4) on 2025-02-05 (commit [`4da0c46`](https://github.com/castorini/rank_llm/commit/4da0c46486fb31b65d41ec9a1fde7dacd9a05410))
