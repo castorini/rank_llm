@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import Candidate, Request, Result
+from rank_llm.data import Candidate, Request, Result, RankingExecInfo
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ class PointwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -65,7 +66,9 @@ class PointwiseRankLLM(RankLLM, ABC):
                     results=rerank_results, index=index
                 )
 
-                outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts)
+                outputs, output_token_counts, scores = self.run_llm_batched(
+                    prompts=prompts
+                )
 
                 for i, score in enumerate(scores):
                     query_number, candidate_number = self.get_query_and_candidate_index(
@@ -74,6 +77,16 @@ class PointwiseRankLLM(RankLLM, ABC):
                     rerank_results[query_number].candidates[
                         candidate_number
                     ].score = score
+                    if populate_exec_summary:
+                        ranking_exec_info = RankingExecInfo(
+                            prompts[i],
+                            outputs[i],
+                            token_counts[i],
+                            output_token_counts[i],
+                        )
+                        rerank_results[query_number].ranking_exec_summary.append(
+                            ranking_exec_info
+                        )
 
                 progress_bar.update(len(scores))
                 index += self._batch_size

@@ -76,7 +76,7 @@ class MonoT5(PointwiseRankLLM):
                 math.exp(truth_logit) + math.exp(false_logit)
             )
             all_scores.append(score)
-            all_output_token_counts.append(self.num_output_tokens)
+            all_output_token_counts.append(self.num_output_tokens())
 
         all_outputs.extend(batch_outputs)
 
