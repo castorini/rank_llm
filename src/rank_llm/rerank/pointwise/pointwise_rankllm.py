@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import Candidate, Request, Result, RankingExecInfo
+from rank_llm.data import Candidate, RankingExecInfo, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
