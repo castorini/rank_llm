@@ -1,30 +1,27 @@
-import os
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import google.generativeai as genai
+from tqdm import tqdm
+
+from rank_llm.data import Request, Result
+from rank_llm.rerank import PromptMode
+
 from .listwise_rankllm import ListwiseRankLLM
 
-from tqdm import tqdm
-import tiktoken
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
-from rank_llm.rerank import PromptMode
-from rank_llm.data import Request, Result
-
-'''
+"""
 make sure to run
 pip install -U -q "google-generativeai>=0.8.2"
-'''
+"""
 
 
-## required functions 
+## required functions
 
-## 
+##
 
 
 class GeminiReranker(ListwiseRankLLM):
-    
     def __init__(
         self,
         model: str,
@@ -34,10 +31,10 @@ class GeminiReranker(ListwiseRankLLM):
         window_size: int = 20,
         keys=None,
         key_start_id=None,
-        temperature = 0,
-        top_p = 0.95,
-        top_k = 40,
-        max_output_tokens = 8192
+        temperature=0,
+        top_p=0.95,
+        top_k=40,
+        max_output_tokens=8192,
     ):
         super().__init__(
             model, context_size, prompt_mode, num_few_shot_examples, window_size
@@ -57,15 +54,15 @@ class GeminiReranker(ListwiseRankLLM):
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
         self.generation_config = {
-        "temperature": temperature,
-        "top_p": top_p,
-        "top_k": top_k,
-        "max_output_tokens": max_output_tokens,
-        "response_mime_type": "text/plain",
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+            "max_output_tokens": max_output_tokens,
+            "response_mime_type": "text/plain",
         }
-        
+
         self.model_name = model
-        self.safety_settings=[
+        self.safety_settings = [
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -73,17 +70,16 @@ class GeminiReranker(ListwiseRankLLM):
         ]
         self.system_instruction = "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
         self.model = genai.GenerativeModel(
-                    model_name=self.model_name,
-                    generation_config=self.generation_config,
-                    system_instruction=self.system_instruction,
-                    safety_settings=self.safety_settings
-                    )
+            model_name=self.model_name,
+            generation_config=self.generation_config,
+            system_instruction=self.system_instruction,
+            safety_settings=self.safety_settings,
+        )
         genai.configure(api_key=self._keys[self._cur_key_id])
-    
+
     class CompletionMode(Enum):
         CHAT = 1
-        
-    
+
     def rerank_batch(
         self,
         requests: List[Request],
@@ -114,7 +110,7 @@ class GeminiReranker(ListwiseRankLLM):
 
     def run_llm_batched(self):
         pass
-    
+
     def _call_completion(
         self,
         *args,
@@ -126,10 +122,7 @@ class GeminiReranker(ListwiseRankLLM):
         while True:
             try:
                 if completion_mode == self.CompletionMode.CHAT:
-                    chat_session = self.model.start_chat(
-                    history=[
-                    ]
-                    )
+                    chat_session = self.model.start_chat(history=[])
                     completion = chat_session.send_message(kwargs.get("messages"))
                 else:
                     raise ValueError(
@@ -146,7 +139,7 @@ class GeminiReranker(ListwiseRankLLM):
                     print("The response was filtered")
                     return "ERROR::The response was filtered"
                 self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
-                self.api_key = self._keys[self._cur_key_id] 
+                self.api_key = self._keys[self._cur_key_id]
                 genai.configure(api_key=self.api_key)
                 time.sleep(5.0)
         if return_text:
@@ -168,7 +161,6 @@ class GeminiReranker(ListwiseRankLLM):
         )
         return response, self.model.count_tokens(response).total_tokens
 
-
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
@@ -185,14 +177,13 @@ class GeminiReranker(ListwiseRankLLM):
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 message += f'{psg_id} = "{self._replace_number(content)}"\n'
                 psg_ids.append(psg_id)
-            message += f'QUESTION = "{query}"\n' + "PASSAGES = [" + ", ".join(psg_ids) + "]\n SORTED_PASSAGES = [\n"
-            message = {
-                        "parts": [
-                            {
-                                "text": message
-                            }
-                        ]
-                        }
+            message += (
+                f'QUESTION = "{query}"\n'
+                + "PASSAGES = ["
+                + ", ".join(psg_ids)
+                + "]\n SORTED_PASSAGES = [\n"
+            )
+            message = {"parts": [{"text": message}]}
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -203,28 +194,33 @@ class GeminiReranker(ListwiseRankLLM):
                     // ((rank_end - rank_start) * 4),
                 )
         return message, self.get_num_tokens(message)
-    
+
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
         if self._output_token_estimate and self._window_size == current_window_size:
             return self._output_token_estimate
         else:
-
-            _output_token_estimate = self.model.count_tokens("[rankstart] " + " > ".join([f"[{i+1}]" for i in range(current_window_size)]) + " [rankend]").total_tokens - 1
+            _output_token_estimate = (
+                self.model.count_tokens(
+                    "[rankstart] "
+                    + " > ".join([f"[{i+1}]" for i in range(current_window_size)])
+                    + " [rankend]"
+                ).total_tokens
+                - 1
+            )
             if (
                 self._output_token_estimate is None
                 and self._window_size == current_window_size
             ):
                 self._output_token_estimate = _output_token_estimate
             return _output_token_estimate
-            
-    
+
     def create_prompt_batched(
         self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
-    
+
     def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""
         num_tokens = 0
@@ -234,15 +230,13 @@ class GeminiReranker(ListwiseRankLLM):
                     response = self.model.count_tokens(value).total_tokens
                     num_tokens += response
         else:
-                response = self.model.count_tokens(prompt).total_tokens
-                num_tokens += response
+            response = self.model.count_tokens(prompt).total_tokens
+            num_tokens += response
         num_tokens += 3
         return num_tokens
-    
-    
+
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
-    
+
     def get_name(self) -> str:
         return self.model_name
-    

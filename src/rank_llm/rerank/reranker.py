@@ -6,10 +6,10 @@ from rank_llm.rerank import (
     PromptMode,
     RankLLM,
     get_azure_openai_args,
+    get_gemini_api_key,
     get_openai_api_key,
-    get_gemini_api_key
 )
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai, GeminiReranker
+from rank_llm.rerank.listwise import GeminiReranker, RankListwiseOSLLM, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
@@ -235,7 +235,7 @@ class Reranker:
                 num_few_shot_examples,
                 window_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
-            
+
             gemini_keys = get_gemini_api_key()
             agent = GeminiReranker(
                 model=model_path,
@@ -243,9 +243,9 @@ class Reranker:
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
                 window_size=window_size,
-                keys=gemini_keys
+                keys=gemini_keys,
             )
-            
+
         elif "vicuna" in model_path or "zephyr" in model_path:
             # RankVicuna or RankZephyr model suite
             print(f"Loading {model_path} ...")
