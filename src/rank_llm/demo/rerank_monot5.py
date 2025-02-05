@@ -1,18 +1,16 @@
 import os
 import sys
+from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.analysis.response_analysis import ResponseAnalyzer
-from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank import Reranker, get_openai_api_key
-from rank_llm.rerank.listwise import SafeOpenai, VicunaReranker, ZephyrReranker
+from rank_llm.data import DataWriter
+from rank_llm.rerank import Reranker
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.retrieve.retriever import Retriever
-from rank_llm.retrieve.topics_dict import TOPICS
 
 dataset = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
@@ -21,10 +19,6 @@ m_reranker = Reranker(monot5_agent)
 kwargs = {"populate_exec_summary": True}
 rerank_results = m_reranker.rerank_batch(requests, **kwargs)
 print(rerank_results)
-
-from pathlib import Path
-
-from rank_llm.data import DataWriter
 
 # write rerank results
 writer = DataWriter(rerank_results)
