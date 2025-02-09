@@ -119,14 +119,12 @@ class RankFiDDistill(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        top_k_retrieve: int = kwargs.get("top_k_retrieve", 100)
-
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
+        rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", self._window_size)
         window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step_size", self._stride)
-
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
         batch_size = kwargs.get("batch_size", 1)
 
         if self._batched:
@@ -406,14 +404,12 @@ class RankFiDScore(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        top_k_retrieve: int = kwargs.get("top_k_retrieve", 100)
-
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
+        rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", self._window_size)
         window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step_size", self._stride)
-
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
         batch_size = kwargs.get("batch_size", 1)
 
         if self._batched:
