@@ -86,7 +86,7 @@ class LiT5DistillReranker:
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
                 batch_size (int): The batch size used for processing multiple requests at once.
         Returns:
-            Result: A list containing the reranked results.
+            Result: the rerank result which contains the reranked candidates.
 
         Note:
             check 'reranker.rerank' for implementation details of reranking process.
@@ -182,7 +182,7 @@ class LiT5ScoreReranker:
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
                 batch_size (int): The batch size used for processing multiple requests at once.
         Returns:
-            Result: A list containing the reranked results.
+            Result: the rerank result which contains the reranked candidates.
 
         Note:
             check 'reranker.rerank' for implementation details of reranking process.
