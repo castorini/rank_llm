@@ -14,8 +14,8 @@ from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
 # create rerankers
-agent = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
-g_reranker = Reranker(agent)
+model_coordinator = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
+g_reranker = Reranker(model_coordinator)
 v_reranker = VicunaReranker()
 z_reranker = ZephyrReranker()
 rerankers = {"rg": g_reranker, "rv": v_reranker, "rz": z_reranker}

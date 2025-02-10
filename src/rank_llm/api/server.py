@@ -26,13 +26,13 @@ Default to 20, 10, None, and 1 respectively
 def create_app(model, port, use_azure_openai=False):
     app = Flask(__name__)
 
-    global default_agent
-    default_agent = None
+    global default_model_coordinator
+    default_model_coordinator = None
     print(model)
     # Load specified model upon server initialization
     if model == "first_mistral":
         print(f"Loading {model} model...")
-        default_agent = RankListwiseOSLLM(
+        default_model_coordinator = RankListwiseOSLLM(
             model=f"castorini/first_mistral",
             name=model,
             context_size=8192,
@@ -49,7 +49,7 @@ def create_app(model, port, use_azure_openai=False):
         )
     elif model == "rank_zephyr":
         print(f"Loading {model} model...")
-        default_agent = RankListwiseOSLLM(
+        default_model_coordinator = RankListwiseOSLLM(
             model=f"castorini/{model}_7b_v1_full",
             name=model,
             context_size=4096,
@@ -64,7 +64,7 @@ def create_app(model, port, use_azure_openai=False):
         )
     elif model == "rank_vicuna":
         print(f"Loading {model} model...")
-        default_agent = RankListwiseOSLLM(
+        default_model_coordinator = RankListwiseOSLLM(
             model=f"castorini/{model}_7b_v1",
             name=model,
             context_size=4096,
@@ -80,7 +80,7 @@ def create_app(model, port, use_azure_openai=False):
         print(f"Loading {model} model...")
         openai_keys = get_openai_api_key()
         print(openai_keys)
-        default_agent = SafeOpenai(
+        default_model_coordinator = SafeOpenai(
             model=model,
             context_size=8192,
             prompt_mode=PromptMode.RANK_GPT,
@@ -90,7 +90,7 @@ def create_app(model, port, use_azure_openai=False):
         )
     elif model == "identity_reranker":
         print(f"Loading {model} model...")
-        default_agent = IdentityReranker()
+        default_model_coordinator = IdentityReranker()
     else:
         raise ValueError(f"Unsupported model: {model}")
 
@@ -129,15 +129,18 @@ def create_app(model, port, use_azure_openai=False):
             return jsonify({"error": str("Retrieval method must be BM25")}), 500
 
         # If the request model is not the default model
-        global default_agent
-        if default_agent is not None and model_path != default_agent.get_name():
-            # Delete the old agent to clear up the CUDA cache
-            del default_agent  # this line is required for clearing the cache
+        global default_model_coordinator
+        if (
+            default_model_coordinator is not None
+            and model_path != default_model_coordinator.get_name()
+        ):
+            # Delete the old model_coordinator to clear up the CUDA cache
+            del default_model_coordinator  # this line is required for clearing the cache
             torch.cuda.empty_cache()
-            default_agent = None
+            default_model_coordinator = None
         try:
             # calls Anserini retriever API and reranks
-            (response, agent) = retrieve_and_rerank(
+            (response, model_coordinator) = retrieve_and_rerank(
                 dataset=dataset,
                 retrieval_mode=RetrievalMode.DATASET,
                 query=query,
@@ -148,14 +151,14 @@ def create_app(model, port, use_azure_openai=False):
                 top_k_retrieve=top_k_retrieve,
                 qid=qid,
                 populate_exec_summary=False,
-                default_agent=default_agent,
+                default_model_coordinator=default_model_coordinator,
                 num_passes=num_passes,
                 retrieval_method=_retrieval_method,
                 print_prompts_responses=False,
             )
 
-            # set the default reranking agent to the most recently used reranking agent
-            default_agent = agent
+            # set the default reranking model_coordinator to the most recently used reranking model_coordinator
+            default_model_coordinator = model_coordinator
 
             return jsonify(response[0]), 200
         except Exception as e:

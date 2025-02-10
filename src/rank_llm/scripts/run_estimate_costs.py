@@ -28,7 +28,7 @@ def main(args):
         print("#" * 20)
         retriever = PyseriniRetriever(dataset, retrieval_method)
         num_queries = retriever.num_queries()
-        agent = SafeOpenai(
+        model_coordinator = SafeOpenai(
             model=model_name,
             context_size=context_size,
             prompt_mode=prompt_mode,
@@ -36,7 +36,7 @@ def main(args):
             keys=openai_keys,
         )
         print(
-            f'Estimating cost for "{dataset}" with "{retrieval_method.value}" retrieval method, {top_k_candidates} top candidates, {context_size} context_size, and "{model_name}" model with {agent.cost_per_1k_token(input_token=True)}|{agent.cost_per_1k_token(input_token=False)} per input|output 1k tokens:'
+            f'Estimating cost for "{dataset}" with "{retrieval_method.value}" retrieval method, {top_k_candidates} top candidates, {context_size} context_size, and "{model_name}" model with {model_coordinator.cost_per_1k_token(input_token=True)}|{model_coordinator.cost_per_1k_token(input_token=False)} per input|output 1k tokens:'
         )
         if estimation_mode == EstimationMode.CREATE_PROMPTS:
             print("Reterieving candidates:")
@@ -44,11 +44,11 @@ def main(args):
             # For dl20 the number of retrieved results is different from the number of queries/topics.
             num_queries = len(retrieved_results)
             print("Estimating cost by prompt generation:")
-            cost, token_count = agent.get_ranking_cost(
+            cost, token_count = model_coordinator.get_ranking_cost(
                 retrieved_results, rank_start=0, rank_end=100, window_size=20, step=10
             )
         elif estimation_mode == EstimationMode.MAX_CONTEXT_LENGTH:
-            cost, token_count = agent.get_ranking_cost_upperbound(
+            cost, token_count = model_coordinator.get_ranking_cost_upperbound(
                 num_queries, rank_start=0, rank_end=100, window_size=20, step=10
             )
         else:
