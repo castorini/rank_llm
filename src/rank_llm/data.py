@@ -72,7 +72,7 @@ class DataWriter:
             self._data = [data]
         self._append = append
 
-    def write_infernece_invocations_history(self, filename: str):
+    def write_inference_invocations_history(self, filename: str):
         aggregated_history = []
         for d in self._data:
             values = []

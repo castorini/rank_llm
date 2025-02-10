@@ -165,7 +165,7 @@ class Reranker:
         Path(f"{inference_invocations_history_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        writer.write_infernece_invocations_history(
+        writer.write_inference_invocations_history(
             f"{inference_invocations_history_dirname}/{retrieval_method_name}/{name}.json"
         )
         return result_file_name
