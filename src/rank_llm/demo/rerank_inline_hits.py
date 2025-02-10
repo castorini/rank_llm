@@ -76,14 +76,15 @@ request_dict = {
 
 request = from_dict(data_class=Request, data=request_dict)
 reranker = ZephyrReranker()
-rerank_results = reranker.rerank(request=request)
+kwargs = {"populate_exec_summary": True}
+rerank_results = reranker.rerank(request=request, **kwargs)
 reranker = VicunaReranker()
-rerank_results = reranker.rerank(request=request)
+rerank_results = reranker.rerank(request=request, **kwargs)
 print(rerank_results)
 
 # write rerank results
 writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
-writer.write_in_json_format(f"demo_outputs/rerank_results.json")
+writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
 writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")

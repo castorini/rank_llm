@@ -3,7 +3,7 @@ Convert from old, unsupported JSON input format to newer JSONL request format.
 
 Some discussion on the change can be found here:
     https://github.com/castorini/rank_llm/issues/110
-    
+
 The newer Request class definition can be found here:
     https://github.com/castorini/rank_llm/blob/7db69439b261162a10a60d597d6b42d323f6a7f1/src/rank_llm/data.py#L23
 """
