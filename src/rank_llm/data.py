@@ -25,7 +25,7 @@ class Request:
 
 
 @dataclass
-class InferenceInfo:
+class RankingExecInfo:
     prompt: Any
     response: str
     input_token_count: int
@@ -36,7 +36,7 @@ class InferenceInfo:
 class Result:
     query: Query
     candidates: list[Candidate] = field(default_factory=list)
-    inference_history: list[InferenceInfo] = (field(default_factory=list),)
+    ranking_exec_summary: list[RankingExecInfo] = (field(default_factory=list),)
 
 
 def read_requests_from_file(file_path: str) -> List[Request]:
@@ -72,15 +72,17 @@ class DataWriter:
             self._data = [data]
         self._append = append
 
-    def write_inference_history(self, filename: str):
-        history = []
+    def write_ranking_exec_summary(self, filename: str):
+        exec_summary = []
         for d in self._data:
             values = []
-            for info in d.inference_history:
+            for info in d.ranking_exec_summary:
                 values.append(info.__dict__)
-            history.append({"query": d.query.__dict__, "inference_history": values})
+            exec_summary.append(
+                {"query": d.query.__dict__, "ranking_exec_summary": values}
+            )
         with open(filename, "a" if self._append else "w") as f:
-            json.dump(history, f, indent=2)
+            json.dump(exec_summary, f, indent=2)
 
     def write_in_json_format(self, filename: str):
         results = []
