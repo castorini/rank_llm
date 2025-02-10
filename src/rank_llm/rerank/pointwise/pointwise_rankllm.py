@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import Candidate, RankingExecInfo, Request, Result
+from rank_llm.data import Candidate, InferenceInvocation, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
@@ -45,12 +45,14 @@ class PointwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
                 candidates=copy.deepcopy(request.candidates),
-                ranking_exec_summary=[],
+                invocations_history=[],
             )
             for request in requests
         ]
@@ -77,15 +79,15 @@ class PointwiseRankLLM(RankLLM, ABC):
                     rerank_results[query_number].candidates[
                         candidate_number
                     ].score = score
-                    if populate_exec_summary:
-                        ranking_exec_info = RankingExecInfo(
+                    if populate_invocations_history:
+                        inference_invocation = InferenceInvocation(
                             prompts[i],
                             outputs[i],
                             token_counts[i],
                             output_token_counts[i],
                         )
-                        rerank_results[query_number].ranking_exec_summary.append(
-                            ranking_exec_info
+                        rerank_results[query_number].invocations_history.append(
+                            inference_invocation
                         )
 
                 progress_bar.update(len(scores))

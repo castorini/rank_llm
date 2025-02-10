@@ -21,7 +21,7 @@ requests = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
 # Rerank multiple requests with LiT5 Distill
 lit5_d_model_coordinator = LiT5DistillReranker("castorini/LiT5-Distill-large")
 lit5_d_reranker = Reranker(lit5_d_model_coordinator)
-kwargs = {"populate_exec_summary": True, "batch_size": 32}
+kwargs = {"populate_invocations_history": True, "batch_size": 32}
 rerank_results = lit5_d_reranker.rerank_batch(requests, **kwargs)
 print(rerank_results)
 
@@ -29,7 +29,7 @@ print(rerank_results)
 request = requests[0]
 lit5_s_model_coordinator = LiT5ScoreReranker("castorini/LiT5-Score-large")
 lit5_s_reranker = Reranker(lit5_s_model_coordinator)
-kwargs = {"populate_exec_summary": True}
+kwargs = {"populate_invocations_history": True}
 rerank_result = lit5_s_reranker.rerank(request, **kwargs)
 print(rerank_results)
 
@@ -38,4 +38,6 @@ writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
 writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
-writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")
+writer.write_infernece_invocations_history(
+    f"demo_outputs/inference_invocations_history.json"
+)

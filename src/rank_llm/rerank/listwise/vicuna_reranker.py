@@ -49,7 +49,7 @@ class VicunaReranker:
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
-                populate_exec_summary (bool): Whether to populate the exec summary. Defaults to False.
+                populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
                 step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
@@ -87,7 +87,7 @@ class VicunaReranker:
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
-                populate_exec_summary (bool): Whether to populate the exec summary. Defaults to False.
+                populate_invocations_history (bool): Whether to populate the history of infernece invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
                 step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.

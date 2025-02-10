@@ -124,7 +124,9 @@ class RankFiDDistill(ListwiseRankLLM):
         window_size: int = kwargs.get("window_size", self._window_size)
         window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step_size", self._stride)
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
         batch_size = kwargs.get("batch_size", 1)
 
         if self._batched:
@@ -149,7 +151,7 @@ class RankFiDDistill(ListwiseRankLLM):
                         step=step,
                         shuffle_candidates=shuffle_candidates,
                         logging=logging,
-                        populate_exec_summary=populate_exec_summary,
+                        populate_invocations_history=populate_invocations_history,
                     )
                     result.extend(batch_result)
                     bar.update(len(batch))
@@ -167,7 +169,7 @@ class RankFiDDistill(ListwiseRankLLM):
                     step=step,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
-                    populate_exec_summary=populate_exec_summary,
+                    populate_invocations_history=populate_invocations_history,
                 )
                 results.append(result)
             return results
@@ -409,7 +411,9 @@ class RankFiDScore(ListwiseRankLLM):
         window_size: int = kwargs.get("window_size", self._window_size)
         window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step_size", self._stride)
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
         batch_size = kwargs.get("batch_size", 1)
 
         if self._batched:
@@ -434,7 +438,7 @@ class RankFiDScore(ListwiseRankLLM):
                         step=step,
                         shuffle_candidates=shuffle_candidates,
                         logging=logging,
-                        populate_exec_summary=populate_exec_summary,
+                        populate_invocations_history=populate_invocations_history,
                     )
                     result.extend(batch_result)
                     bar.update(len(batch))
@@ -452,7 +456,7 @@ class RankFiDScore(ListwiseRankLLM):
                     step=step,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
-                    populate_exec_summary=populate_exec_summary,
+                    populate_invocations_history=populate_invocations_history,
                 )
                 results.append(result)
             return results
