@@ -60,7 +60,7 @@ class SafeGenai(ListwiseRankLLM):
             PromptMode.RANK_GPT_APEER,
         ]:
             raise ValueError(
-                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_APPER}."
+                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_GPT_APPER}."
             )
         self._output_token_estimate = None
         self._keys = keys
@@ -131,7 +131,6 @@ class SafeGenai(ListwiseRankLLM):
                 else:
                     chat_session = self.model.start_chat(history=[])
                     completion = chat_session.send_message(messages)
-                print(completion.text)
                 break
             except Exception as e:
                 print("Error in completion call")

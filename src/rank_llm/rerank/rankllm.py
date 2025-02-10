@@ -15,7 +15,6 @@ class PromptMode(Enum):
     LRL = "LRL"
     MONOT5 = "monot5"
     LiT5 = "LiT5"
-    GEMINI = "GEMINI"
 
     def __str__(self):
         return self.value
