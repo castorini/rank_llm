@@ -1,5 +1,4 @@
 import time
-from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import google.generativeai as genai
@@ -14,11 +13,28 @@ from .listwise_rankllm import ListwiseRankLLM
 make sure to run
 pip install -U -q "google-generativeai>=0.8.2"
 """
-
+try:
+    import google.generativeai as genai
+except:
+    genai = None
 
 ## required functions
 
 ##
+
+
+def populate_generation_config(**kwargs) -> Dict[str, Any]:
+    # TODO: complete this for the rest of the optional generation params.
+    generation_config = {"response_mime_type": "text/plain"}
+    if "temperature" in kwargs:
+        generation_config["temperature"] = kwargs["temperature"]
+    if "top_p" in kwargs:
+        generation_config["top_p"] = kwargs["top_p"]
+    if "top_k" in kwargs:
+        generation_config["top_k"] = kwargs["top_k"]
+    if "max_output_tokens" in kwargs:
+        generation_config["max_output_tokens"] = kwargs["max_output_tokens"]
+    return generation_config
 
 
 class GeminiReranker(ListwiseRankLLM):
@@ -26,59 +42,52 @@ class GeminiReranker(ListwiseRankLLM):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode = PromptMode.GEMINI,
+        prompt_mode: PromptMode = PromptMode.RANK_APEER,
         num_few_shot_examples: int = 0,
         window_size: int = 20,
         keys=None,
         key_start_id=None,
-        temperature=0,
-        top_p=0.95,
-        top_k=40,
-        max_output_tokens=8192,
+        **kwargs,
     ):
         super().__init__(
             model, context_size, prompt_mode, num_few_shot_examples, window_size
         )
+        if not genai:
+            raise ImportError(
+                'Please install genai with `pip install -U -q "google-generativeai>=0.8.2"` to use gemini.'
+            )
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide Gemini Keys.")
         if prompt_mode not in [
-            PromptMode.GEMINI,
+            PromptMode.RANK_GPT_APEER,
         ]:
             raise ValueError(
-                f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.GEMINI}."
+                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_APPER}."
             )
         self._output_token_estimate = None
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
-        self.generation_config = {
-            "temperature": temperature,
-            "top_p": top_p,
-            "top_k": top_k,
-            "max_output_tokens": max_output_tokens,
-            "response_mime_type": "text/plain",
-        }
-
-        self.model_name = model
+        self.generation_config = populate_generation_config(**kwargs)
         self.safety_settings = [
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
         ]
-        self.system_instruction = "This is a chat between a user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions based on the context. The assistant should also indicate when the answer cannot be found in the context."
+        self.system_instruction = kwargs.get(
+            "system_instruction",
+            "As RankGemini, your task is to evaluate and rank unique passages based on their relevance and accuracy to a given query. Prioritize passages that directly address the query and provide detailed, correct answers. Ignore factors such as length, complexity, or writing style unless they seriously hinder readability.",
+        )
         self.model = genai.GenerativeModel(
-            model_name=self.model_name,
+            model_name=self._model,
             generation_config=self.generation_config,
             system_instruction=self.system_instruction,
             safety_settings=self.safety_settings,
         )
         genai.configure(api_key=self._keys[self._cur_key_id])
-
-    class CompletionMode(Enum):
-        CHAT = 1
 
     def rerank_batch(
         self,
@@ -89,10 +98,12 @@ class GeminiReranker(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
+        rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", 20)
+        window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step", 10)
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
         results = []
         for request in tqdm(requests):
             result = self.sliding_windows(
@@ -111,39 +122,31 @@ class GeminiReranker(ListwiseRankLLM):
     def run_llm_batched(self):
         pass
 
-    def _call_completion(
+    def _call_inference(
         self,
         *args,
-        completion_mode: CompletionMode,
         return_text=False,
-        reduce_length=False,
-        **kwargs,
     ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
-                if completion_mode == self.CompletionMode.CHAT:
-                    chat_session = self.model.start_chat(history=[])
-                    completion = chat_session.send_message(kwargs.get("messages"))
+                if isinstance(messages, list):
+                    history = messages[:-1]
+                    chat_message = messages[-1]
+                    chat_session = self.model.start_chat(history=history)
+                    completion = chat_session.send_message(chat_message)
                 else:
-                    raise ValueError(
-                        "Unsupported completion mode: %V" % completion_mode
-                    )
-                break
+                    chat_session = self.model.start_chat(history=[])
+                    completion = chat_session.send_message(messages)
             except Exception as e:
                 print("Error in completion call")
                 print(str(e))
-                if "This model's maximum context length is" in str(e):
-                    print("reduce_length")
-                    return "ERROR::reduce_length"
-                if "The response was filtered" in str(e):
-                    print("The response was filtered")
-                    return "ERROR::The response was filtered"
+                # TODO: do not retry for some of the deterministic failures.
                 self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
-                self.api_key = self._keys[self._cur_key_id]
-                genai.configure(api_key=self.api_key)
-                time.sleep(5.0)
+                genai.api_key = self._keys[self._cur_key_id]
+                time.sleep(1.0)
+
         if return_text:
-            completion = completion.text
+            return completion.text
         return completion
 
     def run_llm(
@@ -151,39 +154,28 @@ class GeminiReranker(ListwiseRankLLM):
         prompt: Union[str, List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
     ) -> Tuple[str, int]:
-        model_key = "model"
-        response = self._call_completion(
+        response = self._call_inference(
             messages=prompt,
-            temperature=1,
-            completion_mode=GeminiReranker.CompletionMode.CHAT,
             return_text=True,
-            **{model_key: self._model},
         )
         return response, self.model.count_tokens(response).total_tokens
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
+        # This one supports the rank_gpt_apeer format which sends a single message.
+        # TODO: implement rank_gpt prompt with multiturn chat
         query = result.query.text
         num = len(result.candidates[rank_start:rank_end])
-        max_length = 300 * (20 / (rank_end - rank_start))
-        psg_ids = []
+        max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            message = f"Given the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage NUM] > [next most relevant passage NUM] > ... > [least relevant passage NUM] [rankend]. ex: [rankstart] [1] > [2] ... [{num}] [rankend] Refrain from including any additional commentary or explanations in your ranking."
+            message = f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
-                psg_id = f"PASSAGE{rank}"
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-                message += f'{psg_id} = "{self._replace_number(content)}"\n'
-                psg_ids.append(psg_id)
-            message += (
-                f'QUESTION = "{query}"\n'
-                + "PASSAGES = ["
-                + ", ".join(psg_ids)
-                + "]\n SORTED_PASSAGES = [\n"
-            )
-            message = {"parts": [{"text": message}]}
+                message += f"\n[{rank}] {self._replace_number(content)}"
+            message += f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -193,7 +185,7 @@ class GeminiReranker(ListwiseRankLLM):
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
                     // ((rank_end - rank_start) * 4),
                 )
-        return message, self.get_num_tokens(message)
+        return prompt, self.get_num_tokens(prompt)
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
@@ -203,9 +195,7 @@ class GeminiReranker(ListwiseRankLLM):
         else:
             _output_token_estimate = (
                 self.model.count_tokens(
-                    "[rankstart] "
-                    + " > ".join([f"[{i+1}]" for i in range(current_window_size)])
-                    + " [rankend]"
+                    " > ".join([f"[{i+1}]" for i in range(current_window_size)])
                 ).total_tokens
                 - 1
             )
@@ -236,7 +226,8 @@ class GeminiReranker(ListwiseRankLLM):
         return num_tokens
 
     def cost_per_1k_token(self, input_token: bool) -> float:
+        # TODO: add proper costs
         return 0
 
     def get_name(self) -> str:
-        return self.model_name
+        return self._model
