@@ -6,10 +6,10 @@ from rank_llm.rerank import (
     PromptMode,
     RankLLM,
     get_azure_openai_args,
-    get_gemini_api_key,
+    get_genai_api_key,
     get_openai_api_key,
 )
-from rank_llm.rerank.listwise import GeminiReranker, RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
@@ -224,7 +224,7 @@ class Reranker:
         elif "gemini" in model_path:
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.GEMINI),
+                ("prompt_mode", PromptMode.RANK_GPT_APEER),
                 ("num_few_shot_examples", 0),
                 ("window_size", 20),
             ]
@@ -235,14 +235,14 @@ class Reranker:
                 window_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
-            gemini_keys = get_gemini_api_key()
-            agent = GeminiReranker(
+            genai_keys = get_genai_api_key()
+            agent = SafeGenai(
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
                 num_few_shot_examples=num_few_shot_examples,
                 window_size=window_size,
-                keys=gemini_keys,
+                keys=genai_keys,
             )
 
         elif "vicuna" in model_path or "zephyr" in model_path:

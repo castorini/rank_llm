@@ -1,7 +1,6 @@
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import google.generativeai as genai
 from tqdm import tqdm
 
 from rank_llm.data import Request, Result
@@ -18,10 +17,6 @@ try:
 except:
     genai = None
 
-## required functions
-
-##
-
 
 def populate_generation_config(**kwargs) -> Dict[str, Any]:
     # TODO: complete this for the rest of the optional generation params.
@@ -37,12 +32,13 @@ def populate_generation_config(**kwargs) -> Dict[str, Any]:
     return generation_config
 
 
-class GeminiReranker(ListwiseRankLLM):
+class SafeGenai(ListwiseRankLLM):
+    # TODO switch to the new genai api to support 2.0* models.
     def __init__(
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode = PromptMode.RANK_APEER,
+        prompt_mode: PromptMode = PromptMode.RANK_GPT_APEER,
         num_few_shot_examples: int = 0,
         window_size: int = 20,
         keys=None,
@@ -59,7 +55,7 @@ class GeminiReranker(ListwiseRankLLM):
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
-            raise ValueError("Please provide Gemini Keys.")
+            raise ValueError("Please provide Genai API Keys.")
         if prompt_mode not in [
             PromptMode.RANK_GPT_APEER,
         ]:
@@ -123,9 +119,7 @@ class GeminiReranker(ListwiseRankLLM):
         pass
 
     def _call_inference(
-        self,
-        *args,
-        return_text=False,
+        self, messages, return_text=False
     ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
@@ -137,6 +131,8 @@ class GeminiReranker(ListwiseRankLLM):
                 else:
                     chat_session = self.model.start_chat(history=[])
                     completion = chat_session.send_message(messages)
+                print(completion.text)
+                break
             except Exception as e:
                 print("Error in completion call")
                 print(str(e))
@@ -175,7 +171,7 @@ class GeminiReranker(ListwiseRankLLM):
                 rank += 1
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 message += f"\n[{rank}] {self._replace_number(content)}"
-            message += f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
+            message += f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend], e.g., [rankstart] [1] > ... > [2] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
@@ -185,7 +181,7 @@ class GeminiReranker(ListwiseRankLLM):
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
                     // ((rank_end - rank_start) * 4),
                 )
-        return prompt, self.get_num_tokens(prompt)
+        return message, self.get_num_tokens(message)
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:

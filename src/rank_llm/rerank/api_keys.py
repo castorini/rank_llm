@@ -34,12 +34,12 @@ def get_azure_openai_args() -> Dict[str, str]:
     return azure_args
 
 
-gemini_path = "GEMINI_API_KEY"
+genai_path = "GEN_AI_API_KEY"
 
 
-def get_gemini_api_key(gemini_path=gemini_path) -> str:
+def get_genai_api_key(genai_path=genai_path) -> str:
     load_dotenv(dotenv_path=f".env.local")
-    if os.getenv(gemini_path) is not None:
-        print(os.getenv(gemini_path))
-        return os.getenv(gemini_path)
+    if os.getenv(genai_path) is not None:
+        print(os.getenv(genai_path))
+        return os.getenv(genai_path)
     return None
