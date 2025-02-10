@@ -137,10 +137,10 @@ class RankLLM(ABC):
         **kwargs: Any,
     ) -> List[Result]:
         """
-        Reranks a list of requests using the RankLLM agent.
+        Reranks a list of requests using the RankLLM model_coordinator.
 
         This function applies a sliding window algorithm to rerank the results.
-        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+        Each window of results is processed by the RankLLM model_coordinator to obtain a new ranking.
 
         Args:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.

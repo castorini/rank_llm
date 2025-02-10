@@ -14,13 +14,13 @@ class LiT5DistillReranker:
         prompt_mode: PromptMode = PromptMode.LiT5,
         window_size: int = 20,
     ) -> None:
-        agent = RankFiDDistill(
+        model_coordinator = RankFiDDistill(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             window_size=window_size,
         )
-        self._reranker = Reranker(agent)
+        self._reranker = Reranker(model_coordinator)
 
     def rerank_batch(
         self,
@@ -110,13 +110,13 @@ class LiT5ScoreReranker:
         window_size: int = 20,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
     ) -> None:
-        agent = RankFiDScore(
+        model_coordinator = RankFiDScore(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
             window_size=window_size,
         )
-        self._reranker = Reranker(agent)
+        self._reranker = Reranker(model_coordinator)
 
     def rerank_batch(
         self,

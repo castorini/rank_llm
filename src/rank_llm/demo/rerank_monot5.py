@@ -14,8 +14,8 @@ from rank_llm.retrieve.retriever import Retriever
 
 dataset = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
-monot5_agent = MonoT5("castorini/monot5-3b-msmarco-10k")
-m_reranker = Reranker(monot5_agent)
+monot5_model_coordinator = MonoT5("castorini/monot5-3b-msmarco-10k")
+m_reranker = Reranker(monot5_model_coordinator)
 kwargs = {"populate_exec_summary": True}
 rerank_results = m_reranker.rerank_batch(requests, **kwargs)
 print(rerank_results)

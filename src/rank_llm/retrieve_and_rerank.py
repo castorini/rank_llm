@@ -26,7 +26,7 @@ def retrieve_and_rerank(
     qid: int = 1,
     num_passes: int = 1,
     interactive: bool = False,
-    default_agent: RankLLM = None,
+    default_model_coordinator: RankLLM = None,
     **kwargs: Any,
 ):
     """Retrieve candidates using Anserini API and rerank them
@@ -35,9 +35,11 @@ def retrieve_and_rerank(
         - List of top_k_rerank candidates
     """
 
-    # Get reranking agent
+    # Get reranking model_coordinator
     reranker = Reranker(
-        Reranker.create_agent(model_path, default_agent, interactive, **kwargs)
+        Reranker.create_model_coordinator(
+            model_path, default_model_coordinator, interactive, **kwargs
+        )
     )
 
     # Retrieve initial candidates
@@ -55,7 +57,7 @@ def retrieve_and_rerank(
 
     # Reranking stages
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
-    if reranker.get_agent() is None:
+    if reranker.get_model_coordinator() is None:
         # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
         shuffle_candidates = True if model_path == "rank_random" else False
         rerank_results = IdentityReranker().rerank_batch(
@@ -88,7 +90,7 @@ def retrieve_and_rerank(
         rr.candidates = rr.candidates[:top_k_rerank]
 
     # generate trec_eval file & evaluate for named datasets only
-    if isinstance(dataset, str) and reranker.get_agent() is not None:
+    if isinstance(dataset, str) and reranker.get_model_coordinator() is not None:
         file_name = reranker.write_rerank_results(
             retrieval_method.name,
             rerank_results,
@@ -116,7 +118,7 @@ def retrieve_and_rerank(
             print(f"Skipping evaluation as {dataset} is not in TOPICS.")
 
     if interactive:
-        return (rerank_results, reranker.get_agent())
+        return (rerank_results, reranker.get_model_coordinator())
     else:
         return rerank_results
 
