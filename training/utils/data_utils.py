@@ -181,15 +181,7 @@ def load_data(file_path):
 def initialize_dataset_and_loader(args, tokenizer):
     """
     Initialize dataset and dataloader based on provided arguments.
-    
-    Args:
-        args: Namespace object containing dataset initialization arguments
-        tokenizer: Tokenizer to be used with the dataset
-        
-    Returns:
-        tuple: (dataset, dataloader)
     """
-    # Load raw data
     if not os.path.isfile(args.train_dataset_path):
         # Using Hugging Face dataset
         ds = load_dataset(args.train_dataset_path)
@@ -197,7 +189,6 @@ def initialize_dataset_and_loader(args, tokenizer):
     else:
         raw_train_data = load_data(args.train_dataset_path)
 
-    # Initialize appropriate dataset and collate function based on objective
     if args.objective == "generation":
         train_dataset = GenerationDataset(raw_train_data, tokenizer)
         train_collate_fn = generation_collate_fn
@@ -208,7 +199,6 @@ def initialize_dataset_and_loader(args, tokenizer):
         train_dataset = RankingDataset(raw_train_data, tokenizer, type="train")        
         train_collate_fn = ranking_collate_fn
 
-    # Create dataloader
     train_dataloader = DataLoader(
         train_dataset,
         shuffle=True,

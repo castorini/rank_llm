@@ -17,7 +17,6 @@ import bitsandbytes as bnb
 
 logger = get_logger(__name__)
 
-# Model configuration constants
 MODEL_CONFIG_CLASSES = list(MODEL_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
@@ -172,18 +171,9 @@ def parse_args():
 def NEFTune(model, noise_alpha=5):
     """
     Apply noisy embeddings during training (NEFTune technique).
-    
-    Args:
-        model: The model to apply NEFTune to
-        noise_alpha: Noise magnitude (default: 5)
-        
-    Returns:
-        model: Model with NEFTune applied
     """
     def noised_embed(orig_embed, noise_alpha):
         def new_func(x):
-            # during training, we add noise to the embedding
-            # during generation, we don't add noise to the embedding
             if model.training:
                 embed_init = orig_embed(x)
                 dims = torch.tensor(embed_init.size(1) * embed_init.size(2))
@@ -199,14 +189,7 @@ def NEFTune(model, noise_alpha=5):
 def initialize_model_and_tokenizer(args):
     """
     Initialize the model, tokenizer, and config based on provided arguments.
-    
-    Args:
-        args: Namespace object containing model initialization arguments
-        
-    Returns:
-        tuple: (tokenizer, model)
     """
-    # Initialize config
     if args.resume_from_checkpoint:
         config = AutoConfig.from_pretrained(
             args.resume_from_checkpoint, cache_dir=args.cache_dir,
@@ -226,7 +209,6 @@ def initialize_model_and_tokenizer(args):
         config = CONFIG_MAPPING[args.model_type]()
         logger.warning("You are instantiating a new config instance from scratch.")
 
-    # Initialize tokenizer
     if args.resume_from_checkpoint:
         tokenizer = AutoTokenizer.from_pretrained(
             args.resume_from_checkpoint, use_fast=True, cache_dir=args.cache_dir, trust_remote_code=args.trust_remote_code
@@ -245,7 +227,6 @@ def initialize_model_and_tokenizer(args):
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
         )
 
-    # Initialize model
     if args.resume_from_checkpoint:
         model = AutoModelForCausalLM.from_pretrained(
             args.resume_from_checkpoint,
@@ -286,14 +267,6 @@ def initialize_model_and_tokenizer(args):
 def initialize_optimizer(model, weight_decay, learning_rate):
     """
     Initialize the optimizer with the appropriate parameter groups.
-    
-    Args:
-        model: The model whose parameters will be optimized
-        weight_decay: Weight decay factor
-        learning_rate: Learning rate for the optimizer
-        
-    Returns:
-        optimizer: Initialized 8-bit AdamW optimizer
     """
     decay_parameters = get_parameter_names(model, [nn.LayerNorm])
     decay_parameters = [name for name in decay_parameters if "bias" not in name]

@@ -5,10 +5,8 @@ BASE_MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 TRAIN_DATA_PATH="rryisthebest/rank_zephyr_training_data_alpha"  # Train Dataset --> Hugging Face dataset or Local dataset
 OUTPUT_DIR="models/ranking/FirstMistral"  # Directory to save the trained model
 
-# Create output directory if it doesn't exist
 mkdir -p "${OUTPUT_DIR}"
 
-# Launch training with DeepSpeed configuration
 accelerate launch \
     --config_file "configs/accel_config_deepspeed.yaml" \
     train_rankllm.py \

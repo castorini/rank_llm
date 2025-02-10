@@ -39,7 +39,6 @@ def main():
         **accelerator_log_kwargs
     )
 
-    # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
@@ -53,7 +52,6 @@ def main():
         datasets.utils.logging.set_verbosity_error()
         transformers.utils.logging.set_verbosity_error()
 
-    # If passed along, set the training seed now.
     if args.seed is not None:
         set_seed(args.seed)
 
@@ -62,20 +60,15 @@ def main():
     
     accelerator.wait_for_everyone()
     
-    # Initialize model, config, and tokenizer
     tokenizer, model = initialize_model_and_tokenizer(args)
 
-    # Initialize optimizer
     optimizer = initialize_optimizer(model, args.weight_decay, args.learning_rate)
 
-    # Initialize dataset and dataloader
     train_dataset, train_dataloader = initialize_dataset_and_loader(args, tokenizer)
 
-    # Setup training state
     overrode_max_train_steps, num_update_steps_per_epoch = initialize_training_state(train_dataloader, args)
     starting_epoch, resume_step, completed_steps = resume_from_checkpoint(args, num_update_steps_per_epoch, train_dataloader)
 
-    # Initialize learning rate scheduler
     lr_scheduler = get_scheduler(
         name=args.lr_scheduler_type,
         optimizer=optimizer,
@@ -83,15 +76,12 @@ def main():
         num_training_steps=args.max_train_steps if overrode_max_train_steps else args.max_train_steps * accelerator.num_processes,
     )
 
-    # Enable gradient checkpointing if requested
     if args.gradient_checkpointing:
         model.gradient_checkpointing_enable()
     
-    # Add noise to embedding if using NEFTune
     if args.noisy_embedding_alpha is not None:
         model = NEFTune(model, args.noisy_embedding_alpha)
 
-    # Initialize trackers for logging
     if args.with_tracking:
         experiment_config = vars(args)
         # Convert scheduler type to string for wandb
@@ -101,7 +91,6 @@ def main():
             experiment_config
         )
 
-        # Log training parameters
         total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
         logger.info("***** Running training *****")
         logger.info(f"  Num examples = {len(train_dataset)}")
@@ -111,16 +100,13 @@ def main():
         logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
-    # Prepare for distributed training
     train_dataloader, model, optimizer, lr_scheduler = accelerator.prepare(
         train_dataloader, model, optimizer, lr_scheduler
     )
 
-    # Initialize progress bar
     progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
     progress_bar.update(completed_steps)
     
-    # Training loop
     model.train()
     for epoch in range(starting_epoch, args.num_train_epochs):
         completed_steps = train_epoch(
@@ -149,7 +135,6 @@ def main():
         if completed_steps >= args.max_train_steps:
             break
 
-    # Final cleanup and saving
     if args.with_tracking:
         accelerator.end_training()
 

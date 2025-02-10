@@ -27,11 +27,9 @@ def lambdarank(y_pred, y_true=None, eps=1e-10, padded_value_indicator=-100, weig
 
         device = y_pred.device
 
-        # sort the true and predicted relevancy scores.
         y_pred_sorted, indices_pred = y_pred.sort(descending=True, dim=-1)
         y_true_sorted, _ = y_true.sort(descending=True, dim=-1)
 
-        # mask out the pairs of indices (i, j) containing index of a padded element.
         true_sorted_by_preds = torch.gather(y_true, dim=1, index=indices_pred)
         true_diffs = true_sorted_by_preds[:, :, None] - true_sorted_by_preds[:, None, :]
         padded_pairs_mask = torch.isfinite(true_diffs)
@@ -46,19 +44,16 @@ def lambdarank(y_pred, y_true=None, eps=1e-10, padded_value_indicator=-100, weig
         true_sorted_by_preds.clamp_(min=0.)
         y_true_sorted.clamp_(min=0.)
 
-        # find the gains, discounts and ideal DCGs per slate.
         pos_idxs = torch.arange(1, y_pred.shape[1] + 1).to(device)
         D = torch.log2(1. + pos_idxs.float())[None, :]
         maxDCGs = torch.sum(((torch.pow(2, y_true_sorted) - 1) / D)[:, :k], dim=-1).clamp(min=eps)
         G = (torch.pow(2, true_sorted_by_preds) - 1) / maxDCGs[:, None]
-
-        # apply appropriate weighing scheme - ndcgLoss1, ndcgLoss2, ndcgLoss2++ or no weights (=1.0)
+        
         if weighing_scheme is None:
             weights = 1.
         else:
             weights = globals()[weighing_scheme](G, D, mu, true_sorted_by_preds)  # type: ignore
 
-        # clamping the array entries to maintain correct backprop (log(0) and division by 0)
         scores_diffs = (y_pred_sorted[:, :, None] - y_pred_sorted[:, None, :]).clamp(min=-1e8, max=1e8)
         scores_diffs.masked_fill(torch.isnan(scores_diffs), 0.)
         weighted_probas = (torch.sigmoid(sigma * scores_diffs).clamp(min=eps) ** weights).clamp(min=eps)
@@ -103,19 +98,14 @@ def rank_net(y_pred, y_true, weighted=False, use_rank=False, weight_by_diff=Fals
         if use_rank is None:
             y_true = torch.tensor([[1 / (np.argsort(y_true)[::-1][i] + 1) for i in range(y_pred.size(1))]] * y_pred.size(0)).cuda()
 
-        # generate every pair of indices from the range of document length in the batch
         document_pairs_candidates = list(product(range(y_true.shape[1]), repeat=2))
 
         pairs_true = y_true[:, document_pairs_candidates]
         selected_pred = y_pred[:, document_pairs_candidates]
 
-        # calculate the relative true relevance of every candidate pair
         true_diffs = pairs_true[:, :, 0] - pairs_true[:, :, 1]
         pred_diffs = selected_pred[:, :, 0] - selected_pred[:, :, 1]
 
-        # filter just the pairs that are 'positive' and did not involve a padded instance
-        # we can do that since in the candidate pairs we had symetric pairs so we can stick with
-        # positive ones for a simpler loss function formulation
         the_mask = (true_diffs > 0) & (~torch.isinf(true_diffs))
 
         pred_diffs = pred_diffs[the_mask]
@@ -137,9 +127,6 @@ def rank_net(y_pred, y_true, weighted=False, use_rank=False, weight_by_diff=Fals
                 abs_diff = torch.abs(true_pow_diffs)
                 weight = abs_diff[the_mask]
 
-        # 'binarize' true relevancy diffs since for a pairwise loss we just need to know
-        # whether one document is better than the other and not about the actual difference in
-        # their relevancy levels
         true_diffs = (true_diffs > 0).type(torch.float32)
         true_diffs = true_diffs[the_mask]
 
@@ -160,20 +147,16 @@ class ADRMSELoss(nn.Module):
         """
         batch_size, slate_length = scores.size()
         
-        # Compute the approximated ranks
         softmax_scores = torch.softmax(scores, dim=1)
         approx_ranks = torch.cumsum(softmax_scores, dim=1)
         
-        # Compute the actual ranks
         sorted_indices = torch.argsort(scores, dim=1, descending=True)
-        ranks = torch.argsort(sorted_indices, dim=1) + 1  # Convert to 1-based ranks
+        ranks = torch.argsort(sorted_indices, dim=1) + 1  
         
-        # Compute the logarithmic discount
         log_discounts = torch.log2(ranks.float() + 1)
         
         rank_diffs = (ranks.float() - approx_ranks) ** 2
         
-        # Apply the logarithmic discount
         discounted_diffs = rank_diffs / log_discounts
         
         loss = discounted_diffs.mean()
