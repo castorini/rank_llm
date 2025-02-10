@@ -61,9 +61,9 @@ class ResponseAnalyzer:
         num_passages = []
         responses = []
         for result in self._data:
-            for exec_info in result.ranking_exec_summary:
-                responses.append(exec_info.response)
-                num_passage = self._get_num_passages(exec_info.prompt)
+            for inference_invocation in result.invocations_history:
+                responses.append(inference_invocation.response)
+                num_passage = self._get_num_passages(inference_invocation.prompt)
                 num_passages.append(int(num_passage))
         return responses, num_passages
 
@@ -78,11 +78,11 @@ class ResponseAnalyzer:
         responses = []
         for result in self._data:
             with open(result) as f:
-                ranking_exec_summaries = json.load(f)
-            for summary in ranking_exec_summaries:
-                for exec_info in summary.ranking_exec_summary:
-                    responses.append(exec_info.response)
-                    num_passage = self._get_num_passages(exec_info.prompt)
+                invocations_histories = json.load(f)
+            for entry in invocations_histories:
+                for inference_invocation in entry.invocations_history:
+                    responses.append(inference_invocation.response)
+                    num_passage = self._get_num_passages(inference_invocation.prompt)
                     num_passages.append(int(num_passage))
         return responses, num_passages
 

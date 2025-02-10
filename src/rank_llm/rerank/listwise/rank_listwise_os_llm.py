@@ -165,7 +165,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         window_size: int = kwargs.get("window_size", 20)
         window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step", 10)
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
         if self._vllm_batched or self._sglang_batched or self._tensorrt_batched:
             # reranking using vllm or sglang or tensorrtllm
             if len(set([len(req.candidates) for req in requests])) != 1:
@@ -183,7 +185,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 step=step,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
-                populate_exec_summary=populate_exec_summary,
+                populate_invocations_history=populate_invocations_history,
             )
         else:
             if self._use_logits:
@@ -202,7 +204,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     step=step,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
-                    populate_exec_summary=populate_exec_summary,
+                    populate_invocations_history=populate_invocations_history,
                 )
                 results.append(result)
             return results

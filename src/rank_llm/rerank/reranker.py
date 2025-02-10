@@ -41,7 +41,7 @@ class Reranker:
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
-                populate_exec_summary (bool): Whether to populate the exec summary. Defaults to False.
+                populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
                 step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window_size.
@@ -74,7 +74,7 @@ class Reranker:
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
-                populate_exec_summary (bool): Whether to populate the exec summary. Defaults to False.
+                populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
                 step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
@@ -99,7 +99,7 @@ class Reranker:
         top_k_candidates: int = 100,
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
-        ranking_execution_summary_dirname: str = "ranking_execution_summary",
+        inference_invocations_history_dirname: str = "inference_invocations_history",
         vllm_batched: bool = False,
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
@@ -109,7 +109,7 @@ class Reranker:
         Writes the reranked results to files in specified formats.
 
         This function saves the reranked results in both TREC Eval format and JSON format.
-        A summary of the ranking execution is saved as well.
+        The history of inference invocations is saved as well.
 
         Args:
             retrieval_method_name (str): The name of the retrieval method.
@@ -161,12 +161,12 @@ class Reranker:
         writer.write_in_jsonl_format(
             f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
         )
-        # Write ranking execution summary
-        Path(f"{ranking_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
+        # Write the history of inference invocations
+        Path(f"{inference_invocations_history_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        writer.write_ranking_exec_summary(
-            f"{ranking_execution_summary_dirname}/{retrieval_method_name}/{name}.json"
+        writer.write_inference_invocations_history(
+            f"{inference_invocations_history_dirname}/{retrieval_method_name}/{name}.json"
         )
         return result_file_name
 

@@ -62,4 +62,6 @@ writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
 writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
-writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")
+writer.write_inference_invocations_history(
+    f"demo_outputs/inference_invocations_history.json"
+)

@@ -1,7 +1,7 @@
 import unittest
 
 from src.rank_llm.analysis.response_analysis import ResponseAnalyzer
-from src.rank_llm.data import RankingExecInfo, Result
+from src.rank_llm.data import InferenceInvocation, Result
 
 
 class TestResponseAnalyzer(unittest.TestCase):
@@ -11,14 +11,14 @@ class TestResponseAnalyzer(unittest.TestCase):
             Result(
                 query="Query 1",
                 candidates=[],
-                ranking_exec_summary=[
-                    RankingExecInfo(
+                invocations_history=[
+                    InferenceInvocation(
                         prompt="I will provide you with 3 passages",
                         response="1 > 2 > 3",
                         input_token_count=100,
                         output_token_count=50,
                     ),
-                    RankingExecInfo(
+                    InferenceInvocation(
                         prompt="I will provide you with 2 passages",
                         response="2 > 1",
                         input_token_count=80,
@@ -29,8 +29,8 @@ class TestResponseAnalyzer(unittest.TestCase):
             Result(
                 query="Query 2",
                 candidates=[],
-                ranking_exec_summary=[
-                    RankingExecInfo(
+                invocations_history=[
+                    InferenceInvocation(
                         prompt="I will provide you with 4 passages",
                         response="4 > 3 > 2 > 1",
                         input_token_count=120,

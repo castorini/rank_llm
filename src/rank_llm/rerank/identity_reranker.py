@@ -33,7 +33,7 @@ class IdentityReranker:
             rerank_result = Result(
                 query=copy.deepcopy(request.query),
                 candidates=copy.deepcopy(request.candidates),
-                ranking_exec_summary=[],
+                invocations_history=[],
             )
             if shuffle_candidates:
                 # Randomly shuffle rerank_result between rank_start and rank_end
