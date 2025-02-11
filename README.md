@@ -133,9 +133,9 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Score-l
 
 The following runs the 3B variant of monoT5 trained for 10K steps:
 
-```
+```bash
 python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=1000 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_mode=monot5 --context_size=512
+    --retrieval_method=bm25 --prompt_mode=monot5 --context_size=512
 ```
 
 Note that we usually rerank 1K candidates with monoT5.
@@ -144,15 +144,27 @@ Note that we usually rerank 1K candidates with monoT5.
 
 We can run the FirstMistral model, reranking using the first-token logits only with the following command:
 
-```
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --vllm_batched --num_gpus 1
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 \
+    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages \
+    --use_logits --use_alpha --vllm_batched --num_gpus 1
 ```
 
 Omit `--use_logits` if you wish to perform traditional listwise reranking.
 
 ### Run end to end - Gemini Flash 2.0
+
+First install genai:
+
+```bash
+pip install -U -q "google-generativeai>=0.8.2"
 ```
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT_APEER  --context_size=4096
+
+Then run the following command:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 --top_k_candidates=100 --dataset=dl20 \
+    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT_APEER  --context_size=4096
 ```
 
 ## Community Contribution
