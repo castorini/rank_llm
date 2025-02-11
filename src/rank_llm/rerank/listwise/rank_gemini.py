@@ -33,7 +33,7 @@ def populate_generation_config(**kwargs) -> Dict[str, Any]:
 
 
 class SafeGenai(ListwiseRankLLM):
-    # TODO switch to the new genai api to support 2.0* models.
+    # TODO switch to the new genai api?
     def __init__(
         self,
         model: str,
@@ -56,11 +56,9 @@ class SafeGenai(ListwiseRankLLM):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide Genai API Keys.")
-        if prompt_mode not in [
-            PromptMode.RANK_GPT_APEER,
-        ]:
+        if prompt_mode not in [PromptMode.RANK_GPT_APEER, PromptMode.RANK_GPT]:
             raise ValueError(
-                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_GPT_APPER}."
+                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_GPT_APPER} or {PromptMode.RANK_GPT}."
             )
         self._output_token_estimate = None
         self._keys = keys
@@ -157,22 +155,30 @@ class SafeGenai(ListwiseRankLLM):
         )
         return response, self.model.count_tokens(response).total_tokens
 
+    def _add_prefix_prompt(self, query: str, num: int) -> str:
+        if self._prompt_mode == PromptMode.RANK_GPT_APEER:
+            return f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
+        return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
+
+    def _add_post_prompt(self, query: str, num: int) -> str:
+        if self._prompt_mode == PromptMode.RANK_GPT_APEER:
+            f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend], e.g., [rankstart] [1] > ... > [2] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
+        return f"\nSearch Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [2] > [1], Only respond with the ranking results, do not say any word or explain."
+
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        # This one supports the rank_gpt_apeer format which sends a single message.
-        # TODO: implement rank_gpt prompt with multiturn chat
         query = result.query.text
         num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            message = f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
+            message = self._add_prefix_prompt(query, num)
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
                 content = self.convert_doc_to_prompt_content(cand.doc, max_length)
                 message += f"\n[{rank}] {self._replace_number(content)}"
-            message += f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend], e.g., [rankstart] [1] > ... > [2] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
+            message += self._add_post_prompt(query, num)
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break

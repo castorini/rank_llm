@@ -150,12 +150,14 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistra
 
 Omit `--use_logits` if you wish to perform traditional listwise reranking.
 
-If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
-
 ### Run end to end - Gemini Flash 2.0
 ```
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT_APEER  --context_size=4096
 ```
+
+## Community Contribution
+If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
+
 
 ## 🦙🐧 Model Zoo
 
