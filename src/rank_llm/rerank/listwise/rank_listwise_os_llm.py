@@ -350,11 +350,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             return self._output_token_estimate
 
         if self._use_alpha:
-            token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
-        else:
             token_str = " > ".join(
                 [f"[{chr(ALPH_START_IDX+i+1)}]" for i in range(current_window_size)]
             )
+        else:
+            token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
 
         _output_token_estimate = len(self._tokenizer.encode(token_str)) - 1
 
@@ -367,10 +367,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         return _output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
-        if self._use_alpha:
-            return f"I will provide you with {num} passages, each indicated by a alphabetical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
-        else:
-            return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
+        identifier_type = "an alphabetical" if self._use_alpha else " a numerical"
+        return f"I will provide you with {num} passages, each indicated by {identifier_type} identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
     def _add_post_prompt(self, query: str, num: int) -> str:
         if self._use_alpha:

@@ -224,7 +224,7 @@ class Reranker:
         elif "gemini" in model_path:
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT_APEER),
+                ("prompt_mode", PromptMode.RANK_GPT),
                 ("num_few_shot_examples", 0),
                 ("window_size", 20),
             ]

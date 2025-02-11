@@ -146,6 +146,9 @@ class ResponseAnalyzer:
             "missing_documents": 0,
         }
         for resp, num_passage in zip(responses, num_passages):
+            resp = resp.replace("[rankstart]", "")
+            resp = resp.replace("[rankend]", "")
+            resp = resp.strip()
             if not self._validate_format(resp):
                 if verbose:
                     print(resp)
