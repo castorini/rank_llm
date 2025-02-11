@@ -143,9 +143,11 @@ class ResponseAnalyzer:
     def process_numerical_format(
         self, response: str, num_passage: int, verbose: bool, stats_dict: Dict[str, int]
     ):
+        print(response)
         resp = response.replace("[rankstart]", "")
         resp = resp.replace("[rankend]", "")
         resp = resp.strip()
+        print(resp)
         if not self._validate_format(resp):
             if verbose:
                 print(resp)
@@ -160,6 +162,7 @@ class ResponseAnalyzer:
         ranks = resp.split("] > [")
         try:
             ranks = [int(rank) for rank in ranks]
+            print(ranks)
         except ValueError:
             if verbose:
                 print(resp)
@@ -167,6 +170,9 @@ class ResponseAnalyzer:
             return
         if len(ranks) < num_passage:
             stats_dict["missing_documents"] += 1
+            print("fff")
+            print(len(ranks))
+            print(num_passage)
             return
         if len(ranks) > num_passage or len(set(ranks)) < num_passage:
             stats_dict["repetition"] += 1
@@ -174,6 +180,7 @@ class ResponseAnalyzer:
         for i in range(num_passage):
             if not i + 1 in set(ranks):
                 stats_dict["missing_documents"] += 1
+                print("ddddd")
                 return
         stats_dict["ok"] += 1
 

@@ -23,36 +23,50 @@ from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
+
 # create rerankers
-monot5_reranker = Reranker(MonoT5("castorini/monot5-3b-msmarco-10k"))
-v_reranker = VicunaReranker()
-z_reranker = ZephyrReranker()
-lit5_reranker = Reranker(LiT5DistillReranker("castorini/LiT5-Distill-large"))
-mistral_reranker = Reranker(
-    RankListwiseOSLLM(
-        model="castorini/first_mistral",
-        use_logits=True,
-        use_alpha=True,
-        vllm_batched=True,
-    )
-)
-gpt_reranker = Reranker(SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key()))
-gemini_reranker = Reranker(
-    SafeGenai("gemini-2.0-flash-001", 4096, keys=get_genai_api_key())
-)
-rerankers = {
-    "monot5": monot5_reranker,
-    "rv": v_reranker,
-    "rz": z_reranker,
-    "lit5": lit5_reranker,
-    "mistral": mistral_reranker,
-}  # , "gpt": g_reranker, "gemini": gemini_reranker }
+def create_reranker(name: str):
+    if name == "monot5":
+        return Reranker(MonoT5("castorini/monot5-3b-msmarco-10k"))
+    if name == "rv":
+        return VicunaReranker()
+    if name == "rz":
+        return ZephyrReranker()
+    if name == "lit5":
+        return Reranker(LiT5DistillReranker("castorini/LiT5-Distill-large"))
+    if name == "mistral":
+        return Reranker(
+            RankListwiseOSLLM(
+                model="castorini/first_mistral",
+                use_logits=True,
+                use_alpha=True,
+                vllm_batched=True,
+            )
+        )
+    if name == "gpt":
+        return Reranker(SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key()))
+    if name == "gemini":
+        return Reranker(
+            SafeGenai("gemini-2.0-flash-001", 4096, keys=get_genai_api_key())
+        )
+
+
+rerankers = [
+    # "monot5",
+    # "rv",
+    # "rz",
+    # "lit5",
+    # "mistral",
+    "gpt",
+    "gemini",
+]
 results = {}
-for dataset in ["dl19", "dl20", "dl21", "dl22", "dl23"]:
-    retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=20)
-    topics = TOPICS[dataset]
-    ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
-    for key, reranker in rerankers.items():
+for key in rerankers:
+    reranker = create_reranker(key)
+    for dataset in ["dl19", "dl20", "dl21", "dl22"]:  # , "dl23"
+        retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
+        topics = TOPICS[dataset]
+        ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
         kwargs = {"populate_invocations_history": True}
         rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
         # Save results
@@ -78,7 +92,8 @@ for dataset in ["dl19", "dl20", "dl21", "dl22", "dl23"]:
         results[(key, dataset)] = (ret_ndcg_10, rerank_ndcg_10, error_counts.__repr__())
         print("-----------\n")
         print(results)
+        with open(f"{output_path_prefix}/eval_results.txt", "w") as f:
+            f.write(f"{(ret_ndcg_10, rerank_ndcg_10, error_counts.__repr__())}")
         print("-----------\n")
-
-with open("demo_outputs/aggeragate_open_source_results.json", "w") as f:
-    json.dump(results, f)
+    # Free up the memory
+    del reranker
