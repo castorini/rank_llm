@@ -124,7 +124,7 @@ class ResponseAnalyzer:
             if not prompt:
                 return 0
             if "text" in prompt[0]:
-                # for LiT5, there is one "text" entry per passage.
+                # For LiT5, there is one "text" entry per passage.
                 return len(prompt)
             if "content" in prompt[0]:
                 # For GPT runs, the prompt is an array of json objects with "role" and "content" as keys.

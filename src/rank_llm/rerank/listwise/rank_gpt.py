@@ -132,7 +132,6 @@ class SafeOpenai(ListwiseRankLLM):
     ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
-                print("request sent")
                 if completion_mode == self.CompletionMode.CHAT:
                     completion = openai.chat.completions.create(
                         *args, **kwargs, timeout=30
@@ -143,7 +142,6 @@ class SafeOpenai(ListwiseRankLLM):
                     raise ValueError(
                         "Unsupported completion mode: %V" % completion_mode
                     )
-                print(completion)
                 break
             except Exception as e:
                 print("Error in completion call")
@@ -321,7 +319,7 @@ class SafeOpenai(ListwiseRankLLM):
         max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
-            message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n For example "
+            message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
