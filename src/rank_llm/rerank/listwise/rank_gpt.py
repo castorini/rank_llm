@@ -132,6 +132,7 @@ class SafeOpenai(ListwiseRankLLM):
     ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
+                print("request sent")
                 if completion_mode == self.CompletionMode.CHAT:
                     completion = openai.chat.completions.create(
                         *args, **kwargs, timeout=30
@@ -142,6 +143,7 @@ class SafeOpenai(ListwiseRankLLM):
                     raise ValueError(
                         "Unsupported completion mode: %V" % completion_mode
                     )
+                print(completion)
                 break
             except Exception as e:
                 print("Error in completion call")
@@ -319,7 +321,7 @@ class SafeOpenai(ListwiseRankLLM):
         max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
-            message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
+            message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n For example "
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
@@ -329,7 +331,8 @@ class SafeOpenai(ListwiseRankLLM):
                 psg_ids.append(psg_id)
             message += f'QUESTION = "{query}"\n'
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
-            message += "SORTED_PASSAGES = [\n"
+            message += "Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.\n"
+            message += "SORTED_PASSAGES = "
             messages = [{"role": "user", "content": message}]
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():

@@ -10,7 +10,7 @@ sys.path.append(parent)
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.data import DataWriter
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank import Reranker, get_genai_api_key, get_openai_api_key
+from rank_llm.rerank import PromptMode, Reranker, get_genai_api_key, get_openai_api_key
 from rank_llm.rerank.listwise import (
     RankListwiseOSLLM,
     SafeGenai,
@@ -24,7 +24,6 @@ from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
 
-# create rerankers
 def create_reranker(name: str):
     if name == "monot5":
         return Reranker(MonoT5("castorini/monot5-3b-msmarco-10k"))
@@ -43,8 +42,33 @@ def create_reranker(name: str):
                 vllm_batched=True,
             )
         )
-    if name == "gpt":
-        return Reranker(SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key()))
+    if name == "rank_gpt":
+        return Reranker(
+            SafeOpenai(
+                "gpt-4o-mini",
+                4096,
+                prompt_mode=PromptMode.RANK_GPT,
+                keys=get_openai_api_key(),
+            )
+        )
+    if name == "lrl":
+        return Reranker(
+            SafeOpenai(
+                "gpt-4o-mini",
+                4096,
+                prompt_mode=PromptMode.LRL,
+                keys=get_openai_api_key(),
+            )
+        )
+    if name == "rank_gpt_apeer":
+        return Reranker(
+            SafeOpenai(
+                "gpt-4o-mini",
+                4096,
+                prompt_mode=PromptMode.RANK_GPT_APEER,
+                keys=get_openai_api_key(),
+            )
+        )
     if name == "gemini":
         return Reranker(
             SafeGenai("gemini-2.0-flash-001", 4096, keys=get_genai_api_key())
@@ -52,13 +76,15 @@ def create_reranker(name: str):
 
 
 rerankers = [
-    # "monot5",
-    # "rv",
-    # "rz",
-    # "lit5",
-    # "mistral",
-    "gpt",
+    "monot5",
+    "rv",
+    "rz",
+    "lit5",
+    "mistral",
+    "rank_gpt",
     "gemini",
+    "lrl",
+    "rank_gpt_apeer",
 ]
 results = {}
 for key in rerankers:
@@ -69,6 +95,7 @@ for key in rerankers:
         ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
         kwargs = {"populate_invocations_history": True}
         rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
+
         # Save results
         writer = DataWriter(rerank_results)
         output_path_prefix = f"demo_outputs/{dataset}/{key}"
@@ -78,10 +105,13 @@ for key in rerankers:
         writer.write_inference_invocations_history(
             f"{output_path_prefix}/inference_invocations_history.json"
         )
+
         # Eval
         rerank_ndcg_10 = EvalFunction.from_results(rerank_results, topics)
+
         # Response Analysis
-        if key not in ["monot5", "duot5"]:
+        # TODO: For now skipping lrl and rank_gpt_apeer since the response analyzer does not support these prompt formats, yet.
+        if key not in ["monot5", "duot5", "lrl", "rank_gpt_apeer"]:
             use_alpha = True if key == "mistral" else False
             analyzer = ResponseAnalyzer.from_inline_results(
                 rerank_results, use_alpha=use_alpha
@@ -90,10 +120,8 @@ for key in rerankers:
         else:
             error_counts = {}
         results[(key, dataset)] = (ret_ndcg_10, rerank_ndcg_10, error_counts.__repr__())
-        print("-----------\n")
-        print(results)
         with open(f"{output_path_prefix}/eval_results.txt", "w") as f:
             f.write(f"{(ret_ndcg_10, rerank_ndcg_10, error_counts.__repr__())}")
-        print("-----------\n")
+
     # Free up the memory
     del reranker

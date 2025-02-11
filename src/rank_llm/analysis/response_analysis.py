@@ -154,13 +154,13 @@ class ResponseAnalyzer:
             stats_dict["wrong_format"] += 1
             return
         begin, end = 0, 0
-        while not resp[begin].isdigit():
+        while begin < len(resp) and not resp[begin].isdigit():
             begin += 1
-        while not resp[len(resp) - end - 1].isdigit():
+        while end < len(resp) and not resp[len(resp) - end - 1].isdigit():
             end += 1
-        resp = resp[begin : len(resp) - end]
-        ranks = resp.split("] > [")
         try:
+            resp = resp[begin : len(resp) - end]
+            ranks = resp.split("] > [")
             ranks = [int(rank) for rank in ranks]
             print(ranks)
         except ValueError:
@@ -170,9 +170,6 @@ class ResponseAnalyzer:
             return
         if len(ranks) < num_passage:
             stats_dict["missing_documents"] += 1
-            print("fff")
-            print(len(ranks))
-            print(num_passage)
             return
         if len(ranks) > num_passage or len(set(ranks)) < num_passage:
             stats_dict["repetition"] += 1
@@ -180,7 +177,6 @@ class ResponseAnalyzer:
         for i in range(num_passage):
             if not i + 1 in set(ranks):
                 stats_dict["missing_documents"] += 1
-                print("ddddd")
                 return
         stats_dict["ok"] += 1
 
@@ -194,13 +190,13 @@ class ResponseAnalyzer:
             stats_dict["wrong_format"] += 1
             return
         begin, end = 0, 0
-        while not resp[begin].isupper():
+        while begin < len(resp) and not resp[begin].isupper():
             begin += 1
-        while not resp[len(resp) - end - 1].isupper():
+        while end < len(resp) and not resp[len(resp) - end - 1].isupper():
             end += 1
-        resp = resp[begin : len(resp) - end]
-        ranks = resp.split("]>[")
         try:
+            resp = resp[begin : len(resp) - end]
+            ranks = resp.split("]>[")
             ranks = [ord(rank) - ord("A") for rank in ranks]
         except ValueError:
             if verbose:
