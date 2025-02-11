@@ -1,28 +1,30 @@
-import os
-import torch
-import json
 import argparse
+
+import bitsandbytes as bnb
+import torch
+from accelerate.logging import get_logger
 from torch import nn
 from transformers import (
-    AutoConfig,
-    AutoTokenizer,
-    AutoModelForCausalLM,
     CONFIG_MAPPING,
     MODEL_MAPPING,
-    SchedulerType
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    SchedulerType,
 )
-from accelerate.logging import get_logger
 from transformers.trainer_pt_utils import get_parameter_names
-import bitsandbytes as bnb
 
 logger = get_logger(__name__)
 
 MODEL_CONFIG_CLASSES = list(MODEL_MAPPING.keys())
 MODEL_TYPES = tuple(conf.model_type for conf in MODEL_CONFIG_CLASSES)
 
+
 def parse_args():
     """Parse command line arguments for model training."""
-    parser = argparse.ArgumentParser(description="Finetune a transformers model on a causal language modeling task")
+    parser = argparse.ArgumentParser(
+        description="Finetune a transformers model on a causal language modeling task"
+    )
 
     parser.add_argument(
         "--model_name_or_path",
@@ -46,13 +48,9 @@ def parse_args():
         "--train_dataset_path",
         type=str,
         required=True,
-        help="Training dataset path in jsonl format"
+        help="Training dataset path in jsonl format",
     )
-    parser.add_argument(
-        "--cache_dir",
-        type=str,
-        help="Path to cache"
-    )
+    parser.add_argument("--cache_dir", type=str, help="Path to cache")
     parser.add_argument(
         "--per_device_train_batch_size",
         type=int,
@@ -65,9 +63,21 @@ def parse_args():
         default=5e-6,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
-    parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
-    parser.add_argument("--noisy_embedding_alpha", type=int, default=None, help="NEFT https://arxiv.org/abs/2310.05914, set this to a number (paper default is 5) to add noise to embeddings")
-    parser.add_argument("--num_train_epochs", type=int, default=3, help="Total number of training epochs to perform.")
+    parser.add_argument(
+        "--weight_decay", type=float, default=0.0, help="Weight decay to use."
+    )
+    parser.add_argument(
+        "--noisy_embedding_alpha",
+        type=int,
+        default=None,
+        help="NEFT https://arxiv.org/abs/2310.05914, set this to a number (paper default is 5) to add noise to embeddings",
+    )
+    parser.add_argument(
+        "--num_train_epochs",
+        type=int,
+        default=3,
+        help="Total number of training epochs to perform.",
+    )
     parser.add_argument(
         "--max_train_steps",
         type=int,
@@ -81,34 +91,48 @@ def parse_args():
         help="Number of updates steps to accumulate before performing a backward/update pass.",
     )
     parser.add_argument(
-        "--ranking_loss", 
+        "--ranking_loss",
         type=str,
-        default="lambda", 
+        default="lambda",
         help="Ranking loss to use",
-        choices=["lambda", "listnet", "ranknet"]
+        choices=["lambda", "listnet", "ranknet"],
     )
     parser.add_argument(
         "--weighted", action="store_true", help="Use weighting with Ranknet"
     )
     parser.add_argument(
-        "--objective", 
+        "--objective",
         type=str,
-        default="generation", 
+        default="generation",
         help="Training objective for reranker training",
-        choices=["ranking", "generation", "combined"]
+        choices=["ranking", "generation", "combined"],
     )
     parser.add_argument(
         "--lr_scheduler_type",
         type=SchedulerType,
         default="linear",
         help="The scheduler type to use.",
-        choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
+        choices=[
+            "linear",
+            "cosine",
+            "cosine_with_restarts",
+            "polynomial",
+            "constant",
+            "constant_with_warmup",
+        ],
     )
     parser.add_argument(
-        "--num_warmup_steps", type=int, default=0, help="Number of steps for the warmup in the lr scheduler."
+        "--num_warmup_steps",
+        type=int,
+        default=0,
+        help="Number of steps for the warmup in the lr scheduler.",
     )
-    parser.add_argument("--output_dir", type=str, default=None, help="Where to store the final model.")
-    parser.add_argument("--seed", type=int, default=None, help="A seed for reproducible training.")
+    parser.add_argument(
+        "--output_dir", type=str, default=None, help="Where to store the final model."
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None, help="A seed for reproducible training."
+    )
     parser.add_argument(
         "--model_type",
         type=str,
@@ -123,7 +147,9 @@ def parse_args():
         help="The number of processes to use for the preprocessing.",
     )
     parser.add_argument(
-        "--overwrite_cache", action="store_true", help="Overwrite the cached training and evaluation sets"
+        "--overwrite_cache",
+        action="store_true",
+        help="Overwrite the cached training and evaluation sets",
     )
     parser.add_argument(
         "--trust_remote_code",
@@ -168,23 +194,30 @@ def parse_args():
     assert args.output_dir is not None
     return args
 
+
 def NEFTune(model, noise_alpha=5):
     """
     Apply noisy embeddings during training (NEFTune technique).
     """
+
     def noised_embed(orig_embed, noise_alpha):
         def new_func(x):
             if model.training:
                 embed_init = orig_embed(x)
                 dims = torch.tensor(embed_init.size(1) * embed_init.size(2))
-                mag_norm = noise_alpha/torch.sqrt(dims)
-                return embed_init + torch.zeros_like(embed_init).uniform_(-mag_norm, mag_norm)
+                mag_norm = noise_alpha / torch.sqrt(dims)
+                return embed_init + torch.zeros_like(embed_init).uniform_(
+                    -mag_norm, mag_norm
+                )
             else:
                 return orig_embed(x)
+
         return new_func
+
     orig_forward = model.base_model.embed_tokens.forward
     model.base_model.embed_tokens.forward = noised_embed(orig_forward, noise_alpha)
     return model
+
 
 def initialize_model_and_tokenizer(args):
     """
@@ -192,17 +225,20 @@ def initialize_model_and_tokenizer(args):
     """
     if args.resume_from_checkpoint:
         config = AutoConfig.from_pretrained(
-            args.resume_from_checkpoint, cache_dir=args.cache_dir,
-            trust_remote_code=args.trust_remote_code
+            args.resume_from_checkpoint,
+            cache_dir=args.cache_dir,
+            trust_remote_code=args.trust_remote_code,
         )
     elif args.config_name:
         config = AutoConfig.from_pretrained(
-            args.config_name, cache_dir=args.cache_dir,
+            args.config_name,
+            cache_dir=args.cache_dir,
             trust_remote_code=args.trust_remote_code,
         )
     elif args.model_name_or_path:
         config = AutoConfig.from_pretrained(
-            args.model_name_or_path, cache_dir=args.cache_dir,
+            args.model_name_or_path,
+            cache_dir=args.cache_dir,
             trust_remote_code=args.trust_remote_code,
         )
     else:
@@ -211,15 +247,24 @@ def initialize_model_and_tokenizer(args):
 
     if args.resume_from_checkpoint:
         tokenizer = AutoTokenizer.from_pretrained(
-            args.resume_from_checkpoint, use_fast=True, cache_dir=args.cache_dir, trust_remote_code=args.trust_remote_code
+            args.resume_from_checkpoint,
+            use_fast=True,
+            cache_dir=args.cache_dir,
+            trust_remote_code=args.trust_remote_code,
         )
     elif args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(
-            args.tokenizer_name, use_fast=True, cache_dir=args.cache_dir, trust_remote_code=args.trust_remote_code
+            args.tokenizer_name,
+            use_fast=True,
+            cache_dir=args.cache_dir,
+            trust_remote_code=args.trust_remote_code,
         )
     elif args.model_name_or_path:
         tokenizer = AutoTokenizer.from_pretrained(
-            args.model_name_or_path, use_fast=True, cache_dir=args.cache_dir, trust_remote_code=args.trust_remote_code
+            args.model_name_or_path,
+            use_fast=True,
+            cache_dir=args.cache_dir,
+            trust_remote_code=args.trust_remote_code,
         )
     else:
         raise ValueError(
@@ -251,11 +296,16 @@ def initialize_model_and_tokenizer(args):
         )
     else:
         logger.info("Training new model from scratch")
-        model = AutoModelForCausalLM.from_config(config, cache_dir=args.cache_dir, attn_implementation="flash_attention_2", trust_remote_code=args.trust_remote_code)
+        model = AutoModelForCausalLM.from_config(
+            config,
+            cache_dir=args.cache_dir,
+            attn_implementation="flash_attention_2",
+            trust_remote_code=args.trust_remote_code,
+        )
 
     # Handle pad token if needed
     if tokenizer.pad_token is None:
-        tokenizer.add_special_tokens({'pad_token': '<|end_of_text|>'})
+        tokenizer.add_special_tokens({"pad_token": "<|end_of_text|>"})
 
     # Resize embeddings if necessary
     embedding_size = model.get_input_embeddings().weight.shape[0]
@@ -263,6 +313,7 @@ def initialize_model_and_tokenizer(args):
         model.resize_token_embeddings(len(tokenizer))
 
     return tokenizer, model
+
 
 def initialize_optimizer(model, weight_decay, learning_rate):
     """
@@ -276,7 +327,9 @@ def initialize_optimizer(model, weight_decay, learning_rate):
             "weight_decay": weight_decay,
         },
         {
-            "params": [p for n, p in model.named_parameters() if n not in decay_parameters],
+            "params": [
+                p for n, p in model.named_parameters() if n not in decay_parameters
+            ],
             "weight_decay": 0.0,
         },
     ]
@@ -285,5 +338,5 @@ def initialize_optimizer(model, weight_decay, learning_rate):
         optimizer_grouped_parameters,
         lr=learning_rate,
     )
-    
-    return optimizer 
+
+    return optimizer
