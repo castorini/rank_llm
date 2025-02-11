@@ -125,3 +125,5 @@ for key in rerankers:
 
     # Free up the memory
     del reranker
+
+print(results)

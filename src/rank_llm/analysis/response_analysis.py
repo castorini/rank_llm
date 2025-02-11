@@ -116,6 +116,7 @@ class ResponseAnalyzer:
         return True
 
     def _get_num_passages(self, prompt) -> int:
+        # TODO: support lrl and rank_gpt_apeer prompt formats
         search_text = ""
         if type(prompt) == str:
             search_text = prompt
@@ -143,11 +144,9 @@ class ResponseAnalyzer:
     def process_numerical_format(
         self, response: str, num_passage: int, verbose: bool, stats_dict: Dict[str, int]
     ):
-        print(response)
         resp = response.replace("[rankstart]", "")
         resp = resp.replace("[rankend]", "")
         resp = resp.strip()
-        print(resp)
         if not self._validate_format(resp):
             if verbose:
                 print(resp)
@@ -162,7 +161,6 @@ class ResponseAnalyzer:
             resp = resp[begin : len(resp) - end]
             ranks = resp.split("] > [")
             ranks = [int(rank) for rank in ranks]
-            print(ranks)
         except ValueError:
             if verbose:
                 print(resp)
