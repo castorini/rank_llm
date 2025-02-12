@@ -18,16 +18,6 @@ logger = logging.getLogger(__name__)
 class PairwiseRankLLM(RankLLM, ABC):
     """
     Abstract base class that all pairwise rerankers implement.
-
-    All concrete children of RankLLM must implement these functions:
-        - rerank_batch
-        - run_llm_batched
-        - run_llm
-        - create_prompt_batched
-        - create_prompt
-        - get_num_tokens
-        - cost_per_1k_tokens
-        - num_output_tokens
     """
 
     def __init__(
@@ -59,7 +49,7 @@ class PairwiseRankLLM(RankLLM, ABC):
             Result(
                 query=copy.deepcopy(request.query),
                 candidates=copy.deepcopy(request.candidates),
-                ranking_exec_summary=[],
+                invocations_history=[],
             )
             for request in requests
         ]
@@ -74,7 +64,7 @@ class PairwiseRankLLM(RankLLM, ABC):
             )
             candidate_2 = index % len(rerank_results[0].candidates)
             if candidate_1 != candidate_2:
-                self._enumerated_indices.append(index)    
+                self._enumerated_indices.append(index)
 
         end = (len(rerank_results[0].candidates) - 1) * len(rerank_results[0].candidates) * len(requests)
         with tqdm(total=end, desc="Progress through (q, d) pairs") as progress_bar:

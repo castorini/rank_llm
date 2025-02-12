@@ -352,7 +352,7 @@ class Reranker:
                 keys_and_defaults, **kwargs
             )
 
-            agent = DuoT5(
+            model_coordinator = DuoT5(
                 model=(
                     model_full_paths[model_path]
                     if model_path in model_full_paths
