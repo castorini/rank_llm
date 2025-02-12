@@ -1,8 +1,8 @@
 import unittest
 
-from rank_llm import retrieve_and_rerank
 from rank_llm.data import Candidate, Query, Request
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode, ServiceRetriever
+from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 
 class TestServiceRetriever(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestServiceRetriever(unittest.TestCase):
             model_path="rank_zephyr",
             interactive=True,
             top_k_retrieve=top_k,
-            exec_summary=False,
+            populate_invocations_history=False,
         )
 
         response = response[0]

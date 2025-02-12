@@ -1,29 +1,38 @@
 import os
 import sys
+from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank import Reranker, get_openai_api_key
-from rank_llm.rerank.listwise import SafeOpenai
+from rank_llm.analysis.response_analysis import ResponseAnalyzer
+from rank_llm.data import DataWriter
+from rank_llm.rerank import Reranker
+from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.retrieve import Retriever
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
-model_coordinator = SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key())
+model_coordinator = RankListwiseOSLLM(
+    model="castorini/first_mistral",
+    use_logits=True,
+    use_alpha=True,
+    vllm_batched=True,
+)
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
 rerank_results = reranker.rerank_batch(requests, **kwargs)
-print(rerank_results)
 
-from pathlib import Path
+# Analyze the response
+analyzer = ResponseAnalyzer.from_inline_results(rerank_results, use_alpha=True)
 
-from rank_llm.data import DataWriter
+error_counts = analyzer.count_errors()
+print(error_counts.__repr__())
 
-# write rerank results
+# Write rerank results
 writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
 writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")

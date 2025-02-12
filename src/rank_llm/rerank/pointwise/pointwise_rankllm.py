@@ -1,6 +1,5 @@
 import copy
 import logging
-import math
 import re
 from abc import ABC
 from datetime import datetime
@@ -10,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import Candidate, Request, Result
+from rank_llm.data import Candidate, InferenceInvocation, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
@@ -53,44 +52,53 @@ class PointwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
                 candidates=copy.deepcopy(request.candidates),
-                ranking_exec_summary=[],
+                invocations_history=[],
             )
             for request in requests
         ]
-        end = len(rerank_results[0].candidates) * len(requests)
 
-        with tqdm(total=end, desc="Progress through (q, d) pairs") as progress_bar:
-            for index in range(0, end, self._batch_size):
+        total_candidates = sum(len(result.candidates) for result in rerank_results)
+
+        with tqdm(
+            total=total_candidates, desc="Progress through (q, d) pairs"
+        ) as progress_bar:
+            index = 0
+            while index < total_candidates:
                 prompts, token_counts = self.create_prompt_batched(
                     results=rerank_results, index=index
                 )
 
-                outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts)
+                outputs, output_token_counts, scores = self.run_llm_batched(
+                    prompts=prompts
+                )
 
-                for update_index in range(
-                    index,
-                    min(
-                        index + self._batch_size,
-                        len(rerank_results[0].candidates) * len(rerank_results),
-                    ),
-                ):
-                    query_number = math.floor(
-                        update_index / len(rerank_results[0].candidates)
+                for i, score in enumerate(scores):
+                    query_number, candidate_number = self.get_query_and_candidate_index(
+                        rerank_results, index + i
                     )
-                    candidate_number = update_index % len(rerank_results[0].candidates)
-
                     rerank_results[query_number].candidates[
                         candidate_number
-                    ].score = scores[update_index - index]
+                    ].score = score
+                    if populate_invocations_history:
+                        inference_invocation = InferenceInvocation(
+                            prompts[i],
+                            outputs[i],
+                            token_counts[i],
+                            output_token_counts[i],
+                        )
+                        rerank_results[query_number].invocations_history.append(
+                            inference_invocation
+                        )
 
-                if index + self._batch_size > end:
-                    progress_bar.update(end - index)
-                else:
-                    progress_bar.update(self._batch_size)
+                progress_bar.update(len(scores))
+                index += self._batch_size
 
         for result in rerank_results:
             result.candidates.sort(
@@ -99,19 +107,32 @@ class PointwiseRankLLM(RankLLM, ABC):
 
         return rerank_results
 
+    def get_query_and_candidate_index(
+        self, results: List[Result], global_index: int
+    ) -> Tuple[int, int]:
+        cumulative_count = 0
+        for query_index, result in enumerate(results):
+            if global_index < cumulative_count + len(result.candidates):
+                return query_index, global_index - cumulative_count
+            cumulative_count += len(result.candidates)
+        raise IndexError("Index out of range in get_query_and_candidate_index")
+
     def create_prompt_batched(
-        self, results: List[Result], index
+        self, results: List[Result], index: int
     ) -> Tuple[List[str], List[int]]:
         prompts = []
         token_counts = []
 
-        for index in range(
+        for i in range(
             index,
-            min(index + self._batch_size, len(results[0].candidates) * len(results)),
+            min(
+                index + self._batch_size,
+                sum(len(result.candidates) for result in results),
+            ),
         ):
-            query_number = math.floor(index / len(results[0].candidates))
-            candidate_number = index % len(results[0].candidates)
-
+            query_number, candidate_number = self.get_query_and_candidate_index(
+                results, i
+            )
             prompt, token_count = self.create_prompt(
                 result=results[query_number], index=candidate_number
             )

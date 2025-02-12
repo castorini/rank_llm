@@ -1,3 +1,4 @@
+from .rank_gemini import SafeGenai
 from .rank_gpt import SafeOpenai
 from .rank_listwise_os_llm import RankListwiseOSLLM
 from .vicuna_reranker import VicunaReranker
@@ -8,4 +9,5 @@ __all__ = [
     "VicunaReranker",
     "ZephyrReranker",
     "SafeOpenai",
+    "SafeGenai",
 ]

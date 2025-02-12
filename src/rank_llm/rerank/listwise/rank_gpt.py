@@ -99,10 +99,14 @@ class SafeOpenai(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
+        rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", 20)
+        window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step", 10)
-        populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
-
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
         results = []
         for request in tqdm(requests):
             result = self.sliding_windows(
@@ -113,7 +117,7 @@ class SafeOpenai(ListwiseRankLLM):
                 step=step,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
-                populate_exec_summary=populate_exec_summary,
+                populate_invocations_history=populate_invocations_history,
             )
             results.append(result)
         return results
@@ -325,7 +329,8 @@ class SafeOpenai(ListwiseRankLLM):
                 psg_ids.append(psg_id)
             message += f'QUESTION = "{query}"\n'
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
-            message += "SORTED_PASSAGES = [\n"
+            message += "Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.\n"
+            message += "SORTED_PASSAGES = "
             messages = [{"role": "user", "content": message}]
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
