@@ -38,7 +38,7 @@ class SafeGenai(ListwiseRankLLM):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT_APEER,
+        prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
         window_size: int = 20,
         keys=None,
@@ -58,7 +58,7 @@ class SafeGenai(ListwiseRankLLM):
             raise ValueError("Please provide Genai API Keys.")
         if prompt_mode not in [PromptMode.RANK_GPT_APEER, PromptMode.RANK_GPT]:
             raise ValueError(
-                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_GPT_APPER} or {PromptMode.RANK_GPT}."
+                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_GPT_APEER} or {PromptMode.RANK_GPT}."
             )
         self._output_token_estimate = None
         self._keys = keys

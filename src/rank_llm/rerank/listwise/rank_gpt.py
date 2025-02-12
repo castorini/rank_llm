@@ -329,7 +329,8 @@ class SafeOpenai(ListwiseRankLLM):
                 psg_ids.append(psg_id)
             message += f'QUESTION = "{query}"\n'
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
-            message += "SORTED_PASSAGES = [\n"
+            message += "Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.\n"
+            message += "SORTED_PASSAGES = "
             messages = [{"role": "user", "content": message}]
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
