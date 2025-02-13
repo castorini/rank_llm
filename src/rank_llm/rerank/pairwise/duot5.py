@@ -6,16 +6,16 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers.generation import GenerationConfig
 
 from rank_llm.data import Result
-from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
+from rank_llm.rerank.pairwise.pairwise_rankllm import PairwiseRankLLM
 
 logger = logging.getLogger(__name__)
 
 
-class MonoT5(PointwiseRankLLM):
+class DuoT5(PairwiseRankLLM):
     def __init__(
         self,
         model: str,
-        prompt_mode: str = "monot5",
+        prompt_mode: str = "duot5",
         context_size: int = 512,
         device: str = "cuda",
         batch_size: int = 32,
@@ -45,54 +45,69 @@ class MonoT5(PointwiseRankLLM):
         gen_cfg.output_scores = True
         gen_cfg.return_dict_in_generate = True
         gen_cfg.do_sample = False
-        all_outputs, all_output_token_counts, all_scores = [], [], []
 
-        token_prompts = self._tokenizer(
-            prompts, padding=True, truncation=True, return_tensors="pt"
+        tokenized = self._tokenizer(
+            prompts,
+            padding=True,
+            truncation=True,
+            max_length=self._context_size,
+            return_tensors="pt",
         ).to(self._device)
+        input_ids = tokenized["input_ids"]
 
-        token_prompts = token_prompts["input_ids"]
-
-        batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
-
-        batch_output_ids = batch_outputs.sequences
-        batch_logits = batch_outputs.scores
+        outputs = self._llm.generate(input_ids, generation_config=gen_cfg)
+        output_ids = outputs.sequences
+        logits = outputs.scores
 
         batch_outputs = [
             self._tokenizer.decode(
-                single_token_sequence,
+                seq,
                 skip_special_tokens=True,
                 spaces_between_special_tokens=False,
             )
-            for single_token_sequence in batch_output_ids
+            for seq in output_ids
         ]
 
-        for logit_tensor in batch_logits[0]:
-            truth_logit = logit_tensor[self._true_id]
-            false_logit = logit_tensor[self._false_id]
+        all_scores, all_output_token_counts = [], []
+        # Use the logits from the generated token (logits[0] is of shape (batch_size, vocab_size))
+        for logit_tensor in logits[0]:
+            truth_logit = logit_tensor[self._true_id].item()
+            false_logit = logit_tensor[self._false_id].item()
             score = math.exp(truth_logit) / (
                 math.exp(truth_logit) + math.exp(false_logit)
             )
             all_scores.append(score)
             all_output_token_counts.append(self.num_output_tokens())
 
-        all_outputs.extend(batch_outputs)
-
-        return all_outputs, all_output_token_counts, all_scores
+        return batch_outputs, all_output_token_counts, all_scores
 
     def run_llm(self, prompt: str) -> Tuple[str, int, float]:
         ret = self.run_llm_batched([prompt])
         return ret[0][0], ret[1][0], ret[2][0]
 
-    def create_prompt(self, result: Result, index: int) -> Tuple[str, int]:
-        query = result.query.text
-        input = f"Query: {query} Document: {self.convert_doc_to_prompt_content(result.candidates[index].doc, max_length=self._context_size)}"
-        prompt = (
-            self._tokenizer.decode(
-                self._tokenizer.encode(input)[: (self._context_size - 32)]
-            )[:-4]
-            + " Relevant: "
+    def create_prompt(
+        self, result: Result, index1: int, index2: int
+    ) -> Tuple[str, int]:
+        query = self._replace_number(result.query.text)
+
+        doc1_raw = self.convert_doc_to_prompt_content(
+            result.candidates[index1].doc, max_length=self._context_size
         )
+        doc2_raw = self.convert_doc_to_prompt_content(
+            result.candidates[index2].doc, max_length=self._context_size
+        )
+
+        doc1_tokens = self._tokenizer.encode(
+            doc1_raw, truncation=True, max_length=self._context_size
+        )
+        doc2_tokens = self._tokenizer.encode(
+            doc2_raw, truncation=True, max_length=self._context_size
+        )
+
+        doc1 = self._tokenizer.decode(doc1_tokens, skip_special_tokens=True)
+        doc2 = self._tokenizer.decode(doc2_tokens, skip_special_tokens=True)
+
+        prompt = f"Query: {query} Document0: {doc1} Document1: {doc2} Relevant: "
         prompt = prompt.replace("<unk>", "")
 
         return prompt, self.get_num_tokens(prompt)

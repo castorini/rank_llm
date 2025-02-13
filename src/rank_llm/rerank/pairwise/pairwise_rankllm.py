@@ -9,24 +9,15 @@ from typing import Any, Dict, List, Tuple
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import Candidate, InferenceInvocation, Request, Result
+from rank_llm.data import Candidate, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
 
-class PointwiseRankLLM(RankLLM, ABC):
+class PairwiseRankLLM(RankLLM, ABC):
     """
-    Abstract base class that all pointwise rerankers implement.
-
-    All children of PointwiseRankLLM must implement these functions:
-        - run_llm_batched
-        - run_llm
-        - create_prompt
-        - get_num_tokens
-        - cost_per_1k_tokens
-        - num_output_tokens
-
+    Abstract base class that all pairwise rerankers implement.
     """
 
     def __init__(
@@ -52,9 +43,13 @@ class PointwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        """
+        Re-rank candidates in a pairwise fashion:
+         1. Build a list of all pairwise comparisons.
+         2. Process in batches: create prompts, run LLM, update scores.
+         3. Sort candidates by final score in descending order.
+        """
+
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -64,81 +59,66 @@ class PointwiseRankLLM(RankLLM, ABC):
             for request in requests
         ]
 
-        total_candidates = sum(len(result.candidates) for result in rerank_results)
+        # zero-initialize candidate scores
+        for result in rerank_results:
+            for candidate in result.candidates:
+                candidate.score = 0
+
+        num_queries, num_pairs = len(rerank_results), 0
+        self._enumerated_indices = [[] for _ in range(num_queries)]
+        for query_idx, res in enumerate(rerank_results):
+            num_candidates = len(res.candidates)
+            for i in range(num_candidates):
+                for j in range(i + 1, num_candidates):
+                    self._enumerated_indices[query_idx].append([i, j])
+            num_pairs += len(self._enumerated_indices[query_idx])
 
         with tqdm(
-            total=total_candidates, desc="Progress through (q, d) pairs"
+            total=num_pairs, desc="Progress through (q, d) pairs"
         ) as progress_bar:
-            index = 0
-            while index < total_candidates:
-                prompts, token_counts = self.create_prompt_batched(
-                    results=rerank_results, index=index
-                )
-
-                outputs, output_token_counts, scores = self.run_llm_batched(
-                    prompts=prompts
-                )
-
-                for i, score in enumerate(scores):
-                    query_number, candidate_number = self.get_query_and_candidate_index(
-                        rerank_results, index + i
+            for query_idx, pair_list in enumerate(self._enumerated_indices):
+                index = 0
+                while index < len(pair_list):
+                    prompts, token_counts = self.create_prompt_batched(
+                        rerank_results, query_idx, index
                     )
-                    rerank_results[query_number].candidates[
-                        candidate_number
-                    ].score = score
-                    if populate_invocations_history:
-                        inference_invocation = InferenceInvocation(
-                            prompts[i],
-                            outputs[i],
-                            token_counts[i],
-                            output_token_counts[i],
-                        )
-                        rerank_results[query_number].invocations_history.append(
-                            inference_invocation
-                        )
 
-                progress_bar.update(len(scores))
-                index += self._batch_size
+                    outputs, output_tokens, scores = self.run_llm_batched(prompts)
+
+                    for (i, j), score in zip(
+                        pair_list[index : index + len(scores)], scores
+                    ):
+                        rerank_results[query_idx].candidates[i].score += score
+                        rerank_results[query_idx].candidates[j].score += 1 - score
+
+                    index += self._batch_size
+                    progress_bar.update(len(scores))
 
         for result in rerank_results:
-            result.candidates.sort(
-                key=cmp_to_key(self.candidate_comparator), reverse=True
-            )
+            result.candidates.sort(key=cmp_to_key(self.candidate_comparator))
 
         return rerank_results
 
-    def get_query_and_candidate_index(
-        self, results: List[Result], global_index: int
-    ) -> Tuple[int, int]:
-        cumulative_count = 0
-        for query_index, result in enumerate(results):
-            if global_index < cumulative_count + len(result.candidates):
-                return query_index, global_index - cumulative_count
-            cumulative_count += len(result.candidates)
-        raise IndexError("Index out of range in get_query_and_candidate_index")
-
     def create_prompt_batched(
-        self, results: List[Result], index: int
+        self, results: List[Result], query_idx: int, index: int
     ) -> Tuple[List[str], List[int]]:
-        prompts = []
-        token_counts = []
+        """
+        Create a batch of prompts for the given query_idx, taking pairs of candidates
+        from self._enumerated_indices[query_idx] in the range [index : index + batch_size].
+        """
+        prompts, token_counts = [], []
 
-        for i in range(
-            index,
-            min(
-                index + self._batch_size,
-                sum(len(result.candidates) for result in results),
-            ),
-        ):
-            query_number, candidate_number = self.get_query_and_candidate_index(
-                results, i
-            )
-            prompt, token_count = self.create_prompt(
-                result=results[query_number], index=candidate_number
-            )
+        pair_list = self._enumerated_indices[query_idx]
+        end_index = min(index + self._batch_size, len(pair_list))
 
+        # Build prompts for each pair in [index, end_index)
+        for pair_idx in range(index, end_index):
+            i, j = pair_list[pair_idx]
+            prompt, tcount = self.create_prompt(
+                result=results[query_idx], index1=i, index2=j
+            )
             prompts.append(prompt)
-            token_counts.append(token_count)
+            token_counts.append(tcount)
 
         return prompts, token_counts
 
@@ -173,9 +153,9 @@ class PointwiseRankLLM(RankLLM, ABC):
 
     def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
         if x.score < y.score:
-            return -1
-        elif x.score > y.score:
             return 1
+        elif x.score > y.score:
+            return -1
         else:
             return 0
 
