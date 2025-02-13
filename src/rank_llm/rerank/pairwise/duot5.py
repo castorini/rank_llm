@@ -35,9 +35,6 @@ class DuoT5(PairwiseRankLLM):
         self._true_id = self._tokenizer.encode("true", add_special_tokens=False)[0]
         self._false_id = self._tokenizer.encode("false", add_special_tokens=False)[0]
 
-    def num_output_tokens(self) -> int:
-        return 1
-
     def run_llm_batched(
         self,
         prompts: List[str],
@@ -59,12 +56,9 @@ class DuoT5(PairwiseRankLLM):
         input_ids = tokenized["input_ids"]
 
         outputs = self._llm.generate(input_ids, generation_config=gen_cfg)
-        output_ids = outputs.sequences  # (batch_size, sequence_length)
-        logits = (
-            outputs.scores
-        )  # Tuple with one tensor (batch_size, vocab_size) since num_output_tokens == 1
+        output_ids = outputs.sequences
+        logits = outputs.scores
 
-        # Decode outputs
         batch_outputs = [
             self._tokenizer.decode(
                 seq,
@@ -74,8 +68,7 @@ class DuoT5(PairwiseRankLLM):
             for seq in output_ids
         ]
 
-        all_scores = []
-        all_output_token_counts = []
+        all_scores, all_output_token_counts = [], []
         # Use the logits from the generated token (logits[0] is of shape (batch_size, vocab_size))
         for logit_tensor in logits[0]:
             truth_logit = logit_tensor[self._true_id].item()
@@ -90,7 +83,7 @@ class DuoT5(PairwiseRankLLM):
 
     def run_llm(self, prompt: str) -> Tuple[str, int, float]:
         ret = self.run_llm_batched([prompt])
-        return (ret[0][0], ret[1][0], ret[2][0])
+        return ret[0][0], ret[1][0], ret[2][0]
 
     def create_prompt(
         self, result: Result, index1: int, index2: int
@@ -121,6 +114,9 @@ class DuoT5(PairwiseRankLLM):
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))
+
+    def num_output_tokens(self) -> int:
+        return 1
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
