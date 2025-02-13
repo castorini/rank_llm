@@ -23,7 +23,7 @@ accelerate launch \
     --noisy_embedding_alpha 5 \
     --objective combined \
     --ranking_loss ranknet \
-    --weighted
+    --weighted \
     --with_tracking \
     --report_to wandb \
     --checkpointing_steps epoch
