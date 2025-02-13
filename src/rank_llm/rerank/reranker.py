@@ -11,8 +11,8 @@ from rank_llm.rerank import (
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
-from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.pairwise.duot5 import DuoT5
+from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
 

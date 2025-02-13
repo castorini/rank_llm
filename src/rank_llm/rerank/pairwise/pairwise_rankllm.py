@@ -1,6 +1,5 @@
 import copy
 import logging
-import math
 import re
 from abc import ABC
 from datetime import datetime
@@ -14,6 +13,7 @@ from rank_llm.data import Candidate, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
+
 
 class PairwiseRankLLM(RankLLM, ABC):
     """
@@ -69,56 +69,57 @@ class PairwiseRankLLM(RankLLM, ABC):
         for query_idx, res in enumerate(rerank_results):
             num_candidates = len(res.candidates)
             for i in range(num_candidates):
-                for j in range(i+1,num_candidates):
-                    self._enumerated_indices[query_idx].append([i,j])
+                for j in range(i + 1, num_candidates):
+                    self._enumerated_indices[query_idx].append([i, j])
             num_pairs += len(self._enumerated_indices[query_idx])
-            
-        with tqdm(total=num_pairs, desc="Progress through (q, d) pairs") as progress_bar:
+
+        with tqdm(
+            total=num_pairs, desc="Progress through (q, d) pairs"
+        ) as progress_bar:
             for query_idx, pair_list in enumerate(self._enumerated_indices):
                 index = 0
                 while index < len(pair_list):
-                    prompts, token_counts = self.create_prompt_batched(rerank_results, query_idx, index)
+                    prompts, token_counts = self.create_prompt_batched(
+                        rerank_results, query_idx, index
+                    )
 
                     outputs, output_tokens, scores = self.run_llm_batched(prompts)
 
-                    for (i, j), score in zip(pair_list[index : index + len(scores)], scores):
+                    for (i, j), score in zip(
+                        pair_list[index : index + len(scores)], scores
+                    ):
                         rerank_results[query_idx].candidates[i].score += score
-                        rerank_results[query_idx].candidates[j].score += (1 - score)
+                        rerank_results[query_idx].candidates[j].score += 1 - score
 
                     index += self._batch_size
                     progress_bar.update(len(scores))
-                    
+
         for result in rerank_results:
             result.candidates.sort(key=cmp_to_key(self.candidate_comparator))
 
         return rerank_results
 
     def create_prompt_batched(
-        self,
-        results: List[Result],
-        query_idx: int,
-        index: int
+        self, results: List[Result], query_idx: int, index: int
     ) -> Tuple[List[str], List[int]]:
         """
         Create a batch of prompts for the given query_idx, taking pairs of candidates
         from self._enumerated_indices[query_idx] in the range [index : index + batch_size].
         """
         prompts, token_counts = [], []
-        
+
         pair_list = self._enumerated_indices[query_idx]
         end_index = min(index + self._batch_size, len(pair_list))
-        
+
         # Build prompts for each pair in [index, end_index)
         for pair_idx in range(index, end_index):
             i, j = pair_list[pair_idx]
             prompt, tcount = self.create_prompt(
-                result=results[query_idx],
-                index1=i,
-                index2=j
+                result=results[query_idx], index1=i, index2=j
             )
             prompts.append(prompt)
             token_counts.append(tcount)
-        
+
         return prompts, token_counts
 
     def get_output_filename(
@@ -151,9 +152,12 @@ class PairwiseRankLLM(RankLLM, ABC):
         )
 
     def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
-        if x.score < y.score: return 1
-        elif x.score > y.score: return -1
-        else: return 0
+        if x.score < y.score:
+            return 1
+        elif x.score > y.score:
+            return -1
+        else:
+            return 0
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)

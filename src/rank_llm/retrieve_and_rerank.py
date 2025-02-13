@@ -54,7 +54,7 @@ def retrieve_and_rerank(
         dataset=dataset,
         **kwargs,
     )
-    
+
     for request in requests:
         request.candidates = request.candidates[:top_k_retrieve]
 

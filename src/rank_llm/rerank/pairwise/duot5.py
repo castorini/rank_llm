@@ -27,11 +27,11 @@ class DuoT5(PairwiseRankLLM):
             device=device,
             batch_size=batch_size,
         )
-        
+
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = T5ForConditionalGeneration.from_pretrained(model).to(self._device)
         self._context_size = context_size
-        
+
         self._true_id = self._tokenizer.encode("true", add_special_tokens=False)[0]
         self._false_id = self._tokenizer.encode("false", add_special_tokens=False)[0]
 
@@ -54,13 +54,15 @@ class DuoT5(PairwiseRankLLM):
             padding=True,
             truncation=True,
             max_length=self._context_size,
-            return_tensors="pt"
+            return_tensors="pt",
         ).to(self._device)
         input_ids = tokenized["input_ids"]
 
         outputs = self._llm.generate(input_ids, generation_config=gen_cfg)
         output_ids = outputs.sequences  # (batch_size, sequence_length)
-        logits = outputs.scores  # Tuple with one tensor (batch_size, vocab_size) since num_output_tokens == 1
+        logits = (
+            outputs.scores
+        )  # Tuple with one tensor (batch_size, vocab_size) since num_output_tokens == 1
 
         # Decode outputs
         batch_outputs = [
@@ -78,7 +80,9 @@ class DuoT5(PairwiseRankLLM):
         for logit_tensor in logits[0]:
             truth_logit = logit_tensor[self._true_id].item()
             false_logit = logit_tensor[self._false_id].item()
-            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
+            score = math.exp(truth_logit) / (
+                math.exp(truth_logit) + math.exp(false_logit)
+            )
             all_scores.append(score)
             all_output_token_counts.append(self.num_output_tokens())
 
@@ -88,32 +92,28 @@ class DuoT5(PairwiseRankLLM):
         ret = self.run_llm_batched([prompt])
         return (ret[0][0], ret[1][0], ret[2][0])
 
-    def create_prompt(self, result: Result, index1: int, index2: int) -> Tuple[str, int]:
+    def create_prompt(
+        self, result: Result, index1: int, index2: int
+    ) -> Tuple[str, int]:
         query = self._replace_number(result.query.text)
 
         doc1_raw = self.convert_doc_to_prompt_content(
-            result.candidates[index1].doc,
-            max_length=self._context_size
+            result.candidates[index1].doc, max_length=self._context_size
         )
         doc2_raw = self.convert_doc_to_prompt_content(
-            result.candidates[index2].doc,
-            max_length=self._context_size
+            result.candidates[index2].doc, max_length=self._context_size
         )
-        
+
         doc1_tokens = self._tokenizer.encode(
-            doc1_raw,
-            truncation=True,
-            max_length=self._context_size
+            doc1_raw, truncation=True, max_length=self._context_size
         )
         doc2_tokens = self._tokenizer.encode(
-            doc2_raw,
-            truncation=True,
-            max_length=self._context_size
+            doc2_raw, truncation=True, max_length=self._context_size
         )
-        
+
         doc1 = self._tokenizer.decode(doc1_tokens, skip_special_tokens=True)
         doc2 = self._tokenizer.decode(doc2_tokens, skip_special_tokens=True)
-        
+
         prompt = f"Query: {query} Document0: {doc1} Document1: {doc2} Relevant: "
         prompt = prompt.replace("<unk>", "")
 
