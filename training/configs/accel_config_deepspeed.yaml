@@ -1,0 +1,12 @@
+compute_environment: LOCAL_MACHINE
+deepspeed_config:
+  deepspeed_config_file: configs/zero3_bf16.json
+  zero3_init_flag: true
+distributed_type: DEEPSPEED
+fsdp_config: {}
+machine_rank: 0
+main_training_function: main
+num_machines: 1
+num_processes: 4
+same_network: true
+use_cpu: false
