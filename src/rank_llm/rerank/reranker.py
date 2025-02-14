@@ -340,7 +340,7 @@ class Reranker:
             # using monot5
             print(f"Loading {model_path} ...")
 
-            model_full_paths = {"duot5": "castorini/duot5-3b-med-msmarco"}
+            model_full_paths = {"duot5": "castorini/duot5-3b-msmarco-10k"}
 
             keys_and_defaults = [
                 ("prompt_mode", PromptMode.DUOT5),
