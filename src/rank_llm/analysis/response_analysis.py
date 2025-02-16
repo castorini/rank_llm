@@ -121,19 +121,12 @@ class ResponseAnalyzer:
     def _validate_format(self, response: str) -> bool:
         if self._use_alpha:
             for c in response:
-                if not c.isupper() and c != "[" and c != "]" and c != ">" and c != " ":
+                if not c.isupper() and c not in "[]> ":
                     return False
             return True
 
         for c in response:
-            if (
-                not c.isdigit()
-                and c != "["
-                and c != "]"
-                and c != ">"
-                and c != " "
-                and c != ","
-            ):
+            if not c.isdigit() and c not in "[]> ,":
                 return False
         return True
 
