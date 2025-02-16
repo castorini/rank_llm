@@ -73,23 +73,39 @@ def create_reranker(name: str):
         return Reranker(
             SafeGenai("gemini-2.0-flash-001", 4096, keys=get_genai_api_key())
         )
+    if name == "qwen":
+        return Reranker(
+            RankListwiseOSLLM(
+                model="Qwen/Qwen2.5-7B-Instruct",
+                vllm_batched=True,
+            )
+        )
+    if name == "llama":
+        return Reranker(
+            RankListwiseOSLLM(
+                model="meta-llama/Llama-3.1-8B-Instruct",
+                vllm_batched=True,
+            )
+        )
 
 
 rerankers = [
     "monot5",
+    "lit5",
     "rv",
     "rz",
-    "lit5",
     "mistral",
+    "qwen",
+    "llama",
     "rank_gpt",
     "gemini",
-    "lrl",
     "rank_gpt_apeer",
+    "lrl",
 ]
 results = {}
 for key in rerankers:
     reranker = create_reranker(key)
-    for dataset in ["dl19", "dl20", "dl21", "dl22"]:  # , "dl23"
+    for dataset in ["dl19", "dl20", "dl21", "dl22", "dl23"]:
         retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
         topics = TOPICS[dataset]
         ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
@@ -108,22 +124,47 @@ for key in rerankers:
 
         # Eval
         rerank_ndcg_10 = EvalFunction.from_results(rerank_results, topics)
-
-        # Response Analysis
-        # TODO: For now skipping lrl and rank_gpt_apeer since the response analyzer does not support these prompt formats, yet.
-        if key not in ["monot5", "duot5", "lrl", "rank_gpt_apeer"]:
-            use_alpha = True if key == "mistral" else False
-            analyzer = ResponseAnalyzer.from_inline_results(
-                rerank_results, use_alpha=use_alpha
-            )
-            error_counts = analyzer.count_errors()
-        else:
-            error_counts = {}
-        results[(key, dataset)] = (ret_ndcg_10, rerank_ndcg_10, error_counts.__repr__())
+        results[(key, dataset)] = (ret_ndcg_10, rerank_ndcg_10)
         with open(f"{output_path_prefix}/eval_results.txt", "w") as f:
-            f.write(f"{(ret_ndcg_10, rerank_ndcg_10, error_counts.__repr__())}")
+            f.write(f"{(ret_ndcg_10, rerank_ndcg_10)}")
 
     # Free up the memory
     del reranker
+
+print(results)
+
+# Analyze invocations
+results = {}
+for model in [
+    "rv",
+    "rz",
+    "lit5",
+    "mistral",
+    "rank_gpt",
+    "gemini",
+    "rank_gpt_apeer",
+    "lrl",
+    "qwen",
+    "llama",
+]:
+    use_alpha = True if model == "mistral" else False
+    if model == "lit5":
+        prompt_mode = PromptMode.LiT5
+    elif model == "rank_gpt_apeer":
+        prompt_mode = PromptMode.RANK_GPT_APEER
+    elif model == "lrl":
+        prompt_mode = PromptMode.LRL
+    else:
+        prompt_mode = PromptMode.RANK_GPT
+    files = []
+    for dataset in ["dl19", "dl20", "dl21", "dl22", "dl23"]:
+        files.append(
+            f"demo_outputs/{dataset}/{model}/inference_invocations_history.json"
+        )
+    analyzer = ResponseAnalyzer.from_stored_files(
+        files, use_alpha=use_alpha, prompt_mode=prompt_mode
+    )
+    error_counts = analyzer.count_errors(verbose=True, normalize=True)
+    results[model] = error_counts.__repr__()
 
 print(results)

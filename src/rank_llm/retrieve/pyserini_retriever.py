@@ -293,9 +293,9 @@ class PyseriniRetriever:
             parents=True, exist_ok=True
         )
         writer = DataWriter(results)
-        # Store JSON in rank_results to a file
-        writer.write_in_json_format(
-            f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
+        # Store retrieved_results into a JSONL file
+        writer.write_in_jsonl_format(
+            f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
         )
         # Store the QRELS of the dataset if specified
         if store_qrels and self._qrels:
