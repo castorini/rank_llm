@@ -55,6 +55,9 @@ def retrieve_and_rerank(
         **kwargs,
     )
 
+    for request in requests:
+        request.candidates = request.candidates[:top_k_retrieve]
+
     # Reranking stages
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
     if reranker.get_model_coordinator() is None:
