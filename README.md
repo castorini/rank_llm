@@ -157,7 +157,8 @@ Omit `--use_logits` if you wish to perform traditional listwise reranking.
 First install genai:
 
 ```bash
-pip install -U -q "google-generativeai>=0.21.0"
+pip install -e .[genai]      # local installation for development
+pip install rank-llm[genai]  # or pip installation
 ```
 
 Then run the following command:
