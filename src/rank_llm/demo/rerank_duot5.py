@@ -7,14 +7,17 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.data import DataWriter, read_requests_from_file
-from rank_llm.rerank.listwise import ZephyrReranker
+from rank_llm.data import DataWriter
+from rank_llm.rerank import Reranker
+from rank_llm.rerank.pairwise.duot5 import DuoT5
+from rank_llm.retrieve.retriever import Retriever
 
-file_name = "retrieve_results/BM25/retrieve_results_dl23_top20.jsonl"
-requests = read_requests_from_file(file_name)
-
-reranker = ZephyrReranker()
-rerank_results = reranker.rerank_batch(requests=requests)
+dataset = "dl20"
+requests = Retriever.from_dataset_with_prebuilt_index(dataset, k=50)
+duot5_model_coordinator = DuoT5("castorini/duot5-3b-msmarco-10k")
+m_reranker = Reranker(duot5_model_coordinator)
+kwargs = {"populate_invocations_history": True}
+rerank_results = m_reranker.rerank_batch(requests, **kwargs)
 print(rerank_results)
 
 # write rerank results

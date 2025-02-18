@@ -14,6 +14,7 @@ class PromptMode(Enum):
     RANK_GPT_APEER = "rank_GPT_APEER"
     LRL = "LRL"
     MONOT5 = "monot5"
+    DUOT5 = "duot5"
     LiT5 = "LiT5"
 
     def __str__(self):
@@ -137,10 +138,10 @@ class RankLLM(ABC):
         **kwargs: Any,
     ) -> List[Result]:
         """
-        Reranks a list of requests using the RankLLM agent.
+        Reranks a list of requests using the RankLLM model_coordinator.
 
         This function applies a sliding window algorithm to rerank the results.
-        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+        Each window of results is processed by the RankLLM model_coordinator to obtain a new ranking.
 
         Args:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.
@@ -153,7 +154,7 @@ class RankLLM(ABC):
             vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
             sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
             tensorrt_batched (bool, optional): Whether to use TensorRT-LLM batches processing. Defaults to False.
-            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
+            populate_invocations_history (bool, optional): Whether to populate the history of inference invocations. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
 
         Returns:

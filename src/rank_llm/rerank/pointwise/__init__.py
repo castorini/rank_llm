@@ -1,3 +1,3 @@
-from .pointwise_rankllm import PointwiseRankLLM
+from .monot5 import MonoT5
 
-__all__ = ["PointwiseRankLLM"]
+__all__ = ["MonoT5"]

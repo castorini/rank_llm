@@ -209,7 +209,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             window_size,
             system_message,
         ) in valid_inputs:
-            agent = RankListwiseOSLLM(
+            model_coordinator = RankListwiseOSLLM(
                 model=model,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
@@ -218,13 +218,15 @@ class TestRankListwiseOSLLM(unittest.TestCase):
                 window_size=window_size,
                 system_message=system_message,
             )
-            self.assertEqual(agent._model, model)
-            self.assertEqual(agent._context_size, context_size)
-            self.assertEqual(agent._prompt_mode, prompt_mode)
-            self.assertEqual(agent._num_few_shot_examples, num_few_shot_examples)
-            self.assertEqual(agent._variable_passages, variable_passages)
-            self.assertEqual(agent._window_size, window_size)
-            self.assertEqual(agent._system_message, system_message)
+            self.assertEqual(model_coordinator._model, model)
+            self.assertEqual(model_coordinator._context_size, context_size)
+            self.assertEqual(model_coordinator._prompt_mode, prompt_mode)
+            self.assertEqual(
+                model_coordinator._num_few_shot_examples, num_few_shot_examples
+            )
+            self.assertEqual(model_coordinator._variable_passages, variable_passages)
+            self.assertEqual(model_coordinator._window_size, window_size)
+            self.assertEqual(model_coordinator._system_message, system_message)
 
     def test_failure_inputs(self):
         for (
@@ -237,7 +239,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             system_message,
         ) in failure_inputs:
             with self.assertRaises(ValueError):
-                agent = RankListwiseOSLLM(
+                model_coordinator = RankListwiseOSLLM(
                     model=model,
                     context_size=context_size,
                     prompt_mode=prompt_mode,
@@ -252,7 +254,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
     )
     def test_num_output_tokens(self, mock_num_output_tokens):
         # Creating PyseriniRetriever instance
-        agent = RankListwiseOSLLM(
+        model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
@@ -264,11 +266,11 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
         mock_num_output_tokens.return_value = 40
-        output = agent.num_output_tokens()
+        output = model_coordinator.num_output_tokens()
         self.assertEqual(output, 40)
 
         # print(output)
-        agent = RankListwiseOSLLM(
+        model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
@@ -280,12 +282,12 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
         mock_num_output_tokens.return_value = 19
-        output = agent.num_output_tokens()
+        output = model_coordinator.num_output_tokens()
         self.assertEqual(output, 19)
 
     @patch("rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.run_llm")
     def test_run_llm(self, mock_run_llm):
-        agent = RankListwiseOSLLM(
+        model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
@@ -297,7 +299,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
         mock_run_llm.return_value = ("> [1] > [2] > [3] > [4] > [5", 19)
-        output, size = agent.run_llm(
+        output, size = model_coordinator.run_llm(
             "How are you doing ? What is your name? What is your age? What is your favorite color?"
         )
         expected_output = "> [1] > [2] > [3] > [4] > [5"
@@ -307,7 +309,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
     def test_create_prompt(
         self,
     ):
-        agent = RankListwiseOSLLM(
+        model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
@@ -327,7 +329,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
 
         start_end_pairs = [(1, 3), (2, 4), (3, 5), (5, 6)]
         for start, end in start_end_pairs:
-            prompt, length = agent.create_prompt(r, start, end)
+            prompt, length = model_coordinator.create_prompt(r, start, end)
             expected_output = min(end, len(r.candidates)) - max(0, start)
             self.assertEqual(get_first_int(prompt), max(expected_output, 0))
 
@@ -335,7 +337,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.get_num_tokens"
     )
     def test_get_num_tokens(self, mock_get_num_tokens):
-        agent = RankListwiseOSLLM(
+        model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
@@ -348,7 +350,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
         mock_get_num_tokens.return_value = 22
-        output = agent.get_num_tokens(
+        output = model_coordinator.get_num_tokens(
             "How are you doing? What is your name? What is your age? What is your favorite color?"
         )
         self.assertEqual(output, 22)

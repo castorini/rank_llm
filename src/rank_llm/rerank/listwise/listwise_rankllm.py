@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import RankingExecInfo, Request, Result
+from rank_llm.data import InferenceInvocation, Request, Result
 from rank_llm.rerank import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,8 @@ ALPH_START_IDX = ord("A") - 1
 
 class ListwiseRankLLM(RankLLM, ABC):
     """
+    Abstract base class that all listwise rerankers inherit.
+
     All children of ListwiseRankLLM must implement these functions:
         - rerank_batched
         - run_llm_batched
@@ -82,7 +84,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         logging: bool = False,
-        populate_exec_summary: bool = False,
+        populate_invocations_history: bool = False,
     ) -> List[Result]:
         """
         Runs the permutation pipeline on a batch of result objects within the passed in rank range.
@@ -115,13 +117,13 @@ class ListwiseRankLLM(RankLLM, ABC):
             permutation, out_token_count = batched_results[index]
             if logging:
                 logger.debug(f"output: {permutation}")
-            if populate_exec_summary:
-                if result.ranking_exec_summary is None:
-                    result.ranking_exec_summary = []
-                ranking_exec_info = RankingExecInfo(
+            if populate_invocations_history:
+                if result.invocations_history is None:
+                    result.invocations_history = []
+                inference_invocation = InferenceInvocation(
                     prompt, permutation, in_token_count, out_token_count
                 )
-                result.ranking_exec_summary.append(ranking_exec_info)
+                result.invocations_history.append(inference_invocation)
             result = self.receive_permutation(result, permutation, rank_start, rank_end)
 
         return results
@@ -132,7 +134,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         logging: bool = False,
-        populate_exec_summary: bool = True,
+        populate_invocations_history: bool = True,
     ) -> Result:
         """
         Runs the permutation pipeline on the passed in result set within the passed in rank range.
@@ -154,11 +156,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         )
         if logging:
             print(f"Output: {permutation}")
-        if populate_exec_summary:
-            ranking_exec_info = RankingExecInfo(
+        if populate_invocations_history:
+            inference_invocation = InferenceInvocation(
                 prompt, permutation, in_token_count, out_token_count
             )
-            result.ranking_exec_summary.append(ranking_exec_info)
+            result.invocations_history.append(inference_invocation)
         result = self.receive_permutation(result, permutation, rank_start, rank_end)
         return result
 
@@ -193,7 +195,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        populate_exec_summary: bool = False,
+        populate_invocations_history: bool = False,
     ) -> List[Result]:
         """
         Applies the sliding window algorithm to the reranking process for a batch of result objects.
@@ -212,7 +214,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             Result(
                 query=copy.deepcopy(request.query),
                 candidates=copy.deepcopy(request.candidates),
-                ranking_exec_summary=[],
+                invocations_history=[],
             )
             for request in requests
         ]
@@ -228,7 +230,11 @@ class ListwiseRankLLM(RankLLM, ABC):
                 logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
             rerank_results = self.permutation_pipeline_batched(
-                rerank_results, start_pos, end_pos, logging, populate_exec_summary
+                rerank_results,
+                start_pos,
+                end_pos,
+                logging,
+                populate_invocations_history,
             )
             end_pos = end_pos - step
             start_pos = start_pos - step
@@ -243,7 +249,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         step: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
-        populate_exec_summary: bool = True,
+        populate_invocations_history: bool = True,
     ) -> Result:
         """
         Applies the sliding window algorithm to the reranking process.
@@ -263,7 +269,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         rerank_result = Result(
             query=copy.deepcopy(request.query),
             candidates=copy.deepcopy(request.candidates),
-            ranking_exec_summary=[],
+            invocations_history=[],
         )
         if shuffle_candidates:
             self.shuffle_and_rescore([rerank_result], rank_start, rank_end)
@@ -278,7 +284,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 start_pos,
                 end_pos,
                 logging,
-                populate_exec_summary=populate_exec_summary,
+                populate_invocations_history=populate_invocations_history,
             )
             end_pos = end_pos - step
             start_pos = start_pos - step

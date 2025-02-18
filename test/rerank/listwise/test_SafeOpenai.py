@@ -81,7 +81,7 @@ class TestSafeOpenai(unittest.TestCase):
     @patch("rank_llm.rerank.listwise.rank_gpt.SafeOpenai._call_completion")
     def test_run_llm(self, mock_call_completion):
         mock_call_completion.return_value = "mock_response"
-        agent = SafeOpenai(
+        model_coordinator = SafeOpenai(
             model="gpt-3.5",
             context_size=4096,
             prompt_mode=PromptMode.RANK_GPT,
@@ -89,12 +89,12 @@ class TestSafeOpenai(unittest.TestCase):
             keys="OPEN_AI_API_KEY",
         )
 
-        output, size = agent.run_llm("how are you?")
+        output, size = model_coordinator.run_llm("how are you?")
         self.assertEqual(output, "mock_response")
         self.assertEqual(size, 2)
 
     def test_num_output_tokens(self):
-        agent = SafeOpenai(
+        model_coordinator = SafeOpenai(
             model="gpt-3.5",
             context_size=4096,
             prompt_mode=PromptMode.RANK_GPT,
@@ -102,10 +102,10 @@ class TestSafeOpenai(unittest.TestCase):
             keys="OPEN_AI_API_KEY",
         )
 
-        output = agent.num_output_tokens(current_window_size=5)
+        output = model_coordinator.num_output_tokens(current_window_size=5)
         self.assertEqual(output, 18)
 
-        output = agent.num_output_tokens(current_window_size=1)
+        output = model_coordinator.num_output_tokens(current_window_size=1)
         self.assertEqual(output, 2)
 
 
