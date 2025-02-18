@@ -63,7 +63,7 @@ def main(args):
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
-        step_size=step_size,
+        step=step_size,
         system_message=system_message,
         vllm_batched=vllm_batched,
         use_logits=use_logits,

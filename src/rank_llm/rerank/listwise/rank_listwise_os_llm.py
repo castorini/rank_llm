@@ -123,6 +123,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 tensor_parallel_size=num_gpus,
             )
             self._tokenizer = self._llm.get_tokenizer()
+            if model == "castorini/rank_vicuna_7b_v1":
+                from transformers import AutoTokenizer
+
+                self._tokenizer.chat_template = AutoTokenizer.from_pretrained(
+                    "meta-llama/Llama-2-7b-chat-hf"
+                ).chat_template
         elif sglang_batched:
             try:
                 from sglang import Engine
@@ -228,7 +234,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 for logit in logits.values()
                 if logit.decoded_token.isnumeric()
                 and not unicodedata.name(logit.decoded_token).startswith(
-                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT")
+                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT", "CJK UNIFIED")
                 )
                 and total[0] <= int(logit.decoded_token) <= total[1]
             }
