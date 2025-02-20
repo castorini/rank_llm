@@ -39,6 +39,9 @@ tensorrt_llm = [
 genai = [
     "google-generativeai>=0.8.2"
 ]
+pyserini = [
+    "pyserini>=0.43.0"
+]
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"

@@ -4,17 +4,32 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from pyserini.index.lucene import LuceneIndexReader
-from pyserini.prebuilt_index_info import (
-    FAISS_INDEX_INFO,
-    IMPACT_INDEX_INFO,
-    TF_INDEX_INFO,
-)
-from pyserini.query_iterator import DefaultQueryIterator
-from pyserini.search import get_qrels, get_topics
-from pyserini.search.faiss import FaissSearcher
-from pyserini.search.faiss._searcher import QueryEncoder
-from pyserini.search.lucene import LuceneImpactSearcher, LuceneSearcher
+
+try:
+    from pyserini.index.lucene import LuceneIndexReader
+    from pyserini.prebuilt_index_info import (
+        FAISS_INDEX_INFO,
+        IMPACT_INDEX_INFO,
+        TF_INDEX_INFO,
+    )
+    from pyserini.query_iterator import DefaultQueryIterator
+    from pyserini.search import get_qrels, get_topics
+    from pyserini.search.faiss import FaissSearcher
+    from pyserini.search.faiss._searcher import QueryEncoder
+    from pyserini.search.lucene import LuceneImpactSearcher, LuceneSearcher
+except ImportError:
+    LuceneIndexReader = None
+    FAISS_INDEX_INFO = None
+    IMPACT_INDEX_INFO = None
+    TF_INDEX_INFO = None
+    DefaultQueryIterator = None
+    get_qrels = None
+    get_topics = None
+    FaissSearcher = None
+    QueryEncoder = None
+    LuceneImpactSearcher = None
+    LuceneSearcher = None
+
 from tqdm import tqdm
 
 from rank_llm.data import Candidate, DataWriter, Query, Request

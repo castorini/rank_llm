@@ -3,7 +3,11 @@ import os
 import urllib.request
 from urllib.parse import urlparse
 
-from pyserini.util import *
+try:
+    from pyserini.util import *
+except ImportError:
+    download_url = None
+    compute_md5 = None
 
 
 def no_bool_convert(pairs):

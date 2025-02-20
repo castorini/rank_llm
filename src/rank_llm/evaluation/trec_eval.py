@@ -5,11 +5,14 @@ import tempfile
 from typing import List
 
 import pandas as pd
-from pyserini.search import get_qrels_file
-from pyserini.util import download_evaluation_script
+try: 
+    from pyserini.search import get_qrels_file
+    from pyserini.util import download_evaluation_script
+except ImportError:
+    get_qrels_file = None
+    download_evaluation_script = None
 
 from rank_llm.data import Result
-
 
 class EvalFunction:
     @staticmethod

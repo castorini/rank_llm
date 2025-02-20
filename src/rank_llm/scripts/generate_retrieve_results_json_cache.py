@@ -52,7 +52,12 @@ import os
 import sys
 from collections import defaultdict
 
-from pyserini.search import LuceneSearcher, get_qrels, get_topics
+try:
+    from pyserini.search import LuceneSearcher, get_qrels, get_topics
+except ImportError:
+    LuceneSearcher = None
+    get_qrels = None
+    get_topics = None
 from tqdm import tqdm
 
 from rank_llm.retrieve import TOPICS
