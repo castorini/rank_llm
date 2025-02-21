@@ -19,6 +19,7 @@ from rank_llm.rerank.listwise import (
     ZephyrReranker,
 )
 from rank_llm.rerank.listwise.lit5_reranker import LiT5DistillReranker
+from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
@@ -27,6 +28,8 @@ from rank_llm.retrieve.topics_dict import TOPICS
 def create_reranker(name: str):
     if name == "monot5":
         return Reranker(MonoT5("castorini/monot5-3b-msmarco-10k"))
+    if name == "duot5":
+        return Reranker(DuoT5("castorini/duot5-3b-msmarco-10k"))
     if name == "rv":
         return VicunaReranker()
     if name == "rz":
@@ -91,14 +94,15 @@ def create_reranker(name: str):
 
 rerankers = [
     "monot5",
+    "duot5",
     "lit5",
     "rv",
     "rz",
     "mistral",
     "qwen",
     "llama",
-    "rank_gpt",
     "gemini",
+    "rank_gpt",
     "rank_gpt_apeer",
     "lrl",
 ]
@@ -136,16 +140,16 @@ print(results)
 # Analyze invocations
 results = {}
 for model in [
+    "lit5",
     "rv",
     "rz",
-    "lit5",
     "mistral",
-    "rank_gpt",
-    "gemini",
-    "rank_gpt_apeer",
-    "lrl",
     "qwen",
     "llama",
+    "gemini",
+    "rank_gpt",
+    "rank_gpt_apeer",
+    "lrl",
 ]:
     use_alpha = True if model == "mistral" else False
     if model == "lit5":
