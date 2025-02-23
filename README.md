@@ -9,7 +9,7 @@
 
 We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
-<img src="docs/images/rankllm_overview.pdf" alt="RankLLM Overview" style="width:80%;">
+<img src="docs/images/rankllm_overview.png" alt="RankLLM Overview" style="width:80%;">
 
 ## Releases
 current_version = 0.21.0
