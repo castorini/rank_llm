@@ -26,12 +26,11 @@ current_version = 0.21.0
 
 # 📟 Installation
 
-## Note for Mac Users
- RankLLM is not compatible with Apple Silicon (M1/M2) chips. However, you can still run it by using the Intel-based version of Anaconda and launching your terminal through Rosetta 2.
+> **⚠️ RankLLM is not compatible with macOS**, regardless of whether you are using an Intel-based Mac or Apple Silicon (M-series). We recommend using Linux or Windows instead.
 
 ## ❗ JDK 21 Warning
 
-As rank_llm relies on [anserini](https://github.com/castorini/anserini), it is required that you have JDK 21 installed.
+As rank_llm relies on [Anserini](https://github.com/castorini/anserini), it is required that you have JDK 21 installed.
 Please note that using JDK 11 is not supported and may lead to errors.
 
 ## Create Conda Environment
@@ -46,12 +45,7 @@ conda activate rankllm
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-## Install Pytorch with MPS (Mac)
-```bash
-pip3 install torch torchvision torchaudio
-```
-
-## Install openjdk with maven if you want to use the retriever
+## Install OpenJDK with Maven if you want to use the retriever
 ```bash
 conda install -c conda-forge openjdk=21 maven -y
 ```
