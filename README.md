@@ -105,7 +105,7 @@ from rank_llm.rerank.listwise import (
 from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
-# ------ Retrieval ------
+# -------- Retrieval --------
 
 # By default BM25 is used for retrieval of top 100 candidates.
 dataset_name = "dl19"
@@ -115,9 +115,9 @@ retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 # retrieved_results = Retriever.from_dataset_with_prebuilt_index(
 #     dataset_name, RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL, k=50
 # )
-# -----------------------
+# ---------------------------
 
-# ------- Rerank --------
+# --------- Rerank ----------
 
 # Rank Zephyr model
 reranker = ZephyrReranker()
@@ -130,9 +130,9 @@ reranker = ZephyrReranker()
 # reranker = Reranker(model_coordinator)
 
 rerank_results = reranker.rerank_batch(requests=retrieved_results)
-# -----------------------
+# ---------------------------
 
-# ----- Evaluation ------
+# ------- Evaluation --------
 
 # Evaluate retrieved results.
 ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, TOPICS[dataset_name])
@@ -151,15 +151,15 @@ print(ndcg_10_rerank)
 # recall_20_rerank = EvalFunction.from_results(rerank_results, topics, eval_args)
 # print(recall_20_rerank)
 
-# -----------------------
+# ---------------------------
 
-# -- Analyze invocations ---
+# --- Analyze invocations ---
 analyzer = ResponseAnalyzer.from_inline_results(rerank_results)
 error_counts = analyzer.count_errors(verbose=True)
 print(error_counts)
-# -----------------------
+# ---------------------------
 
-# ---- Save results ----
+# ------ Save results -------
 writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
 writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
@@ -167,7 +167,7 @@ writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
 writer.write_inference_invocations_history(
     f"demo_outputs/inference_invocations_history.json"
 )
-# -----------------------
+# ---------------------------
 ```
 
 # End-to-end Run and 2CR
