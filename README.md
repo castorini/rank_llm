@@ -9,21 +9,24 @@
 
 We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
-<img src="docs/images/rankllm_overview.png" alt="RankLLM Overview" style="width:80%;">
+<p align="center">
+<img src="docs/images/rankllm_overview.png" alt="RankLLM Overview" style="width:95%;">
+</p>
 
 ## Releases
 current_version = 0.21.0
 
 ## Content
-1. [Installation](#📟-installation)
-2. [Quick Start](#⏳-quick-start)
+1. [Installation](#installation)
+2. [Quick Start](#quick-start)
 3. [End-to-end Run and 2CR](#end-to-end-run-and-2cr)
-4. [Model Zoo](#🦙🐧-model-zoo)
+4. [Model Zoo](#model-zoo)
 5. [Training](#training)
 6. [Community Contribution](#community-contribution)
-7. [References and Citations](#✨-references)
-8. [Acknowledgments](#🙏-acknowledgments)
+7. [References and Citations](#references)
+8. [Acknowledgments](#acknowledgments)
 
+<a id="installation"></a>
 # 📟 Installation
 
 > **⚠️ RankLLM is not compatible with macOS**, regardless of whether you are using an Intel-based Mac or Apple Silicon (M-series). We recommend using Linux or Windows instead.
@@ -84,6 +87,7 @@ pip install -e .[tensorrt-llm]      # local installation for development
 pip install rank-llm[tensorrt-llm]  # or pip installation
 ```
 
+<a id="quick-start"></a>
 # ⏳ Quick Start
 The following code snippet is a minimal walk through of retrieval, reranking, evalaution, and invocations analysis of top 100 retrieved documents for queries from `DL19`. In this example `BM25` is used as the retriever and `RankZephyr` as the reranker. Additional sample snippets are available to run under the `src/rank_llm/demo` directory.
 ```python
@@ -269,6 +273,8 @@ Then run the following command:
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 --top_k_candidates=100 --dataset=dl20 \
     --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT_APEER  --context_size=4096
 ```
+
+<a id="model-zoo"></a>
 # 🦙🐧 Model Zoo
 
 The following is a table of the listwise models our repository was primarily built to handle (with the models hosted on HuggingFace):
@@ -326,7 +332,7 @@ Please check the `training` directory for finetuning open-source listwise rerank
 # Community Contribution
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 
-
+<a id=references></a>
 # ✨ References
 
 If you use RankLLM, please cite the following relevant papers:
@@ -409,7 +415,7 @@ If you would like to cite the FIRST methodology, please consider citing:
   journal = {arXiv:2406.15657},
 }
 ```
-
+<a id=acknowledgments></a>
 # 🙏 Acknowledgments
 
 This research is supported in part by the Natural Sciences and Engineering Research Council (NSERC) of Canada.
