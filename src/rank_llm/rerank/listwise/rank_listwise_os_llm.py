@@ -16,16 +16,16 @@ from rank_llm.rerank import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
 
-try:
-    from vllm import LLM, RequestOutput, SamplingParams
-except:
-    LLM = None
-    SamplingParams = None
+from vllm import LLM, RequestOutput, SamplingParams
 
 try:
+    import sglang
     from sglang import Engine
+    from sglang.srt.entrypoints.engine import Engine as SGLangEngineType
 except:
+    sglang = None
     Engine = None
+    SGLangEngineType = None
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         system_message: str = None,
         use_logits: bool = False,
         use_alpha: bool = False,
-        vllm_batched: bool = True,
         sglang_batched: bool = False,
     ) -> None:
         """
@@ -70,7 +69,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          instructions or context. Defaults to None.
          - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
-         - vllm_batched (bool, optional): Indicates whether batched inference using VLLM is leveraged. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
 
          Raises:
@@ -92,7 +90,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             use_alpha=use_alpha,
         )
         self._device = device
-        self._vllm_batched = vllm_batched
         self._sglang_batched = sglang_batched
         self._name = name
         self._variable_passages = variable_passages
@@ -110,12 +107,20 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
-
-        if vllm_batched and LLM is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
-            )
-        elif vllm_batched:
+        
+        if sglang_batched:
+            if Engine is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
+                )
+            elif sglang_batched:
+                # Add assert here to ensure
+                assert Engine is not None
+                port = random.randint(30000, 35000)
+                self._llm = Engine(model, port=port)
+                self._tokenizer = self._llm.get_tokenizer()
+        else:
+            # Using the LLM from vllm, now vllm batched is defaultly true
             # TODO: find max_model_len given gpu
             self._llm = LLM(
                 model,
@@ -123,21 +128,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 enforce_eager=False,
                 max_logprobs=30,
                 tensor_parallel_size=num_gpus,
-                gpu_memory_utilization=0.93,
+                gpu_memory_utilization=0.90,
             )
             self._tokenizer = self._llm.get_tokenizer()
-        elif sglang_batched and Engine is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
-            )
-        elif sglang_batched:
-            port = random.randint(30000, 35000)
-            self._llm = Engine(model, port=port)
-            self._tokenizer = self._llm.get_tokenizer()
-        else:
-            self._llm, self._tokenizer = load_model(
-                model, device=device, num_gpus=num_gpus
-            )
 
     def rerank_batch(
         self,
@@ -154,46 +147,24 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         step: int = kwargs.get("step", 10)
         populate_exec_summary: bool = kwargs.get("populate_exec_summary", False)
 
-        if self._vllm_batched or self._sglang_batched:
-            # reranking using vllm or sglang
-            if len(set([len(req.candidates) for req in requests])) != 1:
-                raise ValueError(
-                    "Batched requests must have the same number of candidates"
-                )
-
-            return self.sliding_windows_batched(
-                requests,
-                rank_start=max(rank_start, 0),
-                rank_end=min(
-                    rank_end, len(requests[0].candidates)
-                ),  # TODO: Fails arbitrary hit sizes
-                window_size=window_size,
-                step=step,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-                populate_exec_summary=populate_exec_summary,
+        # reranking using vllm or sglang
+        if len(set([len(req.candidates) for req in requests])) != 1:
+            raise ValueError(
+                "Batched requests must have the same number of candidates"
             )
-        else:
-            if self._use_logits:
-                raise TypeError(
-                    "Reranking using logits of first identifier is currently only supported when vllm_batch=True"
-                )
 
-            # Normal operation mode
-            results = []
-            for request in tqdm(requests):
-                result = self.sliding_windows(
-                    request,
-                    rank_start=max(rank_start, 0),
-                    rank_end=min(rank_end, len(request.candidates)),
-                    window_size=window_size,
-                    step=step,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=logging,
-                    populate_exec_summary=populate_exec_summary,
-                )
-                results.append(result)
-            return results
+        return self.sliding_windows_batched(
+            requests,
+            rank_start=max(rank_start, 0),
+            rank_end=min(
+                rank_end, len(requests[0].candidates)
+            ),  # TODO: Fails arbitrary hit sizes
+            window_size=window_size,
+            step=step,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            populate_exec_summary=populate_exec_summary,
+        )
 
     def _evaluate_logits(
         self, logits: Dict[str, "Logit"], total: Tuple[int, int]
@@ -239,10 +210,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
     ) -> List[Tuple[str, int]]:
+        if current_window_size is None:
+            current_window_size = self._window_size
+
         if isinstance(self._llm, LLM):
             logger.info(f"VLLM Generating!")
-            if current_window_size is None:
-                current_window_size = self._window_size
 
             if self._use_logits:
                 params = SamplingParams(
@@ -262,7 +234,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     (output.outputs[0].text, len(output.outputs[0].token_ids))
                     for output in outputs
                 ]
-        else:
+        elif sglang is not None and SGLangEngineType is not None and isinstance(self._llm, SGLangEngineType):
             logger.info(f"SGLang Generating!")
             sampling_params = {
                 "temperature": 0.0,
@@ -275,42 +247,20 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 (output["text"], output["meta_info"]["completion_tokens"] - 1)
                 for output in outputs
             ]
+        else:
+            raise ValueError(
+                "Only support SGLang and VLLM inference backend for inferencing."
+            )
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
     ) -> Tuple[str, int]:
+        # Now forward the run_llm into run_llm_batched
         if current_window_size is None:
             current_window_size = self._window_size
+        
+        return self.run_llm_batched([prompt], current_window_size)[0]
 
-        if self._use_logits:
-            params = SamplingParams(
-                min_tokens=1, max_tokens=1, temperature=0.0, logprobs=30
-            )
-            output = self._llm.generate(
-                [prompt + "["], sampling_params=params, use_tqdm=False
-            )[0]
-            s, _ = self._get_logits_single_digit(output, effective_location=0)
-            return s, len(s)
-        else:
-            inputs = self._tokenizer([prompt])
-            inputs = {k: torch.tensor(v).to(self._device) for k, v in inputs.items()}
-            gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-            gen_cfg.max_new_tokens = self.num_output_tokens(current_window_size)
-            gen_cfg.min_new_tokens = self.num_output_tokens(current_window_size)
-            # gen_cfg.temperature = 0
-            gen_cfg.do_sample = False
-            output_ids = self._llm.generate(**inputs, generation_config=gen_cfg)
-
-            if self._llm.config.is_encoder_decoder:
-                output_ids = output_ids[0]
-            else:
-                output_ids = output_ids[0][len(inputs["input_ids"][0]) :]
-            outputs = self._tokenizer.decode(
-                output_ids,
-                skip_special_tokens=True,
-                spaces_between_special_tokens=False,
-            )
-            return outputs, output_ids.size(0)
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
@@ -377,87 +327,46 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
         while True:
-            if self._vllm_batched:
-                messages = list()
-                if self._system_message:
-                    messages.append({"role": "system", "content": self._system_message})
-                messages = self._add_few_shot_examples_messages(messages)
-                prefix = self._add_prefix_prompt(query, num)
-                rank = 0
-                input_context = f"{prefix}\n"
-                for cand in result.candidates[rank_start:rank_end]:
-                    rank += 1
-                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
+            messages = list()
+            if self._system_message:
+                messages.append({"role": "system", "content": self._system_message})
+            messages = self._add_few_shot_examples_messages(messages)
+            prefix = self._add_prefix_prompt(query, num)
+            rank = 0
+            input_context = f"{prefix}\n"
+            for cand in result.candidates[rank_start:rank_end]:
+                rank += 1
+                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
 
-                    identifier = (
-                        chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
-                    )
-                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
-
-                input_context += self._add_post_prompt(query, num)
-                messages.append({"role": "user", "content": input_context})
-
-                prompt = self._tokenizer.apply_chat_template(
-                    messages, tokenize=False, add_generation_prompt=True
+                identifier = (
+                    chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
                 )
-                prompt = fix_text(prompt)
-                num_tokens = self.get_num_tokens(prompt)
-                if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    rank_end - rank_start
-                ):
-                    break
-                else:
-                    max_length -= max(
-                        1,
-                        (
-                            num_tokens
-                            - self.max_tokens()
-                            + self.num_output_tokens(
-                                rank_end - rank_start, self._use_alpha
-                            )
-                        )
-                        // ((rank_end - rank_start) * 4),
-                    )
+                input_context += f"[{identifier}] {self._replace_number(content)}\n"
+
+            input_context += self._add_post_prompt(query, num)
+            messages.append({"role": "user", "content": input_context})
+
+            prompt = self._tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+            prompt = fix_text(prompt)
+            num_tokens = self.get_num_tokens(prompt)
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(
+                rank_end - rank_start
+            ):
+                break
             else:
-                conv = get_conversation_template(self._model)
-                if self._system_message:
-                    conv.set_system_message(self._system_message)
-                conv = self._add_few_shot_examples(conv)
-                prefix = self._add_prefix_prompt(query, num)
-                rank = 0
-                input_context = f"{prefix}\n"
-                for cand in result.candidates[rank_start:rank_end]:
-                    rank += 1
-                    # For Japanese should cut by character: content = content[:int(max_length)]
-                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-
-                    identifier = (
-                        chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
-                    )
-                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
-
-                input_context += self._add_post_prompt(query, num)
-                conv.append_message(conv.roles[0], input_context)
-                conv.append_message(conv.roles[1], None)
-                prompt = conv.get_prompt()
-                prompt = fix_text(prompt)
-                num_tokens = self.get_num_tokens(prompt)
-                if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                    rank_end - rank_start, self._use_alpha
-                ):
-                    break
-                else:
-                    max_length -= max(
-                        1,
-                        (
-                            num_tokens
-                            - self.max_tokens()
-                            + self.num_output_tokens(
-                                rank_end - rank_start, self._use_alpha
-                            )
+                max_length -= max(
+                    1,
+                    (
+                        num_tokens
+                        - self.max_tokens()
+                        + self.num_output_tokens(
+                            rank_end - rank_start, self._use_alpha
                         )
-                        // ((rank_end - rank_start) * 4),
                     )
+                    // ((rank_end - rank_start) * 4),
+                )
         return prompt, self.get_num_tokens(prompt)
 
     def create_prompt_batched(

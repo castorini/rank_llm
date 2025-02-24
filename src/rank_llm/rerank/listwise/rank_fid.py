@@ -38,7 +38,7 @@ class RankFiDDistill(ListwiseRankLLM):
         step_size: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
-        batched: bool = False,
+        batched: bool = True,
     ) -> None:
         """
         Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
@@ -130,7 +130,6 @@ class RankFiDDistill(ListwiseRankLLM):
         batch_size = kwargs.get("batch_size", 1)
 
         if self._batched:
-            # reranking using vllm
             if len(set([len(req.candidates) for req in requests])) != 1:
                 raise ValueError(
                     "Batched requests must have the same number of candidates"
@@ -300,7 +299,7 @@ class RankFiDScore(ListwiseRankLLM):
         step_size: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
-        batched: bool = False,
+        batched: bool = True,
     ) -> None:
         super().__init__(
             model=model,
@@ -417,7 +416,6 @@ class RankFiDScore(ListwiseRankLLM):
         batch_size = kwargs.get("batch_size", 1)
 
         if self._batched:
-            # reranking using vllm
             if len(set([len(req.candidates) for req in requests])) != 1:
                 raise ValueError(
                     "Batched requests must have the same number of candidates"
