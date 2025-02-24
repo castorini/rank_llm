@@ -27,9 +27,6 @@ requires-python = ">= 3.10"
 dependencies = {file = ["requirements.txt"]}
 
 [project.optional-dependencies]
-vllm = [
-    "vllm>=0.4.0"
-]
 sglang = [
     "sglang[all]>=0.3.4"
 ]

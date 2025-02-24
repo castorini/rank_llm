@@ -7,7 +7,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
-from fastchat.model import get_conversation_template, load_model
 from ftfy import fix_text
 from tqdm import tqdm
 from transformers.generation import GenerationConfig
@@ -48,7 +47,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         system_message: str = None,
         use_logits: bool = False,
         use_alpha: bool = False,
-        vllm_batched: bool = False,
+        vllm_batched: bool = True,
         sglang_batched: bool = False,
     ) -> None:
         """
@@ -111,6 +110,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
+
         if vllm_batched and LLM is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
