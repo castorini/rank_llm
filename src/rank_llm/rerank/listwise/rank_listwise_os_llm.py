@@ -10,13 +10,12 @@ import torch
 from ftfy import fix_text
 from tqdm import tqdm
 from transformers.generation import GenerationConfig
+from vllm import LLM, RequestOutput, SamplingParams
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
-
-from vllm import LLM, RequestOutput, SamplingParams
 
 try:
     import sglang
@@ -110,7 +109,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
             )
-        
+
         if sglang_batched:
             if Engine is None:
                 raise ImportError(
@@ -157,13 +156,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         window_size: int = kwargs.get("window_size", 20)
         window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step", 10)
-        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
 
         # reranking using vllm or sglang
         if len(set([len(req.candidates) for req in requests])) != 1:
-            raise ValueError(
-                "Batched requests must have the same number of candidates"
-            )
+            raise ValueError("Batched requests must have the same number of candidates")
 
         return self.sliding_windows_batched(
             requests,
@@ -246,7 +245,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     (output.outputs[0].text, len(output.outputs[0].token_ids))
                     for output in outputs
                 ]
-        elif sglang is not None and SGLangEngineType is not None and isinstance(self._llm, SGLangEngineType):
+        elif (
+            sglang is not None
+            and SGLangEngineType is not None
+            and isinstance(self._llm, SGLangEngineType)
+        ):
             logger.info(f"SGLang Generating!")
             sampling_params = {
                 "temperature": 0.0,
@@ -286,9 +289,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         # Now forward the run_llm into run_llm_batched
         if current_window_size is None:
             current_window_size = self._window_size
-        
-        return self.run_llm_batched([prompt], current_window_size)[0]
 
+        return self.run_llm_batched([prompt], current_window_size)[0]
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
@@ -387,9 +389,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     (
                         num_tokens
                         - self.max_tokens()
-                        + self.num_output_tokens(
-                            rank_end - rank_start, self._use_alpha
-                        )
+                        + self.num_output_tokens(rank_end - rank_start, self._use_alpha)
                     )
                     // ((rank_end - rank_start) * 4),
                 )
