@@ -6,17 +6,19 @@ from rank_llm.rerank import (
     PromptMode,
     RankLLM,
     get_azure_openai_args,
+    get_genai_api_key,
     get_openai_api_key,
 )
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
+from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
 
 class Reranker:
-    def __init__(self, agent: Optional[RankLLM]) -> None:
-        self._agent = agent
+    def __init__(self, model_coordinator: Optional[RankLLM]) -> None:
+        self._model_coordinator = model_coordinator
 
     def rerank_batch(
         self,
@@ -28,27 +30,29 @@ class Reranker:
         **kwargs: Any,
     ) -> List[Result]:
         """
-        Reranks a list of requests using the RankLLM agent.
+        Reranks a list of requests using the RankLLM model_coordinator.
 
         This function applies a sliding window algorithm to rerank the results.
-        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+        Each window of results is processed by the RankLLM model_coordinator to obtain a new ranking.
 
         Args:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
             populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
-
+            **kwargs: Additional keyword arguments including:
+                populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
+                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
+                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window_size.
         Returns:
             List[Result]: A list containing the reranked candidates.
         """
-        return self._agent.rerank_batch(
+        return self._model_coordinator.rerank_batch(
             requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
         )
 
@@ -62,20 +66,22 @@ class Reranker:
         **kwargs: Any,
     ) -> Result:
         """
-        Reranks a request using the RankLLM agent.
+        Reranks a request using the RankLLM model_coordinator.
 
         This function applies a sliding window algorithm to rerank the results.
-        Each window of results is processed by the RankLLM agent to obtain a new ranking.
+        Each window of results is processed by the RankLLM model_coordinator to obtain a new ranking.
 
         Args:
             request (Request): The reranking request which has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-
+            **kwargs: Additional keyword arguments including:
+                populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
+                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
+                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             Result: the rerank result which contains the reranked candidates.
         """
@@ -98,14 +104,16 @@ class Reranker:
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
         ranking_execution_summary_dirname: str = "ranking_execution_summary",
+        inference_invocations_history_dirname: str = "inference_invocations_history",
         sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
         **kwargs,
     ) -> str:
         """
         Writes the reranked results to files in specified formats.
 
         This function saves the reranked results in both TREC Eval format and JSON format.
-        A summary of the ranking execution is saved as well.
+        The history of inference invocations is saved as well.
 
         Args:
             retrieval_method_name (str): The name of the retrieval method.
@@ -127,7 +135,7 @@ class Reranker:
         pass_ct: Optional[int] = kwargs.get("pass_ct", None)
         window_size: Optional[int] = kwargs.get("window_size", None)
 
-        name = self._agent.get_output_filename(
+        name = self._model_coordinator.get_output_filename(
             top_k_candidates, dataset_name, shuffle_candidates, **kwargs
         )
 
@@ -136,9 +144,11 @@ class Reranker:
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
 
-        # Add vllm or sglang to rerank result file name if they are used
+        # Add vllm or sglang or tensorrt to rerank result file name if they are used
         if sglang_batched:
             name += "_sglang"
+        elif tensorrt_batched:
+            name += "_tensorrt"
         else:
             # VLLM is the fallback right now
             name += "_vllm"
@@ -155,39 +165,39 @@ class Reranker:
         writer.write_in_jsonl_format(
             f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
         )
-        # Write ranking execution summary
-        Path(f"{ranking_execution_summary_dirname}/{retrieval_method_name}/").mkdir(
+        # Write the history of inference invocations
+        Path(f"{inference_invocations_history_dirname}/{retrieval_method_name}/").mkdir(
             parents=True, exist_ok=True
         )
-        writer.write_ranking_exec_summary(
-            f"{ranking_execution_summary_dirname}/{retrieval_method_name}/{name}.json"
+        writer.write_inference_invocations_history(
+            f"{inference_invocations_history_dirname}/{retrieval_method_name}/{name}.json"
         )
         return result_file_name
 
-    def get_agent(self) -> RankLLM:
-        return self._agent
+    def get_model_coordinator(self) -> RankLLM:
+        return self._model_coordinator
 
-    def create_agent(
+    def create_model_coordinator(
         model_path: str,
-        default_agent: RankLLM,
+        default_model_coordinator: RankLLM,
         interactive: bool,
         **kwargs: Any,
     ) -> RankLLM:
-        """Construct rerank agent
+        """Construct rerank model_coordinator
 
         Keyword arguments:
         argument -- description
         model_path -- name of model
-        default_agent -- used for interactive mode to pass in a pre-instantiated agent to use
+        default_model_coordinator -- used for interactive mode to pass in a pre-instantiated model_coordinator to use
         interactive -- whether to run retrieve_and_rerank in interactive mode, used by the API
 
-        Return: rerank agent -- Option<RankLLM>
+        Return: rerank model_coordinator -- Option<RankLLM>
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
 
-        if interactive and default_agent is not None:
-            # Default rerank agent
-            agent = default_agent
+        if interactive and default_model_coordinator is not None:
+            # Default rerank model_coordinator
+            model_coordinator = default_model_coordinator
         elif "gpt" in model_path or use_azure_openai:
             # GPT based reranking models
 
@@ -205,7 +215,7 @@ class Reranker:
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             openai_keys = get_openai_api_key()
-            agent = SafeOpenai(
+            model_coordinator = SafeOpenai(
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
@@ -214,6 +224,30 @@ class Reranker:
                 keys=openai_keys,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
+        elif "gemini" in model_path:
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                ("num_few_shot_examples", 0),
+                ("window_size", 20),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                num_few_shot_examples,
+                window_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            genai_keys = get_genai_api_key()
+            model_coordinator = SafeGenai(
+                model=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                num_few_shot_examples=num_few_shot_examples,
+                window_size=window_size,
+                keys=genai_keys,
+            )
+
         elif "vicuna" in model_path or "zephyr" in model_path:
             # RankVicuna or RankZephyr model suite
             print(f"Loading {model_path} ...")
@@ -233,6 +267,7 @@ class Reranker:
                 ("window_size", 20),
                 ("system_message", None),
                 ("sglang_batched", False),
+                ("tensorrt_batched", False),
                 ("use_logits", False),
                 ("use_alpha", False),
             ]
@@ -246,11 +281,12 @@ class Reranker:
                 window_size,
                 system_message,
                 sglang_batched,
+                tensorrt_batched,
                 use_logits,
                 use_alpha,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
-            agent = RankListwiseOSLLM(
+            model_coordinator = RankListwiseOSLLM(
                 model=(
                     model_full_paths[model_path]
                     if model_path in model_full_paths
@@ -266,6 +302,7 @@ class Reranker:
                 window_size=window_size,
                 system_message=system_message,
                 sglang_batched=sglang_batched,
+                tensorrt_batched=tensorrt_batched,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
             )
@@ -287,7 +324,7 @@ class Reranker:
                 keys_and_defaults, **kwargs
             )
 
-            agent = MonoT5(
+            model_coordinator = MonoT5(
                 model=(
                     model_full_paths[model_path]
                     if model_path in model_full_paths
@@ -298,7 +335,33 @@ class Reranker:
                 device=device,
                 batch_size=batch_size,
             )
+        elif "duot5" in model_path:
+            # using monot5
+            print(f"Loading {model_path} ...")
 
+            model_full_paths = {"duot5": "castorini/duot5-3b-msmarco-10k"}
+
+            keys_and_defaults = [
+                ("prompt_mode", PromptMode.DUOT5),
+                ("context_size", 512),
+                ("device", "cuda"),
+                ("batch_size", 64),
+            ]
+            [prompt_mode, context_size, device, batch_size] = extract_kwargs(
+                keys_and_defaults, **kwargs
+            )
+
+            model_coordinator = DuoT5(
+                model=(
+                    model_full_paths[model_path]
+                    if model_path in model_full_paths
+                    else model_path
+                ),
+                prompt_mode=prompt_mode,
+                context_size=context_size,
+                device=device,
+                batch_size=batch_size,
+            )
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
@@ -317,7 +380,7 @@ class Reranker:
                 device,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
-            agent = RankFiDDistill(
+            model_coordinator = RankFiDDistill(
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
@@ -345,7 +408,7 @@ class Reranker:
                 device,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
-            agent = RankFiDScore(
+            model_coordinator = RankFiDScore(
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
@@ -386,7 +449,7 @@ class Reranker:
                 use_alpha,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
-            agent = RankListwiseOSLLM(
+            model_coordinator = RankListwiseOSLLM(
                 model=(model_path),
                 name=model_path,
                 context_size=context_size,
@@ -403,13 +466,13 @@ class Reranker:
 
             print(f"Completed loading {model_path}")
 
-        if agent is None and model_path not in [
+        if model_coordinator is None and model_path not in [
             "unspecified",
             "rank_random",
             "rank_identity",
         ]:
             raise ValueError(f"Unsupported model: {model_path}")
-        return agent
+        return model_coordinator
 
 
 def extract_kwargs(

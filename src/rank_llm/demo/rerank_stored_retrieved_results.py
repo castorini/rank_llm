@@ -10,7 +10,7 @@ sys.path.append(parent)
 from rank_llm.data import DataWriter, read_requests_from_file
 from rank_llm.rerank.listwise import ZephyrReranker
 
-file_name = "retrieve_results/BM25/retrieve_results_dl23_top20.json"
+file_name = "retrieve_results/BM25/retrieve_results_dl23_top20.jsonl"
 requests = read_requests_from_file(file_name)
 
 reranker = ZephyrReranker()
@@ -20,6 +20,8 @@ print(rerank_results)
 # write rerank results
 writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
-writer.write_in_json_format(f"demo_outputs/rerank_results.json")
+writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
-writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")
+writer.write_inference_invocations_history(
+    f"demo_outputs/inference_invocations_history.json"
+)

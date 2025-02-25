@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
@@ -35,10 +35,9 @@ class VicunaReranker:
         requests: List[Request],
         rank_start: int = 0,
         rank_end: int = 100,
-        window_size: int = 20,
-        step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        **kwargs: Any,
     ) -> List[Result]:
         """
         Reranks a list of requests using the Vicuna model.
@@ -47,11 +46,13 @@ class VicunaReranker:
             requests (List[Request]): The list of requests. Each request has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-
+            **kwargs: Additional keyword arguments including:
+                populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
+                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
+                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             List[Result]: A list containing the reranked results.
 
@@ -62,10 +63,9 @@ class VicunaReranker:
             requests=requests,
             rank_start=rank_start,
             rank_end=rank_end,
-            window_size=window_size,
-            step=step,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
+            **kwargs,
         )
 
     def rerank(
@@ -73,10 +73,9 @@ class VicunaReranker:
         request: Request,
         rank_start: int = 0,
         rank_end: int = 100,
-        window_size: int = 20,
-        step: int = 10,
         shuffle_candidates: bool = False,
         logging: bool = False,
+        **kwargs: Any,
     ) -> Result:
         """
         Reranks a request using the Vicuna model.
@@ -85,11 +84,13 @@ class VicunaReranker:
             request (Request): The reranking request which has a query and a candidates list.
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
-            window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-
+            **kwargs: Additional keyword arguments including:
+                populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
+                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
+                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             Result: the rerank result which contains the reranked candidates.
 
@@ -100,8 +101,7 @@ class VicunaReranker:
             requests=[request],
             rank_start=rank_start,
             rank_end=rank_end,
-            window_size=window_size,
-            step=step,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
+            **kwargs,
         )

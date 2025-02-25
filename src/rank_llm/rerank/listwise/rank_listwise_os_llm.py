@@ -48,6 +48,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         use_logits: bool = False,
         use_alpha: bool = False,
         sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -70,6 +71,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
+         - tensorrt_batched (bool, optional): Indicates whether batched inference using TensorRT-LLM is leveraged. Defaults to False.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -91,6 +93,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         )
         self._device = device
         self._sglang_batched = sglang_batched
+        self._tensorrt_batched = tensorrt_batched
         self._name = name
         self._variable_passages = variable_passages
         self._system_message = system_message
@@ -113,15 +116,23 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 raise ImportError(
                     "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
                 )
-            elif sglang_batched:
-                # Add assert here to ensure
-                assert Engine is not None
-                port = random.randint(30000, 35000)
-                self._llm = Engine(model, port=port)
-                self._tokenizer = self._llm.get_tokenizer()
+            # Add assert here to ensure
+            assert Engine is not None
+            port = random.randint(30000, 35000)
+            self._llm = Engine(model, port=port)
+            self._tokenizer = self._llm.get_tokenizer()
+        elif tensorrt_batched:
+            try:
+                from tensorrt_llm import LLM as TRTLLM
+                from tensorrt_llm import BuildConfig
+            except Exception:
+                raise ImportError(
+                    "Please install rank-llm with `pip install -e .[tensorrt-llm]` to use tensorrt batch inference."
+                )
+            build_config = BuildConfig(max_seq_len=4096)
+            self._llm = TRTLLM(model=model, build_config=build_config)
+            self._tokenizer = self._llm.tokenizer
         else:
-            # Using the LLM from vllm, now vllm batched is defaultly true
-            # TODO: find max_model_len given gpu
             self._llm = LLM(
                 model,
                 download_dir=os.getenv("HF_HOME"),
@@ -141,7 +152,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
-        top_k_retrieve: int = kwargs.get("top_k_retrieve", 50)
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
+        rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", 20)
         window_size = min(window_size, top_k_retrieve)
         step: int = kwargs.get("step", 10)
@@ -247,6 +259,22 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 (output["text"], output["meta_info"]["completion_tokens"] - 1)
                 for output in outputs
             ]
+        elif self._tensorrt_batched:
+            import tensorrt_llm.hlapi.llm
+            from tensorrt_llm import SamplingParams as TRTSamplingParams
+
+            if isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM):
+                logger.info(f"TensorRT LLM Generating!")
+                sampling_params = TRTSamplingParams(
+                    temperature=0.0,
+                    max_tokens=self.num_output_tokens(current_window_size),
+                    min_tokens=self.num_output_tokens(current_window_size),
+                )
+                outputs = self._llm.generate(prompts, sampling_params)
+                return [
+                    (output.outputs[0].text, len(output.outputs[0].token_ids))
+                    for output in outputs
+                ]
         else:
             raise ValueError(
                 "Only support SGLang and VLLM inference backend for inferencing."
@@ -270,11 +298,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             return self._output_token_estimate
 
         if self._use_alpha:
-            token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
-        else:
             token_str = " > ".join(
                 [f"[{chr(ALPH_START_IDX+i+1)}]" for i in range(current_window_size)]
             )
+        else:
+            token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
 
         _output_token_estimate = len(self._tokenizer.encode(token_str)) - 1
 
@@ -287,10 +315,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         return _output_token_estimate
 
     def _add_prefix_prompt(self, query: str, num: int) -> str:
-        if self._use_alpha:
-            return f"I will provide you with {num} passages, each indicated by a alphabetical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
-        else:
-            return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
+        identifier_type = "an alphabetical" if self._use_alpha else " a numerical"
+        return f"I will provide you with {num} passages, each indicated by {identifier_type} identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
     def _add_post_prompt(self, query: str, num: int) -> str:
         if self._use_alpha:

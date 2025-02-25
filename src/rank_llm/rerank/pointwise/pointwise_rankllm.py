@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 from ftfy import fix_text
 from tqdm import tqdm
 
-from rank_llm.data import Candidate, Request, Result
+from rank_llm.data import Candidate, InferenceInvocation, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
@@ -17,8 +17,15 @@ logger = logging.getLogger(__name__)
 
 class PointwiseRankLLM(RankLLM, ABC):
     """
+    Abstract base class that all pointwise rerankers implement.
+
     All children of PointwiseRankLLM must implement these functions:
-        - currently all abstract functions of RankLLM
+        - run_llm_batched
+        - run_llm
+        - create_prompt
+        - get_num_tokens
+        - cost_per_1k_tokens
+        - num_output_tokens
 
     """
 
@@ -45,11 +52,14 @@ class PointwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> List[Result]:
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
+        )
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
                 candidates=copy.deepcopy(request.candidates),
-                ranking_exec_summary=[],
+                invocations_history=[],
             )
             for request in requests
         ]
@@ -65,7 +75,9 @@ class PointwiseRankLLM(RankLLM, ABC):
                     results=rerank_results, index=index
                 )
 
-                outputs, output_tokens, scores = self.run_llm_batched(prompts=prompts)
+                outputs, output_token_counts, scores = self.run_llm_batched(
+                    prompts=prompts
+                )
 
                 for i, score in enumerate(scores):
                     query_number, candidate_number = self.get_query_and_candidate_index(
@@ -74,6 +86,16 @@ class PointwiseRankLLM(RankLLM, ABC):
                     rerank_results[query_number].candidates[
                         candidate_number
                     ].score = score
+                    if populate_invocations_history:
+                        inference_invocation = InferenceInvocation(
+                            prompts[i],
+                            outputs[i],
+                            token_counts[i],
+                            output_token_counts[i],
+                        )
+                        rerank_results[query_number].invocations_history.append(
+                            inference_invocation
+                        )
 
                 progress_bar.update(len(scores))
                 index += self._batch_size
@@ -120,14 +142,6 @@ class PointwiseRankLLM(RankLLM, ABC):
 
         return prompts, token_counts
 
-    def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
-        if x.score < y.score:
-            return -1
-        elif x.score > y.score:
-            return 1
-        else:
-            return 0
-
     def get_output_filename(
         self,
         top_k_candidates: int,
@@ -156,6 +170,14 @@ class PointwiseRankLLM(RankLLM, ABC):
             if shuffle_candidates
             else f"{name}_{datetime.isoformat(datetime.now())}"
         )
+
+    def candidate_comparator(self, x: Candidate, y: Candidate) -> int:
+        if x.score < y.score:
+            return -1
+        elif x.score > y.score:
+            return 1
+        else:
+            return 0
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)

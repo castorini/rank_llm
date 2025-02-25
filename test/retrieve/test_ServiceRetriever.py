@@ -32,7 +32,7 @@ class TestServiceRetriever(unittest.TestCase):
             model_path="rank_zephyr",
             interactive=True,
             top_k_retrieve=top_k,
-            exec_summary=False,
+            populate_invocations_history=False,
         )
 
         response = response[0]

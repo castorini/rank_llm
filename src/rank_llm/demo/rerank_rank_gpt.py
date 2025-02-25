@@ -12,10 +12,11 @@ from rank_llm.retrieve import Retriever
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
-retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset_name)
-agent = SafeOpenai("gpt-3.5-turbo", 4096, keys=get_openai_api_key())
-reranker = Reranker(agent)
-rerank_results = reranker.rerank_batch(retrieved_results)
+requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
+model_coordinator = SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key())
+reranker = Reranker(model_coordinator)
+kwargs = {"populate_invocations_history": True}
+rerank_results = reranker.rerank_batch(requests, **kwargs)
 print(rerank_results)
 
 from pathlib import Path
@@ -25,6 +26,8 @@ from rank_llm.data import DataWriter
 # write rerank results
 writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
-writer.write_in_json_format(f"demo_outputs/rerank_results.json")
+writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
 writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
-writer.write_ranking_exec_summary(f"demo_outputs/ranking_execution_summary.json")
+writer.write_inference_invocations_history(
+    f"demo_outputs/inference_invocations_history.json"
+)
