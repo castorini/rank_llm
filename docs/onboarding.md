@@ -110,7 +110,6 @@ Note that this will require a GPU with **at least 16GB of VRAM**.
 #### Installing rank_llm
 
 Please refer to the [instructions here](https://github.com/castorini/rank_llm?tab=readme-ov-file#-instructions) to install rank_llm.
-Please be sure to install the [optional vLLM dependency](https://github.com/castorini/rank_llm?tab=readme-ov-file#vllm) as well to support the following steps.
 
 #### Running the RankZephyr Model
 We can run the RankZephyr model with the command:
@@ -124,7 +123,6 @@ Results:
 ndcg_cut_10             all     0.8201
 ```
 
-Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library.
 Note that the result you get may vary slightly with the number above. 
 
 _Where is the first-stage retrieval?_
@@ -149,7 +147,7 @@ Assuming that necessary rank_llm installation steps to run RankZephyr have been 
 
 #### Run end to end - FirstMistral
 ```
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --vllm_batched --num_gpus 1
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 The results should be something like:
 ```
