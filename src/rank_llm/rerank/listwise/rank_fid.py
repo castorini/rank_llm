@@ -38,7 +38,6 @@ class RankFiDDistill(ListwiseRankLLM):
         step_size: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
-        batched: bool = True,
     ) -> None:
         """
         Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
@@ -58,8 +57,6 @@ class RankFiDDistill(ListwiseRankLLM):
 
         self._window_size = window_size
         self._stride = step_size
-
-        self._batched = batched
 
         self._answer_maxlength = len(
             " > ".join(map(lambda x: f"[{x}]", range(1, window_size + 1)))
@@ -129,49 +126,30 @@ class RankFiDDistill(ListwiseRankLLM):
         )
         batch_size = kwargs.get("batch_size", 1)
 
-        if self._batched:
-            if len(set([len(req.candidates) for req in requests])) != 1:
-                raise ValueError(
-                    "Batched requests must have the same number of candidates"
-                )
+        if len(set([len(req.candidates) for req in requests])) != 1:
+            raise ValueError("Batched requests must have the same number of candidates")
 
-            result = []
+        result = []
 
-            with tqdm(range(0, len(requests))) as bar:
-                for i in range(0, len(requests), batch_size):
-                    batch = requests[i : min(i + batch_size, len(requests))]
-                    batch_result = self.sliding_windows_batched(
-                        batch,
-                        rank_start=max(rank_start, 0),
-                        rank_end=min(
-                            rank_end, len(requests[0].candidates)
-                        ),  # TODO: Fails arbitrary hit sizes
-                        window_size=window_size,
-                        step=step,
-                        shuffle_candidates=shuffle_candidates,
-                        logging=logging,
-                        populate_invocations_history=populate_invocations_history,
-                    )
-                    result.extend(batch_result)
-                    bar.update(len(batch))
-
-            return result
-        else:
-            # Normal operation mode
-            results = []
-            for request in tqdm(requests):
-                result = self.sliding_windows(
-                    request,
+        with tqdm(range(0, len(requests))) as bar:
+            for i in range(0, len(requests), batch_size):
+                batch = requests[i : min(i + batch_size, len(requests))]
+                batch_result = self.sliding_windows_batched(
+                    batch,
                     rank_start=max(rank_start, 0),
-                    rank_end=min(rank_end, len(request.candidates)),
+                    rank_end=min(
+                        rank_end, len(requests[0].candidates)
+                    ),  # TODO: Fails arbitrary hit sizes
                     window_size=window_size,
                     step=step,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
                 )
-                results.append(result)
-            return results
+                result.extend(batch_result)
+                bar.update(len(batch))
+
+        return result
 
     def run_llm_batched(
         self, prompts: List[List[Dict[str, str]]], **kwargs
@@ -299,7 +277,6 @@ class RankFiDScore(ListwiseRankLLM):
         step_size: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
-        batched: bool = True,
     ) -> None:
         super().__init__(
             model=model,
@@ -315,8 +292,6 @@ class RankFiDScore(ListwiseRankLLM):
         self._device = device
         self._window_size = window_size
         self._stride = step_size
-
-        self._batched = batched
 
         self._output_token_estimate = None
 
@@ -415,49 +390,30 @@ class RankFiDScore(ListwiseRankLLM):
         )
         batch_size = kwargs.get("batch_size", 1)
 
-        if self._batched:
-            if len(set([len(req.candidates) for req in requests])) != 1:
-                raise ValueError(
-                    "Batched requests must have the same number of candidates"
-                )
+        if len(set([len(req.candidates) for req in requests])) != 1:
+            raise ValueError("Batched requests must have the same number of candidates")
 
-            result = []
+        result = []
 
-            with tqdm(range(0, len(requests))) as bar:
-                for i in range(0, len(requests), batch_size):
-                    batch = requests[i : min(i + batch_size, len(requests))]
-                    batch_result = self.sliding_windows_batched(
-                        batch,
-                        rank_start=max(rank_start, 0),
-                        rank_end=min(
-                            rank_end, len(requests[0].candidates)
-                        ),  # TODO: Fails arbitrary hit sizes
-                        window_size=window_size,
-                        step=step,
-                        shuffle_candidates=shuffle_candidates,
-                        logging=logging,
-                        populate_invocations_history=populate_invocations_history,
-                    )
-                    result.extend(batch_result)
-                    bar.update(len(batch))
-
-            return result
-        else:
-            # Normal operation mode
-            results = []
-            for request in tqdm(requests):
-                result = self.sliding_windows(
-                    request,
+        with tqdm(range(0, len(requests))) as bar:
+            for i in range(0, len(requests), batch_size):
+                batch = requests[i : min(i + batch_size, len(requests))]
+                batch_result = self.sliding_windows_batched(
+                    batch,
                     rank_start=max(rank_start, 0),
-                    rank_end=min(rank_end, len(request.candidates)),
+                    rank_end=min(
+                        rank_end, len(requests[0].candidates)
+                    ),  # TODO: Fails arbitrary hit sizes
                     window_size=window_size,
                     step=step,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
                 )
-                results.append(result)
-            return results
+                result.extend(batch_result)
+                bar.update(len(batch))
+
+        return result
 
     def run_llm_batched(
         self, prompts: List[List[Dict[str, str]]], **kwargs
