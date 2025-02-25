@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import torch
 from ftfy import fix_text
 from tqdm import tqdm
-from transformers.generation import GenerationConfig
 from vllm import LLM, RequestOutput, SamplingParams
 
 from rank_llm.data import Request, Result
