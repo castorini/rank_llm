@@ -41,8 +41,6 @@ class Reranker:
             rank_end (int, optional): The end rank for processing. Defaults to 100.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-            sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
-            populate_exec_summary (bool, optional): Whether to populate the exec summary. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
@@ -103,7 +101,6 @@ class Reranker:
         top_k_candidates: int = 100,
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
-        ranking_execution_summary_dirname: str = "ranking_execution_summary",
         inference_invocations_history_dirname: str = "inference_invocations_history",
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,

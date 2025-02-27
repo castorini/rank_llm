@@ -18,11 +18,6 @@ class TestAPI(unittest.TestCase):
 
     def setUp(self):
         # rank zephyr mock
-        self.patcher = patch("rank_llm.rerank.listwise.rank_listwise_os_llm.load_model")
-        self.mock_load_model = self.patcher.start()
-        self.mock_llm = MagicMock()
-        self.mock_tokenizer = MagicMock()
-        self.mock_load_model.return_value = self.mock_llm, self.mock_tokenizer
         self.patcher_cuda = patch("torch.cuda.is_available")
         self.mock_cuda = self.patcher_cuda.start()
         self.mock_cuda.return_value = True
@@ -51,7 +46,6 @@ class TestAPI(unittest.TestCase):
         }
 
     def tearDown(self):
-        self.patcher.stop()
         self.patcher_cuda.stop()
 
     def test_basic_response_structure(self):
