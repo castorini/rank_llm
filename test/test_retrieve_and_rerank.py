@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
