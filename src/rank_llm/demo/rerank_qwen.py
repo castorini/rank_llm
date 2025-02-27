@@ -19,7 +19,6 @@ dataset_name = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 model_coordinator = RankListwiseOSLLM(
     model="Qwen/Qwen2.5-7B-Instruct",
-    vllm_batched=True,
 )
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
