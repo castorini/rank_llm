@@ -230,7 +230,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 for logit in logits.values()
                 if logit.decoded_token.isnumeric()
                 and not unicodedata.name(logit.decoded_token).startswith(
-                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT")
+                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT", "CJK UNIFIED")
                 )
                 and total[0] <= int(logit.decoded_token) <= total[1]
             }
