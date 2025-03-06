@@ -94,6 +94,13 @@ def load_tsv_file(file_path):
 
 def load_pyserini_indexer(collection_file, trec_data, topk):
     examples = {}
+
+    if LuceneSearcher is None:
+        raise ImportError(
+            "Please install rank-llm with `pip install .[pyserini]`."
+        )
+
+
     index_reader = LuceneSearcher.from_prebuilt_index(collection_file)
     for qid, hits in tqdm(trec_data.items()):
         rank = 0
@@ -122,6 +129,11 @@ def generate_retrieve_results(
     trec_file, collection_file, query_file, topk=100, output_trec_file=None
 ):
     if query_file in TOPICS:
+        if get_topics is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install .[pyserini]`."
+            )
+
         if TOPICS[query_file] == "dl22-passage":
             query_data = get_topics("dl22")
         elif TOPICS[query_file] == "dl21-passage":
@@ -130,6 +142,12 @@ def generate_retrieve_results(
             query_data = get_topics(TOPICS[query_file])
         for qid, query in query_data.items():
             query_data[qid] = query["title"]
+
+        if get_qrels is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install .[pyserini]`."
+            )
+
         qrels = get_qrels(TOPICS[query_file])
         print(f"Loaded {len(query_data)} queries from {query_file}")
         print(f"Loaded {len(qrels)} qrels from {query_file}")

@@ -15,6 +15,12 @@ def no_bool_convert(pairs):
 
 
 def parse_file_info(file_name, file_url, save_dir):
+
+    if download_url is None or compute_md5 is None:
+        raise ImportError(
+            "Please install rank-llm with `pip install .[pyserini]`."
+        )
+
     # download file
     local_file_path = download_url(
         file_url, save_dir, local_filename=file_name, verbose=True

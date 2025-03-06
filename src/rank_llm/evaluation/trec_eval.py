@@ -63,6 +63,11 @@ class EvalFunction:
         Returns:
             str: Path to the truncated qrels file.
         """
+        if get_qrels_file is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install .[pyserini]`."
+            )
+
         qrels = get_qrels_file(qrels)
         run = pd.read_csv(run, sep="\s+", header=None)
         qrels = pd.read_csv(qrels, sep="\s+", header=None)
@@ -86,6 +91,11 @@ class EvalFunction:
         Returns:
             str: Evaluation results as a string.
         """
+        if download_evaluation_script is None:
+            raise ImportError(
+                "Please install rank-llm with `pip install .[pyserini]`."
+            )
+
         script_path = download_evaluation_script("trec_eval")
         cmd_prefix = ["java", "-jar", script_path]
         # args = sys.argv
@@ -114,6 +124,11 @@ class EvalFunction:
                 print("Trunc", args[-2])
 
             if not os.path.exists(args[-2]):
+                if get_qrels_file is None:
+                    raise ImportError(
+                        "Please install rank-llm with `pip install .[pyserini]`."
+                    )
+
                 args[-2] = get_qrels_file(args[-2])
             if os.path.exists(args[-1]):
                 # Convert run to trec if it's on msmarco
