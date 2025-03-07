@@ -45,7 +45,6 @@ def create_app(model, port, use_azure_openai=False):
             system_message="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
             use_alpha=True,
             use_logits=True,
-            vllm_batched=True,
         )
     elif model == "rank_zephyr":
         print(f"Loading {model} model...")
@@ -59,7 +58,6 @@ def create_app(model, port, use_azure_openai=False):
             num_gpus=1,
             variable_passages=True,
             window_size=20,
-            vllm_batched=True,
             system_message="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         )
     elif model == "rank_vicuna":
@@ -74,7 +72,6 @@ def create_app(model, port, use_azure_openai=False):
             num_gpus=1,
             variable_passages=False,
             window_size=20,
-            vllm_batched=True,
         )
     elif "gpt" in model:
         print(f"Loading {model} model...")

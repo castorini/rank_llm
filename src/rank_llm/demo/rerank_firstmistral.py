@@ -20,7 +20,6 @@ model_coordinator = RankListwiseOSLLM(
     model="castorini/first_mistral",
     use_logits=True,
     use_alpha=True,
-    vllm_batched=True,
 )
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
