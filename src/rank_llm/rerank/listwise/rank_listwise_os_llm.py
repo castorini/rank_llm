@@ -7,9 +7,9 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
+import vllm
 from ftfy import fix_text
 from tqdm import tqdm
-from vllm import LLM, RequestOutput, SamplingParams
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
@@ -131,7 +131,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
-            self._llm = LLM(
+            self._llm = vllm.LLM(
                 model,
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
@@ -208,7 +208,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def _get_logits_single_digit(
         self,
-        output: RequestOutput,
+        output: vllm.RequestOutput,
         effective_location: int = 1,
         total: Tuple[int, int] = (1, 9),
     ):
@@ -223,18 +223,18 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         if current_window_size is None:
             current_window_size = self._window_size
 
-        if isinstance(self._llm, LLM):
+        if isinstance(self._llm, vllm.LLM):
             logger.info(f"VLLM Generating!")
 
             if self._use_logits:
-                params = SamplingParams(
+                params = vllm.SamplingParams(
                     min_tokens=2, max_tokens=2, temperature=0.0, logprobs=30
                 )
                 outputs = self._llm.generate(prompts, sampling_params=params)
                 arr = [self._get_logits_single_digit(output) for output in outputs]
                 return [(s, len(s)) for s, __ in arr]
             else:
-                sampling_params = SamplingParams(
+                sampling_params = vllm.SamplingParams(
                     temperature=0.0,
                     max_tokens=self.num_output_tokens(current_window_size),
                     min_tokens=self.num_output_tokens(current_window_size),

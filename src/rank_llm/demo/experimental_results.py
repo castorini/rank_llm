@@ -42,6 +42,7 @@ def create_reranker(name: str):
                 model="castorini/first_mistral",
                 use_logits=True,
                 use_alpha=True,
+                vllm_batched=True,
             )
         )
     if name == "rank_gpt":
@@ -79,12 +80,14 @@ def create_reranker(name: str):
         return Reranker(
             RankListwiseOSLLM(
                 model="Qwen/Qwen2.5-7B-Instruct",
+                vllm_batched=True,
             )
         )
     if name == "llama":
         return Reranker(
             RankListwiseOSLLM(
                 model="meta-llama/Llama-3.1-8B-Instruct",
+                vllm_batched=True,
             )
         )
 
