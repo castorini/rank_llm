@@ -58,16 +58,9 @@ conda install -c conda-forge openjdk=21 maven -y
 pip install -r requirements.txt
 ```
 
-## Install vLLM, SGLang, or TensorRT-LLM (Optional)
+## Install SGLang, or TensorRT-LLM (Optional)
 
-### vLLM
-
-```bash
-pip install -e .[vllm]      # local installation for development
-pip install rank-llm[vllm]  # or pip installation
-```
-
-### SGLang
+### Install SGLang (Optional)
 
 ```bash
 pip install -e .[sglang]      # local installation for development
@@ -182,8 +175,6 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 ```
 
-Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library.
-
 Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
 
 Including the `--tensorrt_batched` flag will allow you to run the model in batched mode using the `TensorRT-LLM` library.
@@ -206,7 +197,7 @@ We can run the LiT5-Distill V2 model (which could rerank 100 documents in a sing
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large-v2 --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --vllm_batched --batch_size=4 \
+    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=4 \
     --variable_passages --window_size=100
 ```
 
@@ -214,7 +205,7 @@ We can run the LiT5-Distill original model (which works with a window size of 20
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --vllm_batched --batch_size=32 \
+    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=32 \
     --variable_passages
 ```
 
@@ -222,7 +213,7 @@ We can run the LiT5-Score model with the following command:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Score-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5 --context_size=150 --vllm_batched --batch_size=8 \
+    --retrieval_method=bm25 --prompt_mode=LiT5 --context_size=150 --batch_size=8 \
     --window_size=100 --variable_passages
 ```
 
@@ -250,10 +241,8 @@ Since Duo's pairwise comparison has $O(n^2) runtime complexity, we recommend rer
 
 We can run the FirstMistral model, reranking using the first-token logits only with the following command:
 
-```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 \
-    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages \
-    --use_logits --use_alpha --vllm_batched --num_gpus 1
+```
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 
 Omit `--use_logits` if you wish to perform traditional listwise reranking.

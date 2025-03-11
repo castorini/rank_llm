@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
@@ -7,18 +7,11 @@ from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 # Anserini API must be hosted at 8081
 class TestRetrieveAndRerank(unittest.TestCase):
     def setUp(self):
-        self.patcher = patch("rank_llm.rerank.listwise.rank_listwise_os_llm.load_model")
-        self.mock_load_model = self.patcher.start()
-        self.mock_llm = MagicMock()
-        self.mock_tokenizer = MagicMock()
-        self.mock_load_model.return_value = self.mock_llm, self.mock_tokenizer
-
         self.patcher_cuda = patch("torch.cuda.is_available")
         self.mock_cuda = self.patcher_cuda.start()
         self.mock_cuda.return_value = True
 
     def tearDown(self):
-        self.patcher.stop()
         self.patcher_cuda.stop()
 
     def test_multiple_datasets(self):
