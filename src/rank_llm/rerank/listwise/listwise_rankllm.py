@@ -192,7 +192,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         window_size: int,
-        step: int,
+        stride: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_invocations_history: bool = False,
@@ -204,7 +204,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
-            step (int): The step size for moving the window.
+            stride (int): The stride size for moving the window.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
         Returns:
@@ -224,8 +224,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         start_pos = rank_end - window_size
 
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
-        # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
-        while end_pos > rank_start and start_pos + step != rank_start:
+        # start_pos + stride != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
+        while end_pos > rank_start and start_pos + stride != rank_start:
             if logging:
                 logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
@@ -236,8 +236,8 @@ class ListwiseRankLLM(RankLLM, ABC):
                 logging,
                 populate_invocations_history,
             )
-            end_pos = end_pos - step
-            start_pos = start_pos - step
+            end_pos = end_pos - stride
+            start_pos = start_pos - stride
         return rerank_results
 
     def sliding_windows(
@@ -246,23 +246,21 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         window_size: int,
-        step: int,
+        stride: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_invocations_history: bool = True,
     ) -> Result:
         """
-        Applies the sliding window algorithm to the reranking process.
-
+        Applies the sliding window algorithm to the reranking process for a single result object.
         Args:
             request (Request): The request object to process.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
-            step (int): The step size for moving the window.
+            stride (int): The stride size for moving the window.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
-
         Returns:
             Result: The result object after applying the sliding window technique.
         """
@@ -276,8 +274,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         end_pos = rank_end
         start_pos = rank_end - window_size
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
-        # start_pos + step != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
-        while end_pos > rank_start and start_pos + step != rank_start:
+        # start_pos + stride != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
+        while end_pos > rank_start and start_pos + stride != rank_start:
             start_pos = max(start_pos, rank_start)
             rerank_result = self.permutation_pipeline(
                 rerank_result,
@@ -286,12 +284,12 @@ class ListwiseRankLLM(RankLLM, ABC):
                 logging,
                 populate_invocations_history=populate_invocations_history,
             )
-            end_pos = end_pos - step
-            start_pos = start_pos - step
+            end_pos = end_pos - stride
+            start_pos = start_pos - stride
         return rerank_result
 
     def get_ranking_cost_upperbound(
-        self, num_q: int, rank_start: int, rank_end: int, window_size: int, step: int
+        self, num_q: int, rank_start: int, rank_end: int, window_size: int, stride: int
     ) -> Tuple[float, int]:
         """
         Calculates the upper bound of the ranking cost for a given set of parameters.
@@ -301,13 +299,13 @@ class ListwiseRankLLM(RankLLM, ABC):
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
-            step (int): The step size for moving the window.
+            stride (int): The stride size for moving the window.
 
         Returns:
             Tuple[float, int]: A tuple object containing the cost and the total number of tokens used (input tokens + output tokens).
         """
         # For every prompt generated for every query assume the max context size is used.
-        num_promt = (rank_end - rank_start - window_size) / step + 1
+        num_promt = (rank_end - rank_start - window_size) / stride + 1
         input_token_count = (
             num_q * num_promt * (self._context_size - self.num_output_tokens())
         )
@@ -324,7 +322,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         window_size: int,
-        step: int,
+        stride: int,
     ) -> Tuple[float, int]:
         """
         Calculates the ranking cost based on actual token counts from generated prompts.
@@ -334,7 +332,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
-            step (int): The step size for moving the window.
+            stride (int): The stride size for moving the window.
 
         Returns:
             Tuple[float, int]: A tuple object containing the calculated cost and the total number of tokens used (input tokens + output tokens).
@@ -350,8 +348,8 @@ class ListwiseRankLLM(RankLLM, ABC):
                 start_pos = max(start_pos, rank_start)
                 prompt, _ = self.create_prompt(result, start_pos, end_pos)
                 input_token_count += self.get_num_tokens(prompt)
-                end_pos = end_pos - step
-                start_pos = start_pos - step
+                end_pos = end_pos - stride
+                start_pos = start_pos - stride
                 output_token_count += self.num_output_tokens()
         cost = (
             input_token_count * self.cost_per_1k_token(input_token=True)

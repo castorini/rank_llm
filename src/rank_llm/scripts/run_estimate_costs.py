@@ -45,11 +45,11 @@ def main(args):
             num_queries = len(retrieved_results)
             print("Estimating cost by prompt generation:")
             cost, token_count = model_coordinator.get_ranking_cost(
-                retrieved_results, rank_start=0, rank_end=100, window_size=20, step=10
+                retrieved_results, rank_start=0, rank_end=100, window_size=20, stride=10
             )
         elif estimation_mode == EstimationMode.MAX_CONTEXT_LENGTH:
             cost, token_count = model_coordinator.get_ranking_cost_upperbound(
-                num_queries, rank_start=0, rank_end=100, window_size=20, step=10
+                num_queries, rank_start=0, rank_end=100, window_size=20, stride=10
             )
         else:
             raise ValueError(f"Invalide estimation mode: {estimation_mode}")

@@ -35,7 +35,7 @@ class RankFiDDistill(ListwiseRankLLM):
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
         window_size: int = 20,
-        step_size: int = 10,
+        stride: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
     ) -> None:
@@ -56,7 +56,7 @@ class RankFiDDistill(ListwiseRankLLM):
         self._device = device
 
         self._window_size = window_size
-        self._stride = step_size
+        self._stride = stride
 
         self._answer_maxlength = len(
             " > ".join(map(lambda x: f"[{x}]", range(1, window_size + 1)))
@@ -120,7 +120,7 @@ class RankFiDDistill(ListwiseRankLLM):
         rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", self._window_size)
         window_size = min(window_size, top_k_retrieve)
-        step: int = kwargs.get("step_size", self._stride)
+        stride: int = kwargs.get("stride", self._stride)
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -141,7 +141,7 @@ class RankFiDDistill(ListwiseRankLLM):
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
                     window_size=window_size,
-                    step=step,
+                    stride=stride,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
@@ -274,7 +274,7 @@ class RankFiDScore(ListwiseRankLLM):
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
         window_size: int = 20,
-        step_size: int = 10,
+        stride: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
     ) -> None:
@@ -291,7 +291,7 @@ class RankFiDScore(ListwiseRankLLM):
 
         self._device = device
         self._window_size = window_size
-        self._stride = step_size
+        self._stride = stride
 
         self._output_token_estimate = None
 
@@ -384,7 +384,7 @@ class RankFiDScore(ListwiseRankLLM):
         rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", self._window_size)
         window_size = min(window_size, top_k_retrieve)
-        step: int = kwargs.get("step_size", self._stride)
+        stride: int = kwargs.get("stride", self._stride)
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -405,7 +405,7 @@ class RankFiDScore(ListwiseRankLLM):
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
                     window_size=window_size,
-                    step=step,
+                    stride=stride,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,

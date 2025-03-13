@@ -75,7 +75,7 @@ Consequently, we can't feed everything to the model at once; this is where the s
 
 Let's understand this with a concrete example.
 Suppose we have 10 documents `[A, B, C, D, E, F, G, H, I, J]` to rank, where the true ranking we want to obtain is `[J, I, H, G, F, E, D, C, B, A]`.
-Suppose we cannot fit all 10 documents into the context length, and decide to use the sliding window approach with **window size** 5 and **step size** 3.
+Suppose we cannot fit all 10 documents into the context length, and decide to use the sliding window approach with **window size** 5 and **stride** 3.
 Sliding window will proceed from the back of the list to the front, scanning 5 documents at a time, and advancing the window by 3 documents at a time:
 
 #### Iteration 1
@@ -96,7 +96,7 @@ This completes the sliding window process.
 
 Notice how the final ranking is not exactly the same as the true ranking, but the top documents (the ones that are closer to the beginning of the list) are close to the true ranking.
 
-In practice, we often use a window size of 20 and a step size of 10.
+In practice, we often use a window size of 20 and a stride of 10.
 
 > Note: sliding window is not the only way to do listwise reranking with context length limitations. Alternative methods are being investigated as an active area of research.
 

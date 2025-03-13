@@ -34,7 +34,7 @@ def main(args):
     variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
     num_passes = args.num_passes
-    step_size = args.step_size
+    stride = args.stride
     window_size = args.window_size
     system_message = args.system_message
     use_logits = args.use_logits
@@ -62,7 +62,7 @@ def main(args):
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
-        step=step_size,
+        stride=stride,
         system_message=system_message,
         use_logits=use_logits,
         use_alpha=use_alpha,
@@ -166,10 +166,10 @@ if __name__ == "__main__":
         help="window size for the sliding window approach",
     )
     parser.add_argument(
-        "--step_size",
+        "--stride",
         type=int,
         default=10,
-        help="step size for the sliding window approach",
+        help="stride for the sliding window approach",
     )
     parser.add_argument(
         "--system_message",
