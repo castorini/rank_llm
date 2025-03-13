@@ -151,10 +151,6 @@ class RankLLM(ABC):
             step (int, optional): The step size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
-            vllm_batched (bool, optional): Whether to use VLLM batched processing. Defaults to False.
-            sglang_batched (bool, optional): Whether to use SGLang batched processing. Defaults to False.
-            tensorrt_batched (bool, optional): Whether to use TensorRT-LLM batches processing. Defaults to False.
-            populate_invocations_history (bool, optional): Whether to populate the history of inference invocations. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
 
         Returns:

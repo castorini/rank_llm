@@ -37,7 +37,6 @@ def main(args):
     step_size = args.step_size
     window_size = args.window_size
     system_message = args.system_message
-    vllm_batched = args.vllm_batched
     use_logits = args.use_logits
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
@@ -65,7 +64,6 @@ def main(args):
         window_size=window_size,
         step=step_size,
         system_message=system_message,
-        vllm_batched=vllm_batched,
         use_logits=use_logits,
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
@@ -180,15 +178,10 @@ if __name__ == "__main__":
         help="the system message used in prompts",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
-    infer_backend_group.add_argument(
-        "--vllm_batched",
-        action="store_true",
-        help="whether to run the model in batches",
-    )
     parser.add_argument(
         "--use_logits",
         action="store_true",
-        help="whether to rerank using the logits of the first identifier only. Only supported if vllm_batched is True",
+        help="whether to rerank using the logits of the first identifier only.",
     )
     parser.add_argument(
         "--use_alpha",

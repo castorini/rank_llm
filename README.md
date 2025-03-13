@@ -7,57 +7,60 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 
-We offer a suite of rerankers - pointwise models like monoT5 and listwise models with a focus on open source LLMs compatible with [FastChat](https://github.com/lm-sys/FastChat?tab=readme-ov-file#supported-models) (e.g., Vicuna, Zephyr, etc.), [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
+We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
-# Releases
+<p align="center">
+<img src="docs/images/rankllm_overview.png" alt="RankLLM Overview" style="width:95%;">
+</p>
+
+## Releases
 current_version = 0.21.0
 
-**Note for Mac Users:** RankLLM is not compatible with Apple Silicon (M1/M2) chips. However, you can still run it by using the Intel-based version of Anaconda and launching your terminal through Rosetta 2.
+## Content
+1. [Installation](#installation)
+2. [Quick Start](#quick-start)
+3. [End-to-end Run and 2CR](#end-to-end-run-and-2cr)
+4. [Model Zoo](#model-zoo)
+5. [Training](#training)
+6. [Community Contribution](#community-contribution)
+7. [References and Citations](#references)
+8. [Acknowledgments](#acknowledgments)
 
-## 📟 Instructions
+<a id="installation"></a>
+# 📟 Installation
 
-### ❗ JDK 21 Warning
+> **⚠️ RankLLM is not compatible with macOS**, regardless of whether you are using an Intel-based Mac or Apple Silicon (M-series). We recommend using Linux or Windows instead.
 
-As rank_llm relies on [anserini](https://github.com/castorini/anserini), it is required that you have JDK 21 installed.
+## ❗ JDK 21 Warning
+
+As rank_llm relies on [Anserini](https://github.com/castorini/anserini), it is required that you have JDK 21 installed.
 Please note that using JDK 11 is not supported and may lead to errors.
 
-### Create Conda Environment
+## Create Conda Environment
 
 ```bash
 conda create -n rankllm python=3.10
 conda activate rankllm
 ```
 
-### Install Pytorch with CUDA (Windows/Linux)
+## Install Pytorch with CUDA (Windows/Linux)
 ```bash
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-### Install Pytorch with MPS (Mac)
-```bash
-pip3 install torch torchvision torchaudio
-```
-
-### Install openjdk with maven if you want to use the retriever
+## Install OpenJDK with Maven if you want to use the retriever
 ```bash
 conda install -c conda-forge openjdk=21 maven -y
 ```
 
-### Install Dependencies
+## Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### Install vLLM, SGLang, or TensorRT-LLM (Optional)
+## Install SGLang, or TensorRT-LLM (Optional)
 
-#### vLLM
-
-```bash
-pip install -e .[vllm]      # local installation for development
-pip install rank-llm[vllm]  # or pip installation
-```
-
-#### SGLang
+### Install SGLang (Optional)
 
 ```bash
 pip install -e .[sglang]      # local installation for development
@@ -70,14 +73,101 @@ Remember to install flashinfer to use `SGLang` backend.
 pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
 ```
 
-#### TensorRT-LLM
+### TensorRT-LLM
 
 ```bash
 pip install -e .[tensorrt-llm]      # local installation for development
 pip install rank-llm[tensorrt-llm]  # or pip installation
 ```
 
-### Run end to end - RankZephyr
+<a id="quick-start"></a>
+# ⏳ Quick Start
+The following code snippet is a minimal walk through of retrieval, reranking, evalaution, and invocations analysis of top 100 retrieved documents for queries from `DL19`. In this example `BM25` is used as the retriever and `RankZephyr` as the reranker. Additional sample snippets are available to run under the `src/rank_llm/demo` directory.
+```python
+from pathlib import Path
+
+from rank_llm.analysis.response_analysis import ResponseAnalyzer
+from rank_llm.data import DataWriter
+from rank_llm.evaluation.trec_eval import EvalFunction
+from rank_llm.rerank import Reranker, get_openai_api_key
+from rank_llm.rerank.listwise import (
+    SafeOpenai,
+    VicunaReranker,
+    ZephyrReranker,
+)
+from rank_llm.retrieve.retriever import Retriever
+from rank_llm.retrieve.topics_dict import TOPICS
+
+# -------- Retrieval --------
+
+# By default BM25 is used for retrieval of top 100 candidates.
+dataset_name = "dl19"
+retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset_name)
+
+# Users can specify other retrieval methods and number of retrieved candidates.
+# retrieved_results = Retriever.from_dataset_with_prebuilt_index(
+#     dataset_name, RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL, k=50
+# )
+# ---------------------------
+
+# --------- Rerank ----------
+
+# Rank Zephyr model
+reranker = ZephyrReranker()
+
+# Rank Vicuna model
+# reranker = VicunaReranker()
+
+# RankGPT
+# model_coordinator = SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key())
+# reranker = Reranker(model_coordinator)
+
+rerank_results = reranker.rerank_batch(requests=retrieved_results)
+# ---------------------------
+
+# ------- Evaluation --------
+
+# Evaluate retrieved results.
+ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, TOPICS[dataset_name])
+print(ndcg_10_retrieved)
+
+# Evaluate rerank results.
+ndcg_10_rerank = EvalFunction.from_results(rerank_results, TOPICS[dataset_name])
+print(ndcg_10_rerank)
+
+# By default ndcg@10 is the eval metric, other value can be specified:
+# eval_args = ["-c", "-m", "map_cut.100", "-l2"]
+# map_100_rerank = EvalFunction.from_results(rerank_results, topics, eval_args)
+# print(map_100_rerank)
+
+# eval_args = ["-c", "-m", "recall.20"]
+# recall_20_rerank = EvalFunction.from_results(rerank_results, topics, eval_args)
+# print(recall_20_rerank)
+
+# ---------------------------
+
+# --- Analyze invocations ---
+analyzer = ResponseAnalyzer.from_inline_results(rerank_results)
+error_counts = analyzer.count_errors(verbose=True)
+print(error_counts)
+# ---------------------------
+
+# ------ Save results -------
+writer = DataWriter(rerank_results)
+Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
+writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
+writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
+writer.write_inference_invocations_history(
+    f"demo_outputs/inference_invocations_history.json"
+)
+# ---------------------------
+```
+
+# End-to-end Run and 2CR
+If you are interested in running retrieval and reranking end-to-end or reproducing the results from the [reference papers](#✨-references), `run_rank_llm.py` is a convinent wrapper script that combines these two steps.
+
+The comperehensive list of our two-click reproduction commands are available on [MS MARCO V1](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v1-passage.html) and [MS MARCO V2](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v2-passage.html) webpages for DL19 and DL20 and DL21-23 datasets, respectively. Moving forward, we plan to cover more datasets and retrievers in our 2CR pages. The rest of this session provides some sample e2e runs. 
+## RankZephyr
 
 We can run the RankZephyr model with the following command:
 ```bash
@@ -85,15 +175,13 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
 ```
 
-Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library.
-
 Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
 
 Including the `--tensorrt_batched` flag will allow you to run the model in batched mode using the `TensorRT-LLM` library.
 
 If you want to run multiple passes of the model, you can use the `--num_passes` flag.
 
-### Run end to end - RankGPT4-o
+## RankGPT4-o
 
 We can run the RankGPT4-o model with the following command:
 ```bash
@@ -103,13 +191,13 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o --top_k_candida
 Note that the `--prompt_mode` is set to `rank_GPT_APEER` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
 This can be changed to `rank_GPT` to use the original prompt.
 
-### Run end to end - LiT5
+## LiT5
 
 We can run the LiT5-Distill V2 model (which could rerank 100 documents in a single pass) with the following command:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large-v2 --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --vllm_batched --batch_size=4 \
+    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=4 \
     --variable_passages --window_size=100
 ```
 
@@ -117,7 +205,7 @@ We can run the LiT5-Distill original model (which works with a window size of 20
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --vllm_batched --batch_size=32 \
+    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=32 \
     --variable_passages
 ```
 
@@ -125,34 +213,41 @@ We can run the LiT5-Score model with the following command:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Score-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5 --context_size=150 --vllm_batched --batch_size=8 \
+    --retrieval_method=bm25 --prompt_mode=LiT5 --context_size=150 --batch_size=8 \
     --window_size=100 --variable_passages
 ```
 
-### Run end to end - monoT5
+## MonoT5
 
-The following runs the 3B variant of monoT5 trained for 10K steps:
+The following runs the 3B variant of MonoT5 trained for 10K steps:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=1000 --dataset=dl19 \
     --retrieval_method=bm25 --prompt_mode=monot5 --context_size=512
 ```
 
-Note that we usually rerank 1K candidates with monoT5.
+Note that we usually rerank 1K candidates with MonoT5.
 
-### Run end to end - FirstMistral
+## DuoT5
+The following runs the #B variant of DuoT5 trained for 10K steps:
+```bash
+python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl19 \
+    --retrieval_method=bm25 --prompt_mode=duot5
+```
+
+Since Duo's pairwise comparison has $O(n^2) runtime complexity, we recommend reranking top 50 candidates using DuoT5 models.
+
+## FirstMistral
 
 We can run the FirstMistral model, reranking using the first-token logits only with the following command:
 
-```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 \
-    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages \
-    --use_logits --use_alpha --vllm_batched --num_gpus 1
+```
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 
 Omit `--use_logits` if you wish to perform traditional listwise reranking.
 
-### Run end to end - Gemini Flash 2.0
+## Gemini Flash 2.0
 
 First install genai:
 
@@ -168,11 +263,8 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 -
     --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT_APEER  --context_size=4096
 ```
 
-## Community Contribution
-If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
-
-
-## 🦙🐧 Model Zoo
+<a id="model-zoo"></a>
+# 🦙🐧 Model Zoo
 
 The following is a table of the listwise models our repository was primarily built to handle (with the models hosted on HuggingFace):
 
@@ -188,11 +280,11 @@ The following is a table of the listwise models our repository was primarily bui
 
 We also officially support the following rerankers built by our group:
 
-### LiT5 Suite
+## LiT5 Suite
 
 The following is a table specifically for our LiT5 suite of models hosted on HuggingFace:
 
-| Model Name            | Hugging Face Identifier/Link                            |
+| Model Name            | 🤗 Hugging Face Identifier/Link                            |
 |-----------------------|---------------------------------------------|
 | LiT5 Distill base     | [castorini/LiT5-Distill-base](https://huggingface.co/castorini/LiT5-Distill-base)          |
 | LiT5 Distill large    | [castorini/LiT5-Distill-large](https://huggingface.co/castorini/LiT5-Distill-large)        |
@@ -206,11 +298,11 @@ The following is a table specifically for our LiT5 suite of models hosted on Hug
 
 Now you can run top-100 reranking with the v2 model in a single pass while maintaining efficiency!
 
-### monoT5 Suite - Pointwise Rerankers
+## MonoT5 Suite - Pointwise Rerankers
 
 The following is a table specifically for our monoT5 suite of models hosted on HuggingFace:
 
-| Model Name                        | Hugging Face Identifier/Link                            |
+| Model Name                        | 🤗 Hugging Face Identifier/Link                            |
 |-----------------------------------|--------------------------------------------------------|
 | monoT5 Small MSMARCO 10K          | [castorini/monot5-small-msmarco-10k](https://huggingface.co/castorini/monot5-small-msmarco-10k)       |
 | monoT5 Small MSMARCO 100K         | [castorini/monot5-small-msmarco-100k](https://huggingface.co/castorini/monot5-small-msmarco-100k)     |
@@ -224,8 +316,13 @@ The following is a table specifically for our monoT5 suite of models hosted on H
 | monoT5 3B Med MSMARCO             | [castorini/monot5-3b-med-msmarco](https://huggingface.co/castorini/monot5-3b-med-msmarco)             |
 
 We recommend the Med models for biomedical retrieval. We also provide both 10K (generally better OOD effectiveness) and 100K checkpoints (better in-domain).
+# Training
+Please check the `training` directory for finetuning open-source listwise rerankers.
+# Community Contribution
+If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
 
-## ✨ References
+<a id=references></a>
+# ✨ References
 
 If you use RankLLM, please cite the following relevant papers:
 
@@ -307,7 +404,7 @@ If you would like to cite the FIRST methodology, please consider citing:
   journal = {arXiv:2406.15657},
 }
 ```
-
-## 🙏 Acknowledgments
+<a id=acknowledgments></a>
+# 🙏 Acknowledgments
 
 This research is supported in part by the Natural Sciences and Engineering Research Council (NSERC) of Canada.
