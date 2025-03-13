@@ -120,7 +120,6 @@ This investment not only enables you to complete the onboarding but also positio
 #### Installing rank_llm
 
 Please refer to the [instructions here](https://github.com/castorini/rank_llm?tab=readme-ov-file#-instructions) to install rank_llm.
-Please be sure to install the [optional vLLM dependency](https://github.com/castorini/rank_llm?tab=readme-ov-file#vllm) as well to support the following steps.
 
 #### Running the RankZephyr Model
 We can run the RankZephyr model with the command:
@@ -134,7 +133,6 @@ Results:
 ndcg_cut_10             all     0.8201
 ```
 
-Including the `--vllm_batched` flag will allow you to run the model in batched mode using the `vLLM` library.
 Note that the result you get may vary slightly with the number above. 
 
 _Where is the first-stage retrieval?_
@@ -159,7 +157,7 @@ Assuming that necessary rank_llm installation steps to run RankZephyr have been 
 
 #### Run end to end - FirstMistral
 ```
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --vllm_batched --num_gpus 1
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 The results should be something like:
 ```
@@ -180,19 +178,18 @@ The experiments in this guide could slightly vary in results due to the intrinsi
 Thus, in addition to a log entry like the previous steps of the onboarding path, we also request that you add an entry to the table below indicating the precise numbers you obtained from running the experiments; we would like to keep track of these to better understand the variance from `vLLM`.
 More specifically, we are interested in the `ndcg_cut_10` score for the RankZephyr and FirstMistral models on the DL20 dataset–the two experiments you have just completed.
 
-| RankZephyr DL20 | FirstMistral DL20 |
-|-----------------|-------------------|
-| 0.8201          | 0.7851           |
-| 0.8197          | 0.7843           |
-| 0.8197          | 0.7843           |
-| 0.8197          | 0.7843           |
-| 0.8197          | 0.7843           |
-| 0.8197          | 0.7843           |
+| RankZephyr DL20 | FirstMistral DL20 | Frequency |
+|-----------------|-------------------|-----------|
+| 0.8201          | 0.7851           | 1         |
+| 0.8197          | 0.7843           | 5         |
 
+If your result is present in the table above, please increase its frequency by 1.
+If your result is not present, add a new row to the table with frequency 1.
 
-After adding your row into the table above, please add a log entry as well like the previous guides:
+After editing the table above, add a log entry here as well like the previous guides:
 + Results reproduced by [@wu-ming233](https://github.com/wu-ming233) on 2025-01-08 (commit [`dac99f7`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
 + Results reproduced by [@b8zhong](https://github.com/b8zhong) on 2025-02-03 (commit [`c908de0`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
 + Results reproduced by [@vincent-4](https://github.com/vincent-4) on 2025-02-05 (commit [`4da0c46`](https://github.com/castorini/rank_llm/commit/4da0c46486fb31b65d41ec9a1fde7dacd9a05410))
 + Results reproduced by [@zdann15](https://github.com/zdann15) on 2025-02-12 (commit [`85302c2`](https://github.com/castorini/rank_llm/commit/85302c22c82c9008425651ead5b0c8e53b32cfe9))
 + Results reproduced by [@mithildamani256](https://github.com/mithildamani256) on 2025-02-15 (commit [`c91c011`](https://github.com/castorini/rank_llm/commit/c91c011ef5a60474144f9235551543d7fdd5c612))
++ Results reproduced by [@nihalmenon](https://github.com/nihalmenon) on 2025-02-19 (commit [`539c650`](https://github.com/castorini/rank_llm/commit/539c6502e42499e10a65c548f221b10b2e796296))
