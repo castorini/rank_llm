@@ -83,11 +83,11 @@ def retrieve_and_rerank(
                 **kwargs,
             )
 
-        if num_passes > 1:
-            requests = [
-                Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                for r in rerank_results
-            ]
+            if num_passes > 1:
+                requests = [
+                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                    for r in rerank_results
+                ]
 
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]
