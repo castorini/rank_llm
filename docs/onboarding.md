@@ -105,7 +105,17 @@ In practice, we often use a window size of 20 and a step size of 10.
 [RankZephyr](https://huggingface.co/castorini/rank_zephyr_7b_v1_full) is an LLM specifically fine-tuned for listwise reranking, led by [Pradeep et. al (2023)](https://arxiv.org/abs/2312.02724) at the University of Waterloo.
 We will run end-to-end multi-stage retrieval pipeline with RankZephyr, realizing the listwise reranking with sliding window mechanism as described above.
 Note that this will require a GPU with **at least 16GB of VRAM**.
-> If you are short of GPUs, we recommend purchasing a [Google Colab Pro](https://colab.research.google.com/) for $13.99 CAD.
+
+If you are short of GPUs, we recommend purchasing a [Google Colab Pro](https://colab.research.google.com/) for $13.99 CAD.
+> Why do we make you pay $13.99?
+Many discussions and arguments were made internally to come to this decision.
+This onboarding guide differs from previous ones in that it requires GPU resources, specifically due to working with LLMs.
+Everybody is interested in LLMs these days, and for a reason; a considerable amount of research at the group currently are involved with LLMs.
+However, they come with substantial computational requirements.
+We could have designed a simpler, GPU-free exercise that runs on free Colab, but that would defeat the purpose of these onboarding paths - to give you hands-on experience with actual research work rather than toy examples.
+While Castorini has GPU resources, we cannot practically provide access to everyone who starts the onboarding process, as it involves significant administrative overhead with university compute managers, and many students ultimately don't continue past the initial weeks.
+Therefore, we ask you to invest $13.99 (3 cups of coffee :coffee:) in a Colab Pro subscription.
+This investment not only enables you to complete the onboarding but also positions you for more interesting tasks should you join the group, as you'll have the necessary compute resources at your disposal.
 
 #### Installing rank_llm
 
@@ -163,6 +173,21 @@ That is all for this guide!
 A reminder that this is just a gentle introduction, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
+
+The experiments in this guide could slightly vary in results due to the intrinsic randomness of LLMs, and particularly the `vLLM` library.
+Thus, in addition to a log entry like the previous steps of the onboarding path, we also request that you add an entry to the table below indicating the precise numbers you obtained from running the experiments; we would like to keep track of these to better understand the variance from `vLLM`.
+More specifically, we are interested in the `ndcg_cut_10` score for the RankZephyr and FirstMistral models on the DL20 dataset–the two experiments you have just completed.
+
+| RankZephyr DL20 | FirstMistral DL20 | Frequency |
+|-----------------|-------------------|-----------|
+| 0.8201          | 0.7851           | 1         |
+| 0.8197          | 0.7843           | 5         |
+
+If your result is present in the table above, please increase its frequency by 1.
+If your result is not present, add a new row to the table with frequency 1.
+
+After editing the table above, add a log entry here as well like the previous guides:
++ Results reproduced by [@wu-ming233](https://github.com/wu-ming233) on 2025-01-08 (commit [`dac99f7`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
 + Results reproduced by [@b8zhong](https://github.com/b8zhong) on 2025-02-03 (commit [`c908de0`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
 + Results reproduced by [@vincent-4](https://github.com/vincent-4) on 2025-02-05 (commit [`4da0c46`](https://github.com/castorini/rank_llm/commit/4da0c46486fb31b65d41ec9a1fde7dacd9a05410))
 + Results reproduced by [@zdann15](https://github.com/zdann15) on 2025-02-12 (commit [`85302c2`](https://github.com/castorini/rank_llm/commit/85302c22c82c9008425651ead5b0c8e53b32cfe9))
