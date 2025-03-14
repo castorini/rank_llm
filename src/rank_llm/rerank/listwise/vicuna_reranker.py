@@ -51,7 +51,7 @@ class VicunaReranker:
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             List[Result]: A list containing the reranked results.
@@ -89,7 +89,7 @@ class VicunaReranker:
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             Result: the rerank result which contains the reranked candidates.

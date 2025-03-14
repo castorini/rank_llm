@@ -154,7 +154,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         rank_end = min(top_k_retrieve, rank_end)
         window_size: int = kwargs.get("window_size", 20)
         window_size = min(window_size, top_k_retrieve)
-        step: int = kwargs.get("step", 10)
+        stride: int = kwargs.get("stride", 10)
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -170,7 +170,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 rank_end, len(requests[0].candidates)
             ),  # TODO: Fails arbitrary hit sizes
             window_size=window_size,
-            step=step,
+            stride=stride,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
             populate_invocations_history=populate_invocations_history,
@@ -197,7 +197,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 for logit in logits.values()
                 if logit.decoded_token.isnumeric()
                 and not unicodedata.name(logit.decoded_token).startswith(
-                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT")
+                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT", "CJK UNIFIED")
                 )
                 and total[0] <= int(logit.decoded_token) <= total[1]
             }

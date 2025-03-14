@@ -148,7 +148,7 @@ class RankLLM(ABC):
             rank_start (int, optional): The starting rank for processing. Defaults to 0.
             rank_end (int, optional): The end rank for processing. Defaults to 100.
             window_size (int, optional): The size of each sliding window. Defaults to 20.
-            step (int, optional): The step size for moving the window. Defaults to 10.
+            stride (int, optional): The stride size for moving the window. Defaults to 10.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             batched (bool, optional): Whether to use batched processing. Defaults to False.
