@@ -80,40 +80,47 @@ def create_reranker(name: str):
         return Reranker(
             RankListwiseOSLLM(
                 model="Qwen/Qwen2.5-7B-Instruct",
-                vllm_batched=True,
             )
         )
     if name == "llama":
         return Reranker(
             RankListwiseOSLLM(
                 model="meta-llama/Llama-3.1-8B-Instruct",
-                vllm_batched=True,
+            )
+        )
+    if name == "r1-distill":
+        return Reranker(
+            RankListwiseOSLLM(
+                model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+                window_size=10,
             )
         )
 
 
 rerankers = [
-    "monot5",
-    "duot5",
-    "lit5",
-    "rv",
-    "rz",
-    "mistral",
-    "qwen",
-    "llama",
-    "gemini",
-    "rank_gpt",
-    "rank_gpt_apeer",
-    "lrl",
+    # "monot5",
+    # "duot5",
+    # "lit5",
+    # "rv",
+    # "rz",
+    # "mistral",
+    # "qwen",
+    # "llama",
+    # "gemini",
+    # "rank_gpt",
+    # "rank_gpt_apeer",
+    # "lrl",
+    "r1-distill",
 ]
 results = {}
 for key in rerankers:
     reranker = create_reranker(key)
+    window_size = 10 if reranker == "r1-distill" else 20
     for dataset in ["dl19", "dl20", "dl21", "dl22", "dl23"]:
         retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
         topics = TOPICS[dataset]
         ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
-        kwargs = {"populate_invocations_history": True}
+        kwargs = {"populate_invocations_history": True, "window_size": window_size}
         rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
 
         # Save results

@@ -236,7 +236,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             else:
                 sampling_params = vllm.SamplingParams(
                     temperature=0.0,
-                    max_tokens=self.num_output_tokens(current_window_size),
+                    # max_tokens=self.num_output_tokens(current_window_size),
+                    max_tokens=10000,
                     min_tokens=self.num_output_tokens(current_window_size),
                 )
                 outputs = self._llm.generate(prompts, sampling_params)
@@ -324,7 +325,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             example_ordering = "[B] > [A]" if self._variable_passages else "[D] > [B]"
         else:
             example_ordering = "[2] > [1]" if self._variable_passages else "[4] > [2]"
-        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Only respond with the ranking results, do not say any word or explain."
+        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. If some of the passages are irrelevant, list their identifiers at the end preserving their initial passage order. The output format should be [] > [], e.g., {example_ordering} with each passage identifier appearing exactly once, Only respond with the ranking results, do not say any word or explain."
 
     def _add_few_shot_examples(self, conv):
         for _ in range(self._num_few_shot_examples):

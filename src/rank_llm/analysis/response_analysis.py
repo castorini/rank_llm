@@ -178,7 +178,13 @@ class ResponseAnalyzer:
     def _process_numerical_format(
         self, response: str, num_passage: int, verbose: bool, stats_dict: Dict[str, int]
     ):
-        resp = response.replace("[rankstart]", "")
+        resp = response
+        if not "</think>" in resp:
+            print(resp)
+        if "</think>" in resp:
+            answer_start_index = resp.find("</think>") + len("</think>")
+            resp = resp[answer_start_index:]
+        resp = resp.replace("[rankstart]", "")
         resp = resp.replace("[rankend]", "")
         resp = resp.replace("SORTED_PASSAGES =", "")
         resp = resp.replace(" ", "")

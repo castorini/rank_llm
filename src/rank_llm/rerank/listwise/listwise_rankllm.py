@@ -358,6 +358,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         return (cost, input_token_count + output_token_count)
 
     def _clean_response(self, response: str) -> str:
+        if "</think>" in response:
+            answer_start_index = response.find("</think>") + len("</think>")
+            response = response[answer_start_index:]
         new_response = ""
         if self._use_alpha:
             for c in response:
