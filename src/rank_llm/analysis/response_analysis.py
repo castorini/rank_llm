@@ -166,11 +166,56 @@ class ResponseAnalyzer:
             if "text" in prompt[0]:  # LiT-5 style
                 return len(prompt)
 
+<<<<<<< HEAD
             # RankGPT style (list of dict): extract user messages only
             user_msgs = [msg["content"] for msg in prompt if msg.get("role") == "user"]
             search_text = " ".join(user_msgs)
         else:
             raise ValueError("Unsupported prompt format.")
+=======
+    def _process_numerical_format(
+        self, response: str, num_passage: int, verbose: bool, stats_dict: Dict[str, int]
+    ):
+        resp = response
+        if not "</think>" in resp:
+            print(resp)
+        if "</think>" in resp:
+            answer_start_index = resp.find("</think>") + len("</think>")
+            resp = resp[answer_start_index:]
+        resp = resp.replace("[rankstart]", "")
+        resp = resp.replace("[rankend]", "")
+        resp = resp.replace("SORTED_PASSAGES =", "")
+        resp = resp.replace(" ", "")
+        resp = resp.replace("PASSAGE", "")
+        resp = resp.replace("[", "")
+        resp = resp.replace("]", "")
+        resp = resp.strip()
+        if not self._validate_format(resp):
+            if verbose:
+                print(resp)
+            stats_dict["wrong_format"] += 1
+            return
+        try:
+            delim = "," if self._prompt_mode == PromptMode.LRL else ">"
+            ranks = resp.split(delim)
+            ranks = [int(rank) for rank in ranks]
+        except ValueError:
+            if verbose:
+                print(resp)
+            stats_dict["wrong_format"] += 1
+            return
+        if len(ranks) < num_passage:
+            stats_dict["missing_documents"] += 1
+            return
+        if len(ranks) > num_passage or len(set(ranks)) < num_passage:
+            stats_dict["repetition"] += 1
+            return
+        for i in range(num_passage):
+            if not i + 1 in set(ranks):
+                stats_dict["missing_documents"] += 1
+                return
+        stats_dict["ok"] += 1
+>>>>>>> 5e12dc0 (first r1 commit)
 
         # Extract and count unique rank IDs
         rank_id_pattern = ast.literal_eval(rank_id_pattern)
