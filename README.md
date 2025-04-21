@@ -55,7 +55,7 @@ conda install -c conda-forge openjdk=21 maven -y
 
 ### Install retriever dependencies if you want to use the retriever
 ```bash
-pip install "rank-llm[retrieval]"
+pip install "rank-llm[pyserini]"
 ```
 
 ## Install Dependencies
