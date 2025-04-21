@@ -7,3 +7,4 @@ faiss-cpu>=1.8.0
 ftfy>=6.2.0
 dacite>=1.8.1
 fschat[model_worker]>=0.2.36
+pandas>=1.4.0
