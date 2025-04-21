@@ -41,10 +41,11 @@ class Reranker:
             rank_end (int, optional): The end rank for processing. Defaults to 100.
             shuffle_candidates (bool, optional): Whether to shuffle candidates before reranking. Defaults to False.
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
+            batched (bool, optional): Whether to use batched processing. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window_size.
         Returns:
             List[Result]: A list containing the reranked candidates.
@@ -77,7 +78,7 @@ class Reranker:
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
                 window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                step (int): The size of the step/stride of the sliding window for listwise rernaking, defaults to 10.
+                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             Result: the rerank result which contains the reranked candidates.
@@ -101,7 +102,6 @@ class Reranker:
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
         inference_invocations_history_dirname: str = "inference_invocations_history",
-        vllm_batched: bool = False,
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
         **kwargs,
@@ -120,7 +120,6 @@ class Reranker:
             pass_ct (int, optional): Pass count, if applicable. Defaults to None.
             window_size (int, optional): The window size used in reranking. Defaults to None.
             dataset_name (str, optional): The name of the dataset used. Defaults to None.
-            vllm_batched (bool, optional): Indicates if vLLM inference backend used. Defaults to False.
             sglang_batched (bool, optional): Indicates if SGLang inference backend used. Defaults to False.
 
         Returns:
@@ -142,13 +141,14 @@ class Reranker:
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
 
-        # Add vllm or sglang to rerank result file name if they are used
-        if vllm_batched:
-            name += "_vllm"
+        # Add vllm or sglang or tensorrt to rerank result file name if they are used
         if sglang_batched:
             name += "_sglang"
-        if tensorrt_batched:
+        elif tensorrt_batched:
             name += "_tensorrt"
+        else:
+            # VLLM is the fallback right now
+            name += "_vllm"
 
         # write rerank results
         writer = DataWriter(results)
@@ -191,7 +191,6 @@ class Reranker:
         Return: rerank model_coordinator -- Option<RankLLM>
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
-        vllm_batched: bool = kwargs.get("vllm_batched", False)
 
         if interactive and default_model_coordinator is not None:
             # Default rerank model_coordinator
@@ -264,7 +263,6 @@ class Reranker:
                 ("variable_passages", False),
                 ("window_size", 20),
                 ("system_message", None),
-                ("vllm_batched", False),
                 ("sglang_batched", False),
                 ("tensorrt_batched", False),
                 ("use_logits", False),
@@ -279,7 +277,6 @@ class Reranker:
                 variable_passages,
                 window_size,
                 system_message,
-                vllm_batched,
                 sglang_batched,
                 tensorrt_batched,
                 use_logits,
@@ -301,7 +298,6 @@ class Reranker:
                 variable_passages=variable_passages,
                 window_size=window_size,
                 system_message=system_message,
-                vllm_batched=vllm_batched,
                 sglang_batched=sglang_batched,
                 tensorrt_batched=tensorrt_batched,
                 use_logits=use_logits,
@@ -371,8 +367,6 @@ class Reranker:
                 ("window_size", 20),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
-                # reuse this parameter, but its not for "vllm", but only for "batched"
-                ("vllm_batched", False),
             ]
             (
                 context_size,
@@ -381,7 +375,6 @@ class Reranker:
                 window_size,
                 precision,
                 device,
-                vllm_batched,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankFiDDistill(
@@ -392,7 +385,6 @@ class Reranker:
                 window_size=window_size,
                 precision=precision,
                 device=device,
-                batched=vllm_batched,
             )
             print(f"Completed loading {model_path}")
         elif "lit5-score" in model_path.lower():
@@ -403,8 +395,6 @@ class Reranker:
                 ("window_size", 100),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
-                # reuse this parameter, but its not for "vllm", but only for "batched"
-                ("vllm_batched", False),
             ]
             (
                 context_size,
@@ -413,7 +403,6 @@ class Reranker:
                 window_size,
                 precision,
                 device,
-                vllm_batched,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankFiDScore(
@@ -424,10 +413,12 @@ class Reranker:
                 window_size=window_size,
                 precision=precision,
                 device=device,
-                batched=vllm_batched,
             )
             print(f"Completed loading {model_path}")
-        elif vllm_batched:
+        elif model_path in ["unspecified", "rank_random", "rank_identity"]:
+            # NULL reranker
+            agent = None
+        else:
             # supports loading models from huggingface
             print(f"Loading {model_path} ...")
             keys_and_defaults = [
@@ -439,7 +430,6 @@ class Reranker:
                 ("variable_passages", False),
                 ("window_size", 20),
                 ("system_message", None),
-                ("vllm_batched", True),
                 ("use_logits", False),
                 ("use_alpha", False),
             ]
@@ -452,7 +442,6 @@ class Reranker:
                 variable_passages,
                 window_size,
                 system_message,
-                vllm_batched,
                 use_logits,
                 use_alpha,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
@@ -470,15 +459,9 @@ class Reranker:
                 system_message=system_message,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
-                vllm_batched=vllm_batched,
             )
 
             print(f"Completed loading {model_path}")
-        elif model_path in ["unspecified", "rank_random", "rank_identity"]:
-            # NULL reranker
-            model_coordinator = None
-        else:
-            raise ValueError(f"Unsupported model: {model_path}")
 
         if model_coordinator is None and model_path not in [
             "unspecified",

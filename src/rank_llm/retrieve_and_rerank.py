@@ -83,11 +83,11 @@ def retrieve_and_rerank(
                 **kwargs,
             )
 
-        if num_passes > 1:
-            requests = [
-                Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                for r in rerank_results
-            ]
+            if num_passes > 1:
+                requests = [
+                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                    for r in rerank_results
+                ]
 
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]
@@ -102,7 +102,6 @@ def retrieve_and_rerank(
             pass_ct=None if num_passes == 1 else pass_ct,
             window_size=kwargs.get("window_size", None),
             dataset_name=dataset,
-            vllm_batched=kwargs.get("vllm_batched", False),
             sglang_batched=kwargs.get("sglang_batched", False),
             tensorrt_batched=kwargs.get("tensorrt_batched", False),
         )

@@ -34,10 +34,9 @@ def main(args):
     variable_passages = args.variable_passages
     retrieval_mode = RetrievalMode.DATASET
     num_passes = args.num_passes
-    step_size = args.step_size
+    stride = args.stride
     window_size = args.window_size
     system_message = args.system_message
-    vllm_batched = args.vllm_batched
     use_logits = args.use_logits
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
@@ -63,9 +62,8 @@ def main(args):
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
-        step_size=step_size,
+        stride=stride,
         system_message=system_message,
-        vllm_batched=vllm_batched,
         use_logits=use_logits,
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
@@ -168,10 +166,10 @@ if __name__ == "__main__":
         help="window size for the sliding window approach",
     )
     parser.add_argument(
-        "--step_size",
+        "--stride",
         type=int,
         default=10,
-        help="step size for the sliding window approach",
+        help="stride for the sliding window approach",
     )
     parser.add_argument(
         "--system_message",
@@ -180,15 +178,10 @@ if __name__ == "__main__":
         help="the system message used in prompts",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
-    infer_backend_group.add_argument(
-        "--vllm_batched",
-        action="store_true",
-        help="whether to run the model in batches",
-    )
     parser.add_argument(
         "--use_logits",
         action="store_true",
-        help="whether to rerank using the logits of the first identifier only. Only supported if vllm_batched is True",
+        help="whether to rerank using the logits of the first identifier only.",
     )
     parser.add_argument(
         "--use_alpha",

@@ -185,19 +185,28 @@ r = from_dict(
 
 class TestRankListwiseOSLLM(unittest.TestCase):
     def setUp(self):
-        self.patcher = patch("rank_llm.rerank.listwise.rank_listwise_os_llm.load_model")
-        self.mock_load_model = self.patcher.start()
-        self.mock_llm = MagicMock()
-        self.mock_tokenizer = MagicMock()
-        self.mock_load_model.return_value = self.mock_llm, self.mock_tokenizer
-
-        self.patcher_cuda = patch("torch.cuda.is_available")
+        # Patch cuda availability check
+        self.patcher_cuda = patch("torch.cuda.is_available", return_value=True)
         self.mock_cuda = self.patcher_cuda.start()
-        self.mock_cuda.return_value = True
+
+        # Mock Tokenizer with apply_chat_template method
+        self.mock_tokenizer = MagicMock()
+        self.mock_tokenizer.apply_chat_template.side_effect = (
+            lambda messages, **kwargs: str(messages)
+        )
+
+        # Mock vllm.LLM
+        self.patcher_vllm = patch("vllm.LLM", autospec=True)
+        self.mock_vllm_class = self.patcher_vllm.start()
+        self.mock_vllm_instance = self.mock_vllm_class.return_value
+        self.mock_vllm_instance.get_tokenizer.return_value = self.mock_tokenizer
+
+        # Mock generate method
+        self.mock_vllm_instance.generate.return_value = ["Mock response"]
 
     def tearDown(self):
-        self.patcher.stop()
         self.patcher_cuda.stop()
+        self.patcher_vllm.stop()
 
     def test_valid_inputs(self):
         for (
@@ -285,8 +294,10 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         output = model_coordinator.num_output_tokens()
         self.assertEqual(output, 19)
 
-    @patch("rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.run_llm")
-    def test_run_llm(self, mock_run_llm):
+    @patch(
+        "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.run_llm_batched"
+    )
+    def test_run_llm_batched(self, mock_run_llm_batched):
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
@@ -298,17 +309,15 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             system_message="",
         )
 
-        mock_run_llm.return_value = ("> [1] > [2] > [3] > [4] > [5", 19)
-        output, size = model_coordinator.run_llm(
+        mock_run_llm_batched.return_value = ("> [1] > [2] > [3] > [4] > [5", 19)
+        output, size = model_coordinator.run_llm_batched(
             "How are you doing ? What is your name? What is your age? What is your favorite color?"
         )
         expected_output = "> [1] > [2] > [3] > [4] > [5"
         self.assertEqual(output, expected_output)
         self.assertEqual(size, len([char for char in output if char != " "]))
 
-    def test_create_prompt(
-        self,
-    ):
+    def test_create_prompt(self):
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
