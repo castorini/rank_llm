@@ -4,7 +4,7 @@ import urllib.request
 from urllib.parse import urlparse
 
 try:
-    from pyserini.util import *
+    from pyserini.util import download_url, compute_md5
 except ImportError:
     download_url = None
     compute_md5 = None
