@@ -4,17 +4,31 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from pyserini.index.lucene import LuceneIndexReader
-from pyserini.prebuilt_index_info import (
-    FAISS_INDEX_INFO,
-    IMPACT_INDEX_INFO,
-    TF_INDEX_INFO,
-)
-from pyserini.query_iterator import DefaultQueryIterator
-from pyserini.search import get_qrels, get_topics
-from pyserini.search.faiss import FaissSearcher
-from pyserini.search.faiss._searcher import QueryEncoder
-from pyserini.search.lucene import LuceneImpactSearcher, LuceneSearcher
+try:
+    from pyserini.index.lucene import LuceneIndexReader
+    from pyserini.prebuilt_index_info import (
+        FAISS_INDEX_INFO,
+        IMPACT_INDEX_INFO,
+        TF_INDEX_INFO,
+    )
+    from pyserini.query_iterator import DefaultQueryIterator
+    from pyserini.search import get_qrels, get_topics
+    from pyserini.search.faiss import FaissSearcher
+    from pyserini.search.faiss._searcher import QueryEncoder
+    from pyserini.search.lucene import LuceneImpactSearcher, LuceneSearcher
+except ImportError:
+    LuceneIndexReader = None
+    FAISS_INDEX_INFO = None
+    IMPACT_INDEX_INFO = None
+    TF_INDEX_INFO = None
+    DefaultQueryIterator = None
+    get_qrels = None
+    get_topics = None
+    FaissSearcher = None
+    QueryEncoder = None
+    LuceneImpactSearcher = None
+    LuceneSearcher = None
+
 from tqdm import tqdm
 
 from rank_llm.data import Candidate, DataWriter, Query, Request
@@ -72,6 +86,11 @@ class PyseriniRetriever:
         self, dataset: str, retrieval_method: RetrievalMethod
     ):
         if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
+            if LuceneSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             self._searcher = LuceneSearcher.from_prebuilt_index(self._get_index())
             if not self._searcher:
                 raise ValueError(
@@ -81,6 +100,11 @@ class PyseriniRetriever:
             if retrieval_method == RetrievalMethod.BM25_RM3:
                 self._searcher.set_rm3()
         elif retrieval_method == RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL:
+            if LuceneImpactSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             self._searcher = LuceneImpactSearcher.from_prebuilt_index(
                 self._get_index(),
                 query_encoder="SpladePlusPlusEnsembleDistil",
@@ -104,9 +128,21 @@ class PyseriniRetriever:
                 (RetrievalMethod.OPEN_AI_ADA2, "dl19"): "openai-ada2-dl19-passage",
                 (RetrievalMethod.OPEN_AI_ADA2, "dl20"): "openai-ada2-dl20",
             }
+
+            if QueryEncoder is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             query_encoder = QueryEncoder.load_encoded_queries(
                 query_encoders_map[(retrieval_method, dataset)]
             )
+
+            if FaissSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             self._searcher = FaissSearcher.from_prebuilt_index(
                 self._get_index(), query_encoder
             )
@@ -123,8 +159,17 @@ class PyseriniRetriever:
         self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False
     ):
         if index_type == "lucene":
+            if LuceneSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
             self._searcher = LuceneSearcher(index_path)
         elif index_type == "impact":
+            if LuceneImpactSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             if onnx:
                 self._searcher = LuceneImpactSearcher(
                     index_path, encoder, min_idf=0, encoder_type="onnx"
@@ -144,10 +189,27 @@ class PyseriniRetriever:
         onnx: bool = False,
         encoded_queries: str = None,
     ):
+        if (
+            TF_INDEX_INFO is None
+            or IMPACT_INDEX_INFO is None
+            or FAISS_INDEX_INFO is None
+        ):
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+
         self._dataset = index_path
         if index_path in TF_INDEX_INFO:
+            if LuceneSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
         elif index_path in IMPACT_INDEX_INFO:
+            if LuceneImpactSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             if onnx:
                 self._searcher = LuceneImpactSearcher.from_prebuilt_index(
                     index_path, encoder, min_idf=0, encoder_type="onnx"
@@ -160,7 +222,19 @@ class PyseriniRetriever:
             if not encoded_queries:
                 # This can be worked around if we want to add the (many) arguments needed to create a custom QueryEncoder
                 raise ValueError("encoded_queries must be specified for dense indices")
+
+            if QueryEncoder is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             query_encoder = QueryEncoder.load_encoded_queries(encoded_queries)
+
+            if FaissSearcher is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+
             self._searcher = FaissSearcher.from_prebuilt_index(
                 index_path, query_encoder
             )
@@ -168,6 +242,14 @@ class PyseriniRetriever:
             raise ValueError(f"Cannot build pre-built index: {index_path}")
 
     def _init_custom_index_reader(self, index_path: str, topics_path: str):
+        if (
+            LuceneIndexReader is None
+            or TF_INDEX_INFO is None
+            or IMPACT_INDEX_INFO is None
+            or FAISS_INDEX_INFO is None
+        ):
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+
         if os.path.exists(index_path):
             self._index_reader = LuceneIndexReader(index_path)
         elif index_path in TF_INDEX_INFO or index_path in IMPACT_INDEX_INFO:
@@ -181,11 +263,17 @@ class PyseriniRetriever:
             )
 
     def _init_custom_topics(self, topics_path: str, index_path: str):
+        if DefaultQueryIterator is None:
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+
         self._topics = DefaultQueryIterator.from_topics(topics_path).topics
         self._qrels = None
         self._init_custom_index_reader(index_path, topics_path)
 
     def _init_prebuilt_topics(self, topics_path: str, index_path: str):
+        if get_qrels is None or get_topics is None:
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+
         self._topics = get_topics(topics_path)
         if topics_path in ["dl20", "dl21", "dl22"]:
             self._qrels = get_qrels(f"{topics_path}-passage")
@@ -204,8 +292,16 @@ class PyseriniRetriever:
             topics_key = dataset
         else:
             topics_key = TOPICS[dataset]
+
+        if get_qrels is None or get_topics is None:
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+
         self._topics = get_topics(topics_key)
         self._qrels = get_qrels(TOPICS[dataset])
+
+        if LuceneIndexReader is None:
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+
         self._index_reader = LuceneIndexReader.from_prebuilt_index(
             self._get_index("bm25")
         )
