@@ -5,7 +5,8 @@ import tempfile
 from typing import List
 
 import pandas as pd
-try: 
+
+try:
     from pyserini.search import get_qrels_file
     from pyserini.util import download_evaluation_script
 except ImportError:
@@ -13,6 +14,7 @@ except ImportError:
     download_evaluation_script = None
 
 from rank_llm.data import Result
+
 
 class EvalFunction:
     @staticmethod
@@ -64,9 +66,7 @@ class EvalFunction:
             str: Path to the truncated qrels file.
         """
         if get_qrels_file is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install .[pyserini]`."
-            )
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
 
         qrels = get_qrels_file(qrels)
         run = pd.read_csv(run, sep="\s+", header=None)
@@ -92,9 +92,7 @@ class EvalFunction:
             str: Evaluation results as a string.
         """
         if download_evaluation_script is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install .[pyserini]`."
-            )
+            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
 
         script_path = download_evaluation_script("trec_eval")
         cmd_prefix = ["java", "-jar", script_path]
