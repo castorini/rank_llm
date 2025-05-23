@@ -38,7 +38,11 @@ def retrieve_and_rerank(
     # Get reranking model_coordinator
     reranker = Reranker(
         Reranker.create_model_coordinator(
-            model_path, default_model_coordinator, interactive, **kwargs
+            model_path,
+            default_model_coordinator,
+            interactive,
+            hf_home=kwargs.get("hf_home"),
+            **kwargs,
         )
     )
 

@@ -19,13 +19,14 @@ class SafeOpenai(ListwiseRankLLM):
         context_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         keys=None,
         key_start_id=None,
         proxy=None,
-        api_type: str = None,
-        api_base: str = None,
-        api_version: str = None,
+        api_type: Optional[str] = None,
+        api_base: Optional[str] = None,
+        api_version: Optional[str] = None,
     ) -> None:
         """
         Creates instance of the SafeOpenai class, a specialized version of RankLLM designed for safely handling OpenAI API calls with
@@ -55,7 +56,12 @@ class SafeOpenai(ListwiseRankLLM):
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, window_size
+            model,
+            context_size,
+            prompt_mode,
+            num_few_shot_examples,
+            window_size,
+            few_shot_file,
         )
         if isinstance(keys, str):
             keys = [keys]
@@ -185,17 +191,21 @@ class SafeOpenai(ListwiseRankLLM):
     def _get_prefix_for_rank_gpt_prompt(
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
-        return [
-            {
-                "role": "system",
-                "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
-            },
-            {
-                "role": "user",
-                "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
-            },
-            {"role": "assistant", "content": "Okay, please provide the passages."},
-        ]
+        prefix_message_system = {
+            "role": "system",
+            "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        }
+        messages = self._add_few_shot_examples_messages([prefix_message_system])
+        messages.extend(
+            [
+                {
+                    "role": "user",
+                    "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
+                },
+                {"role": "assistant", "content": "Okay, please provide the passages."},
+            ]
+        )
+        return messages
 
     def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
         return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
@@ -204,16 +214,19 @@ class SafeOpenai(ListwiseRankLLM):
         self, query: str, num: int
     ) -> List[Dict[str, str]]:
         # APEER
-        return [
-            {
-                "role": "system",
-                "content": "As RankGPT, your task is to evaluate and rank unique passages based on their relevance and accuracy to a given query. Prioritize passages that directly address the query and provide detailed, correct answers. Ignore factors such as length, complexity, or writing style unless they seriously hinder readability.",
-            },
+        prefix_message_system = {
+            "role": "system",
+            "content": "As RankGPT, your task is to evaluate and rank unique passages based on their relevance and accuracy to a given query. Prioritize passages that directly address the query and provide detailed, correct answers. Ignore factors such as length, complexity, or writing style unless they seriously hinder readability.",
+        }
+        messages = self._add_few_shot_examples_messages([prefix_message_system])
+        messages.append(
             {
                 "role": "user",
                 "content": f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance.",
-            },
-        ]
+            }
+        )
+
+        return messages
 
     def _get_suffix_for_rank_gpt_apeer_prompt(self, query: str, num: int) -> str:
         return f"Given the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
@@ -309,7 +322,7 @@ class SafeOpenai(ListwiseRankLLM):
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
                     // ((rank_end - rank_start) * 4),
                 )
-        return messages, self.get_num_tokens(messages)
+        return messages, num_tokens
 
     def create_LRL_prompt(
         self, result: Result, rank_start: int, rank_end: int
@@ -319,6 +332,7 @@ class SafeOpenai(ListwiseRankLLM):
         max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
+            messages = self._add_few_shot_examples_messages([])
             message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
@@ -331,7 +345,8 @@ class SafeOpenai(ListwiseRankLLM):
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
             message += "Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.\n"
             message += "SORTED_PASSAGES = "
-            messages = [{"role": "user", "content": message}]
+            messages.append({"role": "user", "content": message})
+
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
