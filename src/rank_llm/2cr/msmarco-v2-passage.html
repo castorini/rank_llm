@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-    <title>RankLLM Reproductions: MS MARCO V1 Passage</title>
+    <title>RankLLM Reproductions: MS MARCO V2 Passage</title>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css" />
     <!-- Google Fonts Roboto -->
@@ -131,7 +131,7 @@ pre[class*="prettyprint"] {
           ">
         <div class="container d-flex align-items-center justify-content-center text-center h-100"  style="max-height: 150px">
           <div class="text-white">
-            <h1 class="mb-3">MS MARCO V1 Passage</h1>
+            <h1 class="mb-3">MS MARCO V2 Passage</h1>
           </div>
         </div>
       </div>
@@ -154,8 +154,9 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
         <th class="headertop" colspan="1"><b>First-Stage Method</b></th>
         <th class="headertop" colspan="1"><b>Top-k</b></th>
         <th class="headertop"></th>
-        <th class="headertop" colspan="1"><b>TREC 2019</b></th>
-        <th class="headertop" colspan="1"><b>TREC 2020</b></th>
+        <th class="headertop" colspan="1"><b>TREC 2021</b></th>
+        <th class="headertop" colspan="1"><b>TREC 2022</b></th>
+	<th class="headertop" colspan="1"><b>TREC 2023</b></th>
       </tr>
       <tr>
         <th class="headerbottom" scope="col"></th>
@@ -167,26 +168,24 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
         <th class="headerbottom" scope="col"></th>
         <th class="headerbottom" scope="col">nDCG@10</th>
         <th class="headerbottom" scope="col">nDCG@10</th>
+	<th class="headerbottom" scope="col">nDCG@10</th>
 
       </tr>
     </thead>
     <tbody>
 
-<!-- Condition: RankVicuna 7B V1 -->
+<!-- Condition: Monot5 3B MSMARCO-10k -->
 <tr class="accordion-toggle collapsed" id="row1" data-toggle="collapse" data-parent="#row1" href="#collapse1">
 <td class="expand-button"></td>
 <td style="min-width: 85px">[1]</td>
-<td style="min-width: 400px">RankVicuna 7B V1</td>
+<td style="min-width: 400px">Monot5 3B MSMARCO-10k</td>
 <td>-</td>
-<td>SPLADE++ EnsembleDistil</td>
+<td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7360</td>
-<td>0.7358</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6678</td>
+<td>0.4958</td>
+<td>0.4505</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -196,10 +195,13 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row1-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row1-tab1-header" data-mdb-toggle="tab" href="#row1-tab1" role="tab" aria-controls="row1-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row1-tab1-header" data-mdb-toggle="tab" href="#row1-tab1" role="tab" aria-controls="row1-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row1-tab2-header" data-mdb-toggle="tab" href="#row1-tab2" role="tab" aria-controls="row1-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row1-tab2-header" data-mdb-toggle="tab" href="#row1-tab2" role="tab" aria-controls="row1-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row1-tab3-header" data-mdb-toggle="tab" href="#row1-tab3" role="tab" aria-controls="row1-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -207,15 +209,16 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
 <!-- Tabs content -->
 <div class="tab-content" id="row1-content">
   <div class="tab-pane fade show active" id="row1-tab1" role="tabpanel" aria-labelledby="row1-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/rank_vicuna_7b_v1  \
-  --top_k_candidates=100 --dataset=dl19  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/monot5-3b-msmarco-10k \
+  --top_k_candidates=100 --dataset=dl21 \
+  --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
-  --context_size=4096
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -224,15 +227,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row1-tab2" role="tabpanel" aria-labelledby="row1-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/rank_vicuna_7b_v1  \
-  --top_k_candidates=100 --dataset=dl20  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/monot5-3b-msmarco-10k \
+  --top_k_candidates=100 --dataset=dl22 \
+  --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
-  --context_size=4096
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -241,10 +245,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row1-tab3" role="tabpanel" aria-labelledby="row1-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/monot5-3b-msmarco-10k \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -257,21 +267,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: RankZephyr 7B V1 - Full -->
+
+<!-- Condition: Duot5 3B MSMARCO-10k -->
 <tr class="accordion-toggle collapsed" id="row2" data-toggle="collapse" data-parent="#row2" href="#collapse2">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[2]</td>
-<td style="min-width: 400px">RankZephyr 7B V1 - Full</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">Duot5 3B MSMARCO-10k</td>
 <td>-</td>
-<td>SPLADE++ EnsembleDistil</td>
+<td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7803</td>
-<td>0.8211</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6951</td>
+<td>0.5158</td>
+<td>0.4600</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -281,10 +289,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row2-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row2-tab1-header" data-mdb-toggle="tab" href="#row2-tab1" role="tab" aria-controls="row2-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row2-tab1-header" data-mdb-toggle="tab" href="#row2-tab1" role="tab" aria-controls="row2-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row2-tab2-header" data-mdb-toggle="tab" href="#row2-tab2" role="tab" aria-controls="row2-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row2-tab2-header" data-mdb-toggle="tab" href="#row2-tab2" role="tab" aria-controls="row2-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row2-tab3-header" data-mdb-toggle="tab" href="#row2-tab3" role="tab" aria-controls="row2-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -292,13 +303,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row2-content">
   <div class="tab-pane fade show active" id="row2-tab1" role="tabpanel" aria-labelledby="row2-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/rank_zephyr_7b_v1_full  \
-  --top_k_candidates=100 --dataset=dl19  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/duot5-3b-msmarco-10k \
+  --top_k_candidates=100 --dataset=dl21 \
+  --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
   --variable_passages
@@ -310,13 +321,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row2-tab2" role="tabpanel" aria-labelledby="row2-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/rank_zephyr_7b_v1_full  \
-  --top_k_candidates=100 --dataset=dl20  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/duot5-3b-msmarco-10k \
+  --top_k_candidates=100 --dataset=dl22 \
+  --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
   --variable_passages
@@ -328,10 +339,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row2-tab3" role="tabpanel" aria-labelledby="row2-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/duot5-3b-msmarco-10k \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -344,21 +361,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: RankZephyr 7B V1 - Full -->
+
+<!-- Condition: Lit5Distill Large -->
 <tr class="accordion-toggle collapsed" id="row3" data-toggle="collapse" data-parent="#row3" href="#collapse3">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[2]</td>
-<td style="min-width: 400px">RankZephyr 7B V1 - Full</td>
-<td>3</td>
-<td>SPLADE++ EnsembleDistil</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">Lit5Distill Large</td>
+<td>-</td>
+<td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7855</td>
-<td>0.8255</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6671</td>
+<td>0.5102</td>
+<td>0.4578</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -368,10 +383,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row3-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row3-tab1-header" data-mdb-toggle="tab" href="#row3-tab1" role="tab" aria-controls="row3-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row3-tab1-header" data-mdb-toggle="tab" href="#row3-tab1" role="tab" aria-controls="row3-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row3-tab2-header" data-mdb-toggle="tab" href="#row3-tab2" role="tab" aria-controls="row3-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row3-tab2-header" data-mdb-toggle="tab" href="#row3-tab2" role="tab" aria-controls="row3-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row3-tab3-header" data-mdb-toggle="tab" href="#row3-tab3" role="tab" aria-controls="row3-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -379,17 +397,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row3-content">
   <div class="tab-pane fade show active" id="row3-tab1" role="tabpanel" aria-labelledby="row3-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/rank_zephyr_7b_v1_full  \
-  --top_k_candidates=100 --dataset=dl19  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/LiT5-Distill-large \
+  --top_k_candidates=100 --dataset=dl21 \
+  --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
-  --variable_passages \
-  --num_passes=3
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -398,17 +415,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row3-tab2" role="tabpanel" aria-labelledby="row3-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/rank_zephyr_7b_v1_full  \
-  --top_k_candidates=100 --dataset=dl20  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/LiT5-Distill-large \
+  --top_k_candidates=100 --dataset=dl22 \
+  --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
-  --variable_passages \
-  --num_passes=3
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -417,10 +433,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row3-tab3" role="tabpanel" aria-labelledby="row3-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/LiT5-Distill-large \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -433,21 +455,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: Monot5 3B MSMARCO-10k -->
+
+<!-- Condition: RankVicuna 7B V1 -->
 <tr class="accordion-toggle collapsed" id="row4" data-toggle="collapse" data-parent="#row4" href="#collapse4">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">Monot5 3B MSMARCO-10k</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">RankVicuna 7B V1</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7174</td>
-<td>0.6878</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6200</td>
+<td>0.4380</td>
+<td>0.4052</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -457,10 +477,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row4-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row4-tab1-header" data-mdb-toggle="tab" href="#row4-tab1" role="tab" aria-controls="row4-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row4-tab1-header" data-mdb-toggle="tab" href="#row4-tab1" role="tab" aria-controls="row4-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row4-tab2-header" data-mdb-toggle="tab" href="#row4-tab2" role="tab" aria-controls="row4-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row4-tab2-header" data-mdb-toggle="tab" href="#row4-tab2" role="tab" aria-controls="row4-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row4-tab3-header" data-mdb-toggle="tab" href="#row4-tab3" role="tab" aria-controls="row4-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -468,12 +491,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row4-content">
   <div class="tab-pane fade show active" id="row4-tab1" role="tabpanel" aria-labelledby="row4-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/monot5-3b-msmarco-10k \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=castorini/rank_vicuna_7b_v1 \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -486,12 +509,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row4-tab2" role="tabpanel" aria-labelledby="row4-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/monot5-3b-msmarco-10k \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=castorini/rank_vicuna_7b_v1 \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -504,10 +527,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row4-tab3" role="tabpanel" aria-labelledby="row4-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/rank_vicuna_7b_v1 \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -520,21 +549,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: Duot5 3B MSMARCO-10k -->
+
+<!-- Condition: RankZephyr 7B V1 - Full -->
 <tr class="accordion-toggle collapsed" id="row5" data-toggle="collapse" data-parent="#row5" href="#collapse5">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">Duot5 3B MSMARCO-10k</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">RankZephyr 7B V1 - Full</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7302</td>
-<td>0.6913</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.7027</td>
+<td>0.5099</td>
+<td>0.4423</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -544,10 +571,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row5-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row5-tab1-header" data-mdb-toggle="tab" href="#row5-tab1" role="tab" aria-controls="row5-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row5-tab1-header" data-mdb-toggle="tab" href="#row5-tab1" role="tab" aria-controls="row5-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row5-tab2-header" data-mdb-toggle="tab" href="#row5-tab2" role="tab" aria-controls="row5-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row5-tab2-header" data-mdb-toggle="tab" href="#row5-tab2" role="tab" aria-controls="row5-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row5-tab3-header" data-mdb-toggle="tab" href="#row5-tab3" role="tab" aria-controls="row5-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -555,12 +585,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row5-content">
   <div class="tab-pane fade show active" id="row5-tab1" role="tabpanel" aria-labelledby="row5-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/duot5-3b-msmarco-10k \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=castorini/rank_zephyr_7b_v1_full \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -573,12 +603,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row5-tab2" role="tabpanel" aria-labelledby="row5-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/duot5-3b-msmarco-10k \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=castorini/rank_zephyr_7b_v1_full \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -591,10 +621,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row5-tab3" role="tabpanel" aria-labelledby="row5-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/rank_zephyr_7b_v1_full \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -607,21 +643,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: Lit5Distill Large -->
+
+<!-- Condition: First Mistral -->
 <tr class="accordion-toggle collapsed" id="row6" data-toggle="collapse" data-parent="#row6" href="#collapse6">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">Lit5Distill Large</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">First Mistral</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7247</td>
-<td>0.7049</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6849</td>
+<td>0.4928</td>
+<td>0.4445</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -631,10 +665,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row6-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row6-tab1-header" data-mdb-toggle="tab" href="#row6-tab1" role="tab" aria-controls="row6-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row6-tab1-header" data-mdb-toggle="tab" href="#row6-tab1" role="tab" aria-controls="row6-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row6-tab2-header" data-mdb-toggle="tab" href="#row6-tab2" role="tab" aria-controls="row6-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row6-tab2-header" data-mdb-toggle="tab" href="#row6-tab2" role="tab" aria-controls="row6-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row6-tab3-header" data-mdb-toggle="tab" href="#row6-tab3" role="tab" aria-controls="row6-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -642,16 +679,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row6-content">
   <div class="tab-pane fade show active" id="row6-tab1" role="tabpanel" aria-labelledby="row6-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/LiT5-Distill-large \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=castorini/first_mistral \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -660,16 +697,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row6-tab2" role="tabpanel" aria-labelledby="row6-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/LiT5-Distill-large \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=castorini/first_mistral \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -678,10 +715,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row6-tab3" role="tabpanel" aria-labelledby="row6-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=castorini/first_mistral \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -694,21 +737,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: RankVicuna 7B V1 -->
+
+<!-- Condition: Qwen 2.5 7B Instruct -->
 <tr class="accordion-toggle collapsed" id="row7" data-toggle="collapse" data-parent="#row7" href="#collapse7">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">RankVicuna 7B V1</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">Qwen 2.5 7B Instruct</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6874</td>
-<td>0.6630</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6451</td>
+<td>0.4264</td>
+<td>0.4061</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -718,10 +759,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row7-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row7-tab1-header" data-mdb-toggle="tab" href="#row7-tab1" role="tab" aria-controls="row7-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row7-tab1-header" data-mdb-toggle="tab" href="#row7-tab1" role="tab" aria-controls="row7-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row7-tab2-header" data-mdb-toggle="tab" href="#row7-tab2" role="tab" aria-controls="row7-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row7-tab2-header" data-mdb-toggle="tab" href="#row7-tab2" role="tab" aria-controls="row7-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row7-tab3-header" data-mdb-toggle="tab" href="#row7-tab3" role="tab" aria-controls="row7-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -729,12 +773,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row7-content">
   <div class="tab-pane fade show active" id="row7-tab1" role="tabpanel" aria-labelledby="row7-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/rank_vicuna_7b_v1 \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=Qwen/Qwen2.5-7B-Instruct \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -747,12 +791,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row7-tab2" role="tabpanel" aria-labelledby="row7-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/rank_vicuna_7b_v1 \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=Qwen/Qwen2.5-7B-Instruct \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -765,10 +809,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row7-tab3" role="tabpanel" aria-labelledby="row7-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=Qwen/Qwen2.5-7B-Instruct \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -781,21 +831,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: RankZephyr 7B V1 - Full -->
+
+<!-- Condition: LLaMA 3.1 8B Instruct -->
 <tr class="accordion-toggle collapsed" id="row8" data-toggle="collapse" data-parent="#row8" href="#collapse8">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">RankZephyr 7B V1 - Full</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">LLaMA 3.1 8B Instruct</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7388</td>
-<td>0.7106</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6394</td>
+<td>0.4469</td>
+<td>0.4109</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -805,10 +853,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row8-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row8-tab1-header" data-mdb-toggle="tab" href="#row8-tab1" role="tab" aria-controls="row8-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row8-tab1-header" data-mdb-toggle="tab" href="#row8-tab1" role="tab" aria-controls="row8-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row8-tab2-header" data-mdb-toggle="tab" href="#row8-tab2" role="tab" aria-controls="row8-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row8-tab2-header" data-mdb-toggle="tab" href="#row8-tab2" role="tab" aria-controls="row8-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row8-tab3-header" data-mdb-toggle="tab" href="#row8-tab3" role="tab" aria-controls="row8-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -816,12 +867,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row8-content">
   <div class="tab-pane fade show active" id="row8-tab1" role="tabpanel" aria-labelledby="row8-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/rank_zephyr_7b_v1_full \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=meta-llama/Llama-3.1-8B-Instruct \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -834,12 +885,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row8-tab2" role="tabpanel" aria-labelledby="row8-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/rank_zephyr_7b_v1_full \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=meta-llama/Llama-3.1-8B-Instruct \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
@@ -852,10 +903,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row8-tab3" role="tabpanel" aria-labelledby="row8-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=meta-llama/Llama-3.1-8B-Instruct \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -868,21 +925,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: First Mistral -->
+
+<!-- Condition: Gemini 2.0 Flash -->
 <tr class="accordion-toggle collapsed" id="row9" data-toggle="collapse" data-parent="#row9" href="#collapse9">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">First Mistral</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">Gemini 2.0 Flash</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7245</td>
-<td>0.7074</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6807</td>
+<td>0.4805</td>
+<td>0.4650</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -892,10 +947,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row9-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row9-tab1-header" data-mdb-toggle="tab" href="#row9-tab1" role="tab" aria-controls="row9-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row9-tab1-header" data-mdb-toggle="tab" href="#row9-tab1" role="tab" aria-controls="row9-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row9-tab2-header" data-mdb-toggle="tab" href="#row9-tab2" role="tab" aria-controls="row9-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row9-tab2-header" data-mdb-toggle="tab" href="#row9-tab2" role="tab" aria-controls="row9-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row9-tab3-header" data-mdb-toggle="tab" href="#row9-tab3" role="tab" aria-controls="row9-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -903,16 +961,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row9-content">
   <div class="tab-pane fade show active" id="row9-tab1" role="tabpanel" aria-labelledby="row9-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/first_mistral \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=gemini-2.0-flash \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
-  --variable_passages --use_alpha --use_logits
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -921,16 +979,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row9-tab2" role="tabpanel" aria-labelledby="row9-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/first_mistral \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=gemini-2.0-flash \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
   --prompt_mode=rank_GPT  \
   --context_size=4096 \
-  --variable_passages --use_alpha --use_logits
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -939,10 +997,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row9-tab3" role="tabpanel" aria-labelledby="row9-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=gemini-2.0-flash \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT  \
+  --context_size=4096 \
+  --variable_passages
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -955,21 +1019,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: Qwen 2.5 7B Instruct -->
+
+<!-- Condition: RankGPT (gpt-4o-mini) -->
 <tr class="accordion-toggle collapsed" id="row10" data-toggle="collapse" data-parent="#row10" href="#collapse10">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">Qwen 2.5 7B Instruct</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">RankGPT (gpt-4o-mini)</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6930</td>
-<td>0.6368</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6830</td>
+<td>0.4947</td>
+<td>0.4676</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -979,10 +1041,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row10-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row10-tab1-header" data-mdb-toggle="tab" href="#row10-tab1" role="tab" aria-controls="row10-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row10-tab1-header" data-mdb-toggle="tab" href="#row10-tab1" role="tab" aria-controls="row10-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row10-tab2-header" data-mdb-toggle="tab" href="#row10-tab2" role="tab" aria-controls="row10-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row10-tab2-header" data-mdb-toggle="tab" href="#row10-tab2" role="tab" aria-controls="row10-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row10-tab3-header" data-mdb-toggle="tab" href="#row10-tab3" role="tab" aria-controls="row10-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -990,16 +1055,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row10-content">
   <div class="tab-pane fade show active" id="row10-tab1" role="tabpanel" aria-labelledby="row10-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=Qwen/Qwen2.5-7B-Instruct \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_mode=rank_GPT \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1008,16 +1073,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row10-tab2" role="tabpanel" aria-labelledby="row10-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=Qwen/Qwen2.5-7B-Instruct \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_mode=rank_GPT \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1026,10 +1091,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row10-tab3" role="tabpanel" aria-labelledby="row10-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT \
+  --context_size=4096 \
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1042,21 +1113,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: LLaMA 3.1 8B Instruct -->
+
+<!-- Condition: RankGPTAPEER (gpt-4o-mini) -->
 <tr class="accordion-toggle collapsed" id="row11" data-toggle="collapse" data-parent="#row11" href="#collapse11">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">LLaMA 3.1 8B Instruct</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">RankGPTAPEER (gpt-4o-mini)</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6718</td>
-<td>0.6342</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6720</td>
+<td>0.4863</td>
+<td>0.4442</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -1066,10 +1135,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row11-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row11-tab1-header" data-mdb-toggle="tab" href="#row11-tab1" role="tab" aria-controls="row11-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row11-tab1-header" data-mdb-toggle="tab" href="#row11-tab1" role="tab" aria-controls="row11-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row11-tab2-header" data-mdb-toggle="tab" href="#row11-tab2" role="tab" aria-controls="row11-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row11-tab2-header" data-mdb-toggle="tab" href="#row11-tab2" role="tab" aria-controls="row11-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row11-tab3-header" data-mdb-toggle="tab" href="#row11-tab3" role="tab" aria-controls="row11-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -1077,16 +1149,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row11-content">
   <div class="tab-pane fade show active" id="row11-tab1" role="tabpanel" aria-labelledby="row11-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=meta-llama/Llama-3.1-8B-Instruct \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_mode=rank_GPT_APEER \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1095,16 +1167,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row11-tab2" role="tabpanel" aria-labelledby="row11-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=meta-llama/Llama-3.1-8B-Instruct \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_mode=rank_GPT_APEER \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1113,10 +1185,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row11-tab3" role="tabpanel" aria-labelledby="row11-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
-<pre><code>
+<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl23 \
+  --retrieval_method=bm25 \
+  --prompt_mode=rank_GPT_APEER \
+  --context_size=4096 \
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1129,21 +1207,19 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 </div></td>
 </tr>
-<!-- Condition: Gemini 2.0 Flash -->
+
+<!-- Condition: LRL (gpt-4o-mini) -->
 <tr class="accordion-toggle collapsed" id="row12" data-toggle="collapse" data-parent="#row12" href="#collapse12">
 <td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">Gemini 2.0 Flash</td>
+<td style="min-width: 85px">[1]</td>
+<td style="min-width: 400px">LRL (gpt-4o-mini)</td>
 <td>-</td>
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7362</td>
-<td>0.6930</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
+<td>0.6558</td>
+<td>0.4740</td>
+<td>0.4426</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -1153,10 +1229,13 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row12-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row12-tab1-header" data-mdb-toggle="tab" href="#row12-tab1" role="tab" aria-controls="row12-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row12-tab1-header" data-mdb-toggle="tab" href="#row12-tab1" role="tab" aria-controls="row12-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row12-tab2-header" data-mdb-toggle="tab" href="#row12-tab2" role="tab" aria-controls="row12-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row12-tab2-header" data-mdb-toggle="tab" href="#row12-tab2" role="tab" aria-controls="row12-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row12-tab3-header" data-mdb-toggle="tab" href="#row12-tab3" role="tab" aria-controls="row12-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -1164,16 +1243,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 <!-- Tabs content -->
 <div class="tab-content" id="row12-content">
   <div class="tab-pane fade show active" id="row12-tab1" role="tabpanel" aria-labelledby="row12-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=gemini-2.0-flash \
-  --top_k_candidates=100 --dataset=dl19 \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_mode=LRL \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1182,16 +1261,16 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row12-tab2" role="tabpanel" aria-labelledby="row12-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=gemini-2.0-flash \
-  --top_k_candidates=100 --dataset=dl20 \
+  --model_path=gpt-4o-mini \
+  --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_mode=LRL \
   --context_size=4096 \
-  --variable_passages
+  --variable_passages --use_azure_openai
 </code></pre></blockquote>
 
   <blockquote class="mycode">
@@ -1200,237 +1279,12 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row12-tab3" role="tabpanel" aria-labelledby="row12-tab3">
-    Command to generate run on dev queries:
-
-  <blockquote class="mycode">
-<pre><code>
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-</div>
-<!-- Tabs content -->
-
-</div></td>
-</tr>
-<!-- Condition: RankGPT (gpt-4o-mini) -->
-<tr class="accordion-toggle collapsed" id="row13" data-toggle="collapse" data-parent="#row13" href="#collapse13">
-<td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">RankGPT (gpt-4o-mini)</td>
-<td>-</td>
-<td>BM25</td>
-<td>100</td>
-<td></td>
-<td>0.7306</td>
-<td>0.6781</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr class="hide-table-padding">
-<td></td>
-<td colspan="11">
-<div id="collapse13" class="collapse in p-3">
-
-<!-- Tabs navs -->
-<ul class="nav nav-tabs mb-3" id="row13-tabs" role="tablist">
-  <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row13-tab1-header" data-mdb-toggle="tab" href="#row13-tab1" role="tab" aria-controls="row13-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
-  </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row13-tab2-header" data-mdb-toggle="tab" href="#row13-tab2" role="tab" aria-controls="row13-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
-  </li>
-</ul>
-<!-- Tabs navs -->
-
-<!-- Tabs content -->
-<div class="tab-content" id="row13-content">
-  <div class="tab-pane fade show active" id="row13-tab1" role="tabpanel" aria-labelledby="row13-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gpt-4o-mini \
-  --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT \
-  --context_size=4096 \
-  --variable_passages --use_azure_openai
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-  <div class="tab-pane fade" id="row13-tab2" role="tabpanel" aria-labelledby="row13-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
-
-  <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=gpt-4o-mini \
-  --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT \
-  --context_size=4096 \
-  --variable_passages --use_azure_openai
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-  <div class="tab-pane fade" id="row13-tab3" role="tabpanel" aria-labelledby="row13-tab3">
-    Command to generate run on dev queries:
-
-  <blockquote class="mycode">
-<pre><code>
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-</div>
-<!-- Tabs content -->
-
-</div></td>
-</tr>
-<!-- Condition: RankGPTAPEER (gpt-4o-mini) -->
-<tr class="accordion-toggle collapsed" id="row14" data-toggle="collapse" data-parent="#row14" href="#collapse14">
-<td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">RankGPTAPEER (gpt-4o-mini)</td>
-<td>-</td>
-<td>BM25</td>
-<td>100</td>
-<td></td>
-<td>0.7278</td>
-<td>0.6912</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr class="hide-table-padding">
-<td></td>
-<td colspan="11">
-<div id="collapse14" class="collapse in p-3">
-
-<!-- Tabs navs -->
-<ul class="nav nav-tabs mb-3" id="row14-tabs" role="tablist">
-  <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row14-tab1-header" data-mdb-toggle="tab" href="#row14-tab1" role="tab" aria-controls="row14-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
-  </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row14-tab2-header" data-mdb-toggle="tab" href="#row14-tab2" role="tab" aria-controls="row14-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
-  </li>
-</ul>
-<!-- Tabs navs -->
-
-<!-- Tabs content -->
-<div class="tab-content" id="row14-content">
-  <div class="tab-pane fade show active" id="row14-tab1" role="tabpanel" aria-labelledby="row14-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
-
-  <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=gpt-4o-mini \
-  --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT_APEER \
-  --context_size=4096 \
-  --variable_passages --use_azure_openai
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-  <div class="tab-pane fade" id="row14-tab2" role="tabpanel" aria-labelledby="row14-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
-
-  <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=gpt-4o-mini \
-  --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT_APEER \
-  --context_size=4096 \
-  --variable_passages --use_azure_openai
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-  <div class="tab-pane fade" id="row14-tab3" role="tabpanel" aria-labelledby="row14-tab3">
-    Command to generate run on dev queries:
-
-  <blockquote class="mycode">
-<pre><code>
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-</div>
-<!-- Tabs content -->
-
-</div></td>
-</tr>
-<!-- Condition: LRL (gpt-4o-mini) -->
-<tr class="accordion-toggle collapsed" id="row15" data-toggle="collapse" data-parent="#row15" href="#collapse15">
-<td class="expand-button"></td>
-<td style="min-width: 85px">[4]</td>
-<td style="min-width: 400px">LRL (gpt-4o-mini)</td>
-<td>-</td>
-<td>BM25</td>
-<td>100</td>
-<td></td>
-<td>0.7149</td>
-<td>0.6722</td>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr class="hide-table-padding">
-<td></td>
-<td colspan="11">
-<div id="collapse15" class="collapse in p-3">
-
-<!-- Tabs navs -->
-<ul class="nav nav-tabs mb-3" id="row15-tabs" role="tablist">
-  <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row15-tab1-header" data-mdb-toggle="tab" href="#row15-tab1" role="tab" aria-controls="row15-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
-  </li>
-  <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row15-tab2-header" data-mdb-toggle="tab" href="#row15-tab2" role="tab" aria-controls="row15-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
-  </li>
-</ul>
-<!-- Tabs navs -->
-
-<!-- Tabs content -->
-<div class="tab-content" id="row15-content">
-  <div class="tab-pane fade show active" id="row15-tab1" role="tabpanel" aria-labelledby="row15-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
-
-  <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=gpt-4o-mini \
-  --top_k_candidates=100 --dataset=dl19 \
+  --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
   --prompt_mode=LRL \
   --context_size=4096 \
@@ -1442,41 +1296,12 @@ Command to generate and evaluate run on TREC 2019 queries:
   </blockquote>
 
   </div>
-  <div class="tab-pane fade" id="row15-tab2" role="tabpanel" aria-labelledby="row15-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
-
-  <blockquote class="mycode">
-<pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=gpt-4o-mini \
-  --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 \
-  --prompt_mode=LRL \
-  --context_size=4096 \
-  --variable_passages --use_azure_openai
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
-  <div class="tab-pane fade" id="row15-tab3" role="tabpanel" aria-labelledby="row15-tab3">
-    Command to generate run on dev queries:
-
-  <blockquote class="mycode">
-<pre><code>
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code></code></pre>
-  </blockquote>
-
-  </div>
 </div>
 <!-- Tabs content -->
 
 </div></td>
 </tr>
+
 
     </tbody>
   </table>
@@ -1484,21 +1309,11 @@ Command to generate and evaluate run on TREC 2019 queries:
 
 <ul style="list-style-type:none; padding-top: 25px">
 
-<li><p>[1] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
-<a href="https://arxiv.org/pdf/2309.15088.pdf">RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models.</a>
-<i>arXiv:2309.15088</i>, September 2023.</p>
+<li><p>[1] PLACEHOLDER
+<a href="https://arxiv.org/pdf/2309.15088.pdf">PLACEHOLDER</a>
+<i>PLACEHOLDER</i>, PLACEHOLDER</p>
 
-<li><p>[2] Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin.
-<a href="https://arxiv.org/pdf/2312.02724.pdf">RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!</a>
-<i>arXiv:2312.02724</i>, December 2023.</p>
 
-<li><p>[3] Thibault Formal, Carlos Lassance, Benjamin Piwowarski, and Stéphane Clinchant
-<a href="https://arxiv.org/abs/2205.04733">From Distillation to Hard Negative Sampling: Making Sparse Neural IR Models More Effective.</a>
-<i>Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2022), May 2022.</i></p></li>
-
-<li><p>[4] PLACEHOLDER
-<a href="https://arxiv.org/abs/2205.04733">PLACEHOLDER</a>
-<i>PLACEHOLDER</i></p></li>
 </ul>
 
 <div style="padding-top: 20px"/>
@@ -1519,7 +1334,7 @@ To list all the experimental conditions:</p>
 
 
 <blockquote class="mycode2"><tt>
-python -m src.rank_llm.2cr.msmarco --collection v1-passage --list-conditions
+python -m src.rank_llm.2cr.msmarco --collection v2-passage --list-conditions
 </tt></blockquote>
 
 <p>These conditions correspond to the table rows above.</p>
@@ -1527,13 +1342,13 @@ python -m src.rank_llm.2cr.msmarco --collection v1-passage --list-conditions
 <p>For all conditions, just show the commands in a "dry run":</p>
 
 <blockquote class="mycode2"><tt>
-python -m src.rank_llm.2cr.msmarco --collection v1-passage --all --display-commands --dry-run
+python -m src.rank_llm.2cr.msmarco --collection v2-passage --all --display-commands --dry-run
 </tt></blockquote>
 
 <p>To actually run all the experimental conditions:</p>
 
 <blockquote class="mycode2"><tt>
-python -m src.rank_llm.2cr.msmarco --collection v1-passage --all --display-commands
+python -m src.rank_llm.2cr.msmarco --collection v2-passage --all --display-commands
 </tt></blockquote>
 
 <p>With the above command, run files will be placed in the current directory.
@@ -1542,7 +1357,7 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>To show the commands for a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m src.rank_llm.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands --dry-run
+python -m src.rank_llm.2cr.msmarco --collection v2-passage --condition lrl --display-commands --dry-run
 </tt></blockquote>
 
 <p>This will generate exactly the commands for a specific condition above (corresponding to a row in the table).</p>
@@ -1550,7 +1365,7 @@ python -m src.rank_llm.2cr.msmarco --collection v1-passage --condition bm25-defa
 <p>To actually run a specific condition:</p>
 
 <blockquote class="mycode2"><tt>
-python -m src.rank_llm.2cr.msmarco --collection v1-passage --condition bm25-default --display-commands
+python -m src.rank_llm.2cr.msmarco --collection v2-passage --condition lrl --display-commands
 </tt></blockquote>
 
 <p>Again, with the above command, run files will be placed in the current directory.
@@ -1559,10 +1374,10 @@ Use the option <tt>--directory runs/</tt> to place the runs in a sub-directory.<
 <p>Finally, to generate this page:</p>
 
 <blockquote class="mycode2"><tt>
-python -m src.rank_llm.2cr.msmarco --collection v1-passage --generate-report --output msmarco-v1-passage.html
+python -m src.rank_llm.2cr.msmarco --collection v2-passage --generate-report --output msmarco-v2-passage.html
 </tt></blockquote>
 
-<p>The output file <tt>msmarco-v1-passage.html</tt> should be identical to this page.</p>
+<p>The output file <tt>msmarco-v2-passage.html</tt> should be identical to this page.</p>
 
 <div style="padding-top: 50px"/>
 

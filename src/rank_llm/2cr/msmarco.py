@@ -26,6 +26,7 @@ from string import Template
 
 import pkg_resources
 import yaml
+import re
 
 from ._base import fail_str, ok_str, okish_str, run_eval_and_return_metric
 
@@ -41,7 +42,34 @@ models = {
         "rank_vicuna_7b_v1",
         "rank_zephyr_7b_v1_full",
         "rank_zephyr_7b_v1_full_mult_pass",
-    ]
+        "monot5",
+        "duot5",
+        "lit5distill",
+        "rankvicuna",
+        "rankzephyr",
+        "firstmistral",
+        "qwen_2.5_7b_inst",
+        "llama_3.1_8b_inst",
+        "gemini_flash_2.0",
+        "rankgpt",
+        "rankgptapeer",
+        "lrl",
+    ],
+    # MS MARCO v2 passage
+    "msmarco-v2-passage": [
+        "monot5",
+        "duot5",
+        "lit5distill",
+        "rankvicuna",
+        "rankzephyr",
+        "firstmistral",
+        "qwen_2.5_7b_inst",
+        "llama_3.1_8b_inst",
+        "gemini_2.0_flash",
+        "rankgpt",
+        "rankgptapeer",
+        "lrl",
+    ],
     #  ,
     # # MS MARCO v1 doc
     # 'msmarco-v1-doc':
@@ -69,6 +97,23 @@ trec_eval_metric_definitions = {
             # 'R@1K': '-c -l 2 -m recall.1000'
         },
         "dl20-passage": {
+            # 'MAP': '-c -l 2 -m map',
+            "nDCG@10": "-c -m ndcg_cut.10",
+            # 'R@1K': '-c -l 2 -m recall.1000'
+        },
+    },
+    "msmarco-v2-passage": {
+        "dl21-passage": {
+            # 'MAP': '-c -l 2 -m map',
+            "nDCG@10": "-c -m ndcg_cut.10",
+            # 'R@1K': '-c -l 2 -m recall.1000'
+        },
+        "dl22-passage": {
+            # 'MAP': '-c -l 2 -m map',
+            "nDCG@10": "-c -m ndcg_cut.10",
+            # 'R@1K': '-c -l 2 -m recall.1000'
+        },
+        "dl23-passage": {
             # 'MAP': '-c -l 2 -m map',
             "nDCG@10": "-c -m ndcg_cut.10",
             # 'R@1K': '-c -l 2 -m recall.1000'
@@ -106,6 +151,10 @@ def find_msmarco_table_topic_set_key_v2(topic_key):
         key = "dev2"
     elif topic_key.startswith("dl21"):
         key = "dl21"
+    elif topic_key.startswith("dl22"):
+        key = "dl22"
+    elif topic_key.startswith("dl23"):
+        key = "dl23"
 
     return key
 
@@ -279,14 +328,14 @@ def generate_report(args):
                     else "-"
                 ),
                 s2=(
-                    f'{table[name]["dl20"]["MAP"]:.4f}'
-                    if table[name]["dl20"]["MAP"] != 0
-                    else "SPLADE++ EnsembleDistil"
+                    "SPLADE++ EnsembleDistil"
+                    if "SPLADE++_EnsembleDistil_ONNX" in commands[name]["dl19"]
+                    else "BM25"
                 ),
                 s3=(
-                    f'{table[name]["dl19"]["R@1K"]:.4f}'
-                    if table[name]["dl19"]["R@1K"] != 0
-                    else "100"
+                    re.search(r"--top_k_candidates=(\d+)", commands[name]["dl19"]).group(1)
+                    if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl19"])
+                    else "-"
                 ),
                 s4=(
                     f'{table[name]["dl19"]["nDCG@10"]:.4f}'
@@ -344,6 +393,57 @@ def generate_report(args):
             full_name = "MS MARCO V1 Passage"
         else:
             full_name = "MS MARCO V1 Document"
+
+        with open(args.output, "w") as out:
+            out.write(
+                Template(html_template).substitute(title=full_name, rows=all_rows)
+            )
+    elif args.collection == "msmarco-v2-passage":  # v2 passage
+        html_rows = []
+        row_cnt = 1
+        for name in models[args.collection]:
+            if not name:
+                # Add blank row for spacing
+                html_rows.append('<tr><td style="border-bottom: 0"></td></tr>')
+                continue
+
+            s = Template(row_template).substitute(
+                row_cnt=row_cnt,
+                condition_name=table_keys[name],
+                row=row_ids[name],
+                s1=(
+                    f'{table[name]["dl19"]["MULT"]:.0f}'
+                    if table[name]["dl19"]["MULT"] != 0
+                    else "-"
+                ),
+                s2=(
+                    "SPLADE++ EnsembleDistil"
+                    if "SPLADE++_EnsembleDistil_ONNX" in commands[name]["dl19"]
+                    else "BM25"
+                ),
+                s3=(
+                    re.search(r"--top_k_candidates=(\d+)", commands[name]["dl21"]).group(1)
+                    if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl21"])
+                    else "-"
+                ),
+                s4=f'{table[name]["dl21"].get("nDCG@10", 0):.4f}' if "dl21" in table[name] else "-",
+                s5=f'{table[name]["dl22"].get("nDCG@10", 0):.4f}' if "dl22" in table[name] else "-",
+                s6=f'{table[name]["dl23"].get("nDCG@10", 0):.4f}' if "dl23" in table[name] else "-",
+                cmd1=format_command(commands[name].get("dl21", "")),
+                cmd2=format_command(commands[name].get("dl22", "")),
+                cmd3=format_command(commands[name].get("dl23", "")),
+                eval_cmd1=format_eval_command(eval_commands[name].get("dl21", "")),
+                eval_cmd2=format_eval_command(eval_commands[name].get("dl22", "")),
+                eval_cmd3=format_eval_command(eval_commands[name].get("dl23", ""))
+            )
+            html_rows.append(s)
+            row_cnt += 1
+        
+        all_rows = "\n".join(html_rows)
+        if args.collection == "msmarco-v2-passage":
+            full_name = "MS MARCO V2 Passage"
+        else:
+            full_name = "MS MARCO V2 Document"
 
         with open(args.output, "w") as out:
             out.write(
@@ -620,6 +720,38 @@ def run_conditions(args):
                     + f'{table[name]["dl19"]["MAP"]:8.4f}{table[name]["dl19"]["nDCG@10"]:8.4f}{table[name]["dl19"]["R@1K"]:8.4f}  '
                     + f'{table[name]["dl20"]["MAP"]:8.4f}{table[name]["dl20"]["nDCG@10"]:8.4f}{table[name]["dl20"]["R@1K"]:8.4f}  '
                     + f'{table[name]["dev"]["MRR@10"]:8.4f}{table[name]["dev"]["R@1K"]:8.4f}'
+                )
+    elif args.collection == "msmarco-v2-passage":
+        print(
+            " " * 50 + "TREC 2021" + " " * 14 + "TREC 2022" + " " * 14 + "TREC 2023"
+        )
+        print(
+            " " * 50 + "nDCG@10" + " " * 14 + "nDCG@10" + " " * 14 + "nDCG@10"
+        )
+        print(" " * 50 + "-" * 8 + " " * 14 + "-" * 8 + " " * 14 + "-" * 8)
+
+        if args.condition:
+            name = args.condition
+            print(
+                f"{table_keys[name]:48}"
+                + f'{table[name]["dl21"]["nDCG@10"]:8.4f}'
+                + " " * 14
+                + f'{table[name]["dl22"]["nDCG@10"]:8.4f}'
+                + " " * 14
+                + f'{table[name]["dl23"]["nDCG@10"]:8.4f}'
+            )
+        else:
+            for name in models[args.collection]:
+                if not name:
+                    print("")
+                    continue
+                print(
+                    f"{table_keys[name]:48}"
+                    + f'{table[name]["dl21"]["nDCG@10"]:8.4f}'
+                    + " " * 14
+                    + f'{table[name]["dl22"]["nDCG@10"]:8.4f}'
+                    + " " * 14
+                    + f'{table[name]["dl23"]["nDCG@10"]:8.4f}'
                 )
     else:
         print(
