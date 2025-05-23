@@ -1,10 +1,12 @@
 import copy
+import json
 import logging
+import random
 import re
 from abc import ABC
 from datetime import datetime
 from functools import cmp_to_key
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ftfy import fix_text
 from tqdm import tqdm
@@ -25,11 +27,15 @@ class PairwiseRankLLM(RankLLM, ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
+        num_few_shot_examples: int,
+        few_shot_file: Optional[str],
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,
     ) -> None:
         super().__init__(model, context_size, prompt_mode)
+        self._num_few_shot_examples = num_few_shot_examples
+        self._few_shot_file = few_shot_file
         self._device = device
         self._filename = filename
         self._batch_size = batch_size
@@ -184,3 +190,50 @@ class PairwiseRankLLM(RankLLM, ABC):
         # For Japanese should cut by character: content = content[:int(max_length)]
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
+
+    def _load_few_shot_examples(self, file_path: str):
+        try:
+            with open(file_path, "r") as json_file:
+                self._examples = json.load(json_file)
+        except FileNotFoundError:
+            raise ValueError(f"Few-shot examples file not found: {file_path}")
+        except json.JSONDecodeError:
+            raise ValueError(
+                f"Invalid JSON format in few-shot examples file: {file_path}"
+            )
+
+    def _build_pairwise_few_shot_examples(self) -> str:
+        if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
+            examples = []
+            for _ in range(min(self._num_few_shot_examples, len(self._examples))):
+                ex = random.choice(self._examples)
+                try:
+                    # assume each value for conversation contain 2 values (user query + docs, asssistant response)
+                    example_query = (
+                        ex["conversations"][0]["value"]
+                        .split("Query: ")[-1]
+                        .split("Document0: ")[0]
+                        .strip()
+                    )
+                    example_doc0 = (
+                        ex["conversations"][0]["value"]
+                        .split(" Document0: ")[-1]
+                        .split("Document1: ")[0]
+                        .strip()
+                    )
+                    example_doc1 = (
+                        ex["conversations"][0]["value"]
+                        .split(" Document1: ")[-1]
+                        .strip()
+                    )
+                    example_relevance = ex["conversations"][1]["value"].strip()
+
+                    examples.append(
+                        f"Query: {example_query} Document0: {example_doc0} Document1: {example_doc1} Relevant: {example_relevance}"
+                    )
+                except (json.JSONDecodeError, KeyError, IndexError):
+                    continue
+
+            return "\n\n".join(examples) + "\n\n" if examples else ""
+        else:
+            return ""

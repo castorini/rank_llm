@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
@@ -12,6 +12,7 @@ class ZephyrReranker:
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         device: str = "cuda",
         num_gpus: int = 1,
         variable_passages: bool = True,
@@ -23,6 +24,7 @@ class ZephyrReranker:
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
             device=device,
             num_gpus=num_gpus,
             variable_passages=variable_passages,

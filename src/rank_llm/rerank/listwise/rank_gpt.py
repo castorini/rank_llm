@@ -19,13 +19,14 @@ class SafeOpenai(ListwiseRankLLM):
         context_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         keys=None,
         key_start_id=None,
         proxy=None,
-        api_type: str = None,
-        api_base: str = None,
-        api_version: str = None,
+        api_type: Optional[str] = None,
+        api_base: Optional[str] = None,
+        api_version: Optional[str] = None,
     ) -> None:
         """
         Creates instance of the SafeOpenai class, a specialized version of RankLLM designed for safely handling OpenAI API calls with
@@ -55,7 +56,12 @@ class SafeOpenai(ListwiseRankLLM):
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, window_size
+            model,
+            context_size,
+            prompt_mode,
+            num_few_shot_examples,
+            window_size,
+            few_shot_file,
         )
         if isinstance(keys, str):
             keys = [keys]
@@ -77,6 +83,13 @@ class SafeOpenai(ListwiseRankLLM):
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
         self.use_azure_ai = False
+
+        if num_few_shot_examples > 0:
+            if not few_shot_file:
+                raise ValueError(
+                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
+                )
+            self._load_few_shot_examples(few_shot_file)
 
         if all([api_type, api_base, api_version]):
             # See https://learn.microsoft.com/en-US/azure/ai-services/openai/reference for list of supported versions
@@ -266,11 +279,16 @@ class SafeOpenai(ListwiseRankLLM):
 
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            messages = (
+            prefix_messasge = (
                 self._get_prefix_for_rank_gpt_apeer_prompt(query, num)
                 if self._prompt_mode == PromptMode.RANK_GPT_APEER
                 else self._get_prefix_for_rank_gpt_prompt(query, num)
             )
+
+            prefix_message_system = [prefix_messasge[0]]
+            messages = self._add_few_shot_examples_messages(prefix_message_system)
+            messages.append(prefix_messasge[1])
+
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
@@ -319,7 +337,11 @@ class SafeOpenai(ListwiseRankLLM):
         max_length = 300 * (20 / (rank_end - rank_start))
         psg_ids = []
         while True:
+            messages = []
+            messages = self._add_few_shot_examples_messages(messages)
+
             message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
+
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
@@ -331,7 +353,9 @@ class SafeOpenai(ListwiseRankLLM):
             message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
             message += "Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.\n"
             message += "SORTED_PASSAGES = "
-            messages = [{"role": "user", "content": message}]
+
+            messages.append({"role": "user", "content": message})
+
             num_tokens = self.get_num_tokens(messages)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
