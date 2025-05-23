@@ -18,6 +18,7 @@ import argparse
 import glob
 import math
 import os
+import re
 import sys
 import time
 from collections import defaultdict
@@ -26,7 +27,6 @@ from string import Template
 
 import pkg_resources
 import yaml
-import re
 
 from ._base import fail_str, ok_str, okish_str, run_eval_and_return_metric
 
@@ -118,7 +118,7 @@ trec_eval_metric_definitions = {
             "nDCG@10": "-c -m ndcg_cut.10",
             # 'R@1K': '-c -l 2 -m recall.1000'
         },
-    }
+    },
 }
 
 
@@ -333,7 +333,9 @@ def generate_report(args):
                     else "BM25"
                 ),
                 s3=(
-                    re.search(r"--top_k_candidates=(\d+)", commands[name]["dl19"]).group(1)
+                    re.search(
+                        r"--top_k_candidates=(\d+)", commands[name]["dl19"]
+                    ).group(1)
                     if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl19"])
                     else "-"
                 ),
@@ -422,23 +424,31 @@ def generate_report(args):
                     else "BM25"
                 ),
                 s3=(
-                    re.search(r"--top_k_candidates=(\d+)", commands[name]["dl21"]).group(1)
+                    re.search(
+                        r"--top_k_candidates=(\d+)", commands[name]["dl21"]
+                    ).group(1)
                     if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl21"])
                     else "-"
                 ),
-                s4=f'{table[name]["dl21"].get("nDCG@10", 0):.4f}' if "dl21" in table[name] else "-",
-                s5=f'{table[name]["dl22"].get("nDCG@10", 0):.4f}' if "dl22" in table[name] else "-",
-                s6=f'{table[name]["dl23"].get("nDCG@10", 0):.4f}' if "dl23" in table[name] else "-",
+                s4=f'{table[name]["dl21"].get("nDCG@10", 0):.4f}'
+                if "dl21" in table[name]
+                else "-",
+                s5=f'{table[name]["dl22"].get("nDCG@10", 0):.4f}'
+                if "dl22" in table[name]
+                else "-",
+                s6=f'{table[name]["dl23"].get("nDCG@10", 0):.4f}'
+                if "dl23" in table[name]
+                else "-",
                 cmd1=format_command(commands[name].get("dl21", "")),
                 cmd2=format_command(commands[name].get("dl22", "")),
                 cmd3=format_command(commands[name].get("dl23", "")),
                 eval_cmd1=format_eval_command(eval_commands[name].get("dl21", "")),
                 eval_cmd2=format_eval_command(eval_commands[name].get("dl22", "")),
-                eval_cmd3=format_eval_command(eval_commands[name].get("dl23", ""))
+                eval_cmd3=format_eval_command(eval_commands[name].get("dl23", "")),
             )
             html_rows.append(s)
             row_cnt += 1
-        
+
         all_rows = "\n".join(html_rows)
         if args.collection == "msmarco-v2-passage":
             full_name = "MS MARCO V2 Passage"
@@ -722,12 +732,8 @@ def run_conditions(args):
                     + f'{table[name]["dev"]["MRR@10"]:8.4f}{table[name]["dev"]["R@1K"]:8.4f}'
                 )
     elif args.collection == "msmarco-v2-passage":
-        print(
-            " " * 50 + "TREC 2021" + " " * 14 + "TREC 2022" + " " * 14 + "TREC 2023"
-        )
-        print(
-            " " * 50 + "nDCG@10" + " " * 14 + "nDCG@10" + " " * 14 + "nDCG@10"
-        )
+        print(" " * 50 + "TREC 2021" + " " * 14 + "TREC 2022" + " " * 14 + "TREC 2023")
+        print(" " * 50 + "nDCG@10" + " " * 14 + "nDCG@10" + " " * 14 + "nDCG@10")
         print(" " * 50 + "-" * 8 + " " * 14 + "-" * 8 + " " * 14 + "-" * 8)
 
         if args.condition:
