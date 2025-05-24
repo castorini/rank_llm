@@ -476,6 +476,7 @@ class Reranker:
                 reasoning_token_budget,
                 use_logits,
                 use_alpha,
+                hf_home,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
@@ -494,6 +495,7 @@ class Reranker:
                 reasoning_token_budget=reasoning_token_budget,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
+                hf_home=hf_home,
             )
 
             print(f"Completed loading {model_path}")
