@@ -41,7 +41,6 @@ def retrieve_and_rerank(
             model_path,
             default_model_coordinator,
             interactive,
-            hf_home=kwargs.get("hf_home"),
             **kwargs,
         )
     )

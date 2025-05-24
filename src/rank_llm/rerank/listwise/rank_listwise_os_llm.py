@@ -1,5 +1,4 @@
 import logging
-import os
 import random
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
@@ -170,7 +169,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 else:
                     self._llm = LLM(
                         model,
-                        download_dir=os.getenv("HF_HOME"),
+                        download_dir=self._hf_home + "/hub",
                         enforce_eager=False,
                         max_logprobs=30,
                         tensor_parallel_size=num_gpus,
