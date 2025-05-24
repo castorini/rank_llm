@@ -53,6 +53,11 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 conda install -c conda-forge openjdk=21 maven -y
 ```
 
+### Install retriever dependencies if you want to use the retriever
+```bash
+pip install "rank-llm[pyserini]"
+```
+
 ## Install Dependencies
 ```bash
 pip install -r requirements.txt
