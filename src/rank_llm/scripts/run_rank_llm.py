@@ -9,6 +9,9 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
+default_hf_home = os.path.join(os.getcwd(), "cache", "llms")
+os.makedirs(default_hf_home, exist_ok=True)
+
 from rank_llm.rerank import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
@@ -27,6 +30,7 @@ def main(args):
     retrieval_method = args.retrieval_method
     prompt_mode = args.prompt_mode
     num_few_shot_examples = args.num_few_shot_examples
+    few_shot_file = args.few_shot_file
     shuffle_candidates = args.shuffle_candidates
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
@@ -41,6 +45,7 @@ def main(args):
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
+    hf_home = args.hf_home
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -56,12 +61,14 @@ def main(args):
         num_gpus=num_gpus,
         prompt_mode=prompt_mode,
         num_few_shot_examples=num_few_shot_examples,
+        few_shot_file=few_shot_file,
         shuffle_candidates=shuffle_candidates,
         print_prompts_responses=print_prompts_responses,
         use_azure_openai=use_azure_openai,
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
+        hf_home=hf_home,
         stride=stride,
         system_message=system_message,
         use_logits=use_logits,
@@ -148,6 +155,13 @@ if __name__ == "__main__":
         help="number of in context examples to provide",
     )
     parser.add_argument(
+        "--few_shot_file",
+        type=str,
+        required=False,
+        default=None,
+        help="path to JSONL file containing few-shot examples.",
+    )
+    parser.add_argument(
         "--variable_passages",
         action="store_true",
         help="whether the model can account for variable number of passages in input",
@@ -176,6 +190,13 @@ if __name__ == "__main__":
         type=str,
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
+    )
+    parser.add_argument(
+        "--hf_home",
+        type=str,
+        default=default_hf_home,
+        required=False,
+        help=f"the hugging face home directory to save and load stored models (default: {default_hf_home})",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
     parser.add_argument(

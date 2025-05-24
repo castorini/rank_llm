@@ -1,3 +1,4 @@
+import random
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -40,14 +41,26 @@ class SafeGenai(ListwiseRankLLM):
         context_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         keys=None,
         key_start_id=None,
         **kwargs,
     ):
         super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, window_size
+            model,
+            context_size,
+            prompt_mode,
+            num_few_shot_examples,
+            window_size,
+            few_shot_file,
         )
+        if num_few_shot_examples > 0:
+            if not few_shot_file:
+                raise ValueError(
+                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
+                )
+            self._load_few_shot_examples(few_shot_file)
         if not genai:
             raise ImportError(
                 'Please install genai with `pip install -U -q "google-generativeai>=0.8.2"` to use gemini.'
@@ -162,17 +175,46 @@ class SafeGenai(ListwiseRankLLM):
 
     def _add_post_prompt(self, query: str, num: int) -> str:
         if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-            f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend], e.g., [rankstart] [1] > ... > [2] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
+            return f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend], e.g., [rankstart] [1] > ... > [2] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
         return f"\nSearch Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [2] > [1], Only respond with the ranking results, do not say any word or explain."
+
+    def _add_few_shot_examples_text(self, text_prompt: str) -> str:
+        """Adds few-shot examples to a text prompt, returning the combined string."""
+
+        if (
+            self._num_few_shot_examples > 0
+            and hasattr(self, "_examples")
+            and self._examples
+        ):
+            examples_text = []
+            for _ in range(min(self._num_few_shot_examples, len(self._examples))):
+                ex = random.choice(self._examples)
+
+                if "conversations" in ex and len(ex) >= 2:
+                    examples_text.append(
+                        f"Example Input:\n{ex['conversations'][0]['value'].strip()}\n"
+                        f"Example Output:\n{ex['conversations'][1]['value'].strip()}"
+                    )
+
+            final_text = (
+                "In response to the query: [querystart] {QUERY} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
+                + f"Examples:\n"
+                + "\n\n".join(examples_text)
+            )
+            return final_text if examples_text else text_prompt
+        else:
+            return text_prompt
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
+    ) -> Tuple[str, int]:
         query = result.query.text
         num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            message = self._add_prefix_prompt(query, num)
+            message = self._add_few_shot_examples_text("")
+            message += self._add_prefix_prompt(query, num)
+
             rank = 0
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
