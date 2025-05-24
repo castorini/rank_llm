@@ -1,5 +1,4 @@
 import logging
-import os
 import random
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
