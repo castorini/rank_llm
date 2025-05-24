@@ -38,7 +38,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
         model: str,
-        hf_home: str,
+        hf_home: Optional[str] = "cache/llms",
         name: str = "",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
