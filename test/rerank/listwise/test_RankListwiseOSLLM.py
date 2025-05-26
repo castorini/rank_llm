@@ -189,34 +189,36 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.patcher_cuda = patch("torch.cuda.is_available", return_value=True)
         self.mock_cuda = self.patcher_cuda.start()
 
-        # Patch DeviceConfig to prevent actual device resolution
-        self.patcher_device_config = patch("vllm.config.DeviceConfig", autospec=True)
-        self.mock_device_config = self.patcher_device_config.start()
-
-        # Patch LLMEngine to avoid real model loading
-        self.patcher_llm_engine = patch(
-            "vllm.engine.llm_engine.LLMEngine", autospec=True
-        )
-        self.mock_llm_engine = self.patcher_llm_engine.start()
-
         # Mock tokenizer
         self.mock_tokenizer = MagicMock()
         self.mock_tokenizer.apply_chat_template.side_effect = (
             lambda messages, **kwargs: str(messages)
         )
 
-        # Patch vllm.LLM to return mocked instance
-        self.patcher_vllm = patch("vllm.LLM", autospec=True)
-        self.mock_vllm_class = self.patcher_vllm.start()
-        self.mock_vllm_instance = self.mock_vllm_class.return_value
-        self.mock_vllm_instance.get_tokenizer.return_value = self.mock_tokenizer
-        self.mock_vllm_instance.generate.return_value = ["Mock response"]
+        # Create mock LLM instance
+        self.mock_llm = MagicMock()
+        self.mock_llm.get_tokenizer.return_value = self.mock_tokenizer
+        self.mock_llm.generate.return_value = ["Mock response"]
+
+        # Patch vLLM (imported in RankListwiseOSLLM)
+        self.patchers = [
+            patch(
+                "rank_llm.rerank.listwise.rank_listwise_os_llm.LLM",
+                return_value=self.mock_llm,
+            ),
+            patch("vllm.config.DeviceConfig", autospec=True),
+            patch("vllm.engine.llm_engine.LLMEngine", autospec=True),
+            patch("vllm.engine.arg_utils.EngineArgs", autospec=True),
+            patch.dict("os.environ", {"VLLM_DEVICE": "cpu"}),
+        ]
+
+        for p in self.patchers:
+            p.start()
 
     def tearDown(self):
         self.patcher_cuda.stop()
-        self.patcher_device_config.stop()
-        self.patcher_llm_engine.stop()
-        self.patcher_vllm.stop()
+        for p in self.patchers:
+            p.stop()
 
     def test_valid_inputs(self):
         for (
