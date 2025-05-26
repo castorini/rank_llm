@@ -195,18 +195,31 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             lambda messages, **kwargs: str(messages)
         )
 
-        # Mock vllm.LLM
-        self.patcher_vllm = patch("vllm.LLM", autospec=True)
-        self.mock_vllm_class = self.patcher_vllm.start()
-        self.mock_vllm_instance = self.mock_vllm_class.return_value
-        self.mock_vllm_instance.get_tokenizer.return_value = self.mock_tokenizer
+        # Create deep mock of vLLM and its internals
+        self.mock_llm = MagicMock()
+        self.mock_llm.get_tokenizer.return_value = self.mock_tokenizer
+        self.mock_llm.generate.return_value = ["Mock response"]
 
-        # Mock generate method
-        self.mock_vllm_instance.generate.return_value = ["Mock response"]
+        self.patchers = [
+            patch("vllm.LLM", return_value=self.mock_llm),
+            patch("vllm.config.DeviceConfig", autospec=True),
+            patch("vllm.engine.llm_engine.LLMEngine", autospec=True),
+            patch("vllm.engine.arg_utils.EngineArgs", autospec=True),
+            patch.dict("os.environ", {"VLLM_DEVICE": "cpu"}),
+        ]
+
+        for p in self.patchers:
+            p.start()
+
+        self.sampling_params_patcher = patch("vllm.SamplingParams", autospec=True)
+        self.mock_sampling_params = self.sampling_params_patcher.start()
 
     def tearDown(self):
         self.patcher_cuda.stop()
-        self.patcher_vllm.stop()
+        self.sampling_params_patcher.stop()
+
+        for p in self.patchers:
+            p.stop()
 
     def test_valid_inputs(self):
         for (
