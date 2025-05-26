@@ -274,6 +274,7 @@ class Reranker:
                 ("tensorrt_batched", False),
                 ("use_logits", False),
                 ("use_alpha", False),
+                ("hf_home", "cache/llms"),
             ]
             [
                 context_size,
@@ -304,7 +305,6 @@ class Reranker:
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 device=device,
-                hf_home=hf_home,
                 num_gpus=num_gpus,
                 variable_passages=variable_passages,
                 window_size=window_size,
@@ -461,6 +461,7 @@ class Reranker:
                 ("reasoning_token_budget", 10000),
                 ("use_logits", False),
                 ("use_alpha", False),
+                ("hf_home", "cache/llms"),
             ]
             [
                 context_size,
