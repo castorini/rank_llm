@@ -153,6 +153,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
                 )
 
+                if "rank_vicuna" in model:
+                    setattr(
+                        self._tokenizer,
+                        "chat_template",
+                        """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}
+                        {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
+                    )
+
     def rerank_batch(
         self,
         requests: List[Request],
