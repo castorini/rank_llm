@@ -185,41 +185,38 @@ r = from_dict(
 
 class TestRankListwiseOSLLM(unittest.TestCase):
     def setUp(self):
-        # Patch cuda availability check
+        # Patch CUDA check
         self.patcher_cuda = patch("torch.cuda.is_available", return_value=True)
         self.mock_cuda = self.patcher_cuda.start()
 
-        # Mock Tokenizer with apply_chat_template method
+        # Patch DeviceConfig to prevent actual device resolution
+        self.patcher_device_config = patch("vllm.config.DeviceConfig", autospec=True)
+        self.mock_device_config = self.patcher_device_config.start()
+
+        # Patch LLMEngine to avoid real model loading
+        self.patcher_llm_engine = patch(
+            "vllm.engine.llm_engine.LLMEngine", autospec=True
+        )
+        self.mock_llm_engine = self.patcher_llm_engine.start()
+
+        # Mock tokenizer
         self.mock_tokenizer = MagicMock()
         self.mock_tokenizer.apply_chat_template.side_effect = (
             lambda messages, **kwargs: str(messages)
         )
 
-        # Create deep mock of vLLM and its internals
-        self.mock_llm = MagicMock()
-        self.mock_llm.get_tokenizer.return_value = self.mock_tokenizer
-        self.mock_llm.generate.return_value = ["Mock response"]
-
-        self.patchers = [
-            patch("vllm.LLM", return_value=self.mock_llm),
-            patch("vllm.config.DeviceConfig", autospec=True),
-            patch("vllm.engine.llm_engine.LLMEngine", autospec=True),
-            patch("vllm.engine.arg_utils.EngineArgs", autospec=True),
-            patch.dict("os.environ", {"VLLM_DEVICE": "cpu"}),
-        ]
-
-        for p in self.patchers:
-            p.start()
-
-        self.sampling_params_patcher = patch("vllm.SamplingParams", autospec=True)
-        self.mock_sampling_params = self.sampling_params_patcher.start()
+        # Patch vllm.LLM to return mocked instance
+        self.patcher_vllm = patch("vllm.LLM", autospec=True)
+        self.mock_vllm_class = self.patcher_vllm.start()
+        self.mock_vllm_instance = self.mock_vllm_class.return_value
+        self.mock_vllm_instance.get_tokenizer.return_value = self.mock_tokenizer
+        self.mock_vllm_instance.generate.return_value = ["Mock response"]
 
     def tearDown(self):
         self.patcher_cuda.stop()
-        self.sampling_params_patcher.stop()
-
-        for p in self.patchers:
-            p.stop()
+        self.patcher_device_config.stop()
+        self.patcher_llm_engine.stop()
+        self.patcher_vllm.stop()
 
     def test_valid_inputs(self):
         for (
