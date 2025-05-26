@@ -185,40 +185,30 @@ r = from_dict(
 
 class TestRankListwiseOSLLM(unittest.TestCase):
     def setUp(self):
-        # Patch CUDA check
+        # Patch cuda availability check
         self.patcher_cuda = patch("torch.cuda.is_available", return_value=True)
         self.mock_cuda = self.patcher_cuda.start()
 
-        # Mock tokenizer
+        # Mock Tokenizer with apply_chat_template method
         self.mock_tokenizer = MagicMock()
         self.mock_tokenizer.apply_chat_template.side_effect = (
             lambda messages, **kwargs: str(messages)
         )
 
-        # Create mock LLM instance
-        self.mock_llm = MagicMock()
-        self.mock_llm.get_tokenizer.return_value = self.mock_tokenizer
-        self.mock_llm.generate.return_value = ["Mock response"]
+        # Mock vllm.LLM
+        self.patcher_vllm = patch(
+            "rank_llm.rerank.listwise.rank_listwise_os_llm.LLM", autospec=True
+        )
+        self.mock_vllm_class = self.patcher_vllm.start()
+        self.mock_vllm_instance = self.mock_vllm_class.return_value
+        self.mock_vllm_instance.get_tokenizer.return_value = self.mock_tokenizer
 
-        # Patch vLLM (imported in RankListwiseOSLLM)
-        self.patchers = [
-            patch(
-                "rank_llm.rerank.listwise.rank_listwise_os_llm.LLM",
-                return_value=self.mock_llm,
-            ),
-            patch("vllm.config.DeviceConfig", autospec=True),
-            patch("vllm.engine.llm_engine.LLMEngine", autospec=True),
-            patch("vllm.engine.arg_utils.EngineArgs", autospec=True),
-            patch.dict("os.environ", {"VLLM_DEVICE": "cpu"}),
-        ]
-
-        for p in self.patchers:
-            p.start()
+        # Mock generate method
+        self.mock_vllm_instance.generate.return_value = ["Mock response"]
 
     def tearDown(self):
         self.patcher_cuda.stop()
-        for p in self.patchers:
-            p.stop()
+        self.patcher_vllm.stop()
 
     def test_valid_inputs(self):
         for (
