@@ -37,7 +37,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
-        device: str = "cuda",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         num_gpus: int = 1,
         variable_passages: bool = False,
         window_size: int = 20,
