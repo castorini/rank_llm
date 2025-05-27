@@ -202,7 +202,7 @@ class SafeOpenai(ListwiseRankLLM):
             "role": "system",
             "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
         }
-        messages = self._add_few_shot_examples_messages(prefix_message_system)
+        messages = self._add_few_shot_examples_messages([prefix_message_system])
         messages.extend(
             [
                 {
@@ -225,7 +225,7 @@ class SafeOpenai(ListwiseRankLLM):
             "role": "system",
             "content": "As RankGPT, your task is to evaluate and rank unique passages based on their relevance and accuracy to a given query. Prioritize passages that directly address the query and provide detailed, correct answers. Ignore factors such as length, complexity, or writing style unless they seriously hinder readability.",
         }
-        messages = self._add_few_shot_examples_messages(prefix_message_system)
+        messages = self._add_few_shot_examples_messages([prefix_message_system])
         messages.append(
             {
                 "role": "user",
