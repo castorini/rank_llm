@@ -62,15 +62,15 @@ conditions:
       - topic_key: dl21
         eval_key: dl21-passage
         scores:
-          - nDCG@10: 0.6200
+          - nDCG@10: 0.6219
       - topic_key: dl22
         eval_key: dl22-passage
         scores:
-          - nDCG@10: 0.4380
+          - nDCG@10: 0.4327
       - topic_key: dl23
         eval_key: dl23-passage
         scores:
-          - nDCG@10: 0.4052
+          - nDCG@10: 0.4062
   - name: rankzephyr
     display: "RankZephyr 7B V1 - Full"
     display-html: "RankZephyr 7B V1 - Full"

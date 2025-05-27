@@ -8,11 +8,11 @@ conditions:
       - topic_key: dl19
         eval_key: dl19-passage
         scores:
-          - nDCG@10: 0.7360
+          - nDCG@10: 0.7497
       - topic_key: dl20
         eval_key: dl20-passage
         scores:
-          - nDCG@10: 0.7358
+          - nDCG@10: 0.7506
   - name: rank_zephyr_7b_v1_full_splade_pp
     display: "RankZephyr 7B V1 - Full"
     display-html: "RankZephyr 7B V1 - Full"
@@ -94,11 +94,11 @@ conditions:
       - topic_key: dl19
         eval_key: dl19-passage
         scores:
-          - nDCG@10: 0.6874
+          - nDCG@10: 0.6679
       - topic_key: dl20
         eval_key: dl20-passage
         scores:
-          - nDCG@10: 0.6630
+          - nDCG@10: 0.6627
   - name: rank_zephyr_7b_v1_full_bm25
     display: "RankZephyr 7B V1 - Full"
     display-html: "RankZephyr 7B V1 - Full"
