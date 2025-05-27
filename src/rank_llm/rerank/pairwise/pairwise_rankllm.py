@@ -33,7 +33,9 @@ class PairwiseRankLLM(RankLLM, ABC):
         filename: str = "",
         batch_size: int = 32,
     ) -> None:
-        super().__init__(model, context_size, prompt_mode)
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, few_shot_file
+        )
         self._num_few_shot_examples = num_few_shot_examples
         self._few_shot_file = few_shot_file
         self._device = device

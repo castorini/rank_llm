@@ -43,18 +43,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         few_shot_file: Optional[str] = None,
         use_alpha: bool = False,
     ) -> None:
-        super().__init__(model, context_size, prompt_mode)
-        self._num_few_shot_examples = num_few_shot_examples
-        self._few_shot_file = few_shot_file
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, few_shot_file
+        )
         self._window_size = window_size
         self._use_alpha = use_alpha
-
-        if self._num_few_shot_examples > 0:
-            if not few_shot_file:
-                raise ValueError(
-                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
-                )
-            self._load_few_shot_examples(few_shot_file)
 
     def get_output_filename(
         self,
@@ -473,17 +466,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         # For Japanese should cut by character: content = content[:int(max_length)]
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
-
-    def _load_few_shot_examples(self, file_path: str):
-        try:
-            with open(file_path, "r") as json_file:
-                self._examples = json.load(json_file)
-        except FileNotFoundError:
-            raise ValueError(f"Few-shot examples file not found: {file_path}")
-        except json.JSONDecodeError:
-            raise ValueError(
-                f"Invalid JSON format in few-shot examples file: {file_path}"
-            )
 
     def _add_few_shot_examples(self, conv):
         exs = random.sample(self._examples, self._num_few_shot_examples)
