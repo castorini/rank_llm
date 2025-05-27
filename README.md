@@ -6,7 +6,10 @@
 [![Generic badge](https://img.shields.io/badge/arXiv-2309.15088-red.svg)](https://arxiv.org/abs/2309.15088)
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
+## News
+- **[2024.05.25]** Our [RankLLM](https://arxiv.org/abs/2304.09542) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
 
+## Overview
 We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
 <p align="center">
@@ -330,6 +333,19 @@ If you would like to contribute to the project, please refer to the [contributio
 # ✨ References
 
 If you use RankLLM, please cite the following relevant papers:
+
+[[2505.19284] RankLLM: A Python Package for Reranking with LLMs](https://arxiv.org/abs/2505.19284)
+
+<!-- {% raw %} -->
+```
+@ARTICLE{sharifymoghaddam2025rankllm,
+  title   = {{RankLLM}: A Python Package for Reranking with LLMs},
+  author  = {Sahel Sharifymoghaddam and Ronak Pradeep and Andre Slavescu and Ryan Nguyen and Andrew Xu and Zijian Chen and Yilin Zhang and Yidi Chen and Jasper Xian and Jimmy Lin},
+  year    = {2025},
+  journal = {arXiv:2505.19284}
+}
+```
+<!-- {% endraw %} -->
 
 [[2309.15088] RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models](https://arxiv.org/abs/2309.15088)
 
