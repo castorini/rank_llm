@@ -49,6 +49,13 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._window_size = window_size
         self._use_alpha = use_alpha
 
+        if self._num_few_shot_examples > 0:
+            if not few_shot_file:
+                raise ValueError(
+                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
+                )
+            self._load_few_shot_examples(few_shot_file)
+
     def get_output_filename(
         self,
         top_k_candidates: int,
