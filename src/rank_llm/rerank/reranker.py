@@ -274,7 +274,6 @@ class Reranker:
                 ("tensorrt_batched", False),
                 ("use_logits", False),
                 ("use_alpha", False),
-                ("hf_home", "cache/llms"),
             ]
             [
                 context_size,
@@ -290,7 +289,6 @@ class Reranker:
                 tensorrt_batched,
                 use_logits,
                 use_alpha,
-                hf_home,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
@@ -459,7 +457,6 @@ class Reranker:
                 ("system_message", None),
                 ("use_logits", False),
                 ("use_alpha", False),
-                ("hf_home", "cache/llms"),
             ]
             [
                 context_size,
@@ -473,7 +470,6 @@ class Reranker:
                 system_message,
                 use_logits,
                 use_alpha,
-                hf_home,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
@@ -490,7 +486,6 @@ class Reranker:
                 system_message=system_message,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
-                hf_home=hf_home,
             )
 
             print(f"Completed loading {model_path}")

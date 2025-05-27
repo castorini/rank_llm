@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
@@ -38,7 +39,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
         model: str,
-        hf_home: Optional[str] = "cache/llms",
         name: str = "",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
@@ -108,7 +108,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
-        self._hf_home = hf_home
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
@@ -139,45 +138,23 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
-            if LLM is None:
-                raise ImportError(
-                    "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
+            self._llm = vllm.LLM(
+                model,
+                download_dir=os.getenv("HF_HOME"),
+                enforce_eager=False,
+                max_logprobs=30,
+                tensor_parallel_size=num_gpus,
+                gpu_memory_utilization=0.90,
+            )
+            self._tokenizer = self._llm.get_tokenizer()
+
+            if "rank_vicuna" in model:
+                setattr(
+                    self._tokenizer,
+                    "chat_template",
+                    """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}
+                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
                 )
-            else:
-                if model in ["mistralai/Mistral-Large-Instruct-2407"]:
-                    ignore_patterns = ["*consolidated*"]
-                else:
-                    ignore_patterns = []
-
-                if "rank_zephyr" in model or "qwen" in model.lower():
-                    self._llm = LLM(
-                        model,
-                        download_dir=self._hf_home + "/hub",
-                        enforce_eager=False,
-                        max_logprobs=30,
-                        tensor_parallel_size=num_gpus,
-                        gpu_memory_utilization=0.90,
-                        ignore_patterns=ignore_patterns,
-                    )
-                else:
-                    self._llm = LLM(
-                        model,
-                        download_dir=self._hf_home + "/hub",
-                        enforce_eager=False,
-                        max_logprobs=30,
-                        tensor_parallel_size=num_gpus,
-                        gpu_memory_utilization=0.90,
-                        ignore_patterns=ignore_patterns,
-                    )
-                self._tokenizer = self._llm.get_tokenizer()
-
-                if "rank_vicuna" in model:
-                    setattr(
-                        self._tokenizer,
-                        "chat_template",
-                        """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}
-                        {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
-                    )
 
     def rerank_batch(
         self,
