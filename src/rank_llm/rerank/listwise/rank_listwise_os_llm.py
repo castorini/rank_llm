@@ -110,13 +110,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._num_gpus = num_gpus
         self._hf_home = hf_home
 
-        if num_few_shot_examples > 0:
-            if not few_shot_file:
-                raise ValueError(
-                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
-                )
-            self._load_few_shot_examples(few_shot_file)
-
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
         if prompt_mode != PromptMode.RANK_GPT:

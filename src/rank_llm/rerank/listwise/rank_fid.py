@@ -68,13 +68,6 @@ class RankFiDDistill(ListwiseRankLLM):
 
         self._post_init()
 
-        if num_few_shot_examples > 0:
-            if not few_shot_file:
-                raise ValueError(
-                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
-                )
-            self._load_few_shot_examples(few_shot_file)
-
     def _run_llm_by_length_unified(
         self, batch_prompts: List[List[str]]
     ) -> List[Tuple[str, int]]:
