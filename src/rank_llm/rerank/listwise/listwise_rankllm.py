@@ -477,7 +477,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             conv.append_message(conv.roles[1], response)
         return conv
 
-    def _add_few_shot_examples_messages(self, messages):
+    def _add_few_shot_examples_messages(self, messages) -> List[Dict[str, str]]:
         if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
             for ex in self._examples[
                 : min(self._num_few_shot_examples, len(self._examples))
