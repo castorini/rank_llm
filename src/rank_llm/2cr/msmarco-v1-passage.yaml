@@ -1,5 +1,5 @@
 conditions:
-  - name: rank_vicuna_7b_v1
+  - name: rank_vicuna_7b_v1_splade_pp
     display: "RankVicuna 7B V1"
     display-html: "RankVicuna 7B V1"
     display-row: "[1]"
@@ -13,7 +13,7 @@ conditions:
         eval_key: dl20-passage
         scores:
           - nDCG@10: 0.7358
-  - name: rank_zephyr_7b_v1_full
+  - name: rank_zephyr_7b_v1_full_splade_pp
     display: "RankZephyr 7B V1 - Full"
     display-html: "RankZephyr 7B V1 - Full"
     display-row: "[2]"
@@ -27,7 +27,7 @@ conditions:
         eval_key: dl20-passage
         scores:
           - nDCG@10: 0.8211
-  - name: rank_zephyr_7b_v1_full_mult_pass
+  - name: rank_zephyr_7b_v1_full_splade_pp_mult_pass
     display: "RankZephyr 7B V1 - Full"
     display-html: "RankZephyr 7B V1 - Full"
     display-row: "[2]"
@@ -85,7 +85,7 @@ conditions:
         eval_key: dl20-passage
         scores:
           - nDCG@10: 0.7049
-  - name: rankvicuna
+  - name: rank_vicuna_7b_v1_bm25
     display: "RankVicuna 7B V1"
     display-html: "RankVicuna 7B V1"
     display-row: "[4]"
@@ -99,7 +99,7 @@ conditions:
         eval_key: dl20-passage
         scores:
           - nDCG@10: 0.6630
-  - name: rankzephyr
+  - name: rank_zephyr_7b_v1_full_bm25
     display: "RankZephyr 7B V1 - Full"
     display-html: "RankZephyr 7B V1 - Full"
     display-row: "[4]"

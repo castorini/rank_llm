@@ -39,14 +39,14 @@ sparse_batch_size = 128
 models = {
     # MS MARCO v1 passage
     "msmarco-v1-passage": [
-        "rank_vicuna_7b_v1",
-        "rank_zephyr_7b_v1_full",
-        "rank_zephyr_7b_v1_full_mult_pass",
+        "rank_vicuna_7b_v1_splade_pp",
+        "rank_zephyr_7b_v1_full_splade_pp",
+        "rank_zephyr_7b_v1_full_splade_pp_mult_pass",
         "monot5",
         "duot5",
         "lit5distill",
-        "rankvicuna",
-        "rankzephyr",
+        "rank_vicuna_7b_v1_bm25",
+        "rank_zephyr_7b_v1_full_bm25",
         "firstmistral",
         "qwen_2.5_7b_inst",
         "llama_3.1_8b_inst",
