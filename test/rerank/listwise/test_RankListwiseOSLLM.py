@@ -196,9 +196,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
         # Mock vllm.LLM
-        self.patcher_vllm = patch(
-            "rank_llm.rerank.listwise.rank_listwise_os_llm.LLM", autospec=True
-        )
+        self.patcher_vllm = patch("vllm.LLM", autospec=True)
         self.mock_vllm_class = self.patcher_vllm.start()
         self.mock_vllm_instance = self.mock_vllm_class.return_value
         self.mock_vllm_instance.get_tokenizer.return_value = self.mock_tokenizer

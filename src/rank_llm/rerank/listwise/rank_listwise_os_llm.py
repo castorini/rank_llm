@@ -16,12 +16,6 @@ from rank_llm.rerank import PromptMode
 from .listwise_rankllm import ListwiseRankLLM
 
 try:
-    from vllm import LLM, SamplingParams
-except:
-    LLM = None
-    SamplingParams = None
-
-try:
     import sglang
     from sglang import Engine
     from sglang.srt.entrypoints.engine import Engine as SGLangEngineType
@@ -235,22 +229,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
     ) -> List[Tuple[str, int]]:
-        if SamplingParams is None:
-            raise ImportError(
-                "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
-            )
-
         if current_window_size is None:
             current_window_size = self._window_size
 
-        if isinstance(self._llm, LLM):
+        if isinstance(self._llm, vllm.LLM):
             logger.info(f"VLLM Generating!")
-            logger.info(
-                f"Using {self._num_gpus} GPUs: {torch.cuda.device_count()} available."
-            )
 
             if self._use_logits:
-                params = SamplingParams(
+                params = vllm.SamplingParams(
                     min_tokens=2, max_tokens=2, temperature=0.0, logprobs=30
                 )
                 outputs = self._llm.generate(prompts, sampling_params=params)
@@ -258,7 +244,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 return [(s, len(s)) for s, __ in arr]
 
             else:
-                sampling_params = SamplingParams(
+                sampling_params = vllm.SamplingParams(
                     temperature=0.0,
                     max_tokens=self.num_output_tokens(current_window_size),
                     min_tokens=self.num_output_tokens(current_window_size),
