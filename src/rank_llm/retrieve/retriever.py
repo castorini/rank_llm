@@ -204,7 +204,9 @@ class Retriever:
                                     from_dict(data_class=Request, data=json.loads(line))
                                 )
                     except ValueError as e:
-                        print(f"Retrieving with dataset {self._dataset}")
+                        print(
+                            f"Using Pyserini to retrieve with dataset {self._dataset} due to error: {e}"
+                        )
                         pyserini = PyseriniRetriever(
                             self._dataset, self._retrieval_method
                         )
