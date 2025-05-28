@@ -132,7 +132,7 @@ class Retriever:
         retrieve_results_dirname: str,
         retrieval_method_name: str,
         dataset_name: str,
-        file_pattern: str = "retrieve_results_{dataset}_top{k}.jsonl",
+        file_pattern: str = "retrieve_results_{dataset_name}_top{k}.jsonl",
     ) -> Optional[str]:
         """
         Finds the file with the highest `k` value in a directory.
