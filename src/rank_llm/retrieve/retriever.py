@@ -141,20 +141,25 @@ class Retriever:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             )
+            default_file = Path(
+                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
+            )
             query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             if not candidates_file.is_file():
-                try:
-                    file_path = download_cached_hits(query_name)
-                    with open(file_path, "r") as f:
-                        retrieved_results = []
-                        for line in f:
-                            retrieved_results.append(
-                                from_dict(data_class=Request, data=json.loads(line))
-                            )
-                except ValueError as e:
+                if default_file.is_file():
+                    assert 1 <= k <= 100
+
+                    print(
+                        f"Reusing existing default top 100 results for top {k} reranking."
+                    )
+                    with open(default_file, "r") as f:
+                        retrieved_results = [
+                            from_dict(data_class=Request, data=json.loads(line))
+                            for i, line in enumerate(f)
+                            if i < k
+                        ]
+                else:
                     try:
-                        assert k <= 100
-                        query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
                         file_path = download_cached_hits(query_name)
                         with open(file_path, "r") as f:
                             retrieved_results = []
@@ -162,12 +167,25 @@ class Retriever:
                                 retrieved_results.append(
                                     from_dict(data_class=Request, data=json.loads(line))
                                 )
-                    except:
-                        print(f"Retrieving with dataset {self._dataset}")
-                        pyserini = PyseriniRetriever(
-                            self._dataset, self._retrieval_method
-                        )
-                        retrieved_results = pyserini.retrieve_and_store(k=k)
+                    except ValueError as e:
+                        try:
+                            assert k <= 100
+                            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
+                            file_path = download_cached_hits(query_name)
+                            with open(file_path, "r") as f:
+                                retrieved_results = []
+                                for line in f:
+                                    retrieved_results.append(
+                                        from_dict(
+                                            data_class=Request, data=json.loads(line)
+                                        )
+                                    )
+                        except:
+                            print(f"Retrieving with dataset {self._dataset}")
+                            pyserini = PyseriniRetriever(
+                                self._dataset, self._retrieval_method
+                            )
+                            retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
                 md5_local = compute_md5(candidates_file)
