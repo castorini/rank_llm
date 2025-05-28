@@ -167,6 +167,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
+        print(f"populate_invocations_history is set to {populate_invocations_history}")
 
         # reranking using vllm or sglang
         if len(set([len(req.candidates) for req in requests])) != 1:
