@@ -183,7 +183,7 @@ $rows
 <ul style="list-style-type:none; padding-top: 25px">
 
 <li><p>[1] Sahel Sharifymoghaddam, Ronak Pradeep, Andre Slavescu, Ryan Nguyen, Andrew Xu, Zijian Chen, Yilin Zhang, Yidi Chen, Jasper Xian, and Jimmy Lin.
-<a href="https://arxiv.org/abs/XXXX.XXXXX">RankLLM: A Python Package for Reranking with LLMs</a>
+<a href="https://arxiv.org/pdf/2505.19284">RankLLM: A Python Package for Reranking with LLMs</a>
 <i>Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2025), May 2025.</i></p></li>
 
 
