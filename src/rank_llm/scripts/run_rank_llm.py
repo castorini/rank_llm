@@ -190,8 +190,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--populate_invocations_history",
-        type=bool,
-        default=False,
+        action="store_true",
         help="write a file with the prompts and raw responses from LLM",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
