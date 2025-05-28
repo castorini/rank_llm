@@ -38,6 +38,7 @@ def main(args):
     stride = args.stride
     window_size = args.window_size
     system_message = args.system_message
+    populate_invocations_history = args.populate_invocations_history
     use_logits = args.use_logits
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
@@ -66,6 +67,7 @@ def main(args):
         window_size=window_size,
         stride=stride,
         system_message=system_message,
+        populate_invocations_history=populate_invocations_history,
         use_logits=use_logits,
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
@@ -185,6 +187,12 @@ if __name__ == "__main__":
         type=str,
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
+    )
+    parser.add_argument(
+        "--populate_invocations_history",
+        type=bool,
+        default=False,
+        help="write a file with the prompts and raw responses from LLM",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
     parser.add_argument(
