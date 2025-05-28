@@ -229,7 +229,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
     ) -> List[Tuple[str, int]]:
-        if SamplingParams is None:
+        if vllm.SamplingParams is None:
             raise ImportError(
                 "Please install rank-llm with `pip install rank-llm[vllm]` to use batch inference."
             )
