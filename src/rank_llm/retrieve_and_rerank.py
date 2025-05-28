@@ -27,6 +27,7 @@ def retrieve_and_rerank(
     num_passes: int = 1,
     interactive: bool = False,
     default_model_coordinator: RankLLM = None,
+    populate_invocations_history: bool = False,
     **kwargs: Any,
 ):
     """Retrieve candidates using Anserini API and rerank them
@@ -83,6 +84,7 @@ def retrieve_and_rerank(
                 shuffle_candidates=shuffle_candidates,
                 logging=print_prompts_responses,
                 top_k_retrieve=top_k_retrieve,
+                populate_invocations_history=populate_invocations_history,
                 **kwargs,
             )
 
