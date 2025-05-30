@@ -43,6 +43,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         variable_passages: bool = False,
         window_size: int = 20,
         system_message: str = None,
+        is_thinking: bool = False,
         use_logits: bool = False,
         use_alpha: bool = False,
         sglang_batched: bool = False,
@@ -95,6 +96,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._name = name
         self._variable_passages = variable_passages
         self._system_message = system_message
+        self._is_thinking = is_thinking
         self._output_token_estimate = None
         self._use_logits = use_logits
 
@@ -234,9 +236,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 arr = [self._get_logits_single_digit(output) for output in outputs]
                 return [(s, len(s)) for s, __ in arr]
             else:
+                if self._is_thinking:
+                    print("THINKING MODE IS ON")
                 sampling_params = vllm.SamplingParams(
                     temperature=0.0,
-                    max_tokens=self.num_output_tokens(current_window_size),
+                    max_tokens=30000
+                    if self._is_thinking
+                    else self.num_output_tokens(current_window_size),
                     min_tokens=self.num_output_tokens(current_window_size),
                 )
                 outputs = self._llm.generate(prompts, sampling_params)
