@@ -38,6 +38,8 @@ def main(args):
     window_size = args.window_size
     system_message = args.system_message
     populate_invocations_history = args.populate_invocations_history
+    is_thinking = args.is_thinking
+    reasoning_token_budget = args.reasoning_token_budget
     use_logits = args.use_logits
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
@@ -66,6 +68,8 @@ def main(args):
         stride=stride,
         system_message=system_message,
         populate_invocations_history=populate_invocations_history,
+        is_thinking=is_thinking,
+        reasoning_token_budget=reasoning_token_budget,
         use_logits=use_logits,
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
@@ -183,6 +187,17 @@ if __name__ == "__main__":
         "--populate_invocations_history",
         action="store_true",
         help="write a file with the prompts and raw responses from LLM",
+    )
+    parser.add_argument(
+        "--is_thinking",
+        action="store_true",
+        help="enables thinking mode which increases output token budget to account for the full thinking trace + response.",
+    )
+    parser.add_argument(
+        "--reasoning_token_budget",
+        type=int,
+        default=10000,
+        help="number of output token budget for thinking traces on reasoning models",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
     parser.add_argument(

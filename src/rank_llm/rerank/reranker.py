@@ -430,6 +430,8 @@ class Reranker:
                 ("variable_passages", False),
                 ("window_size", 20),
                 ("system_message", None),
+                ("is_thinking", False),
+                ("reasoning_token_budget", 10000),
                 ("use_logits", False),
                 ("use_alpha", False),
             ]
@@ -442,6 +444,8 @@ class Reranker:
                 variable_passages,
                 window_size,
                 system_message,
+                is_thinking,
+                reasoning_token_budget,
                 use_logits,
                 use_alpha,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
@@ -457,6 +461,8 @@ class Reranker:
                 variable_passages=variable_passages,
                 window_size=window_size,
                 system_message=system_message,
+                is_thinking=is_thinking,
+                reasoning_token_budget=reasoning_token_budget,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
             )
