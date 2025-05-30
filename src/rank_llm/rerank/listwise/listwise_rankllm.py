@@ -361,13 +361,13 @@ class ListwiseRankLLM(RankLLM, ABC):
         if "</think>" in response:
             response = response.split("</think>")[-1].strip()
 
-        new_response = ""
         fake_numbers_map = str.maketrans(
             "⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉①②③④⑤⑥⑦⑧⑨❶❷❸❹❺❻❼❽❾０１２３４５６７８９🄀🄁🄂🄃🄄🄅🄆🄇🄈🄉",
             "0123456789012345678912345678912345678901234567890123456789",
         )
         response = response.translate(fake_numbers_map)
 
+        new_response = ""
         if self._use_alpha:
             for c in response:
                 if not c.isalpha():

@@ -183,7 +183,6 @@ class ResponseAnalyzer:
             parts = resp.split("</think>")
             resp = parts[-1]
         resp = resp.replace("[rankstart]", "")
-        resp = resp.replace("[rankstart]", "")
         resp = resp.replace("[rankend]", "")
         resp = resp.replace("SORTED_PASSAGES =", "")
         resp = resp.replace(" ", "")
