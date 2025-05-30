@@ -44,6 +44,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         window_size: int = 20,
         system_message: str = None,
         is_thinking: bool = False,
+        reasoning_token_budget: int = 10000,
         use_logits: bool = False,
         use_alpha: bool = False,
         sglang_batched: bool = False,
@@ -97,6 +98,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._variable_passages = variable_passages
         self._system_message = system_message
         self._is_thinking = is_thinking
+        self._reasoning_token_budget = reasoning_token_budget
         self._output_token_estimate = None
         self._use_logits = use_logits
 
@@ -238,7 +240,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             else:
                 sampling_params = vllm.SamplingParams(
                     temperature=0.0,
-                    max_tokens=10000
+                    max_tokens=self._reasoning_token_budget
                     if self._is_thinking
                     else self.num_output_tokens(current_window_size),
                     min_tokens=self.num_output_tokens(current_window_size),
