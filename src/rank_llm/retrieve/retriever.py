@@ -4,7 +4,7 @@ import os
 import re
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dacite import from_dict
 
@@ -133,7 +133,7 @@ class Retriever:
         retrieval_method_name: str,
         dataset_name: str,
         file_pattern: str = "retrieve_results_{dataset_name}_top{k}.jsonl",
-    ) -> Optional[str]:
+    ) -> Tuple[Optional[str], int]:
         """
         Finds the file with the highest `k` value in a directory.
 
@@ -155,14 +155,14 @@ class Retriever:
         matching_files = glob.glob(glob_pattern)
 
         if not matching_files:
-            return None
+            return None, -1
 
         def _extract_k(file_path):
             match = re.search(rf"top(\d+)\.jsonl$", file_path)
             return int(match.group(1))
 
         file_with_max_k = max(matching_files, key=_extract_k)
-        return file_with_max_k
+        return file_with_max_k, _extract_k(file_with_max_k)
 
     def retrieve(
         self, retrieve_results_dirname: str = "retrieve_results", k: int = 100
@@ -180,11 +180,11 @@ class Retriever:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             )
-            max_k_file = self._get_file_with_highest_k(
+            max_k_file, max_k = self._get_file_with_highest_k(
                 retrieve_results_dirname, self._retrieval_method.name, self._dataset
             )
             if not candidates_file.is_file():
-                if max_k_file is not None:
+                if max_k_file is not None and max_k >= k:
                     print(f"Reusing existing file: {max_k_file} for top {k} reranking.")
 
                     with open(max_k_file, "r") as f:
