@@ -361,8 +361,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         if "</think>" in response:
             response = response.split("</think>")[-1].strip()
 
-        response = response.split("\n")[-1].strip()
-
         new_response = ""
         fake_numbers_map = str.maketrans(
             "⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉①②③④⑤⑥⑦⑧⑨❶❷❸❹❺❻❼❽❾０１２３４５６７８９🄀🄁🄂🄃🄄🄅🄆🄇🄈🄉",
