@@ -10,11 +10,11 @@ sys.path.append(parent)
 from rank_llm.data import DataWriter, read_requests_from_file
 from rank_llm.rerank.listwise import ZephyrReranker
 
-file_name = "retrieve_results/BM25/retrieve_results_dl23_top20.jsonl"
+file_name = "/store2/scratch/s8sharif/rank_llm/retrieve_results/BM25/retrieve_results_dl23_top100.jsonl"
 requests = read_requests_from_file(file_name)
 
 reranker = ZephyrReranker()
-rerank_results = reranker.rerank_batch(requests=requests)
+rerank_results = reranker.rerank_batch(requests=requests[:1])
 print(rerank_results)
 
 # write rerank results
