@@ -1,8 +1,10 @@
+import glob
 import json
 import os
+import re
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dacite import from_dict
 
@@ -125,6 +127,43 @@ class Retriever:
         )
         return retriever.retrieve(k=k)
 
+    def _get_file_with_highest_k(
+        self,
+        retrieve_results_dirname: str,
+        retrieval_method_name: str,
+        dataset_name: str,
+        file_pattern: str = "retrieve_results_{dataset_name}_top{k}.jsonl",
+    ) -> Tuple[Optional[str], int]:
+        """
+        Finds the file with the highest `k` value in a directory.
+
+        Args:
+            retrieve_results_dirname: Base directory (e.g., "retrieve_results").
+            retrieval_method_name: Method name (e.g., "BM25").
+            dataset_name: Dataset name (e.g., "dl19").
+            file_pattern: Format string for filenames (default matches the original pattern).
+
+        Returns:
+            Path to the file with the highest `k`, or `None` if no files exist.
+        """
+        glob_pattern = os.path.join(
+            retrieve_results_dirname,
+            retrieval_method_name,
+            file_pattern.format(dataset_name=dataset_name, k="*"),
+        )
+
+        matching_files = glob.glob(glob_pattern)
+
+        if not matching_files:
+            return None, -1
+
+        def _extract_k(file_path):
+            match = re.search(rf"top(\d+)\.jsonl$", file_path)
+            return int(match.group(1))
+
+        file_with_max_k = max(matching_files, key=_extract_k)
+        return file_with_max_k, _extract_k(file_with_max_k)
+
     def retrieve(
         self, retrieve_results_dirname: str = "retrieve_results", k: int = 100
     ) -> List[Request]:
@@ -141,29 +180,37 @@ class Retriever:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
             )
-            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
+            max_k_file, max_k = self._get_file_with_highest_k(
+                retrieve_results_dirname, self._retrieval_method.name, self._dataset
+            )
             if not candidates_file.is_file():
-                try:
-                    file_path = download_cached_hits(query_name)
-                    with open(file_path, "r") as f:
-                        retrieved_results = []
-                        for line in f:
-                            retrieved_results.append(
-                                from_dict(data_class=Request, data=json.loads(line))
-                            )
-                except ValueError as e:
+                if max_k_file is not None and max_k >= k:
+                    print(f"Reusing existing file: {max_k_file} for top {k} reranking.")
+
+                    with open(max_k_file, "r") as f:
+                        retrieved_results = [
+                            from_dict(data_class=Request, data=json.loads(line))
+                            for i, line in enumerate(f)
+                            if i < k
+                        ]
+                else:
                     try:
-                        assert k <= 100
-                        query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
+                        if 1 <= k <= 100:
+                            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
+                        else:
+                            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top1000.jsonl"
+
                         file_path = download_cached_hits(query_name)
                         with open(file_path, "r") as f:
-                            retrieved_results = []
-                            for line in f:
-                                retrieved_results.append(
-                                    from_dict(data_class=Request, data=json.loads(line))
-                                )
-                    except:
-                        print(f"Retrieving with dataset {self._dataset}")
+                            retrieved_results = [
+                                from_dict(data_class=Request, data=json.loads(line))
+                                for i, line in enumerate(f)
+                                if i < k
+                            ]
+                    except ValueError as e:
+                        print(
+                            f"Using Pyserini to retrieve with dataset {self._dataset} due to error: {e}"
+                        )
                         pyserini = PyseriniRetriever(
                             self._dataset, self._retrieval_method
                         )
