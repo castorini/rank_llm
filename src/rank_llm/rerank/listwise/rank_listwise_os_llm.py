@@ -236,11 +236,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 arr = [self._get_logits_single_digit(output) for output in outputs]
                 return [(s, len(s)) for s, __ in arr]
             else:
-                if self._is_thinking:
-                    print("THINKING MODE IS ON")
                 sampling_params = vllm.SamplingParams(
                     temperature=0.0,
-                    max_tokens=30000
+                    max_tokens=10000
                     if self._is_thinking
                     else self.num_output_tokens(current_window_size),
                     min_tokens=self.num_output_tokens(current_window_size),
