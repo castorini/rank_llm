@@ -195,7 +195,11 @@ class Retriever:
                         ]
                 else:
                     try:
-                        query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.jsonl"
+                        if 1 <= k <= 100:
+                            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
+                        else:
+                            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top1000.jsonl"
+
                         file_path = download_cached_hits(query_name)
                         with open(file_path, "r") as f:
                             retrieved_results = []
