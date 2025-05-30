@@ -202,11 +202,11 @@ class Retriever:
 
                         file_path = download_cached_hits(query_name)
                         with open(file_path, "r") as f:
-                            retrieved_results = []
-                            for line in f:
-                                retrieved_results.append(
-                                    from_dict(data_class=Request, data=json.loads(line))
-                                )
+                            retrieved_results = [
+                                from_dict(data_class=Request, data=json.loads(line))
+                                for i, line in enumerate(f)
+                                if i < k
+                            ]
                     except ValueError as e:
                         print(
                             f"Using Pyserini to retrieve with dataset {self._dataset} due to error: {e}"
