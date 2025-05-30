@@ -183,6 +183,11 @@ class Retriever:
             max_k_file, max_k = self._get_file_with_highest_k(
                 retrieve_results_dirname, self._retrieval_method.name, self._dataset
             )
+            if 1 <= k <= 100:
+                query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
+            else:
+                query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top1000.jsonl"
+
             if not candidates_file.is_file():
                 if max_k_file is not None and max_k >= k:
                     print(f"Reusing existing file: {max_k_file} for top {k} reranking.")
@@ -195,11 +200,6 @@ class Retriever:
                         ]
                 else:
                     try:
-                        if 1 <= k <= 100:
-                            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top100.jsonl"
-                        else:
-                            query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top1000.jsonl"
-
                         file_path = download_cached_hits(query_name)
                         with open(file_path, "r") as f:
                             retrieved_results = [
