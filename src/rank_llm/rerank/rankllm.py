@@ -1,7 +1,8 @@
+import json
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from rank_llm.data import Request, Result
 
@@ -22,10 +23,26 @@ class PromptMode(Enum):
 
 
 class RankLLM(ABC):
-    def __init__(self, model: str, context_size: int, prompt_mode: PromptMode) -> None:
+    def __init__(
+        self,
+        model: str,
+        context_size: int,
+        prompt_mode: PromptMode,
+        num_few_shot_examples: int,
+        few_shot_file: Optional[str] = None,
+    ) -> None:
         self._model = model
         self._context_size = context_size
         self._prompt_mode = prompt_mode
+        self._num_few_shot_examples = num_few_shot_examples
+        self._few_shot_file = few_shot_file
+
+        if self._num_few_shot_examples > 0:
+            if not few_shot_file:
+                raise ValueError(
+                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
+                )
+            self._load_few_shot_examples(few_shot_file)
 
     @abstractmethod
     def run_llm_batched(
@@ -170,3 +187,14 @@ class RankLLM(ABC):
         Returns the output filename used when writing rerank results to file
         """
         pass
+
+    def _load_few_shot_examples(self, file_path: str):
+        try:
+            with open(file_path, "r") as json_file:
+                self._examples = json.load(json_file)
+        except FileNotFoundError:
+            raise ValueError(f"Few-shot examples file not found: {file_path}")
+        except json.JSONDecodeError:
+            raise ValueError(
+                f"Invalid JSON format in few-shot examples file: {file_path}"
+            )

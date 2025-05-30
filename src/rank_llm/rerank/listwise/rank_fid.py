@@ -34,6 +34,7 @@ class RankFiDDistill(ListwiseRankLLM):
         context_size: int = 150,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
@@ -47,6 +48,7 @@ class RankFiDDistill(ListwiseRankLLM):
             context_size=context_size,
             prompt_mode=prompt_mode,
             num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
             window_size=window_size,
         )
         self._precision = precision

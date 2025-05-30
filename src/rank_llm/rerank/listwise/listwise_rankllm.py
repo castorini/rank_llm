@@ -1,10 +1,11 @@
 import copy
+import json
 import logging
 import random
 import re
 from abc import ABC
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ftfy import fix_text
 from tqdm import tqdm
@@ -39,10 +40,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
         window_size: int,
+        few_shot_file: Optional[str] = None,
         use_alpha: bool = False,
     ) -> None:
-        super().__init__(model, context_size, prompt_mode)
-        self._num_few_shot_examples = num_few_shot_examples
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, few_shot_file
+        )
         self._window_size = window_size
         self._use_alpha = use_alpha
 
@@ -359,6 +362,13 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def _clean_response(self, response: str) -> str:
         new_response = ""
+
+        supersub_script_map = str.maketrans(
+            "⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉①②③④⑤⑥⑦⑧⑨❶❷❸❹❺❻❼❽❾０１２３４５６７８９🄀🄁🄂🄃🄄🄅🄆🄇🄈🄉",
+            "0123456789012345678912345678912345678901234567890123456789",
+        )
+        response = response.translate(supersub_script_map)
+
         if self._use_alpha:
             for c in response:
                 if not c.isalpha():
@@ -456,3 +466,26 @@ class ListwiseRankLLM(RankLLM, ABC):
         # For Japanese should cut by character: content = content[:int(max_length)]
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
+
+    def _add_few_shot_examples(self, conv):
+        exs = random.sample(self._examples, self._num_few_shot_examples)
+        for ex in exs:
+            obj = json.loads(ex)
+            prompt = obj["conversations"][0]["value"]
+            response = obj["conversations"][1]["value"]
+            conv.append_message(conv.roles[0], prompt)
+            conv.append_message(conv.roles[1], response)
+        return conv
+
+    def _add_few_shot_examples_messages(
+        self, messages: List[Dict[str, str]]
+    ) -> List[Dict[str, str]]:
+        if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
+            for ex in self._examples[
+                : min(self._num_few_shot_examples, len(self._examples))
+            ]:
+                for turn in ex["conversations"]:
+                    messages.append({"role": turn["role"], "content": turn["value"]})
+            return messages
+
+        return messages
