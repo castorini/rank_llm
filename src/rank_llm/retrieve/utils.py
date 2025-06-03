@@ -58,6 +58,5 @@ def download_cached_hits(
         filename=hf_filename,
         local_dir=cache_dir,
     )
-    print(f"Downloaded cached results to {cache_dir}/{file_path}")
 
     return file_path

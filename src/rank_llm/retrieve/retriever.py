@@ -192,7 +192,7 @@ class Retriever:
                             if i < k
                         ]
                         print(
-                            f"Successfully loaded {max_k_file} to get top {k} candidate"
+                            f"Successfully loaded {max_k_file} to get top {k} candidates"
                         )
                         return results
                 except Exception as local_error:
@@ -207,6 +207,9 @@ class Retriever:
                         for i, line in enumerate(f)
                         if i < k
                     ]
+                    print(
+                        f"Successfully downloaded cached results to {retrieve_results_dirname}/{cached_file}"
+                    )
                     return results
             except Exception as hf_error:
                 print(f"HF download failed, using Pyserini: {hf_error}")
