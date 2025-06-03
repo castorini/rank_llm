@@ -213,7 +213,7 @@ class Retriever:
             try:  # fallback #2: retrieve on the spot with pyserini
                 print(f"Using Pyserini to retrieve with dataset {self._dataset}")
                 pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
-                return pyserini.retrieve(k=k)
+                return pyserini.retrieve_and_store(k=k)
             except Exception as pyserini_error:
                 raise ValueError(f"Pyserini error: {pyserini_error}")
         elif self._retrieval_mode == RetrievalMode.CUSTOM:
