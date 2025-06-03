@@ -48,7 +48,7 @@ def download_cached_hits(
     Returns:
         Local path to the downloaded file
     """
-    repo_id = "RankLLMData/RankLLM_Data"
+    repo_id = "castorini/rank_llm_data"
     hf_filename = f"retrieve_results/{query_name}"
     cache_dir = get_cache_home()
 
