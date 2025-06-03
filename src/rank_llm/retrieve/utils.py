@@ -38,14 +38,12 @@ def get_cache_home():
 
 def download_cached_hits(
     query_name: str,
-    force_download: bool = False,
 ) -> str:
     """
     Download stored retrieved_results from HuggingFace datasets repo.
 
     Args:
         query_name: query name (eg. "BM25/retrieve_results_arguana_top100.jsonl")
-        force_download: If True, ignores cache and re-downloads
 
     Returns:
         Local path to the downloaded file
@@ -54,17 +52,11 @@ def download_cached_hits(
     hf_filename = f"retrieve_results/{query_name}"
     cache_dir = get_cache_home()
 
-    cache_path = f"{cache_dir}/{hf_filename}"
-    if not force_download and os.path.exists(cache_path):
-        print(f"Loading cached results from {cache_path}")
-        return cache_path
-
     file_path = hf_hub_download(
         repo_id=repo_id,
         repo_type="dataset",
         filename=hf_filename,
         local_dir=cache_dir,
-        force_download=force_download,
     )
     print(f"Downloaded cached results to {cache_dir}/{file_path}")
 
