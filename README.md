@@ -88,6 +88,19 @@ pip install -e .[tensorrt-llm]      # local installation for development
 pip install rank-llm[tensorrt-llm]  # or pip installation
 ```
 
+## Install Training (Optional)
+
+```bash
+pip install -e .[training]      # local installation for development
+pip install rank-llm[training]  # or pip installation
+```
+
+Remember to also install flash-attn to use as optimized implementation of attention mechanism used in Transformer models.
+
+```bash
+pip install flash-attn --no-build-isolation
+```
+
 <a id="quick-start"></a>
 # ⏳ Quick Start
 The following code snippet is a minimal walk through of retrieval, reranking, evalaution, and invocations analysis of top 100 retrieved documents for queries from `DL19`. In this example `BM25` is used as the retriever and `RankZephyr` as the reranker. Additional sample snippets are available to run under the `src/rank_llm/demo` directory.

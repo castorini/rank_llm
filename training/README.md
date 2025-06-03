@@ -10,7 +10,7 @@ To install the dependencies, run:
 ```bash
 conda create --name first python=3.9.18
 conda activate first
-pip install -r requirements.txt
+pip install rank-llm[training]
 pip install flash-attn --no-build-isolation
 ```
 
