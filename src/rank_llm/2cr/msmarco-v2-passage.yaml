@@ -1,0 +1,217 @@
+conditions:
+  - name: monot5
+    display: "Monot5 3B MSMARCO-10k"
+    display-html: "Monot5 3B MSMARCO-10k"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6678
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4958
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4505
+  - name: duot5
+    display: "Duot5 3B MSMARCO-10k"
+    display-html: "Duot5 3B MSMARCO-10k"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6951
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.5158
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4600
+  - name: lit5distill
+    display: "Lit5Distill Large"
+    display-html: "Lit5Distill Large"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6671
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.5102
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4578
+  - name: rankvicuna
+    display: "RankVicuna 7B V1"
+    display-html: "RankVicuna 7B V1"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_vicuna_7b_v1 --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6219
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4327
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4062
+  - name: rankzephyr
+    display: "RankZephyr 7B V1 - Full"
+    display-html: "RankZephyr 7B V1 - Full"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.7027
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.5099
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4423
+  - name: firstmistral
+    display: "First Mistral"
+    display-html: "First Mistral"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_alpha --use_logits
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6849
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4928
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4445
+  - name: qwen_2.5_7b_inst
+    display: "Qwen 2.5 7B Instruct"
+    display-html: "Qwen 2.5 7B Instruct"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=Qwen/Qwen2.5-7B-Instruct --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6451
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4264
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4061
+  - name: llama_3.1_8b_inst
+    display: "LLaMA 3.1 8B Instruct"
+    display-html: "LLaMA 3.1 8B Instruct"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=meta-llama/Llama-3.1-8B-Instruct --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6394
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4469
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4109
+  - name: gemini_2.0_flash
+    display: "Gemini 2.0 Flash"
+    display-html: "Gemini 2.0 Flash"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6807
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4805
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4650
+  - name: rankgpt
+    display: "RankGPT (gpt-4o-mini)"
+    display-html: "RankGPT (gpt-4o-mini)"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o-mini --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT --context_size=4096 --variable_passages --use_azure_openai
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6830
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4947
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4676
+  - name: rankgptapeer
+    display: "RankGPTAPEER (gpt-4o-mini)"
+    display-html: "RankGPTAPEER (gpt-4o-mini)"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o-mini --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=rank_GPT_APEER --context_size=4096 --variable_passages --use_azure_openai
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6720
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4863
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4442
+  - name: lrl
+    display: "LRL (gpt-4o-mini)"
+    display-html: "LRL (gpt-4o-mini)"
+    display-row: "[1]"
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o-mini --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_mode=LRL --context_size=4096 --variable_passages --use_azure_openai
+    topics:
+      - topic_key: dl21
+        eval_key: dl21-passage
+        scores:
+          - nDCG@10: 0.6558
+      - topic_key: dl22
+        eval_key: dl22-passage
+        scores:
+          - nDCG@10: 0.4740
+      - topic_key: dl23
+        eval_key: dl23-passage
+        scores:
+          - nDCG@10: 0.4426

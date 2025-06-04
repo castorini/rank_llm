@@ -9,6 +9,7 @@
 <td></td>
 <td>$s4</td>
 <td>$s5</td>
+<td>$s6</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -18,10 +19,13 @@
 <!-- Tabs navs -->
 <ul class="nav nav-tabs mb-3" id="row${row_cnt}-tabs" role="tablist">
   <li class="nav-item" role="presentation">
-    <a class="nav-link active" id="row${row_cnt}-tab1-header" data-mdb-toggle="tab" href="#row${row_cnt}-tab1" role="tab" aria-controls="row${row_cnt}-tab1" aria-selected="true" style="text-transform:none">TREC 2019</a>
+    <a class="nav-link active" id="row${row_cnt}-tab1-header" data-mdb-toggle="tab" href="#row${row_cnt}-tab1" role="tab" aria-controls="row${row_cnt}-tab1" aria-selected="true" style="text-transform:none">TREC 2021</a>
   </li>
   <li class="nav-item" role="presentation">
-    <a class="nav-link" id="row${row_cnt}-tab2-header" data-mdb-toggle="tab" href="#row${row_cnt}-tab2" role="tab" aria-controls="row${row_cnt}-tab2" aria-selected="false" style="text-transform:none">TREC 2020</a>
+    <a class="nav-link" id="row${row_cnt}-tab2-header" data-mdb-toggle="tab" href="#row${row_cnt}-tab2" role="tab" aria-controls="row${row_cnt}-tab2" aria-selected="false" style="text-transform:none">TREC 2022</a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" id="row${row_cnt}-tab3-header" data-mdb-toggle="tab" href="#row${row_cnt}-tab3" role="tab" aria-controls="row${row_cnt}-tab3" aria-selected="false" style="text-transform:none">TREC 2023</a>
   </li>
 </ul>
 <!-- Tabs navs -->
@@ -29,7 +33,7 @@
 <!-- Tabs content -->
 <div class="tab-content" id="row${row_cnt}-content">
   <div class="tab-pane fade show active" id="row${row_cnt}-tab1" role="tabpanel" aria-labelledby="row${row_cnt}-tab1">
-Command to generate and evaluate run on TREC 2019 queries:
+Command to generate and evaluate run on TREC 2021 queries:
 
   <blockquote class="mycode">
 <pre><code>$cmd1
@@ -41,7 +45,7 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row${row_cnt}-tab2" role="tabpanel" aria-labelledby="row${row_cnt}-tab2">
-    Command to generate and evaluate run on TREC 2020 queries:
+    Command to generate and evaluate run on TREC 2022 queries:
 
   <blockquote class="mycode">
 <pre><code>$cmd2
@@ -53,9 +57,15 @@ Command to generate and evaluate run on TREC 2019 queries:
 
   </div>
   <div class="tab-pane fade" id="row${row_cnt}-tab3" role="tabpanel" aria-labelledby="row${row_cnt}-tab3">
-    Command to generate run on dev queries:
+    Command to generate and evaluate run on TREC 2023 queries:
 
   <blockquote class="mycode">
+<pre><code>$cmd3
+</code></pre></blockquote>
+
+  <blockquote class="mycode">
+<pre><code>${eval_cmd3}</code></pre>
+  </blockquote>
 
   </div>
 </div>
