@@ -145,7 +145,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 gpu_memory_utilization=0.90,
             )
             self._tokenizer = self._llm.get_tokenizer()
-        
+
             if "rank_vicuna" in model:
                 setattr(
                     self._tokenizer,
@@ -340,7 +340,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         else:
             example_ordering = "[2] > [1]" if self._variable_passages else "[4] > [2]"
         return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Answer concisely and directly and only respond with the ranking results, do not say any word or explain."
-    
+
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
