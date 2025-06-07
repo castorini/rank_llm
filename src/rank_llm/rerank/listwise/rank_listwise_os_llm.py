@@ -91,8 +91,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             context_size,
             prompt_mode,
             num_few_shot_examples,
-            window_size,
             few_shot_file,
+            window_size,
             use_alpha=use_alpha,
         )
         self._device = device
