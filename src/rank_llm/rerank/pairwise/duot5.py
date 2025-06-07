@@ -108,8 +108,6 @@ class DuoT5(PairwiseRankLLM):
             f"Query: {query} Document0:  Document1:  Relevant: "
         )
 
-        few_shot_prompt = ""
-        few_shot_tokens = 0
         few_shot_prompt = self._build_pairwise_few_shot_examples()
         few_shot_tokens = self.get_num_tokens(few_shot_prompt)
 
@@ -134,7 +132,10 @@ class DuoT5(PairwiseRankLLM):
         doc1 = self._tokenizer.decode(doc1_tokens, skip_special_tokens=True)
         doc2 = self._tokenizer.decode(doc2_tokens, skip_special_tokens=True)
 
-        prompt = f"{few_shot_prompt} Query: {query} Document0: {doc1} Document1: {doc2} Relevant: "
+        prompt = (
+            few_shot_prompt
+            + f"Query: {query} Document0: {doc1} Document1: {doc2} Relevant: "
+        )
         prompt = prompt.replace("<unk>", "")
 
         return prompt, self.get_num_tokens(prompt)

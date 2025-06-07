@@ -1,5 +1,4 @@
 import copy
-import json
 import logging
 import random
 import re
@@ -193,47 +192,32 @@ class PairwiseRankLLM(RankLLM, ABC):
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
 
-    def _load_few_shot_examples(self, file_path: str):
-        try:
-            with open(file_path, "r") as json_file:
-                self._examples = json.load(json_file)
-        except FileNotFoundError:
-            raise ValueError(f"Few-shot examples file not found: {file_path}")
-        except json.JSONDecodeError:
-            raise ValueError(
-                f"Invalid JSON format in few-shot examples file: {file_path}"
-            )
-
     def _build_pairwise_few_shot_examples(self) -> str:
         if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
             examples = []
-            for _ in range(min(self._num_few_shot_examples, len(self._examples))):
-                ex = random.choice(self._examples)
+            pattern = re.compile(
+                r"Query: (?P<query>.+?) Document0: (?P<doc0>.+?) Document1: (?P<doc1>.+)$"
+            )
+
+            exs = random.sample(self._examples, self._num_few_shot_examples)
+            for ex in exs:
                 try:
                     # assume each value for conversation contain 2 values (user query + docs, asssistant response)
-                    example_query = (
-                        ex["conversations"][0]["value"]
-                        .split("Query: ")[-1]
-                        .split("Document0: ")[0]
-                        .strip()
-                    )
-                    example_doc0 = (
-                        ex["conversations"][0]["value"]
-                        .split(" Document0: ")[-1]
-                        .split("Document1: ")[0]
-                        .strip()
-                    )
-                    example_doc1 = (
-                        ex["conversations"][0]["value"]
-                        .split(" Document1: ")[-1]
-                        .strip()
-                    )
+                    user_msg = ex["conversations"][0]["value"]
+
+                    match = pattern.match(user_msg)
+                    if not match:
+                        continue
+
+                    example_query = match.group("query").strip()
+                    example_doc0 = match.group("doc0").strip()
+                    example_doc1 = match.group("doc1").strip()
                     example_relevance = ex["conversations"][1]["value"].strip()
 
                     examples.append(
                         f"Query: {example_query} Document0: {example_doc0} Document1: {example_doc1} Relevant: {example_relevance}"
                     )
-                except (json.JSONDecodeError, KeyError, IndexError):
+                except (KeyError, IndexError):
                     continue
 
             return "\n\n".join(examples) + "\n\n" if examples else ""

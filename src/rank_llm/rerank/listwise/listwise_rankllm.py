@@ -1,5 +1,4 @@
 import copy
-import json
 import logging
 import random
 import re
@@ -39,8 +38,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         context_size: int,
         prompt_mode: PromptMode,
         num_few_shot_examples: int,
-        window_size: int,
         few_shot_file: Optional[str] = None,
+        window_size: int = 20,
         use_alpha: bool = False,
     ) -> None:
         super().__init__(
@@ -472,9 +471,8 @@ class ListwiseRankLLM(RankLLM, ABC):
     def _add_few_shot_examples(self, conv):
         exs = random.sample(self._examples, self._num_few_shot_examples)
         for ex in exs:
-            obj = json.loads(ex)
-            prompt = obj["conversations"][0]["value"]
-            response = obj["conversations"][1]["value"]
+            prompt = ex["conversations"][0]["value"]
+            response = ex["conversations"][1]["value"]
             conv.append_message(conv.roles[0], prompt)
             conv.append_message(conv.roles[1], response)
         return conv

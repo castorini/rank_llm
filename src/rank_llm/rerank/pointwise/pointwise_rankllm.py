@@ -1,5 +1,4 @@
 import copy
-import json
 import logging
 import random
 import re
@@ -211,32 +210,30 @@ class PointwiseRankLLM(RankLLM, ABC):
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
 
-    def _load_few_shot_examples(self, file_path: str):
-        try:
-            with open(file_path, "r") as json_file:
-                self._examples = json.load(json_file)
-        except FileNotFoundError:
-            raise ValueError(f"Few-shot examples file not found: {file_path}")
-        except json.JSONDecodeError:
-            raise ValueError(
-                f"Invalid JSON format in few-shot examples file: {file_path}"
-            )
-
     def _build_pointwise_few_shot_examples(self):
         if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
             examples = []
-            for _ in range(min(self._num_few_shot_examples, len(self._examples))):
-                ex = random.choice(self._examples)
+            pattern = re.compile(r"Query: (?P<query>.+?) Document: (?P<doc>.+)$")
 
-                # assume each value to conversation key have at least 2 values (user: query + doc, assistant: score of relevance)
-                parts = ex["conversations"][0]["value"].split(" Document: ")
-                example_query = parts[0].replace("Query", "").strip()
-                example_doc = parts[1].split(" Relevant: ")[0].strip()
-                example_relevance = ex["conversations"][1]["value"].strip()
+            exs = random.sample(self._examples, self._num_few_shot_examples)
+            for ex in exs:
+                try:
+                    # assume each value to conversation key have at least 2 values (user: query + doc, assistant: score of relevance)
+                    user_msg = ex["conversations"][0]["value"]
 
-                examples.append(
-                    f"Query: {example_query} Document: {example_doc}\n Relevant: {example_relevance}"
-                )
+                    match = pattern.match(user_msg)
+                    if not match:
+                        continue
+
+                    example_query = match.group("query").strip()
+                    example_doc = match.group("doc").strip()
+                    example_relevance = ex["conversations"][1]["value"].strip()
+
+                    examples.append(
+                        f"Query: {example_query} Document: {example_doc}\n Relevant: {example_relevance}"
+                    )
+                except (KeyError, IndexError):
+                    continue
 
             return "\n\n".join(examples) + "\n\n" if examples else ""
         else:
