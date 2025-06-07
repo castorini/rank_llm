@@ -153,6 +153,8 @@ For more information about FIRST, refer to [Reddy et al. (2024)](https://arxiv.o
 [FirstMistral](https://arxiv.org/abs/2411.05508) is an LLM fine-tuned for listwise reranking using the FIRST approach.
 Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with FirstMistral.
 
+To avoid potential mismatches between the PyPI package and the latest code in this repository, please install from source by running `pip install -e .[pyserini]` instead of `pip install "rank-llm[pyserini]"`
+
 Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following command to run FirstMistral:
 
 #### Run end to end - FirstMistral
@@ -182,7 +184,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 |-----------------|-------------------|-----------|
 | 0.8201          | 0.7851           | 1         |
 | 0.8197          | 0.7843           | 5         |
-| 0.8198          | 0.7885           | 1         |
+| 0.8198          | 0.7885           | 2         |
 
 If your result is present in the table above, please increase its frequency by 1.
 If your result is not present, add a new row to the table with frequency 1.
@@ -195,3 +197,4 @@ After editing the table above, add a log entry here as well like the previous gu
 + Results reproduced by [@mithildamani256](https://github.com/mithildamani256) on 2025-02-15 (commit [`c91c011`](https://github.com/castorini/rank_llm/commit/c91c011ef5a60474144f9235551543d7fdd5c612))
 + Results reproduced by [@nihalmenon](https://github.com/nihalmenon) on 2025-02-19 (commit [`539c650`](https://github.com/castorini/rank_llm/commit/539c6502e42499e10a65c548f221b10b2e796296))
 + Results reproduced by [@lilyjge](https://github.com/lilyjge) on 2025-04-25 (commit [`b4ecd4c`](https://github.com/castorini/rank_llm/commit/b4ecd4c5512e95b7d00ca28c69149b13279fc274))
++ Results reproduced by [@Yaohui2019](https://github.com/Yaohui2019) on 2025-04-25 (commit [`d3a7a3c`](https://github.com/castorini/rank_llm/commit/d3a7a3c1690534b6f8f35c23a54e38321372d57d))
