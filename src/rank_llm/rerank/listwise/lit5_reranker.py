@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
@@ -12,13 +12,21 @@ class LiT5DistillReranker:
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
+        num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
+        precision: str = "bfloat16",
         window_size: int = 20,
+        device: str = "cuda",
     ) -> None:
         model_coordinator = RankFiDDistill(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
+            precision=precision,
             window_size=window_size,
+            device=device,
         )
         self._reranker = Reranker(model_coordinator)
 

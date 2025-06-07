@@ -27,6 +27,7 @@ def main(args):
     retrieval_method = args.retrieval_method
     prompt_mode = args.prompt_mode
     num_few_shot_examples = args.num_few_shot_examples
+    few_shot_file = args.few_shot_file
     shuffle_candidates = args.shuffle_candidates
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
@@ -59,6 +60,7 @@ def main(args):
         num_gpus=num_gpus,
         prompt_mode=prompt_mode,
         num_few_shot_examples=num_few_shot_examples,
+        few_shot_file=few_shot_file,
         shuffle_candidates=shuffle_candidates,
         print_prompts_responses=print_prompts_responses,
         use_azure_openai=use_azure_openai,
@@ -152,6 +154,13 @@ if __name__ == "__main__":
         required=False,
         default=0,
         help="number of in context examples to provide",
+    )
+    parser.add_argument(
+        "--few_shot_file",
+        type=str,
+        required=False,
+        default=None,
+        help="path to JSONL file containing few-shot examples.",
     )
     parser.add_argument(
         "--variable_passages",

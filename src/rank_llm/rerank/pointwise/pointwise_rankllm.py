@@ -1,10 +1,11 @@
 import copy
 import logging
+import random
 import re
 from abc import ABC
 from datetime import datetime
 from functools import cmp_to_key
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ftfy import fix_text
 from tqdm import tqdm
@@ -34,11 +35,15 @@ class PointwiseRankLLM(RankLLM, ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
+        num_few_shot_examples: int,
+        few_shot_file: Optional[str] = None,
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,
     ) -> None:
-        super().__init__(model, context_size, prompt_mode)
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, few_shot_file
+        )
         self._device = device
         self._filename = filename
         self._batch_size = batch_size
@@ -204,3 +209,32 @@ class PointwiseRankLLM(RankLLM, ABC):
         # For Japanese should cut by character: content = content[:int(max_length)]
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
+
+    def _build_pointwise_few_shot_examples(self):
+        if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
+            examples = []
+            pattern = re.compile(r"Query: (?P<query>.+?) Document: (?P<doc>.+)$")
+
+            exs = random.sample(self._examples, self._num_few_shot_examples)
+            for ex in exs:
+                try:
+                    # assume each value to conversation key have at least 2 values (user: query + doc, assistant: score of relevance)
+                    user_msg = ex["conversations"][0]["value"]
+
+                    match = pattern.match(user_msg)
+                    if not match:
+                        continue
+
+                    example_query = match.group("query").strip()
+                    example_doc = match.group("doc").strip()
+                    example_relevance = ex["conversations"][1]["value"].strip()
+
+                    examples.append(
+                        f"Query: {example_query} Document: {example_doc}\n Relevant: {example_relevance}"
+                    )
+                except (KeyError, IndexError):
+                    continue
+
+            return "\n\n".join(examples) + "\n\n" if examples else ""
+        else:
+            return ""

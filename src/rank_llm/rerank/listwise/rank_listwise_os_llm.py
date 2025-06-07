@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import random
@@ -38,11 +37,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
         num_few_shot_examples: int = 0,
-        device: str = "cuda",
+        few_shot_file: Optional[str] = None,
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         num_gpus: int = 1,
         variable_passages: bool = False,
         window_size: int = 20,
-        system_message: str = None,
+        system_message: Optional[str] = None,
         is_thinking: bool = False,
         reasoning_token_budget: int = 10000,
         use_logits: bool = False,
@@ -62,6 +62,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
          the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
          by default.
+         - few_shot_file (str, optional): Path to JSONL file containing few-shot examples. Required if num_few_shot_examples > 0.
+         File should contain one JSON object per line with "conversations" field containing prompt/response pairs.
          - device (str, optional): Specifies the device for model computation ('cuda' for GPU or 'cpu'). Defaults to 'cuda'.
          - num_gpus (int, optional): Number of GPUs to use for model loading and inference. Defaults to 1.
          - variable_passages (bool, optional): Indicates whether the number of passages to rank can vary. Defaults to False.
@@ -76,6 +78,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
          - ValueError: If an unsupported prompt mode is provided.
+         - ValueError: If num_few_shot_examples > 0 but no valid file path is provided
 
          Note:
          - This class is operates given scenarios where listwise ranking is required, with support for dynamic
@@ -88,6 +91,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             context_size,
             prompt_mode,
             num_few_shot_examples,
+            few_shot_file,
             window_size,
             use_alpha=use_alpha,
         )
@@ -101,13 +105,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._reasoning_token_budget = reasoning_token_budget
         self._output_token_estimate = None
         self._use_logits = use_logits
+        self._num_gpus = num_gpus
 
-        if num_few_shot_examples > 0:
-            with open("data/output_v2_aug_filtered.jsonl", "r") as json_file:
-                self._examples = list(json_file)[1:-1]
         if self._device == "cuda":
-            assert torch.cuda.is_available()
-
+            assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
         if prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
                 f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
@@ -144,6 +145,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 gpu_memory_utilization=0.90,
             )
             self._tokenizer = self._llm.get_tokenizer()
+
+            if "rank_vicuna" in model:
+                setattr(
+                    self._tokenizer,
+                    "chat_template",
+                    """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}
+                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
+                )
 
     def rerank_batch(
         self,
@@ -330,27 +339,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             example_ordering = "[B] > [A]" if self._variable_passages else "[D] > [B]"
         else:
             example_ordering = "[2] > [1]" if self._variable_passages else "[4] > [2]"
-        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Only respond with the ranking results, do not say any word or explain."
-
-    def _add_few_shot_examples(self, conv):
-        for _ in range(self._num_few_shot_examples):
-            ex = random.choice(self._examples)
-            obj = json.loads(ex)
-            prompt = obj["conversations"][0]["value"]
-            response = obj["conversations"][1]["value"]
-            conv.append_message(conv.roles[0], prompt)
-            conv.append_message(conv.roles[1], response)
-        return conv
-
-    def _add_few_shot_examples_messages(self, messages):
-        for _ in range(self._num_few_shot_examples):
-            ex = random.choice(self._examples)
-            obj = json.loads(ex)
-            prompt = obj["conversations"][0]["value"]
-            response = obj["conversations"][1]["value"]
-            messages.append({"role": "user", "content": prompt})
-            messages.append({"role": "assistant", "content": response})
-        return messages
+        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Answer concisely and directly and only respond with the ranking results, do not say any word or explain."
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
@@ -394,7 +383,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     (
                         num_tokens
                         - self.max_tokens()
-                        + self.num_output_tokens(rank_end - rank_start, self._use_alpha)
+                        + self.num_output_tokens(rank_end - rank_start)
                     )
                     // ((rank_end - rank_start) * 4),
                 )

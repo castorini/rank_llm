@@ -1,10 +1,11 @@
 import copy
 import logging
+import random
 import re
 from abc import ABC
 from datetime import datetime
 from functools import cmp_to_key
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ftfy import fix_text
 from tqdm import tqdm
@@ -25,11 +26,17 @@ class PairwiseRankLLM(RankLLM, ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
+        num_few_shot_examples: int,
+        few_shot_file: Optional[str],
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,
     ) -> None:
-        super().__init__(model, context_size, prompt_mode)
+        super().__init__(
+            model, context_size, prompt_mode, num_few_shot_examples, few_shot_file
+        )
+        self._num_few_shot_examples = num_few_shot_examples
+        self._few_shot_file = few_shot_file
         self._device = device
         self._filename = filename
         self._batch_size = batch_size
@@ -184,3 +191,35 @@ class PairwiseRankLLM(RankLLM, ABC):
         # For Japanese should cut by character: content = content[:int(max_length)]
         content = " ".join(content.split()[: int(max_length)])
         return self._replace_number(content)
+
+    def _build_pairwise_few_shot_examples(self) -> str:
+        if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
+            examples = []
+            pattern = re.compile(
+                r"Query: (?P<query>.+?) Document0: (?P<doc0>.+?) Document1: (?P<doc1>.+)$"
+            )
+
+            exs = random.sample(self._examples, self._num_few_shot_examples)
+            for ex in exs:
+                try:
+                    # assume each value for conversation contain 2 values (user query + docs, asssistant response)
+                    user_msg = ex["conversations"][0]["value"]
+
+                    match = pattern.match(user_msg)
+                    if not match:
+                        continue
+
+                    example_query = match.group("query").strip()
+                    example_doc0 = match.group("doc0").strip()
+                    example_doc1 = match.group("doc1").strip()
+                    example_relevance = ex["conversations"][1]["value"].strip()
+
+                    examples.append(
+                        f"Query: {example_query} Document0: {example_doc0} Document1: {example_doc1} Relevant: {example_relevance}"
+                    )
+                except (KeyError, IndexError):
+                    continue
+
+            return "\n\n".join(examples) + "\n\n" if examples else ""
+        else:
+            return ""
