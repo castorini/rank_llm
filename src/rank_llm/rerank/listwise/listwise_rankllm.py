@@ -126,7 +126,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                     prompt, permutation, in_token_count, out_token_count
                 )
                 result.invocations_history.append(inference_invocation)
-            result = self.receive_permutation(result, permutation, rank_start, rank_end)
+            result = self.receive_permutation(
+                result, permutation, rank_start, rank_end, logging
+            )
 
         return results
 
@@ -163,7 +165,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                 prompt, permutation, in_token_count, out_token_count
             )
             result.invocations_history.append(inference_invocation)
-        result = self.receive_permutation(result, permutation, rank_start, rank_end)
+        result = self.receive_permutation(
+            result, permutation, rank_start, rank_end, logging
+        )
         return result
 
     def shuffle_and_rescore(
@@ -395,7 +399,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         return new_response
 
     def receive_permutation(
-        self, result: Result, permutation: str, rank_start: int, rank_end: int
+        self,
+        result: Result,
+        permutation: str,
+        rank_start: int,
+        rank_end: int,
+        logging: True,
     ) -> Result:
         """
         Processes and applies a permutation to the ranking results.
@@ -422,17 +431,21 @@ class ListwiseRankLLM(RankLLM, ABC):
             Items not mentioned in the permutation string remain in their original sequence but are moved after
             the permuted items.
         """
-
-        # Parse and normalize the permutation indices
-        response = self._clean_response(permutation)
-        response = [int(x) - 1 for x in response.split()]
-        response = self._remove_duplicate(response)
-
-        # Extract the relevant candidates and create a mapping for new order
         cut_range = copy.deepcopy(result.candidates[rank_start:rank_end])
         original_rank = [tt for tt in range(len(cut_range))]
-        response = [ss for ss in response if ss in original_rank]
-        response = response + [tt for tt in original_rank if tt not in response]
+        try:
+            # Parse and normalize the permutation indices
+            response = self._clean_response(permutation)
+            response = [int(x) - 1 for x in response.split()]
+            response = self._remove_duplicate(response)
+
+            # Extract the relevant candidates and create a mapping for new order
+            response = [ss for ss in response if ss in original_rank]
+            response = response + [tt for tt in original_rank if tt not in response]
+        except Exception as e:
+            if logging:
+                print(f"exception {e} happened while handling response {permutation}")
+            response = original_rank
 
         # Update candidates in the new order
         for j, x in enumerate(response):
