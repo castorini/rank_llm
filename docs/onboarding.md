@@ -153,8 +153,6 @@ For more information about FIRST, refer to [Reddy et al. (2024)](https://arxiv.o
 [FirstMistral](https://arxiv.org/abs/2411.05508) is an LLM fine-tuned for listwise reranking using the FIRST approach.
 Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with FirstMistral.
 
-To avoid potential mismatches between the PyPI package and the latest code in this repository, please install from source by running `pip install -e .[pyserini]` instead of `pip install "rank-llm[pyserini]"`
-
 Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following command to run FirstMistral:
 
 #### Run end to end - FirstMistral
