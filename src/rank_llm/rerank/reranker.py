@@ -201,6 +201,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default rank_GPT template is ready
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -208,6 +212,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -218,6 +223,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 window_size=window_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -228,6 +234,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default rank_GPT template is ready
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -235,6 +245,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -245,6 +256,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
@@ -263,6 +275,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default rank_GPT template is ready
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),
@@ -278,6 +294,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 device,
@@ -300,6 +317,7 @@ class Reranker:
                 name=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 device=device,
@@ -322,6 +340,10 @@ class Reranker:
 
             keys_and_defaults = [
                 ("prompt_mode", PromptMode.MONOT5),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default MONOT5 template is ready
                 ("context_size", 512),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
@@ -330,6 +352,7 @@ class Reranker:
             ]
             [
                 prompt_mode,
+                template_path,
                 context_size,
                 num_few_shot_examples,
                 few_shot_file,
@@ -344,6 +367,7 @@ class Reranker:
                     else model_path
                 ),
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 context_size=context_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -358,13 +382,21 @@ class Reranker:
 
             keys_and_defaults = [
                 ("prompt_mode", PromptMode.DUOT5),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default DUOT5 template is ready
                 ("context_size", 512),
                 ("device", "cuda"),
                 ("batch_size", 64),
             ]
-            [prompt_mode, context_size, device, batch_size] = extract_kwargs(
-                keys_and_defaults, **kwargs
-            )
+            [
+                prompt_mode,
+                template_path,
+                context_size,
+                device,
+                batch_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = DuoT5(
                 model=(
@@ -373,6 +405,7 @@ class Reranker:
                     else model_path
                 ),
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 context_size=context_size,
                 device=device,
                 batch_size=batch_size,
@@ -381,6 +414,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 150),
                 ("prompt_mode", PromptMode.LiT5),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default LiT5 template is ready
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -390,6 +427,7 @@ class Reranker:
             (
                 context_size,
                 prompt_mode,
+                template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -401,6 +439,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
@@ -412,6 +451,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 150),
                 ("prompt_mode", PromptMode.LiT5),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default LiT5 template is ready
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 100),
@@ -421,6 +464,7 @@ class Reranker:
             (
                 context_size,
                 prompt_mode,
+                template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -432,6 +476,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
@@ -448,6 +493,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "template_path",
+                    None,
+                ),  # Need to modify later when default rank_GPT template is ready
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),
@@ -463,6 +512,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 device,
@@ -481,6 +531,7 @@ class Reranker:
                 name=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                template_path=template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 device=device,

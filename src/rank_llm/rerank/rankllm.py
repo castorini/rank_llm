@@ -4,7 +4,11 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import yaml
+
 from rank_llm.data import Request, Result
+from rank_llm.rerank.inference_handler import BaseInferenceHandler
+from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +32,8 @@ class RankLLM(ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
-        num_few_shot_examples: int,
+        template_path: Optional[str] = None,
+        num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
     ) -> None:
         self._model = model
@@ -36,6 +41,15 @@ class RankLLM(ABC):
         self._prompt_mode = prompt_mode
         self._num_few_shot_examples = num_few_shot_examples
         self._few_shot_file = few_shot_file
+
+        if (
+            template_path is not None
+        ):  # need to add condition right now since no default files
+            with open(template_path, "r") as file:
+                data = yaml.safe_load(file)
+        data = {"": ""}  # placeholder for now if template path is none
+
+        self._inference_handler = self._create_handler(data)
 
         if self._num_few_shot_examples > 0:
             if not few_shot_file:
@@ -187,6 +201,9 @@ class RankLLM(ABC):
         Returns the output filename used when writing rerank results to file
         """
         pass
+
+    def _create_handler(self, template: Dict[str, str]) -> BaseInferenceHandler:
+        return ListwiseInferenceHandler(template)  # placeholder value for now
 
     def _load_few_shot_examples(self, file_path: str):
         try:

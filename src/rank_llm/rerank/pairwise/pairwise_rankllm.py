@@ -26,14 +26,20 @@ class PairwiseRankLLM(RankLLM, ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
-        num_few_shot_examples: int,
-        few_shot_file: Optional[str],
+        template_path: Optional[str] = None,
+        num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,
     ) -> None:
         super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, few_shot_file
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            template_path=template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
         )
         self._num_few_shot_examples = num_few_shot_examples
         self._few_shot_file = few_shot_file
