@@ -8,7 +8,6 @@ import yaml
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
-from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +202,10 @@ class RankLLM(ABC):
         pass
 
     def _create_handler(self, template: Dict[str, str]) -> BaseInferenceHandler:
+        from rank_llm.rerank.listwise.listwise_inference_handler import (
+            ListwiseInferenceHandler,
+        )
+
         return ListwiseInferenceHandler(template)  # placeholder value for now
 
     def _load_few_shot_examples(self, file_path: str):
