@@ -44,12 +44,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         use_alpha: bool = False,
     ) -> None:
         super().__init__(
-            model,
-            context_size,
-            prompt_mode,
-            template_path,
-            num_few_shot_examples,
-            few_shot_file,
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            template_path=template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
         )
         self._window_size = window_size
         self._use_alpha = use_alpha
