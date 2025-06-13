@@ -37,7 +37,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
-        template_path: Optional[str] = None,
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
@@ -47,7 +47,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            template_path=template_path,
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
         )

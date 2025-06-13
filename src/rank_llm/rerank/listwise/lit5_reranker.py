@@ -12,7 +12,7 @@ class LiT5DistillReranker:
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
-        template_path: Optional[str] = None,
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         precision: str = "bfloat16",
@@ -23,7 +23,7 @@ class LiT5DistillReranker:
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            template_path=template_path,
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             precision=precision,
@@ -117,7 +117,7 @@ class LiT5ScoreReranker:
         model_path: str = "castorini/LiT5-Score-base",
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
-        template_path: Optional[str] = None,
+        prompt_template_path: Optional[str] = None,
         window_size: int = 20,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
     ) -> None:
@@ -125,7 +125,7 @@ class LiT5ScoreReranker:
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            template_path=template_path,
+            prompt_template_path=prompt_template_path,
             window_size=window_size,
         )
         self._reranker = Reranker(model_coordinator)

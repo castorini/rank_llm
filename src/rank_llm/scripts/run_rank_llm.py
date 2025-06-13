@@ -26,7 +26,7 @@ def main(args):
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
     prompt_mode = args.prompt_mode
-    template_path = args.template_path
+    prompt_template_path = args.prompt_template_path
     num_few_shot_examples = args.num_few_shot_examples
     few_shot_file = args.few_shot_file
     shuffle_candidates = args.shuffle_candidates
@@ -60,7 +60,7 @@ def main(args):
         device=device,
         num_gpus=num_gpus,
         prompt_mode=prompt_mode,
-        template_path=template_path,
+        prompt_template_path=prompt_template_path,
         num_few_shot_examples=num_few_shot_examples,
         few_shot_file=few_shot_file,
         shuffle_candidates=shuffle_candidates,
@@ -141,7 +141,7 @@ if __name__ == "__main__":
         choices=list(PromptMode),
     )
     parser.add_argument(
-        "--template_path",
+        "--prompt_template_path",
         type=str,
         required=False,
         help="yaml file path for the prompt template",

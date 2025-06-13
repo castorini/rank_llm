@@ -31,7 +31,7 @@ class RankLLM(ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
-        template_path: Optional[str] = None,
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
     ) -> None:
@@ -42,9 +42,9 @@ class RankLLM(ABC):
         self._few_shot_file = few_shot_file
 
         if (
-            template_path is not None
+            prompt_template_path is not None
         ):  # need to add condition right now since no default files
-            with open(template_path, "r") as file:
+            with open(prompt_template_path, "r") as file:
                 data = yaml.safe_load(file)
         data = {"": ""}  # placeholder for now if template path is none
 

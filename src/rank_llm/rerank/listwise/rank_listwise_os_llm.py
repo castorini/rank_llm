@@ -36,7 +36,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         name: str = "",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
-        template_path: Optional[str] = None,
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -88,13 +88,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         TODO: Make repetition_penalty configurable
         """
         super().__init__(
-            model,
-            context_size,
-            prompt_mode,
-            template_path,
-            num_few_shot_examples,
-            few_shot_file,
-            window_size,
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
+            window_size=window_size,
             use_alpha=use_alpha,
         )
         self._device = device
