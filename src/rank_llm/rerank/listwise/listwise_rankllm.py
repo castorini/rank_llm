@@ -404,7 +404,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         permutation: str,
         rank_start: int,
         rank_end: int,
-        logging: True,
+        logging: bool = False,
     ) -> Result:
         """
         Processes and applies a permutation to the ranking results.
