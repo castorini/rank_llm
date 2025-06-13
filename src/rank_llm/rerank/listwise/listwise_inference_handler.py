@@ -4,6 +4,7 @@ from rank_llm.data import Result
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 
+# TODO(issue #237): Need to modify functions for this class
 class ListwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
         super().__init__(template)

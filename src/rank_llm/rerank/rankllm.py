@@ -43,10 +43,12 @@ class RankLLM(ABC):
 
         if (
             prompt_template_path is not None
-        ):  # need to add condition right now since no default files
+        ):  # TODO(issue #236): after default template is added, remove condition
             with open(prompt_template_path, "r") as file:
                 data = yaml.safe_load(file)
-        data = {"": ""}  # placeholder for now if template path is none
+        data = {
+            "": ""
+        }  # TODO(issue #236): after default template is added, remove this line
 
         self._inference_handler = self._create_handler(data)
 
@@ -202,11 +204,12 @@ class RankLLM(ABC):
         pass
 
     def _create_handler(self, template: Dict[str, str]) -> BaseInferenceHandler:
+        # TODO(issue #236 and #237): Need to modify function to select correct inference handler
         from rank_llm.rerank.listwise.listwise_inference_handler import (
             ListwiseInferenceHandler,
         )
 
-        return ListwiseInferenceHandler(template)  # placeholder value for now
+        return ListwiseInferenceHandler(template)
 
     def _load_few_shot_examples(self, file_path: str):
         try:
