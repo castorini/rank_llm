@@ -431,6 +431,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             Items not mentioned in the permutation string remain in their original sequence but are moved after
             the permuted items.
         """
+        # Extract the relevant candidates
         cut_range = copy.deepcopy(result.candidates[rank_start:rank_end])
         original_rank = [tt for tt in range(len(cut_range))]
         try:
@@ -439,7 +440,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             response = [int(x) - 1 for x in response.split()]
             response = self._remove_duplicate(response)
 
-            # Extract the relevant candidates and create a mapping for new order
+            # Create a mapping for new order
             response = [ss for ss in response if ss in original_rank]
             response = response + [tt for tt in original_rank if tt not in response]
         except Exception as e:
