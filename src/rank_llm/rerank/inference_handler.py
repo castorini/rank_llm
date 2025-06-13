@@ -28,7 +28,9 @@ class BaseInferenceHandler(ABC):
         """
         pass
 
-    def _replace_key(self, template_part: str, **kwargs: Any) -> str:
+    def _replace_key(
+        self, template_part: str, replacements: Dict[str, str | int]
+    ) -> str:
         """
         Replaces placeholder keywords in a template section with actual content.
 
@@ -45,7 +47,12 @@ class BaseInferenceHandler(ABC):
             and kwargs = {"query": "llm ranking", "num": 3}
             Returns: "Query: llm ranking\nNumber: 3"
         """
-        pass
+        template_part_content = self.template[template_part]
+
+        for keyword, value in replacements.items():
+            template_part_content = template_part_content.replace(keyword, str(value))
+
+        return template_part_content
 
     @abstractmethod
     def generate_prompt(
