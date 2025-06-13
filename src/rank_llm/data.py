@@ -82,7 +82,8 @@ class DataWriter:
                 {"query": d.query.__dict__, "invocations_history": values}
             )
         with open(filename, "a" if self._append else "w") as f:
-            json.dump(aggregated_history, f, indent=2)
+            output = json.dumps(aggregated_history, indent=2, ensure_ascii=False)
+            f.write(output)
 
     def write_in_json_format(self, filename: str):
         results = []
@@ -90,13 +91,18 @@ class DataWriter:
             candidates = [candidate.__dict__ for candidate in d.candidates]
             results.append({"query": d.query.__dict__, "candidates": candidates})
         with open(filename, "a" if self._append else "w") as f:
-            json.dump(results, f, indent=2)
+            output = json.dumps(results, indent=2, ensure_ascii=False)
+            f.write(output)
 
     def write_in_jsonl_format(self, filename: str):
         with open(filename, "a" if self._append else "w") as f:
             for d in self._data:
                 candidates = [candidate.__dict__ for candidate in d.candidates]
-                json.dump({"query": d.query.__dict__, "candidates": candidates}, f)
+                output = json.dumps(
+                    {"query": d.query.__dict__, "candidates": candidates},
+                    ensure_ascii=False,
+                )
+                f.write(output)
                 f.write("\n")
 
     def write_in_trec_eval_format(self, filename: str):
