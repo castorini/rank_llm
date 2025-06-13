@@ -9,8 +9,53 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
         super().__init__(template)
 
+        self._validate_template(self.template)
+
     def _validate_template(self, template: Dict[str, str]):
-        pass
+        required_template_keys = {
+            "body": ["{rank}", "{candidate}"],
+        }
+
+        allowed_template_keys = {
+            "system_message": [],
+            "prefix": ["{num}", "{query}"],
+            "suffix": ["{num}", "{query}"],
+        }
+
+        # Validate the method value
+        if template["method"] != "listwise":
+            raise ValueError(
+                f"Incorrect method type, expected \"listwise\", got {template['method']}"
+            )
+
+        # Validate the required keys
+        missing_template_keys = [
+            key for key in required_template_keys if key not in template
+        ]
+        if missing_template_keys:
+            raise ValueError(f"Missing required template keys: {missing_template_keys}")
+
+        # Validate the rest of the template keys
+        for template_key, template_value in template.items():
+            if (
+                template_key not in required_template_keys
+                and template_key not in allowed_template_keys
+            ):
+                raise ValueError(f"Unknown template key: {template_key}")
+            if template_key in required_template_keys:
+                for keyword in required_template_keys[template_key]:
+                    if keyword not in template_value:
+                        raise ValueError(
+                            f"Missing required keyword {keyword} in {template_key} section"
+                        )
+            if template_key in allowed_template_keys:
+                for keyword in allowed_template_keys[template_key]:
+                    if keyword not in template_value:
+                        raise ValueError(
+                            f"Missing required keywords: {keyword} in {template_key} section"
+                        )
+
+        print("Template validated successfully!")
 
     def _generate_prefix(
         self, num: Optional[int] = None, query: Optional[str] = None
