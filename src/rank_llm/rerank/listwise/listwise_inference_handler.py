@@ -26,8 +26,18 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         pass
 
     def generate_prompt(
-        self, result: Result, **kwargs: Any
-    ) -> Tuple[str, int] | List[Tuple[Dict[str, str], int]]:
+        self, result: Result, rank_start: int, rank_end: int, **kwargs: Any
+    ) -> Tuple[str, int]:
+        pass
+
+    def generate_prompt_batched(
+        self,
+        result: Result,
+        rank_start: int,
+        rank_end: int,
+        batch_size: int,
+        **kwargs: Any,
+    ) -> List[Tuple[str, int]]:
         pass
 
     def _clean_response(self, response: str, **kwargs: Any) -> str:

@@ -61,23 +61,15 @@ class BaseInferenceHandler(ABC):
         return template_text
 
     @abstractmethod
-    def generate_prompt(
-        self, result: Result, **kwargs: Any
-    ) -> Tuple[str, int] | List[Tuple[Dict[str, str], int]]:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> Tuple[str, int]:
         """
         Generates complete prompt(s) for the ranking task.
 
         Args:
             result (Result): The search Result object to generate prompts for
-            rank_start (int): Starting index for documents to include
-            rank_end (int): Ending index for documents to include
 
         Returns:
-            Either:
-            - A single tuple of (prompt_text, token_count)
-            OR
-            - List of tuples where each tuple contains (prompt_dict, token_count)
-              for batched prompts
+            Tuple[str, int]: A tuple object containing the text response and the number of tokens in the response.
 
         Note:
             Should:
@@ -85,5 +77,20 @@ class BaseInferenceHandler(ABC):
             2. Combine all parts into final prompt(s)
             3. Calculate token counts for each prompt
             4. Handle both single and batched prompt cases
+        """
+        pass
+
+    @abstractmethod
+    def generate_prompt_batched(
+        self, result: Result, batch_size: int, **kwargs: Any
+    ) -> List[Tuple[str, int]]:
+        """
+        Generates a batch of complete prompt(s) for the ranking task.
+
+        Args:
+            results (List[Result]): The list of result objects containing data for prompt generation.
+
+        Returns:
+            Tuple[List[Union[str, List[Dict[str, str]]], List[int]]: A tuple object containing the list of generated prompts and the list of number of tokens in the generated prompts.
         """
         pass
