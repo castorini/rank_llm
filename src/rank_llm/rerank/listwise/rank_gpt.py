@@ -18,6 +18,7 @@ class SafeOpenai(ListwiseRankLLM):
         model: str,
         context_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
@@ -56,12 +57,13 @@ class SafeOpenai(ListwiseRankLLM):
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         super().__init__(
-            model,
-            context_size,
-            prompt_mode,
-            num_few_shot_examples,
-            window_size,
-            few_shot_file,
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
+            window_size=window_size,
         )
         if isinstance(keys, str):
             keys = [keys]

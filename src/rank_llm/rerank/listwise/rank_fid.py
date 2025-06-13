@@ -33,6 +33,7 @@ class RankFiDDistill(ListwiseRankLLM):
         model: str,
         context_size: int = 150,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
@@ -47,6 +48,7 @@ class RankFiDDistill(ListwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
@@ -274,7 +276,9 @@ class RankFiDScore(ListwiseRankLLM):
         model: str,
         context_size: int = 150,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
@@ -284,6 +288,7 @@ class RankFiDScore(ListwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             window_size=window_size,
         )
