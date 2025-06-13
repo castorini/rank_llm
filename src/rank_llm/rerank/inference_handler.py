@@ -82,7 +82,7 @@ class BaseInferenceHandler(ABC):
 
     @abstractmethod
     def generate_prompt_batched(
-        self, result: Result, batch_size: int, **kwargs: Any
+        self, result: Result, **kwargs: Any
     ) -> List[Tuple[str, int]]:
         """
         Generates a batch of complete prompt(s) for the ranking task.

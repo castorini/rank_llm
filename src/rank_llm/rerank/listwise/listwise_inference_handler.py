@@ -25,19 +25,25 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
     def _generate_body(self, result: Result) -> str:
         pass
 
-    def generate_prompt(
-        self, result: Result, rank_start: int, rank_end: int, **kwargs: Any
-    ) -> Tuple[str, int]:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> Tuple[str, int]:
+        try:
+            rank_start = kwargs["rank_start"]
+            rank_end = kwargs["rank_end"]
+        except KeyError as e:
+            raise ValueError(f"Missing required parameter: {e}")
         pass
 
     def generate_prompt_batched(
         self,
         result: Result,
-        rank_start: int,
-        rank_end: int,
-        batch_size: int,
         **kwargs: Any,
     ) -> List[Tuple[str, int]]:
+        try:
+            rank_start = kwargs["rank_start"]
+            rank_end = kwargs["rank_end"]
+            batch_size = kwargs["batch_size"]
+        except KeyError as e:
+            raise ValueError(f"Missing required parameter: {e}")
         pass
 
     def _clean_response(self, response: str, **kwargs: Any) -> str:
