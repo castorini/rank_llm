@@ -29,30 +29,36 @@ class BaseInferenceHandler(ABC):
         pass
 
     def _replace_key(
-        self, template_part: str, replacements: Dict[str, str | int]
+        self, template_key: str, replacements: Dict[str, str | int]
     ) -> str:
         """
         Replaces placeholder keywords in a template section with actual content.
 
         Args:
-            template_part (str): The template section containing placeholders
-            **kwargs (Any): Key-value pairs where keys match template placeholders
-                (e.g., {query: "actual query text", num: 5})
+            template_key (str): The template section containing placeholders
+            replacements (Dict[str, str | int]): Key-value pairs where keywords match the content for them
+                (e.g., {"{query}": "actual query text", "{num}": 5})
 
         Returns:
-            The template string with all placeholders replaced by their values
+            The template text with all keywords replaced by their values
 
         Example:
-            If template_part = "Query: {query}\nNumber: {num}"
-            and kwargs = {"query": "llm ranking", "num": 3}
+            If template_key = "Query: {query}\nNumber: {num}"
+            and replacements = {"{query}": "llm ranking", "{num}": 3}
             Returns: "Query: llm ranking\nNumber: 3"
         """
-        template_part_content = self.template[template_part]
+        template_text = self.template.get(template_key, "")
+
+        if not template_text:
+            print(
+                f"{template_key} is not a part of the template provided, setting {template_key} part as empty string"
+            )
+            return ""
 
         for keyword, value in replacements.items():
-            template_part_content = template_part_content.replace(keyword, str(value))
+            template_text = template_text.replace(keyword, str(value))
 
-        return template_part_content
+        return template_text
 
     @abstractmethod
     def generate_prompt(
