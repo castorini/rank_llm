@@ -423,7 +423,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         body_text = listwise_inference_handler._generate_body(
             r, rank_start=0, rank_end=2, use_alpha=False
         )
-        expected_body = "1. Title: Sample Title Content: Sample Text\n2. Title: Sample Title Content: Sample Text\n"
+        expected_body = "[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\n"
         self.assertEqual(body_text, expected_body)
 
     def test_generate_prompt(self):
@@ -435,7 +435,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             {"role": "system", "content": VALID_TEMPLATE["system_message"]},
             {
                 "role": "user",
-                "content": "Sample prefix: Rank these 2 passsages for query: Sample Query\n1. Title: Sample Title Content: Sample Text\n2. Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 1 passages based on query: test query",
+                "content": "Sample prefix: Rank these 2 passsages for query: Sample Query\n[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 1 passages based on query: test query",
             },
         ]
         self.assertEqual(prompt, expected_prompt)
