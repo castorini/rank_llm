@@ -134,7 +134,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
             rank_start = kwargs["rank_start"]
             rank_end = kwargs["rank_end"]
             psg_ids = []
-            for rank in range(rank_start, rank_end):
+            for rank in range(rank_end - rank_start):
                 psg_ids.append(f"PASSAGE{rank+1}")
             psg_ids_str = "[" + ", ".join(psg_ids) + "]"
             suffix_fmt_values["psg_ids"] = psg_ids_str
