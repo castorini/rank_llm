@@ -91,7 +91,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            prompt_template_path=prompt_template_path,
+            prompt_template_path="rank_gpt_template.yaml"
+            if not prompt_template_path
+            else prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
@@ -108,7 +110,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
-        self._use_inference_handler = prompt_template_path
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
@@ -349,39 +350,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
-        query = result.query.text
-        query = self._replace_number(query)
-        num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
 
         while True:
-            if self._use_inference_handler:
-                print("USING INFERENCE HANDLER TO GENERATE PROMPT")
-                inference_handler = self._inference_handler
-                messages = inference_handler.generate_prompt(
-                    result=result, rank_start=rank_start, rank_end=rank_end
-                )
-            else:
-                print("USING DEFAULT FUNCTION TO GENERATE PROMPT")
-                messages = list()
-                if self._system_message:
-                    messages.append({"role": "system", "content": self._system_message})
-                messages = self._add_few_shot_examples_messages(messages)
-                prefix = self._add_prefix_prompt(query, num)
-                rank = 0
-                input_context = f"{prefix}\n"
-                for cand in result.candidates[rank_start:rank_end]:
-                    rank += 1
-                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-
-                    identifier = (
-                        chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
-                    )
-                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
-
-                input_context += self._add_post_prompt(query, num)
-                messages.append({"role": "user", "content": input_context})
-
+            inference_handler = self._inference_handler
+            messages = inference_handler.generate_prompt(
+                result=result, rank_start=rank_start, rank_end=rank_end
+            )
             prompt = self._tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
