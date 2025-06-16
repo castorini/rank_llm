@@ -108,6 +108,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
+        self._use_inference_handler = prompt_template_path
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
@@ -332,10 +333,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         return _output_token_estimate
 
+    # TODO(issue #237): Need to remove this function after ListwiseInferenceHandler is implemented
     def _add_prefix_prompt(self, query: str, num: int) -> str:
         identifier_type = "an alphabetical" if self._use_alpha else " a numerical"
         return f"I will provide you with {num} passages, each indicated by {identifier_type} identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
+    # TODO(issue #237): Need to remove this function after ListwiseInferenceHandler is implemented
     def _add_post_prompt(self, query: str, num: int) -> str:
         if self._use_alpha:
             example_ordering = "[B] > [A]" if self._variable_passages else "[D] > [B]"
@@ -350,25 +353,32 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         query = self._replace_number(query)
         num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
+
         while True:
-            messages = list()
-            if self._system_message:
-                messages.append({"role": "system", "content": self._system_message})
-            messages = self._add_few_shot_examples_messages(messages)
-            prefix = self._add_prefix_prompt(query, num)
-            rank = 0
-            input_context = f"{prefix}\n"
-            for cand in result.candidates[rank_start:rank_end]:
-                rank += 1
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-
-                identifier = (
-                    chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
+            if self._use_inference_handler:
+                inference_handler = self._inference_handler
+                messages = inference_handler.generate_prompt(
+                    result, rank_start, rank_end
                 )
-                input_context += f"[{identifier}] {self._replace_number(content)}\n"
+            else:
+                messages = list()
+                if self._system_message:
+                    messages.append({"role": "system", "content": self._system_message})
+                messages = self._add_few_shot_examples_messages(messages)
+                prefix = self._add_prefix_prompt(query, num)
+                rank = 0
+                input_context = f"{prefix}\n"
+                for cand in result.candidates[rank_start:rank_end]:
+                    rank += 1
+                    content = self.convert_doc_to_prompt_content(cand.doc, max_length)
 
-            input_context += self._add_post_prompt(query, num)
-            messages.append({"role": "user", "content": input_context})
+                    identifier = (
+                        chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
+                    )
+                    input_context += f"[{identifier}] {self._replace_number(content)}\n"
+
+                input_context += self._add_post_prompt(query, num)
+                messages.append({"role": "user", "content": input_context})
 
             prompt = self._tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True

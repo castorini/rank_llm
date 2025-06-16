@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 from rank_llm.data import Result
 
@@ -43,7 +43,7 @@ class BaseInferenceHandler(ABC):
             The template text with all keywords replaced by their values
 
         Example:
-            If template_key = "Query: {query}\nNumber: {num}"
+            If template_key = "prefix"
             and replacements = {"{query}": "llm ranking", "{num}": 3}
             Returns: "Query: llm ranking\nNumber: 3"
         """
@@ -77,20 +77,5 @@ class BaseInferenceHandler(ABC):
             2. Combine all parts into final prompt(s)
             3. Calculate token counts for each prompt
             4. Handle both single and batched prompt cases
-        """
-        pass
-
-    @abstractmethod
-    def generate_prompt_batched(
-        self, result: Result, **kwargs: Any
-    ) -> List[Tuple[str, int]]:
-        """
-        Generates a batch of complete prompt(s) for the ranking task.
-
-        Args:
-            results (List[Result]): The list of result objects containing data for prompt generation.
-
-        Returns:
-            Tuple[List[Union[str, List[Dict[str, str]]], List[int]]: A tuple object containing the list of generated prompts and the list of number of tokens in the generated prompts.
         """
         pass

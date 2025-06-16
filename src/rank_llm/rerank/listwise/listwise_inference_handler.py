@@ -1,10 +1,14 @@
+import re
 from typing import Any, Dict, List, Optional, Tuple
+
+from ftfy import fix_text
 
 from rank_llm.data import Result
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
+ALPH_START_IDX = ord("A") - 1
 
-# TODO(issue #237): Need to modify functions for this class
+
 class ListwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
         super().__init__(template)
@@ -57,42 +61,102 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
 
         print("Template validated successfully!")
 
-    def _generate_prefix(
+    def _replace_number(self, s: str) -> str:
+        return re.sub(r"\[(\d+)\]", r"(\1)", s)
+
+    def _convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
+        if "text" in doc:
+            content = doc["text"]
+        elif "segment" in doc:
+            content = doc["segment"]
+        elif "contents" in doc:
+            content = doc["contents"]
+        elif "content" in doc:
+            content = doc["content"]
+        elif "body" in doc:
+            content = doc["body"]
+        else:
+            content = doc["passage"]
+        if "title" in doc and doc["title"]:
+            content = "Title: " + doc["title"] + " " + "Content: " + content
+        content = content.strip()
+        content = fix_text(content)
+        # For Japanese should cut by character: content = content[:int(max_length)]
+        content = " ".join(content.split()[: int(max_length)])
+
+        return self._replace_number(content)
+
+    def _generate_prefix_suffix(
         self, num: Optional[int] = None, query: Optional[str] = None
+    ) -> Tuple[str, str]:
+        replacements = {"{num}": num, "{query}": query}
+
+        prefix_text = self._replace_key(
+            template_key="prefix", replacements=replacements
+        )
+        suffix_text = self._replace_key(
+            template_key="suffix", replacements=replacements
+        )
+
+        return prefix_text, suffix_text
+
+    def _generate_body(
+        self, result: Result, rank_start: int, rank_end: int, use_alpha: bool
     ) -> str:
-        pass
+        max_length = 300 * (20 // (rank_end - rank_start))
+        rank = 0
+        body_text = ""
 
-    def _generate_suffix(
-        self, num: Optional[int] = None, query: Optional[int] = None
-    ) -> str:
-        pass
+        for cand in result.candidates[rank_start:rank_end]:
+            rank += 1
+            content = self._convert_doc_to_prompt_content(cand.doc, max_length)
 
-    def _generate_body(self, result: Result) -> str:
-        pass
+            identifier = chr(ALPH_START_IDX + rank) if use_alpha else str(rank)
 
-    def generate_prompt(self, result: Result, **kwargs: Any) -> Tuple[str, int]:
+            content = self._replace_number(content)
+            replacements = {"{rank}": identifier, "{candidate}": content}
+            single_text = self._replace_key(
+                template_key="body", replacements=replacements
+            )
+
+            body_text += f"{single_text}\n"
+
+        return body_text
+
+    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
         try:
             rank_start = kwargs["rank_start"]
             rank_end = kwargs["rank_end"]
+            use_alpha = kwargs.get("use_alpha", False)
         except KeyError as e:
             raise ValueError(f"Missing required parameter: {e}")
-        pass
 
-    def generate_prompt_batched(
-        self,
-        result: Result,
-        **kwargs: Any,
-    ) -> List[Tuple[str, int]]:
-        try:
-            rank_start = kwargs["rank_start"]
-            rank_end = kwargs["rank_end"]
-            batch_size = kwargs["batch_size"]
-        except KeyError as e:
-            raise ValueError(f"Missing required parameter: {e}")
-        pass
+        query = result.query.text
+        query = self._replace_number(query)
+        num = len(result.candidates[rank_start:rank_end])
+
+        prompt_messages = list()
+        system_message = self.template.get("system_message")
+        if system_message:
+            prompt_messages.append({"role": "system", "content": system_message})
+
+        prefix_text, suffix_text = self._generate_prefix_suffix(num, query)
+        body_text = self._generate_body(result, rank_start, rank_end, use_alpha)
+        prompt_text = ""
+
+        if prefix_text:
+            prompt_text += f"{prefix_text}\n"
+        prompt_text += body_text
+        if suffix_text:
+            prompt_text += suffix_text
+
+        prompt_messages.append({"role": "user", "content": prompt_text})
+
+        return prompt_messages
 
     def _clean_response(self, response: str, **kwargs: Any) -> str:
-        ALPH_START_IDX = ord("A") - 1
         use_alpha = kwargs.get("use_alpha", False)
 
         if "</think>" in response:

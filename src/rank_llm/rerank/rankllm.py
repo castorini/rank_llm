@@ -12,6 +12,7 @@ from rank_llm.rerank.inference_handler import BaseInferenceHandler
 logger = logging.getLogger(__name__)
 
 
+# TODO(issue #236): Need to remove this after all the inference handlers are added
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     RANK_GPT = "rank_GPT"
@@ -41,14 +42,14 @@ class RankLLM(ABC):
         self._num_few_shot_examples = num_few_shot_examples
         self._few_shot_file = few_shot_file
 
+        data = {
+            "": ""
+        }  # TODO(issue #236): after default template is added, remove this line
         if (
             prompt_template_path is not None
         ):  # TODO(issue #236): after default template is added, remove condition
             with open(prompt_template_path, "r") as file:
                 data = yaml.safe_load(file)
-        data = {
-            "": ""
-        }  # TODO(issue #236): after default template is added, remove this line
 
         self._inference_handler = self._create_handler(data)
 
