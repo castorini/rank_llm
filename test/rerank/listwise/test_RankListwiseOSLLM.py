@@ -6,6 +6,7 @@ from dacite import from_dict
 from rank_llm.data import Result
 from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise import RankListwiseOSLLM
+from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 # model, context_size, prompt_mode, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
@@ -363,6 +364,81 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             "How are you doing? What is your name? What is your age? What is your favorite color?"
         )
         self.assertEqual(output, 22)
+
+
+VALID_TEMPLATE = {
+    "method": "listwise",
+    "system_message": "You are a helpful assistant that ranks documents.",
+    "prefix": "Sample prefix: Rank these {num} passsages for query: {query}",
+    "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+    "body": "[{rank}] {candidate}",
+}
+
+# Sample invalid templates for testing validation
+INVALID_TEMPLATES = [
+    {"method": "pairwise", "body": "{rank} {candidate}"},  # Wrong method type
+    {
+        "method": "listwise",
+        "body": "Missing rank placeholder {rank}",
+    },  # Missing required placeholder: {candidate}
+    {
+        "method": "listwise",
+        "body": "{rank} {candidate}",
+        "unknown_key": "value",
+    },  # Unknown key
+]
+
+
+class TestListwiseInferenceHandler(unittest.TestCase):
+    def test_valid_template_initialization(self):
+        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
+        self.assertEqual(listwise_inference_handler.template, VALID_TEMPLATE)
+
+    def test_invalid_templates(self):
+        for template in INVALID_TEMPLATES:
+            with self.subTest(template=template):
+                with self.assertRaises(ValueError):
+                    ListwiseInferenceHandler(template)
+
+    def test_prefix_generation(self):
+        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
+        prefix_text, _ = listwise_inference_handler._generate_prefix_suffix(
+            1, "test query"
+        )
+        expected_prefix = "Sample prefix: Rank these 1 passsages for query: test query"
+        self.assertEqual(prefix_text, expected_prefix)
+
+    def test_suffix_generation(self):
+        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
+        _, suffix_text = listwise_inference_handler._generate_prefix_suffix(
+            1, "test query"
+        )
+        expected_suffix = (
+            "Sample suffix: Rank the provided 1 passages based on query: test query"
+        )
+        self.assertEqual(suffix_text, expected_suffix)
+
+    def test_body_generation(self):
+        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
+        body_text = listwise_inference_handler._generate_body(
+            r, rank_start=0, rank_end=2, use_alpha=False
+        )
+        expected_body = "1. Title: Sample Title Content: Sample Text\n2. Title: Sample Title Content: Sample Text\n"
+        self.assertEqual(body_text, expected_body)
+
+    def test_generate_prompt(self):
+        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
+        prompt = listwise_inference_handler.generate_prompt(
+            r, rank_start=0, rank_end=2, use_alpha=False
+        )
+        expected_prompt = [
+            {"role": "system", "content": VALID_TEMPLATE["system_message"]},
+            {
+                "role": "user",
+                "content": "Sample prefix: Rank these 2 passsages for query: Sample Query\n1. Title: Sample Title Content: Sample Text\n2. Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 1 passages based on query: test query",
+            },
+        ]
+        self.assertEqual(prompt, expected_prompt)
 
 
 if __name__ == "__main__":

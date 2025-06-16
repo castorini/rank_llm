@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ftfy import fix_text
 
@@ -89,9 +89,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
 
         return self._replace_number(content)
 
-    def _generate_prefix_suffix(
-        self, num: Optional[int] = None, query: Optional[str] = None
-    ) -> Tuple[str, str]:
+    def _generate_prefix_suffix(self, num: int, query: str) -> Tuple[str, str]:
         replacements = {"{num}": num, "{query}": query}
 
         prefix_text = self._replace_key(
