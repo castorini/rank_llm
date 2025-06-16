@@ -42,16 +42,15 @@ class RankLLM(ABC):
         self._num_few_shot_examples = num_few_shot_examples
         self._few_shot_file = few_shot_file
 
-        data = {
-            "": ""
-        }  # TODO(issue #236): after default template is added, remove this line
+        data = {}  # TODO(issue #236): after default template is added, remove this line
         if (
             prompt_template_path is not None
         ):  # TODO(issue #236): after default template is added, remove condition
             with open(prompt_template_path, "r") as file:
                 data = yaml.safe_load(file)
 
-        self._inference_handler = self._create_handler(data)
+        if bool(data):
+            self._inference_handler = self._create_handler(data)
 
         if self._num_few_shot_examples > 0:
             if not few_shot_file:
