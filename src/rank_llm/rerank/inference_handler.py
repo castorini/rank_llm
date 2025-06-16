@@ -28,23 +28,23 @@ class BaseInferenceHandler(ABC):
         """
         pass
 
-    def _replace_key(
-        self, template_key: str, replacements: Dict[str, str | int]
+    def _format_template(
+        self, template_key: str, fmt_values: Dict[str, str | int]
     ) -> str:
         """
         Replaces placeholder keywords in a template section with actual content.
 
         Args:
             template_key (str): The template section containing placeholders
-            replacements (Dict[str, str | int]): Key-value pairs where keywords match the content for them
-                (e.g., {"{query}": "actual query text", "{num}": 5})
+            fmt_values (Dict[str, str | int]): Key-value pairs where keywords match the content for them
+                (e.g., {"query": "actual query text", "num": 5})
 
         Returns:
             The template text with all keywords replaced by their values
 
         Example:
             If template_key = "prefix"
-            and replacements = {"{query}": "llm ranking", "{num}": 3}
+            and replacements = {"query": "llm ranking", "num": 3}
             Returns: "Query: llm ranking\nNumber: 3"
         """
         template_text = self.template.get(template_key, "")
@@ -55,10 +55,7 @@ class BaseInferenceHandler(ABC):
             )
             return ""
 
-        for keyword, value in replacements.items():
-            template_text = template_text.replace(keyword, str(value))
-
-        return template_text
+            return template_text.format(**fmt_values)
 
     @abstractmethod
     def generate_prompt(self, result: Result, **kwargs: Any) -> Tuple[str, int]:

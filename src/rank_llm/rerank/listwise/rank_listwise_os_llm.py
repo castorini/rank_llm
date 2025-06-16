@@ -353,8 +353,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         max_length = 300 * (20 / (rank_end - rank_start))
 
         while True:
-            inference_handler = self._inference_handler
-            messages = inference_handler.generate_prompt(
+            messages = self._inference_handler.generate_prompt(
                 result=result, rank_start=rank_start, rank_end=rank_end
             )
             prompt = self._tokenizer.apply_chat_template(

@@ -1,5 +1,6 @@
 import re
-from typing import Any, Dict, List, Tuple
+from string import Formatter
+from typing import Any, Dict, List, Set, Tuple
 
 from ftfy import fix_text
 
@@ -15,17 +16,24 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
 
         self._validate_template(self.template)
 
-    def _validate_template(self, template: Dict[str, str]):
+    def _validate_template(self, template: Dict[str, str], strict: bool = False):
         required_template_keys = {
-            "method": ["listwise"],
-            "body": ["{rank}", "{candidate}"],
+            "body": ["rank", "candidate"],
         }
 
         allowed_template_keys = {
             "system_message": [],
-            "prefix": ["{num}", "{query}"],
-            "suffix": ["{num}", "{query}"],
+            "prefix": ["num", "query"],
+            "suffix": ["num", "query"],
         }
+
+        formatter = Formatter()
+
+        # Validate the method value
+        if template["method"] != "listwise":
+            raise ValueError(
+                f"Incorrect method type, expected \"listwise\", got {template['method']}"
+            )
 
         # Validate the required keys
         missing_template_keys = [
@@ -34,31 +42,35 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
 
-        # Validate the method value
-        if template["method"] != "listwise":
-            raise ValueError(
-                f"Incorrect method type, expected \"listwise\", got {template['method']}"
-            )
-
         # Validate the rest of the template keys
         for template_key, template_value in template.items():
-            if (
-                template_key not in required_template_keys
-                and template_key not in allowed_template_keys
-            ):
-                raise ValueError(f"Unknown template key: {template_key}")
+            if template_key == "method":
+                continue
+
+            allowed_placeholders: Set[str] = set()
+            used_placeholders = {
+                name
+                for _, name, _, _ in formatter.parse(self.template[template_key])
+                if name is not None
+            }
+            unsupported_placeholders = used_placeholders - allowed_placeholders
             if template_key in required_template_keys:
-                for keyword in required_template_keys[template_key]:
-                    if keyword not in template_value:
-                        raise ValueError(
-                            f"Missing required keyword {keyword} in {template_key} section"
-                        )
-            if template_key in allowed_template_keys:
-                for keyword in allowed_template_keys[template_key]:
-                    if keyword not in template_value:
-                        raise ValueError(
-                            f"Missing required keywords: {keyword} in {template_key} section"
-                        )
+                allowed_placeholders.update(required_template_keys[template_key])
+                missing = set(required_template_keys[template_key]) - used_placeholders
+            elif template_key in allowed_template_keys:
+                allowed_placeholders.update(allowed_template_keys[template_key])
+                missing = set(allowed_template_keys[template_key]) - used_placeholders
+            else:
+                raise ValueError(f"Unsupported template section: {template_key}")
+
+            if missing:
+                raise ValueError(
+                    f"Missing placeholders in {template_key} section: {missing}"
+                )
+            if unsupported_placeholders:
+                msg = f"Unsupported placeholders in {template_key} section: {unsupported_placeholders}"
+                if strict:
+                    raise ValueError(msg)
 
         print("Template validated successfully!")
 
@@ -90,13 +102,13 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         return self._replace_number(content)
 
     def _generate_prefix_suffix(self, num: int, query: str) -> Tuple[str, str]:
-        replacements = {"{num}": num, "{query}": query}
+        fmt_values = {"num": num, "query": query}
 
-        prefix_text = self._replace_key(
-            template_key="prefix", replacements=replacements
+        prefix_text = self._format_template(
+            template_key="prefix", fmt_values=fmt_values
         )
-        suffix_text = self._replace_key(
-            template_key="suffix", replacements=replacements
+        suffix_text = self._format_template(
+            template_key="suffix", fmt_values=fmt_values
         )
 
         return prefix_text, suffix_text
@@ -115,9 +127,9 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
             identifier = chr(ALPH_START_IDX + rank) if use_alpha else str(rank)
 
             content = self._replace_number(content)
-            replacements = {"{rank}": identifier, "{candidate}": content}
-            single_text = self._replace_key(
-                template_key="body", replacements=replacements
+            fmt_values = {"rank": identifier, "candidate": content}
+            single_text = self._format_template(
+                template_key="body", fmt_values=fmt_values
             )
 
             body_text += f"{single_text}\n"
