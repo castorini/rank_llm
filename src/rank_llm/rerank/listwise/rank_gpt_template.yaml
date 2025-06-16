@@ -1,4 +1,4 @@
-type: "rank_GPT"
+method: "listwise"
 system_message: "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query"
 prefix: "I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 body: "[{rank}] {candidate}"

@@ -356,11 +356,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         while True:
             if self._use_inference_handler:
+                print("USING INFERENCE HANDLER TO GENERATE PROMPT")
                 inference_handler = self._inference_handler
                 messages = inference_handler.generate_prompt(
-                    result, rank_start, rank_end
+                    result=result, rank_start=rank_start, rank_end=rank_end
                 )
             else:
+                print("USING DEFAULT FUNCTION TO GENERATE PROMPT")
                 messages = list()
                 if self._system_message:
                     messages.append({"role": "system", "content": self._system_message})

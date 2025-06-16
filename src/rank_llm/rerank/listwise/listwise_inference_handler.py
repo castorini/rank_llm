@@ -17,6 +17,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
 
     def _validate_template(self, template: Dict[str, str]):
         required_template_keys = {
+            "method": ["listwise"],
             "body": ["{rank}", "{candidate}"],
         }
 
@@ -26,18 +27,18 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
             "suffix": ["{num}", "{query}"],
         }
 
-        # Validate the method value
-        if template["method"] != "listwise":
-            raise ValueError(
-                f"Incorrect method type, expected \"listwise\", got {template['method']}"
-            )
-
         # Validate the required keys
         missing_template_keys = [
             key for key in required_template_keys if key not in template
         ]
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
+
+        # Validate the method value
+        if template["method"] != "listwise":
+            raise ValueError(
+                f"Incorrect method type, expected \"listwise\", got {template['method']}"
+            )
 
         # Validate the rest of the template keys
         for template_key, template_value in template.items():
