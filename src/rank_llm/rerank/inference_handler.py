@@ -55,7 +55,7 @@ class BaseInferenceHandler(ABC):
             )
             return ""
 
-            return template_text.format(**fmt_values)
+        return template_text.format(**fmt_values)
 
     @abstractmethod
     def generate_prompt(self, result: Result, **kwargs: Any) -> Tuple[str, int]:
