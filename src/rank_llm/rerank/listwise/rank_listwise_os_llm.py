@@ -91,7 +91,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            prompt_template_path="rank_gpt_template.yaml"
+            prompt_template_path="src/rank_llm/rerank/listwise/rank_gpt_template.yaml"
             if not prompt_template_path
             else prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
