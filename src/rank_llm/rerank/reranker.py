@@ -487,6 +487,44 @@ class Reranker:
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None
+        elif "qwen" in model_path.lower():
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                ("prompt_template_path", None),
+                ("num_few_shot_examples", 0),
+                ("few_shot_file", None),
+                ("device", "cuda"),
+                ("num_gpus", 1),
+                ("variable_passages", True),
+                ("window_size", 20),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                prompt_template_path,
+                num_few_shot_examples,
+                few_shot_file,
+                device,
+                num_gpus,
+                variable_passages,
+                window_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            from rank_llm.rerank.listwise import QwenReranker
+            model_coordinator = QwenReranker(
+                model_path=model_path,
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
+                num_few_shot_examples=num_few_shot_examples,
+                few_shot_file=few_shot_file,
+                device=device,
+                num_gpus=num_gpus,
+                variable_passages=variable_passages,
+                window_size=window_size,
+            )._reranker
+            print(f"Completed loading {model_path}")
         else:
             # supports loading models from huggingface
             print(f"Loading {model_path} ...")
