@@ -386,6 +386,12 @@ INVALID_TEMPLATES = [
         "body": "{rank} {candidate}",
         "unknown_key": "value",
     },  # Unknown key
+    {
+        "method": "listwise",
+        "prefix": "{num}",
+        "body": "{rank} {candidate}",
+        "suffix": "test",
+    },  # Missing query placeholder in both prefix and suffix
 ]
 
 

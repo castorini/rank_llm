@@ -97,7 +97,9 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
                 query_present = True
 
         if not query_present:
-            raise ValueError("query placeholder must be either prefix or suffix")
+            raise ValueError(
+                "query placeholder must be present in prefix and/or suffix"
+            )
 
         print("Template validated successfully!")
 
@@ -203,7 +205,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         prompt_text = ""
 
         if prefix_text:
-            prompt_text += f"{prefix_text}\n"
+            prompt_text += f"{prefix_text}"
         prompt_text += body_text
         if suffix_text:
             prompt_text += suffix_text

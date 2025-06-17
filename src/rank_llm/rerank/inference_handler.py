@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List
 
 from rank_llm.data import Result
 
@@ -59,7 +59,7 @@ class BaseInferenceHandler(ABC):
         return template_text.format(**fmt_values)
 
     @abstractmethod
-    def generate_prompt(self, result: Result, **kwargs: Any) -> Tuple[str, int]:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
         """
         Generates complete prompt(s) for the ranking task.
 
