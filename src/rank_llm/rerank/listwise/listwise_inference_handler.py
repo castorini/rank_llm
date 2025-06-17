@@ -194,7 +194,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         result: Result,
         rank_start: int,
         rank_end: int,
-        use_alpha: bool,
+        use_alpha: bool = False,
         window_size: int = 20,
         is_conversational: bool = False,
     ) -> str | List[Dict[str, str]]:
