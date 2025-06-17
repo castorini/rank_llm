@@ -1,6 +1,6 @@
 import re
 from string import Formatter
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 from ftfy import fix_text
 
@@ -15,17 +15,34 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         super().__init__(template)
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        required_template_keys = {
-            "body": {"required": ["rank", "candidate"], "allowed": []},
+        TEMPLATE_SECTIONS = {
+            # Format:
+            # "template_key": {
+            #    "required": True/False,  # Whether the section itself is mandatory
+            #    "required_placeholders": set(),  # Placeholders that must exist in this section
+            #    "allowed_placeholders": set()    # All allowed placeholders (including required ones)
+            # }
+            "body": {
+                "required": True,
+                "required_placeholders": {"rank", "candidate"},
+                "allowed_placeholders": set(),
+            },
+            "system_message": {
+                "required": False,
+                "required_placeholders": set(),
+                "allowed_placeholders": set(),
+            },
+            "prefix": {
+                "required": False,
+                "required_placeholders": set(),
+                "allowed_placeholders": {"query", "num"},
+            },
+            "suffix": {
+                "required": False,
+                "required_placeholders": set(),
+                "allowed_placeholders": {"query", "num", "psg_ids"},
+            },
         }
-
-        allowed_template_keys = {
-            "system_message": {"required": [], "allowed": []},
-            "prefix": {"required": [], "allowed": ["query", "num"]},
-            "suffix": {"required": [], "allowed": ["query", "num", "psg_ids"]},
-        }
-
-        formatter = Formatter()
 
         # Validate the method value
         if template["method"] != "listwise":
@@ -35,54 +52,47 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
 
         # Validate the required template keys
         missing_template_keys = [
-            key for key in required_template_keys if key not in template
+            key
+            for key, config in TEMPLATE_SECTIONS.items()
+            if key not in template and config["required"]
         ]
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
 
+        formatter = Formatter()
         query_present = False if "prefix" in template or "suffix" in template else True
 
         # Validate the rest of the template keys
-        for template_key in template:
+        for template_key, template_text in template.items():
             if template_key == "method":
                 continue
-
-            allowed_placeholders: Set[str] = set()
-            used_placeholders = {
-                name
-                for _, name, _, _ in formatter.parse(template[template_key])
-                if name is not None
-            }
-            if template_key in required_template_keys:
-                allowed_placeholders.update(
-                    required_template_keys[template_key]["required"]
-                    + required_template_keys[template_key]["allowed"]
-                )
-                missing = (
-                    set(required_template_keys[template_key]["required"])
-                    - used_placeholders
-                )
-            elif template_key in allowed_template_keys:
-                allowed_placeholders.update(
-                    allowed_template_keys[template_key]["required"]
-                    + allowed_template_keys[template_key]["allowed"]
-                )
-                missing = (
-                    set(allowed_template_keys[template_key]["required"])
-                    - used_placeholders
-                )
-            else:
+            if template_key not in TEMPLATE_SECTIONS:
                 raise ValueError(f"Unsupported template section: {template_key}")
 
-            if missing:
+            section = TEMPLATE_SECTIONS[template_key]
+            required_placeholders = section["required_placeholders"]
+            allowed_placeholders = (
+                required_placeholders | section["allowed_placeholders"]
+            )
+            used_placeholders = {
+                name
+                for _, name, _, _ in formatter.parse(template_text)
+                if name is not None
+            }
+            missing_placeholders = required_placeholders - used_placeholders
+            if missing_placeholders:
                 raise ValueError(
-                    f"Missing placeholders in {template_key} section: {missing}"
+                    f"Missing placeholders in {template_key} section: {missing_placeholders}"
                 )
+
             unsupported_placeholders = used_placeholders - allowed_placeholders
             if unsupported_placeholders:
                 msg = f"Unsupported placeholders in {template_key} section: {unsupported_placeholders}"
                 if strict:
                     raise ValueError(msg)
+                else:
+                    print(msg)
+
             if "query" in used_placeholders:
                 query_present = True
 
