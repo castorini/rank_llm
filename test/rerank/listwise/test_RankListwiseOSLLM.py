@@ -371,7 +371,7 @@ VALID_TEMPLATE = {
     "system_message": "You are a helpful assistant that ranks documents.",
     "prefix": "Sample prefix: Rank these {num} passsages for query: {query}",
     "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
-    "body": "[{rank}] {candidate}",
+    "body": "[{rank}] {candidate}\n",
 }
 
 # Sample invalid templates for testing validation
