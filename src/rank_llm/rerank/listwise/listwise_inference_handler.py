@@ -194,11 +194,10 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         result: Result,
         rank_start: int,
         rank_end: int,
+        max_length: int,
         use_alpha: bool = False,
-        window_size: int = 20,
         is_conversational: bool = False,
     ) -> str | List[Dict[str, str]]:
-        max_length = 300 * (window_size // (rank_end - rank_start))
         rank = 0
         if is_conversational:
             body_prompt = []
@@ -234,8 +233,8 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         try:
             rank_start = kwargs["rank_start"]
             rank_end = kwargs["rank_end"]
+            max_length = kwargs["max_length"]
             use_alpha = kwargs.get("use_alpha", False)
-            window_size = kwargs.get("window_size", 20)
         except KeyError as e:
             raise ValueError(f"Missing required parameter: {e}")
 
@@ -258,8 +257,8 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
             result=result,
             rank_start=rank_start,
             rank_end=rank_end,
+            max_length=max_length,
             use_alpha=use_alpha,
-            window_size=window_size,
             is_conversational=is_conversational_body,
         )
 

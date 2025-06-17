@@ -354,7 +354,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         while True:
             messages = self._inference_handler.generate_prompt(
-                result=result, rank_start=rank_start, rank_end=rank_end
+                result=result,
+                rank_start=rank_start,
+                rank_end=rank_end,
+                max_length=max_length,
             )
             prompt = self._tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
