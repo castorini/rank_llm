@@ -427,7 +427,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
     def test_body_generation(self):
         listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
         body_text = listwise_inference_handler._generate_body(
-            r, rank_start=0, rank_end=2, use_alpha=False
+            r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
         expected_body = "[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\n"
         self.assertEqual(body_text, expected_body)
@@ -435,7 +435,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
     def test_generate_prompt(self):
         listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
         prompt = listwise_inference_handler.generate_prompt(
-            r, rank_start=0, rank_end=2, use_alpha=False
+            r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
         expected_prompt = [
             {"role": "system", "content": VALID_TEMPLATE["system_message"]},
