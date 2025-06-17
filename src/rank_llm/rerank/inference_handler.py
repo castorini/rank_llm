@@ -6,6 +6,7 @@ from rank_llm.data import Result
 
 class BaseInferenceHandler(ABC):
     def __init__(self, template: Dict[str, str]):
+        self._validate_template(template=template)
         self.template = template
 
     @abstractmethod

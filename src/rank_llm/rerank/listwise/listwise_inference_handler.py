@@ -14,8 +14,6 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
         super().__init__(template)
 
-        self._validate_template(self.template)
-
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
         required_template_keys = {
             "body": {"required": ["rank", "candidate"], "allowed": []},
@@ -23,8 +21,8 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
 
         allowed_template_keys = {
             "system_message": {"required": [], "allowed": []},
-            "prefix": {"required": ["num", "query"], "allowed": []},
-            "suffix": {"required": ["num", "query"], "allowed": ["psg_ids"]},
+            "prefix": {"required": [], "allowed": ["query", "num"]},
+            "suffix": {"required": [], "allowed": ["query", "num", "psg_ids"]},
         }
 
         formatter = Formatter()
@@ -41,6 +39,8 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         ]
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
+
+        query_present = False if "prefix" in template or "suffix" in template else True
 
         # Validate the rest of the template keys
         for template_key in template:
@@ -83,6 +83,11 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
                 msg = f"Unsupported placeholders in {template_key} section: {unsupported_placeholders}"
                 if strict:
                     raise ValueError(msg)
+            if "query" in used_placeholders:
+                query_present = True
+
+        if not query_present:
+            raise ValueError("query placeholder must be either prefix or suffix")
 
         print("Template validated successfully!")
 
@@ -117,11 +122,6 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
         self, num: int, query: str, **kwargs: Any
     ) -> Tuple[str, str]:
         formatter = Formatter()
-        prefix_placeholders = [
-            name
-            for _, name, _, _ in formatter.parse(self.template["prefix"])
-            if name is not None
-        ]
         suffix_placeholders = [
             name
             for _, name, _, _ in formatter.parse(self.template["suffix"])
@@ -130,7 +130,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
 
         prefix_fmt_values = suffix_fmt_values = {"num": num, "query": query}
 
-        if "psg_ids" in suffix_placeholders:
+        if "psg_ids" in suffix_placeholders:  # Used in RankLRL prompt mode
             rank_start = kwargs["rank_start"]
             rank_end = kwargs["rank_end"]
             psg_ids = []
