@@ -12,8 +12,8 @@ ALPH_START_IDX = ord("A") - 1
 
 class ListwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
-        super().__init__(template)
         self._formatter = Formatter()
+        super().__init__(template)
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
         TEMPLATE_SECTIONS = {
