@@ -268,7 +268,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
                 prompt_messages.extend(prefix_prompt)
             prompt_messages.extend(body_prompt)
             if suffix_text:
-                prompt_messages[-1]["content"] += suffix_text
+                prompt_messages.append({"role": "user", "content": suffix_text})
         else:
             if prefix_prompt:
                 if is_conversational_prefix:
