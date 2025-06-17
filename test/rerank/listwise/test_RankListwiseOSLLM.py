@@ -441,7 +441,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             {"role": "system", "content": VALID_TEMPLATE["system_message"]},
             {
                 "role": "user",
-                "content": "Sample prefix: Rank these 2 passsages for query: Sample Query\n[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
+                "content": "Sample prefix: Rank these 2 passsages for query: Sample Query[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
             },
         ]
         self.assertEqual(prompt, expected_prompt)
