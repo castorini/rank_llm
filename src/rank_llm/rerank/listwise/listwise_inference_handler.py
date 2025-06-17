@@ -50,7 +50,7 @@ class ListwiseInferenceHandler(BaseInferenceHandler):
             allowed_placeholders: Set[str] = set()
             used_placeholders = {
                 name
-                for _, name, _, _ in formatter.parse(self.template[template_key])
+                for _, name, _, _ in formatter.parse(template[template_key])
                 if name is not None
             }
             if template_key in required_template_keys:
