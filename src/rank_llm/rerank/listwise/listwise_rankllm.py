@@ -465,6 +465,7 @@ class ListwiseRankLLM(RankLLM, ABC):
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
+    # TODO(issue #237): Need to remove this after ListWiseInferenceHandler is implemented since it is moved there instead
     def convert_doc_to_prompt_content(
         self, doc: Dict[str, Any], max_length: int
     ) -> str:

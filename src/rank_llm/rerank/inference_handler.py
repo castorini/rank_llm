@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from rank_llm.data import Result
 
 
 class BaseInferenceHandler(ABC):
     def __init__(self, template: Dict[str, str]):
+        self._validate_template(template=template)
         self.template = template
 
     @abstractmethod
@@ -28,23 +29,23 @@ class BaseInferenceHandler(ABC):
         """
         pass
 
-    def _replace_key(
-        self, template_key: str, replacements: Dict[str, str | int]
+    def _format_template(
+        self, template_key: str, fmt_values: Dict[str, str | int]
     ) -> str:
         """
         Replaces placeholder keywords in a template section with actual content.
 
         Args:
             template_key (str): The template section containing placeholders
-            replacements (Dict[str, str | int]): Key-value pairs where keywords match the content for them
-                (e.g., {"{query}": "actual query text", "{num}": 5})
+            fmt_values (Dict[str, str | int]): Key-value pairs where keywords match the content for them
+                (e.g., {"query": "actual query text", "num": 5})
 
         Returns:
             The template text with all keywords replaced by their values
 
         Example:
-            If template_key = "Query: {query}\nNumber: {num}"
-            and replacements = {"{query}": "llm ranking", "{num}": 3}
+            If template_key = "prefix"
+            and replacements = {"query": "llm ranking", "num": 3}
             Returns: "Query: llm ranking\nNumber: 3"
         """
         template_text = self.template.get(template_key, "")
@@ -55,13 +56,10 @@ class BaseInferenceHandler(ABC):
             )
             return ""
 
-        for keyword, value in replacements.items():
-            template_text = template_text.replace(keyword, str(value))
-
-        return template_text
+        return template_text.format(**fmt_values)
 
     @abstractmethod
-    def generate_prompt(self, result: Result, **kwargs: Any) -> Tuple[str, int]:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
         """
         Generates complete prompt(s) for the ranking task.
 
@@ -77,20 +75,5 @@ class BaseInferenceHandler(ABC):
             2. Combine all parts into final prompt(s)
             3. Calculate token counts for each prompt
             4. Handle both single and batched prompt cases
-        """
-        pass
-
-    @abstractmethod
-    def generate_prompt_batched(
-        self, result: Result, **kwargs: Any
-    ) -> List[Tuple[str, int]]:
-        """
-        Generates a batch of complete prompt(s) for the ranking task.
-
-        Args:
-            results (List[Result]): The list of result objects containing data for prompt generation.
-
-        Returns:
-            Tuple[List[Union[str, List[Dict[str, str]]], List[int]]: A tuple object containing the list of generated prompts and the list of number of tokens in the generated prompts.
         """
         pass
