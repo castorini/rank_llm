@@ -582,7 +582,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         ]
         self.assertEqual(prompt, expected_prompt)
 
-    def test_generate_prompt_conv(self):
+    def test_generate_prompt_multiturn(self):
         listwise_inference_handler = MultiTurnListwiseInferenceHandler(
             VALID_MULTITURN_TEMPLATE
         )

@@ -213,9 +213,9 @@ class RankLLM(ABC):
         )
 
         try:
-            if template["method"] == "listwise_norm":
+            if template["method"] == "singleturn_listwise":
                 return SingleTurnListwiseInferenceHandler(template)
-            elif template["method"] == "listwise_conv":
+            elif template["method"] == "multiturn_listwise":
                 return MultiTurnListwiseInferenceHandler(template)
             else:  # TODO(issue #236 and #237): Need to remove this after all the handlers are implemented
                 return SingleTurnListwiseInferenceHandler(template)

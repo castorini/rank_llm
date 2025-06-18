@@ -131,7 +131,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             template_key="prefix_user", fmt_values=prefix_fmt_values
         )
         suffix_text = self._format_template(
-            template_key="suffix", fmt_values=suffix_fmt_values
+            template_key="suffix_user", fmt_values=suffix_fmt_values
         )
 
         if not prefix_text:
