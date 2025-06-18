@@ -128,7 +128,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         prefix_fmt_values = suffix_fmt_values = {"num": num, "query": query}
 
         prefix_text = self._format_template(
-            template_key="prefix", fmt_values=prefix_fmt_values
+            template_key="prefix_user", fmt_values=prefix_fmt_values
         )
         suffix_text = self._format_template(
             template_key="suffix", fmt_values=suffix_fmt_values
@@ -166,7 +166,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             content = self._replace_number(content)
             identifier = chr(self.ALPH_START_IDX + rank) if use_alpha else str(rank)
             body_fmt_values = {"rank": identifier, "candidate": content}
-            body_text = self._format_template("body", body_fmt_values)
+            body_text = self._format_template("body_user", body_fmt_values)
 
             if is_conversational:
                 assistant_fmt_values = {"rank": identifier}
