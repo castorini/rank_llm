@@ -109,20 +109,18 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             raise ValueError(
                 "One of prefix_assistant and body_assistant sections must be present if the template method is listwise_conv"
             )
-        if "prefix_assistant" in template and "prefix" not in template:
+        if "prefix_assistant" in template and "prefix_user" not in template:
             raise ValueError(
-                "prefix section must be present if prefix_assistant section is used in the template"
+                "prefix_user section must be present if prefix_assistant section is used in the template"
             )
         if (
             "body_assistant" in template
-            and "prefix" in template
+            and "prefix_user" in template
             and "prefix_assistant" not in template
         ):
             raise ValueError(
-                "prefix_assistant section must be present if body_assisstant and prefix sections are used in the template"
+                "prefix_assistant section must be present if body_assisstant and prefix_user sections are used in the template"
             )
-
-        print("Template validated successfully!")
 
     def _generate_prefix_suffix(
         self, num: int, query: str, **kwargs: Any

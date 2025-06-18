@@ -94,8 +94,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 "query placeholder must be present in prefix and/or suffix"
             )
 
-        print("Template validated successfully!")
-
     def _generate_prefix_suffix(
         self, num: int, query: str, **kwargs: Any
     ) -> Tuple[str, str]:
