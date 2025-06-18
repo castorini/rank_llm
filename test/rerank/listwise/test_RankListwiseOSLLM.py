@@ -5,13 +5,13 @@ from dacite import from_dict
 
 from rank_llm.data import Result
 from rank_llm.rerank import PromptMode
-from rank_llm.rerank.listwise.listwise_conv_inference_handler import (
-    ListwiseInferenceHandlerConv,
-)
-from rank_llm.rerank.listwise.listwise_norm_inference_handler import (
-    ListwiseInferenceHandlerNorm,
+from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
+    MultiTurnListwiseInferenceHandler,
 )
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
+from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
+    SingleTurnListwiseInferenceHandler,
+)
 
 # model, context_size, prompt_mode, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
@@ -371,67 +371,67 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertEqual(output, 22)
 
 
-VALID_NORM_TEMPLATE = {
-    "method": "listwise_norm",
+VALID_SINGLETURN_TEMPLATE = {
+    "method": "singleturn_listwise",
     "system_message": "You are a helpful assistant that ranks documents.",
     "prefix": "Sample prefix: Rank these {num} passages for query: {query}",
     "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
     "body": "[{rank}] {candidate}\n",
 }
-VALID_CONV_TEMPLATE = {
-    "method": "listwise_conv",
+VALID_MULTITURN_TEMPLATE = {
+    "method": "multiturn_listwise",
     "system_message": "You are a helpful assistant than ranks documents.",
-    "prefix": "Sample prefix: Rank these {num} passages for query: {query}",
+    "prefix_user": "Sample prefix: Rank these {num} passages for query: {query}",
     "prefix_assistant": "Okay, please provide the passages.",
-    "body": "[{rank}] {candidate}",
+    "body_user": "[{rank}] {candidate}",
     "body_assistant": "Received passage [{rank}].",
-    "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+    "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
 }
 
 # Sample invalid templates for testing validation
-INVALID_NORM_TEMPLATES = [
+INVALID_SINGLETURN_TEMPLATES = [
     {"method": "pairwise", "body": "{rank} {candidate}"},  # Wrong method type
     {
-        "method": "listwise_norm",
+        "method": "singleturn_listwise",
         "body": "Missing rank placeholder {rank}",
     },  # Missing required placeholder: {candidate}
     {
-        "method": "listwise_norm",
+        "method": "singleturn_listwise",
         "body": "{rank} {candidate}",
         "unknown_key": "value",
     },  # Unknown key
     {
-        "method": "listwise_norm",
+        "method": "singleturn_listwise",
         "prefix": "{num}",
         "body": "{rank} {candidate}",
         "suffix": "test",
     },  # Missing query placeholder in both prefix and suffix
 ]
-INVALID_CONV_TEMPLATES = [
+INVALID_MULTITURN_TEMPLATES = [
     {
-        "method": "listwise_norm",
+        "method": "singleturn_listwise",
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
     },  # Wrong method type
     {
-        "method": "listwise_conv",
+        "method": "multiturn_listwise",
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
         "unknown_key": "value",
     },  # Unknown key
     {
-        "method": "listwise_conv",
+        "method": "multiturn_listwise",
         "body": "{rank} {candidate}",
     },  # Missing assistant sections
     {
-        "method": "listwise_conv",
+        "method": "multiturn_listwise",
         "prefix": "{num}",
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
         "suffix": "test",
     },  # Missing prefix_assistant when body_assistant and prefix are both present
     {
-        "method": "listwise_conv",
+        "method": "multiturn_listwise",
         "system_message": "You are a helpful assistant than ranks documents.",
         "prefix": "Sample prefix: Rank these {num} passages",
         "prefix_assistant": "Okay, please provide the passages.",
@@ -444,42 +444,52 @@ INVALID_CONV_TEMPLATES = [
 
 class TestListwiseInferenceHandler(unittest.TestCase):
     def test_listwise_valid_template_initialization(self):
-        norm_listwise_inference_handler = ListwiseInferenceHandlerNorm(
-            VALID_NORM_TEMPLATE
+        singleturn_listwise_inference_handler = SingleTurnListwiseInferenceHandler(
+            VALID_SINGLETURN_TEMPLATE
         )
-        conv_listwise_inference_handler = ListwiseInferenceHandlerConv(
-            VALID_CONV_TEMPLATE
+        multiturn_listwise_inference_handler = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE
         )
-        self.assertEqual(norm_listwise_inference_handler.template, VALID_NORM_TEMPLATE)
-        self.assertEqual(conv_listwise_inference_handler.template, VALID_CONV_TEMPLATE)
+        self.assertEqual(
+            singleturn_listwise_inference_handler.template, VALID_SINGLETURN_TEMPLATE
+        )
+        self.assertEqual(
+            multiturn_listwise_inference_handler.template, VALID_MULTITURN_TEMPLATE
+        )
 
     def test_invalid_templates(self):
-        for template in INVALID_NORM_TEMPLATES:
+        for template in INVALID_SINGLETURN_TEMPLATES:
             with self.subTest(template=template):
                 with self.assertRaises(ValueError):
-                    ListwiseInferenceHandlerNorm(template)
-        for template in INVALID_CONV_TEMPLATES:
+                    SingleTurnListwiseInferenceHandler(template)
+        for template in INVALID_MULTITURN_TEMPLATES:
             with self.subTest(template=template):
                 with self.assertRaises(ValueError):
-                    ListwiseInferenceHandlerConv(template)
+                    MultiTurnListwiseInferenceHandler(template)
 
     def test_prefix_generation(self):
-        norm_listwise_inference_handler = ListwiseInferenceHandlerNorm(
-            VALID_NORM_TEMPLATE
+        singleturn_listwise_inference_handler = SingleTurnListwiseInferenceHandler(
+            VALID_SINGLETURN_TEMPLATE
         )
-        conv_listwise_inference_handler = ListwiseInferenceHandlerConv(
-            VALID_CONV_TEMPLATE
+        multiturn_listwise_inference_handler = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE
         )
-        prefix_text_norm, _ = norm_listwise_inference_handler._generate_prefix_suffix(
+        (
+            singleturn_prefix_text,
+            _,
+        ) = singleturn_listwise_inference_handler._generate_prefix_suffix(
             1, "test query"
         )
-        prefix_text_conv, _ = conv_listwise_inference_handler._generate_prefix_suffix(
+        (
+            multiturn_prefix_text,
+            _,
+        ) = multiturn_listwise_inference_handler._generate_prefix_suffix(
             1, "test query"
         )
-        expected_prefix_norm = (
+        expected_prefix_singleturn = (
             "Sample prefix: Rank these 1 passages for query: test query"
         )
-        expected_prefix_conv = [
+        expected_prefix_multiturn = [
             {
                 "role": "user",
                 "content": "Sample prefix: Rank these 1 passages for query: test query",
@@ -487,40 +497,50 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             {"role": "assistant", "content": "Okay, please provide the passages."},
         ]
 
-        self.assertEqual(prefix_text_norm, expected_prefix_norm)
-        self.assertEqual(prefix_text_conv, expected_prefix_conv)
+        self.assertEqual(singleturn_prefix_text, expected_prefix_singleturn)
+        self.assertEqual(multiturn_prefix_text, expected_prefix_multiturn)
 
     def test_suffix_generation(self):
-        norm_listwise_inference_handler = ListwiseInferenceHandlerNorm(
-            VALID_NORM_TEMPLATE
+        singleturn_listwise_inference_handler = SingleTurnListwiseInferenceHandler(
+            VALID_SINGLETURN_TEMPLATE
         )
-        conv_listwise_inference_handler = ListwiseInferenceHandlerConv(
-            VALID_CONV_TEMPLATE
+        multiturn_listwise_inference_handler = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE
         )
-        _, norm_suffix_text = norm_listwise_inference_handler._generate_prefix_suffix(
+        (
+            _,
+            singleturn_suffix_text,
+        ) = singleturn_listwise_inference_handler._generate_prefix_suffix(
             1, "test query"
         )
-        _, conv_suffix_text = conv_listwise_inference_handler._generate_prefix_suffix(
+        (
+            _,
+            multiturn_suffix_text,
+        ) = multiturn_listwise_inference_handler._generate_prefix_suffix(
             1, "test query"
         )
         expected_suffix = (
             "Sample suffix: Rank the provided 1 passages based on query: test query"
         )
 
-        self.assertEqual(norm_suffix_text, expected_suffix)
-        self.assertEqual(conv_suffix_text, expected_suffix)
+        self.assertEqual(singleturn_suffix_text, expected_suffix)
+        self.assertEqual(multiturn_suffix_text, expected_suffix)
 
-    def test_body_generation_norm(self):
-        listwise_inference_handler = ListwiseInferenceHandlerNorm(VALID_NORM_TEMPLATE)
+    def test_body_generation_singleturn(self):
+        listwise_inference_handler = SingleTurnListwiseInferenceHandler(
+            VALID_SINGLETURN_TEMPLATE
+        )
         body_text = listwise_inference_handler._generate_body(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
         expected_body = "[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\n"
         self.assertEqual(body_text, expected_body)
 
-    def test_body_generation_conv(self):
-        listwise_inference_handler = ListwiseInferenceHandlerConv(VALID_CONV_TEMPLATE)
-        body_text_norm = listwise_inference_handler._generate_body(
+    def test_body_generation_multiturn(self):
+        listwise_inference_handler = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE
+        )
+        body_text_singleturn = listwise_inference_handler._generate_body(
             r,
             rank_start=0,
             rank_end=2,
@@ -528,7 +548,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             use_alpha=False,
             is_conversational=False,
         )
-        body_text_conv = listwise_inference_handler._generate_body(
+        body_text_multiturn = listwise_inference_handler._generate_body(
             r,
             rank_start=0,
             rank_end=2,
@@ -536,23 +556,25 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             use_alpha=False,
             is_conversational=True,
         )
-        expected_body_norm = "[1] Title: Sample Title Content: Sample Text[2] Title: Sample Title Content: Sample Text"
-        expected_body_conv = [
+        expected_body_singleturn = "[1] Title: Sample Title Content: Sample Text[2] Title: Sample Title Content: Sample Text"
+        expected_body_multiturn = [
             {"role": "user", "content": "[1] Title: Sample Title Content: Sample Text"},
             {"role": "assistant", "content": "Received passage [1]."},
             {"role": "user", "content": "[2] Title: Sample Title Content: Sample Text"},
             {"role": "assistant", "content": "Received passage [2]."},
         ]
-        self.assertEqual(body_text_norm, expected_body_norm)
-        self.assertEqual(body_text_conv, expected_body_conv)
+        self.assertEqual(body_text_singleturn, expected_body_singleturn)
+        self.assertEqual(body_text_multiturn, expected_body_multiturn)
 
-    def test_generate_prompt_norm(self):
-        listwise_inference_handler = ListwiseInferenceHandlerNorm(VALID_NORM_TEMPLATE)
+    def test_generate_prompt_singleturn(self):
+        listwise_inference_handler = SingleTurnListwiseInferenceHandler(
+            VALID_SINGLETURN_TEMPLATE
+        )
         prompt = listwise_inference_handler.generate_prompt(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
         expected_prompt = [
-            {"role": "system", "content": VALID_NORM_TEMPLATE["system_message"]},
+            {"role": "system", "content": VALID_SINGLETURN_TEMPLATE["system_message"]},
             {
                 "role": "user",
                 "content": "Sample prefix: Rank these 2 passages for query: Sample Query[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
@@ -561,12 +583,14 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(prompt, expected_prompt)
 
     def test_generate_prompt_conv(self):
-        listwise_inference_handler = ListwiseInferenceHandlerConv(VALID_CONV_TEMPLATE)
+        listwise_inference_handler = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE
+        )
         prompt = listwise_inference_handler.generate_prompt(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
         expected_prompt = [
-            {"role": "system", "content": VALID_CONV_TEMPLATE["system_message"]},
+            {"role": "system", "content": VALID_MULTITURN_TEMPLATE["system_message"]},
             {
                 "role": "user",
                 "content": "Sample prefix: Rank these 2 passages for query: Sample Query",

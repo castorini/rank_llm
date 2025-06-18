@@ -1,4 +1,4 @@
-method: "listwise_norm"
+method: "singleturn_listwise"
 prefix: "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
 body: "PASSAGE{rank} = \"{candidate}\"\n"
 suffix: |-

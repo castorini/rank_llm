@@ -205,20 +205,20 @@ class RankLLM(ABC):
 
     def _create_handler(self, template: Dict[str, str]) -> BaseInferenceHandler:
         # TODO(issue #236 and #237): Need to modify function to select correct inference handler
-        from rank_llm.rerank.listwise.listwise_conv_inference_handler import (
-            ListwiseInferenceHandlerConv,
+        from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
+            MultiTurnListwiseInferenceHandler,
         )
-        from rank_llm.rerank.listwise.listwise_norm_inference_handler import (
-            ListwiseInferenceHandlerNorm,
+        from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
+            SingleTurnListwiseInferenceHandler,
         )
 
         try:
             if template["method"] == "listwise_norm":
-                return ListwiseInferenceHandlerNorm(template)
+                return SingleTurnListwiseInferenceHandler(template)
             elif template["method"] == "listwise_conv":
-                return ListwiseInferenceHandlerConv(template)
+                return MultiTurnListwiseInferenceHandler(template)
             else:  # TODO(issue #236 and #237): Need to remove this after all the handlers are implemented
-                return ListwiseInferenceHandlerNorm(template)
+                return SingleTurnListwiseInferenceHandler(template)
         except:
             raise ValueError("Please provide a method section in the template")
 

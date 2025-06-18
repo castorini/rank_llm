@@ -4,7 +4,7 @@ from rank_llm.data import Result
 from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 
-class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
+class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
         super().__init__(template)
 
@@ -16,7 +16,7 @@ class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
             #    "required_placeholders": set(),  # Placeholders that must exist in this section
             #    "allowed_placeholders": set()    # All allowed placeholders (including required ones)
             # }
-            "body": {
+            "body_user": {
                 "required": True,
                 "required_placeholders": {"rank", "candidate"},
                 "allowed_placeholders": set(),
@@ -26,22 +26,32 @@ class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
                 "required_placeholders": set(),
                 "allowed_placeholders": set(),
             },
-            "prefix": {
+            "prefix_assistant": {
                 "required": False,
                 "required_placeholders": set(),
                 "allowed_placeholders": {"query", "num"},
             },
-            "suffix": {
+            "body_assistant": {
                 "required": False,
                 "required_placeholders": set(),
-                "allowed_placeholders": {"query", "num", "psg_ids"},
+                "allowed_placeholders": {"rank"},
+            },
+            "prefix_user": {
+                "required": False,
+                "required_placeholders": set(),
+                "allowed_placeholders": {"query", "num"},
+            },
+            "suffix_user": {
+                "required": False,
+                "required_placeholders": set(),
+                "allowed_placeholders": {"query", "num"},
             },
         }
 
         # Validate the method value
-        if template["method"] != "listwise_norm":
+        if template["method"] != "multiturn_listwise":
             raise ValueError(
-                f'Incorrect method type, expected "listwise_norm", got {template["method"]}'
+                f'Incorrect method type, expected "listwise_conv", got {template["method"]}'
             )
 
         # Validate the required template keys
@@ -94,27 +104,30 @@ class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
                 "query placeholder must be present in prefix and/or suffix"
             )
 
+        # Validate if assistant section is present
+        if "prefix_assistant" not in template and "body_assistant" not in template:
+            raise ValueError(
+                "One of prefix_assistant and body_assistant sections must be present if the template method is listwise_conv"
+            )
+        if "prefix_assistant" in template and "prefix" not in template:
+            raise ValueError(
+                "prefix section must be present if prefix_assistant section is used in the template"
+            )
+        if (
+            "body_assistant" in template
+            and "prefix" in template
+            and "prefix_assistant" not in template
+        ):
+            raise ValueError(
+                "prefix_assistant section must be present if body_assisstant and prefix sections are used in the template"
+            )
+
         print("Template validated successfully!")
 
     def _generate_prefix_suffix(
         self, num: int, query: str, **kwargs: Any
-    ) -> Tuple[str, str]:
-        suffix_placeholders = [
-            name
-            for _, name, _, _ in self._formatter.parse(self.template["suffix"])
-            if name is not None
-        ]
-
+    ) -> Tuple[str | List[Dict[str, str]], str]:
         prefix_fmt_values = suffix_fmt_values = {"num": num, "query": query}
-
-        if "psg_ids" in suffix_placeholders:  # Used in RankLRL prompt mode
-            rank_start = kwargs["rank_start"]
-            rank_end = kwargs["rank_end"]
-            psg_ids = []
-            for rank in range(rank_end - rank_start):
-                psg_ids.append(f"PASSAGE{rank+1}")
-            psg_ids_str = "[" + ", ".join(psg_ids) + "]"
-            suffix_fmt_values["psg_ids"] = psg_ids_str
 
         prefix_text = self._format_template(
             template_key="prefix", fmt_values=prefix_fmt_values
@@ -123,7 +136,16 @@ class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
             template_key="suffix", fmt_values=suffix_fmt_values
         )
 
-        return prefix_text, suffix_text
+        if not prefix_text:
+            return "", suffix_text
+
+        assistant_text = self._format_template(
+            template_key="prefix_assistant", fmt_values=prefix_fmt_values
+        )
+        return [
+            {"role": "user", "content": prefix_text},
+            {"role": "assistant", "content": assistant_text},
+        ], suffix_text
 
     def _generate_body(
         self,
@@ -131,24 +153,41 @@ class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
         rank_start: int,
         rank_end: int,
         max_length: int,
-        use_alpha: bool,
-    ) -> str:
-        body_text = ""
+        use_alpha: bool = False,
+        is_conversational: bool = False,
+    ) -> str | List[Dict[str, str]]:
+        if is_conversational:
+            body_prompt = []
+        else:
+            body_prompt = ""
+
         rank = 0
         for cand in result.candidates[rank_start:rank_end]:
             rank += 1
-
             content = self._convert_doc_to_prompt_content(cand.doc, max_length)
+            content = self._replace_number(content)
             identifier = chr(self.ALPH_START_IDX + rank) if use_alpha else str(rank)
+            body_fmt_values = {"rank": identifier, "candidate": content}
+            body_text = self._format_template("body", body_fmt_values)
 
-            fmt_values = {"rank": identifier, "candidate": content}
-            single_text = self._format_template(
-                template_key="body", fmt_values=fmt_values
-            )
+            if is_conversational:
+                assistant_fmt_values = {"rank": identifier}
+                assistant_text = self._format_template(
+                    "body_assistant", assistant_fmt_values
+                )
+                body_prompt.extend(
+                    [
+                        {
+                            "role": "user",
+                            "content": body_text,
+                        },
+                        {"role": "assistant", "content": assistant_text},
+                    ]
+                )
+            else:
+                body_prompt += body_text
 
-            body_text += single_text
-
-        return body_text
+        return body_prompt
 
     def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
         try:
@@ -168,22 +207,27 @@ class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
             for system_message in [self.template.get("system_message", "")]
             if system_message
         ]
-        prefix_text, suffix_text = self._generate_prefix_suffix(num, query)
-        body_text = self._generate_body(
+        prefix_prompt, suffix_text = self._generate_prefix_suffix(num=num, query=query)
+        is_conversational_body = "body_assistant" in self.template
+        body_prompt = self._generate_body(
             result=result,
             rank_start=rank_start,
             rank_end=rank_end,
             max_length=max_length,
             use_alpha=use_alpha,
+            is_conversational=is_conversational_body,
         )
-        prompt_text = ""
 
-        if prefix_text:
-            prompt_text += prefix_text
-        prompt_text += body_text
-        if suffix_text:
-            prompt_text += suffix_text
-
-        prompt_messages.append({"role": "user", "content": prompt_text})
+        if prefix_prompt and isinstance(prefix_prompt, list):
+            prompt_messages.extend(prefix_prompt)
+        if is_conversational_body and isinstance(body_prompt, list):
+            prompt_messages.extend(body_prompt)
+            if suffix_text:
+                prompt_messages.append({"role": "user", "content": suffix_text})
+        else:
+            prompt_text = body_prompt
+            if suffix_text:
+                prompt_text += suffix_text
+            prompt_messages.append({"role": "user", "content": prompt_text})
 
         return prompt_messages

@@ -196,6 +196,7 @@ class SafeGenai(ListwiseRankLLM):
     ) -> Tuple[str, int]:
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
+            # TODO (issue #237): Need to modify inference handler to add back fewshot examples
             message = self._inference_handler.generate_prompt(
                 result=result,
                 rank_start=rank_start,
