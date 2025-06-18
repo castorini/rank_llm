@@ -378,13 +378,21 @@ VALID_SINGLETURN_TEMPLATE = {
     "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
     "body": "[{rank}] {candidate}\n",
 }
-VALID_MULTITURN_TEMPLATE = {
+VALID_MULTITURN_TEMPLATE_1 = {
     "method": "multiturn_listwise",
     "system_message": "You are a helpful assistant than ranks documents.",
     "prefix_user": "Sample prefix: Rank these {num} passages for query: {query}",
     "prefix_assistant": "Okay, please provide the passages.",
     "body_user": "[{rank}] {candidate}",
     "body_assistant": "Received passage [{rank}].",
+    "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+}
+VALID_MULTITURN_TEMPLATE_2 = {
+    "method": "multiturn_listwise",
+    "system_message": "You are a helpful assistant than ranks documents.",
+    "prefix_user": "Sample prefix: Rank these {num} passages for query: {query}",
+    "prefix_assistant": "Okay, please provide the passages.",
+    "body_user": "[{rank}] {candidate}\n",
     "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
 }
 
@@ -447,14 +455,20 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         singleturn_listwise_inference_handler = SingleTurnListwiseInferenceHandler(
             VALID_SINGLETURN_TEMPLATE
         )
-        multiturn_listwise_inference_handler = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE
+        multiturn_listwise_inference_handler_1 = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE_1
+        )
+        multiturn_listwise_inference_handler_2 = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE_2
         )
         self.assertEqual(
             singleturn_listwise_inference_handler.template, VALID_SINGLETURN_TEMPLATE
         )
         self.assertEqual(
-            multiturn_listwise_inference_handler.template, VALID_MULTITURN_TEMPLATE
+            multiturn_listwise_inference_handler_1.template, VALID_MULTITURN_TEMPLATE_1
+        )
+        self.assertEqual(
+            multiturn_listwise_inference_handler_2.template, VALID_MULTITURN_TEMPLATE_2
         )
 
     def test_invalid_templates(self):
@@ -472,7 +486,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             VALID_SINGLETURN_TEMPLATE
         )
         multiturn_listwise_inference_handler = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE
+            VALID_MULTITURN_TEMPLATE_1
         )
         (
             singleturn_prefix_text,
@@ -505,7 +519,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             VALID_SINGLETURN_TEMPLATE
         )
         multiturn_listwise_inference_handler = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE
+            VALID_MULTITURN_TEMPLATE_1
         )
         (
             _,
@@ -538,7 +552,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
 
     def test_body_generation_multiturn(self):
         listwise_inference_handler = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE
+            VALID_MULTITURN_TEMPLATE_1
         )
         body_text_singleturn = listwise_inference_handler._generate_body(
             r,
@@ -583,14 +597,20 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(prompt, expected_prompt)
 
     def test_generate_prompt_multiturn(self):
-        listwise_inference_handler = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE
+        listwise_inference_handler_1 = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE_1
         )
-        prompt = listwise_inference_handler.generate_prompt(
+        listwise_inference_handler_2 = MultiTurnListwiseInferenceHandler(
+            VALID_MULTITURN_TEMPLATE_2
+        )
+        prompt_1 = listwise_inference_handler_1.generate_prompt(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
-        expected_prompt = [
-            {"role": "system", "content": VALID_MULTITURN_TEMPLATE["system_message"]},
+        prompt_2 = listwise_inference_handler_2.generate_prompt(
+            r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
+        )
+        expected_prompt_1 = [
+            {"role": "system", "content": VALID_MULTITURN_TEMPLATE_1["system_message"]},
             {
                 "role": "user",
                 "content": "Sample prefix: Rank these 2 passages for query: Sample Query",
@@ -605,7 +625,20 @@ class TestListwiseInferenceHandler(unittest.TestCase):
                 "content": "Sample suffix: Rank the provided 2 passages based on query: Sample Query",
             },
         ]
-        self.assertEqual(prompt, expected_prompt)
+        expected_prompt_2 = [
+            {"role": "system", "content": VALID_MULTITURN_TEMPLATE_1["system_message"]},
+            {
+                "role": "user",
+                "content": "Sample prefix: Rank these 2 passages for query: Sample Query",
+            },
+            {"role": "assistant", "content": "Okay, please provide the passages."},
+            {
+                "role": "user",
+                "content": "[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
+            },
+        ]
+        self.assertEqual(prompt_1, expected_prompt_1)
+        self.assertEqual(prompt_2, expected_prompt_2)
 
 
 if __name__ == "__main__":
