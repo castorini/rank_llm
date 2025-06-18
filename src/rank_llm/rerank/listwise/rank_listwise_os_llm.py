@@ -36,6 +36,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         name: str = "",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -87,12 +88,15 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         TODO: Make repetition_penalty configurable
         """
         super().__init__(
-            model,
-            context_size,
-            prompt_mode,
-            num_few_shot_examples,
-            few_shot_file,
-            window_size,
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            prompt_template_path="src/rank_llm/rerank/listwise/rank_gpt_template.yaml"
+            if not prompt_template_path
+            else prompt_template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
+            window_size=window_size,
             use_alpha=use_alpha,
         )
         self._device = device
@@ -330,10 +334,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         return _output_token_estimate
 
+    # TODO(issue #237): Need to remove this function after ListwiseInferenceHandler is implemented
     def _add_prefix_prompt(self, query: str, num: int) -> str:
         identifier_type = "an alphabetical" if self._use_alpha else " a numerical"
         return f"I will provide you with {num} passages, each indicated by {identifier_type} identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
 
+    # TODO(issue #237): Need to remove this function after ListwiseInferenceHandler is implemented
     def _add_post_prompt(self, query: str, num: int) -> str:
         if self._use_alpha:
             example_ordering = "[B] > [A]" if self._variable_passages else "[D] > [B]"
@@ -344,30 +350,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
-        query = result.query.text
-        query = self._replace_number(query)
-        num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (20 / (rank_end - rank_start))
+
         while True:
-            messages = list()
-            if self._system_message:
-                messages.append({"role": "system", "content": self._system_message})
-            messages = self._add_few_shot_examples_messages(messages)
-            prefix = self._add_prefix_prompt(query, num)
-            rank = 0
-            input_context = f"{prefix}\n"
-            for cand in result.candidates[rank_start:rank_end]:
-                rank += 1
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-
-                identifier = (
-                    chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
-                )
-                input_context += f"[{identifier}] {self._replace_number(content)}\n"
-
-            input_context += self._add_post_prompt(query, num)
-            messages.append({"role": "user", "content": input_context})
-
+            messages = self._inference_handler.generate_prompt(
+                result=result, rank_start=rank_start, rank_end=rank_end
+            )
             prompt = self._tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )

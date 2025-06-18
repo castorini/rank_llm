@@ -4,11 +4,15 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import yaml
+
 from rank_llm.data import Request, Result
+from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 logger = logging.getLogger(__name__)
 
 
+# TODO(issue #236): Need to remove this after all the inference handlers are added
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     RANK_GPT = "rank_GPT"
@@ -28,7 +32,8 @@ class RankLLM(ABC):
         model: str,
         context_size: int,
         prompt_mode: PromptMode,
-        num_few_shot_examples: int,
+        prompt_template_path: Optional[str] = None,
+        num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
     ) -> None:
         self._model = model
@@ -36,6 +41,16 @@ class RankLLM(ABC):
         self._prompt_mode = prompt_mode
         self._num_few_shot_examples = num_few_shot_examples
         self._few_shot_file = few_shot_file
+
+        data = {}  # TODO(issue #236): after default template is added, remove this line
+        if (
+            prompt_template_path is not None
+        ):  # TODO(issue #236): after default template is added, remove condition
+            with open(prompt_template_path, "r") as file:
+                data = yaml.safe_load(file)
+
+        if bool(data):
+            self._inference_handler = self._create_handler(data)
 
         if self._num_few_shot_examples > 0:
             if not few_shot_file:
@@ -187,6 +202,14 @@ class RankLLM(ABC):
         Returns the output filename used when writing rerank results to file
         """
         pass
+
+    def _create_handler(self, template: Dict[str, str]) -> BaseInferenceHandler:
+        # TODO(issue #236 and #237): Need to modify function to select correct inference handler
+        from rank_llm.rerank.listwise.listwise_inference_handler import (
+            ListwiseInferenceHandler,
+        )
+
+        return ListwiseInferenceHandler(template)
 
     def _load_few_shot_examples(self, file_path: str):
         try:
