@@ -51,7 +51,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         # Validate the method value
         if template["method"] != "multiturn_listwise":
             raise ValueError(
-                f'Incorrect method type, expected "listwise_conv", got {template["method"]}'
+                f'Incorrect method type, expected "multiturn_listwise", got {template["method"]}'
             )
 
         # Validate the required template keys

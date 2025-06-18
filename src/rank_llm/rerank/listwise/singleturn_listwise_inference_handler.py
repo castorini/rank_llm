@@ -41,7 +41,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         # Validate the method value
         if template["method"] != "singleturn_listwise":
             raise ValueError(
-                f'Incorrect method type, expected "listwise_norm", got {template["method"]}'
+                f'Incorrect method type, expected "singleturn_listwise", got {template["method"]}'
             )
 
         # Validate the required template keys
