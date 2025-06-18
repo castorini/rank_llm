@@ -5,8 +5,12 @@ from dacite import from_dict
 
 from rank_llm.data import Result
 from rank_llm.rerank import PromptMode
-from rank_llm.rerank.listwise import RankListwiseOSLLM
-from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
+from rank_llm.rerank.listwise.listwise_conv_inference_handler import (
+    ListwiseInferenceHandlerConv,
+)
+from rank_llm.rerank.listwise.listwise_norm_inference_handler import (
+    ListwiseInferenceHandlerNorm,
+)
 
 # model, context_size, prompt_mode, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
@@ -366,82 +370,214 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertEqual(output, 22)
 
 
-VALID_TEMPLATE = {
-    "method": "listwise",
+VALID_NORM_TEMPLATE = {
+    "method": "listwise_norm",
     "system_message": "You are a helpful assistant that ranks documents.",
     "prefix": "Sample prefix: Rank these {num} passsages for query: {query}",
     "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
     "body": "[{rank}] {candidate}\n",
 }
+VALID_CONV_TEMPLATE = {
+    "method": "listwise_conv",
+    "system_message": "You are a helpful assistant than ranks documents.",
+    "prefix": "Sample prefix: Rank these {num} passsages for query: {query}",
+    "prefix_assistant": "Okay, please provide the passages.",
+    "body": "[{rank}] {candidate}",
+    "body_assistant": "Received passage [{rank}].",
+    "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+}
 
 # Sample invalid templates for testing validation
-INVALID_TEMPLATES = [
+INVALID_NORM_TEMPLATES = [
     {"method": "pairwise", "body": "{rank} {candidate}"},  # Wrong method type
     {
-        "method": "listwise",
+        "method": "listwise_norm",
         "body": "Missing rank placeholder {rank}",
     },  # Missing required placeholder: {candidate}
     {
-        "method": "listwise",
+        "method": "listwise_norm",
         "body": "{rank} {candidate}",
         "unknown_key": "value",
     },  # Unknown key
     {
-        "method": "listwise",
+        "method": "listwise_norm",
         "prefix": "{num}",
         "body": "{rank} {candidate}",
         "suffix": "test",
     },  # Missing query placeholder in both prefix and suffix
 ]
+INVALID_CONV_TEMPLATES = [
+    {
+        "method": "listwise_norm",
+        "body": "{rank} {candidate}",
+        "body_assistant": "{rank}",
+    },  # Wrong method type
+    {
+        "method": "listwise_conv",
+        "body": "{rank} {candidate}",
+        "body_assistant": "{rank}",
+        "unknown_key": "value",
+    },  # Unknown key
+    {
+        "method": "listwise_conv",
+        "body": "{rank} {candidate}",
+    },  # Missing assistant sections
+    {
+        "method": "listwise_conv",
+        "prefix": "{num}",
+        "body": "{rank} {candidate}",
+        "body_assistant": "{rank}",
+        "suffix": "test",
+    },  # Missing prefix_assistant when body_assistant and prefix are both present
+    {
+        "method": "listwise_conv",
+        "system_message": "You are a helpful assistant than ranks documents.",
+        "prefix": "Sample prefix: Rank these {num} passages",
+        "prefix_assistant": "Okay, please provide the passages.",
+        "body": "[{rank}] {candidate}",
+        "body_assistant": "Received passage [{rank}].",
+        "suffix": "Sample suffix: Rank the provided {num} passages",
+    },  # Missing query placeholder in both prefix and suffix
+]
 
 
 class TestListwiseInferenceHandler(unittest.TestCase):
-    def test_valid_template_initialization(self):
-        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
-        self.assertEqual(listwise_inference_handler.template, VALID_TEMPLATE)
+    def test_listwise_valid_template_initialization(self):
+        norm_listwise_inference_handler = ListwiseInferenceHandlerNorm(
+            VALID_NORM_TEMPLATE
+        )
+        conv_listwise_inference_handler = ListwiseInferenceHandlerConv(
+            VALID_CONV_TEMPLATE
+        )
+        self.assertEqual(norm_listwise_inference_handler.template, VALID_NORM_TEMPLATE)
+        self.assertEqual(conv_listwise_inference_handler.template, VALID_CONV_TEMPLATE)
 
     def test_invalid_templates(self):
-        for template in INVALID_TEMPLATES:
+        for template in INVALID_NORM_TEMPLATES:
             with self.subTest(template=template):
                 with self.assertRaises(ValueError):
-                    ListwiseInferenceHandler(template)
+                    ListwiseInferenceHandlerNorm(template)
+        for template in INVALID_CONV_TEMPLATES:
+            with self.subTest(template=template):
+                with self.assertRaises(ValueError):
+                    ListwiseInferenceHandlerConv(template)
 
     def test_prefix_generation(self):
-        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
-        prefix_text, _ = listwise_inference_handler._generate_prefix_suffix(
+        norm_listwise_inference_handler = ListwiseInferenceHandlerNorm(
+            VALID_NORM_TEMPLATE
+        )
+        conv_listwise_inference_handler = ListwiseInferenceHandlerConv(
+            VALID_CONV_TEMPLATE
+        )
+        prefix_text_norm, _ = norm_listwise_inference_handler._generate_prefix_suffix(
             1, "test query"
         )
-        expected_prefix = "Sample prefix: Rank these 1 passsages for query: test query"
-        self.assertEqual(prefix_text, expected_prefix)
+        prefix_text_conv, _ = conv_listwise_inference_handler._generate_prefix_suffix(
+            1, "test query"
+        )
+        expected_prefix_norm = (
+            "Sample prefix: Rank these 1 passsages for query: test query"
+        )
+        expected_prefix_conv = [
+            {
+                "role": "user",
+                "content": "Sample prefix: Rank these 1 passages for query: test query",
+            },
+            {"role": "assistant", "content": "Okay, please provide the passages."},
+        ]
+
+        self.assertEqual(prefix_text_norm, expected_prefix_norm)
+        self.assertEqual(prefix_text_conv, expected_prefix_conv)
 
     def test_suffix_generation(self):
-        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
-        _, suffix_text = listwise_inference_handler._generate_prefix_suffix(
+        norm_listwise_inference_handler = ListwiseInferenceHandlerNorm(
+            VALID_NORM_TEMPLATE
+        )
+        conv_listwise_inference_handler = ListwiseInferenceHandlerConv(
+            VALID_CONV_TEMPLATE
+        )
+        _, norm_suffix_text = norm_listwise_inference_handler._generate_prefix_suffix(
+            1, "test query"
+        )
+        _, conv_suffix_text = conv_listwise_inference_handler._generate_prefix_suffix(
             1, "test query"
         )
         expected_suffix = (
             "Sample suffix: Rank the provided 1 passages based on query: test query"
         )
-        self.assertEqual(suffix_text, expected_suffix)
 
-    def test_body_generation(self):
-        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
+        self.assertEqual(norm_suffix_text, expected_suffix)
+        self.assertEqual(conv_suffix_text, expected_suffix)
+
+    def test_body_generation_norm(self):
+        listwise_inference_handler = ListwiseInferenceHandlerNorm(VALID_NORM_TEMPLATE)
         body_text = listwise_inference_handler._generate_body(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
         expected_body = "[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\n"
         self.assertEqual(body_text, expected_body)
 
-    def test_generate_prompt(self):
-        listwise_inference_handler = ListwiseInferenceHandler(VALID_TEMPLATE)
+    def test_body_generation_conv(self):
+        listwise_inference_handler = ListwiseInferenceHandlerConv(VALID_CONV_TEMPLATE)
+        body_text_norm = listwise_inference_handler._generate_body(
+            r,
+            rank_start=0,
+            rank_end=2,
+            max_length=6000,
+            use_alpha=False,
+            is_conversational=False,
+        )
+        body_text_conv = listwise_inference_handler._generate_body(
+            r,
+            rank_start=0,
+            rank_end=2,
+            max_length=6000,
+            use_alpha=False,
+            is_conversational=True,
+        )
+        expected_body_norm = "[1] Title: Sample Title Content: Sample Text[2] Title: Sample Title Content: Sample Text"
+        expected_body_conv = [
+            {"role": "user", "content": "[1] Title: Sample Title Content: Sample Text"},
+            {"role": "assistant", "content": "Received passage [1]."},
+            {"role": "user", "content": "[2] Title: Sample Title Content: Sample Text"},
+            {"role": "assistant", "content": "Received passage [2]."},
+        ]
+        self.assertEqual(body_text_norm, expected_body_norm)
+        self.assertEqual(body_text_conv, expected_body_conv)
+
+    def test_generate_prompt_norm(self):
+        listwise_inference_handler = ListwiseInferenceHandlerNorm(VALID_NORM_TEMPLATE)
         prompt = listwise_inference_handler.generate_prompt(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
         expected_prompt = [
-            {"role": "system", "content": VALID_TEMPLATE["system_message"]},
+            {"role": "system", "content": VALID_NORM_TEMPLATE["system_message"]},
             {
                 "role": "user",
                 "content": "Sample prefix: Rank these 2 passsages for query: Sample Query[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
+            },
+        ]
+        self.assertEqual(prompt, expected_prompt)
+
+    def test_generate_prompt_conv(self):
+        listwise_inference_handler = ListwiseInferenceHandlerConv(VALID_CONV_TEMPLATE)
+        prompt = listwise_inference_handler.generate_prompt(
+            r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
+        )
+        expected_prompt = [
+            {"role": "system", "content": VALID_CONV_TEMPLATE["system_message"]},
+            {
+                "role": "user",
+                "content": "Sample prefix: Rank these 2 passages for query: Sample Query",
+            },
+            {"role": "assistant", "content": "Okay, please provide the passages."},
+            {"role": "user", "content": "[1] Title: Sample Title Content: Sample Text"},
+            {"role": "assistant", "content": "Received passage [1]."},
+            {"role": "user", "content": "[2] Title: Sample Title Content: Sample Text"},
+            {"role": "assistant", "content": "Received passage [2]."},
+            {
+                "role": "user",
+                "content": "Sample suffix: Rank the provided 2 passages based on query: Sample Query",
             },
         ]
         self.assertEqual(prompt, expected_prompt)

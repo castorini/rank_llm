@@ -1,4 +1,4 @@
-method: "listwise"
+method: "listwise_conv"
 system_message: "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query."
 prefix: |-
   I will provide you with {num} passages, each indicated by number identifier [].
