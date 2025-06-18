@@ -146,7 +146,7 @@ class ListwiseInferenceHandlerNorm(ListwiseInferenceHandler):
                 template_key="body", fmt_values=fmt_values
             )
 
-            body_text += f"{single_text}\n"
+            body_text += single_text
 
         return body_text
 

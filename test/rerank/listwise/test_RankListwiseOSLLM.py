@@ -11,6 +11,7 @@ from rank_llm.rerank.listwise.listwise_conv_inference_handler import (
 from rank_llm.rerank.listwise.listwise_norm_inference_handler import (
     ListwiseInferenceHandlerNorm,
 )
+from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
 
 # model, context_size, prompt_mode, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
@@ -373,14 +374,14 @@ class TestRankListwiseOSLLM(unittest.TestCase):
 VALID_NORM_TEMPLATE = {
     "method": "listwise_norm",
     "system_message": "You are a helpful assistant that ranks documents.",
-    "prefix": "Sample prefix: Rank these {num} passsages for query: {query}",
+    "prefix": "Sample prefix: Rank these {num} passages for query: {query}",
     "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
     "body": "[{rank}] {candidate}\n",
 }
 VALID_CONV_TEMPLATE = {
     "method": "listwise_conv",
     "system_message": "You are a helpful assistant than ranks documents.",
-    "prefix": "Sample prefix: Rank these {num} passsages for query: {query}",
+    "prefix": "Sample prefix: Rank these {num} passages for query: {query}",
     "prefix_assistant": "Okay, please provide the passages.",
     "body": "[{rank}] {candidate}",
     "body_assistant": "Received passage [{rank}].",
@@ -476,7 +477,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             1, "test query"
         )
         expected_prefix_norm = (
-            "Sample prefix: Rank these 1 passsages for query: test query"
+            "Sample prefix: Rank these 1 passages for query: test query"
         )
         expected_prefix_conv = [
             {
@@ -554,7 +555,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             {"role": "system", "content": VALID_NORM_TEMPLATE["system_message"]},
             {
                 "role": "user",
-                "content": "Sample prefix: Rank these 2 passsages for query: Sample Query[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
+                "content": "Sample prefix: Rank these 2 passages for query: Sample Query[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
             },
         ]
         self.assertEqual(prompt, expected_prompt)
