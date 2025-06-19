@@ -1,5 +1,6 @@
 import logging
 import math
+import re
 from typing import List, Optional, Tuple
 
 from transformers import T5ForConditionalGeneration, T5Tokenizer
@@ -101,7 +102,7 @@ class DuoT5(PairwiseRankLLM):
     def create_prompt(
         self, result: Result, index1: int, index2: int
     ) -> Tuple[str, int]:
-        query = self._replace_number(result.query.text)
+        query = re.sub(r"\[(\d+)\]", r"(\1)", result.query.text)
 
         reserved_for_output = (
             64  # might need to change depending on what the actual output look like
