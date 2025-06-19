@@ -91,7 +91,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            prompt_template_path="src/rank_llm/rerank/listwise/rank_gpt_template.yaml"
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
             if not prompt_template_path
             else prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
@@ -334,27 +334,19 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         return _output_token_estimate
 
-    # TODO(issue #237): Need to remove this function after ListwiseInferenceHandler is implemented
-    def _add_prefix_prompt(self, query: str, num: int) -> str:
-        identifier_type = "an alphabetical" if self._use_alpha else " a numerical"
-        return f"I will provide you with {num} passages, each indicated by {identifier_type} identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
-
-    # TODO(issue #237): Need to remove this function after ListwiseInferenceHandler is implemented
-    def _add_post_prompt(self, query: str, num: int) -> str:
-        if self._use_alpha:
-            example_ordering = "[B] > [A]" if self._variable_passages else "[D] > [B]"
-        else:
-            example_ordering = "[2] > [1]" if self._variable_passages else "[4] > [2]"
-        return f"Search Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., {example_ordering}, Answer concisely and directly and only respond with the ranking results, do not say any word or explain."
-
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
         max_length = 300 * (20 / (rank_end - rank_start))
 
         while True:
+            # TODO (issue #237): Need to modify inference handler to add back fewshot examples
             messages = self._inference_handler.generate_prompt(
-                result=result, rank_start=rank_start, rank_end=rank_end
+                result=result,
+                rank_start=rank_start,
+                rank_end=rank_end,
+                max_length=max_length,
+                use_alpha=self._use_alpha,
             )
             prompt = self._tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True

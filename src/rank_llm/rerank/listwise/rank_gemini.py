@@ -164,16 +164,6 @@ class SafeGenai(ListwiseRankLLM):
         )
         return response, self.model.count_tokens(response).total_tokens
 
-    def _add_prefix_prompt(self, query: str, num: int) -> str:
-        if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-            return f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
-        return f"I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.\n"
-
-    def _add_post_prompt(self, query: str, num: int) -> str:
-        if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-            return f"\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend], e.g., [rankstart] [1] > ... > [2] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
-        return f"\nSearch Query: {query}.\nRank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [2] > [1], Only respond with the ranking results, do not say any word or explain."
-
     def _add_few_shot_examples_text(self, text_prompt: str) -> str:
         """Adds few-shot examples to a text prompt, returning the combined string."""
 
@@ -204,19 +194,15 @@ class SafeGenai(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
-        query = result.query.text
-        num = len(result.candidates[rank_start:rank_end])
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            message = self._add_few_shot_examples_text("")
-            message += self._add_prefix_prompt(query, num)
-
-            rank = 0
-            for cand in result.candidates[rank_start:rank_end]:
-                rank += 1
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-                message += f"\n[{rank}] {self._replace_number(content)}"
-            message += self._add_post_prompt(query, num)
+            # TODO (issue #237): Need to modify inference handler to add back fewshot examples
+            message = self._inference_handler.generate_prompt(
+                result=result,
+                rank_start=rank_start,
+                rank_end=rank_end,
+                max_length=max_length,
+            )[-1]["content"]
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
