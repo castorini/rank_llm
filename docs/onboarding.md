@@ -183,7 +183,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.8201          | 0.7851           | 1         |
 | 0.8197          | 0.7843           | 5         |
 | 0.8198          | 0.7885           | 2         |
-| 0.8199          | 0.5256           | 1         |
+| 0.8199          | 0.7906          | 1         |
 
 If your result is present in the table above, please increase its frequency by 1.
 If your result is not present, add a new row to the table with frequency 1.
