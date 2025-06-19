@@ -544,11 +544,16 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         listwise_inference_handler = SingleTurnListwiseInferenceHandler(
             VALID_SINGLETURN_TEMPLATE
         )
-        body_text = listwise_inference_handler._generate_body(
+        body_text_num = listwise_inference_handler._generate_body(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
-        expected_body = "[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\n"
-        self.assertEqual(body_text, expected_body)
+        expected_body_num = "[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\n"
+        body_text_alpha = listwise_inference_handler._generate_body(
+            r, rank_start=0, rank_end=2, max_length=6000, use_alpha=True
+        )
+        expected_body_alpha = "[A] Title: Sample Title Content: Sample Text\n[B] Title: Sample Title Content: Sample Text\n"
+        self.assertEqual(body_text_num, expected_body_num)
+        self.assertEqual(body_text_alpha, expected_body_alpha)
 
     def test_body_generation_multiturn(self):
         listwise_inference_handler = MultiTurnListwiseInferenceHandler(
@@ -584,17 +589,28 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         listwise_inference_handler = SingleTurnListwiseInferenceHandler(
             VALID_SINGLETURN_TEMPLATE
         )
-        prompt = listwise_inference_handler.generate_prompt(
+        num_prompt = listwise_inference_handler.generate_prompt(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
-        expected_prompt = [
+        expected_prompt_num = [
             {"role": "system", "content": VALID_SINGLETURN_TEMPLATE["system_message"]},
             {
                 "role": "user",
                 "content": "Sample prefix: Rank these 2 passages for query: Sample Query[1] Title: Sample Title Content: Sample Text\n[2] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
             },
         ]
-        self.assertEqual(prompt, expected_prompt)
+        alpha_prompt = listwise_inference_handler.generate_prompt(
+            r, rank_start=0, rank_end=2, max_length=6000, use_alpha=True
+        )
+        expected_prompt_alpha = [
+            {"role": "system", "content": VALID_SINGLETURN_TEMPLATE["system_message"]},
+            {
+                "role": "user",
+                "content": "Sample prefix: Rank these 2 passages for query: Sample Query[A] Title: Sample Title Content: Sample Text\n[B] Title: Sample Title Content: Sample Text\nSample suffix: Rank the provided 2 passages based on query: Sample Query",
+            },
+        ]
+        self.assertEqual(num_prompt, expected_prompt_num)
+        self.assertEqual(alpha_prompt, expected_prompt_alpha)
 
     def test_generate_prompt_multiturn(self):
         listwise_inference_handler_1 = MultiTurnListwiseInferenceHandler(
