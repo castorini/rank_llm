@@ -23,6 +23,10 @@ class DuoT5(PairwiseRankLLM):
         device: str = "cuda",
         batch_size: int = 32,
     ):
+        if prompt_mode == "duot5":
+            prompt_template_path = (
+                "src/rank_llm/rerank/prompt_templates/duot5_template.yaml"
+            )
         super().__init__(
             model=model,
             context_size=context_size,
@@ -117,29 +121,14 @@ class DuoT5(PairwiseRankLLM):
             self._context_size - reserved_for_output - query_tokens - few_shot_tokens
         )
 
-        doc1_raw = self.convert_doc_to_prompt_content(
-            result.candidates[index1].doc, max_length=max_token
+        # TODO (issue #237): need to modify the class to be able to add inference handler later
+        prompt = self._inference_handler.generate_prompt(
+            result=result,
+            index1=index1,
+            index2=index2,
+            max_token=max_token,
+            tokenizer=self._tokenizer,
         )
-        doc2_raw = self.convert_doc_to_prompt_content(
-            result.candidates[index2].doc, max_length=max_token
-        )
-
-        doc1_tokens = self._tokenizer.encode(
-            doc1_raw, truncation=True, max_length=max_token
-        )
-        doc2_tokens = self._tokenizer.encode(
-            doc2_raw, truncation=True, max_length=max_token
-        )
-
-        doc1 = self._tokenizer.decode(doc1_tokens, skip_special_tokens=True)
-        doc2 = self._tokenizer.decode(doc2_tokens, skip_special_tokens=True)
-
-        prompt = (
-            few_shot_prompt
-            + f"Query: {query} Document0: {doc1} Document1: {doc2} Relevant: "
-        )
-        prompt = prompt.replace("<unk>", "")
-
         return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, prompt: str) -> int:

@@ -213,6 +213,8 @@ class RankLLM(ABC):
         )
         from rank_llm.rerank.pointwise.pointwise_inference_handler import (
             PointwiseInferenceHandler,
+        from rank_llm.rerank.pairwise.pairwise_inference_handler import (
+            PairwiseInferenceHandler,
         )
 
         try:
@@ -222,6 +224,8 @@ class RankLLM(ABC):
                 return MultiTurnListwiseInferenceHandler(template)
             elif template["method"] == "pointwise":
                 return PointwiseInferenceHandler(template)
+            elif template["method"] == "pairwise":
+                return PairwiseInferenceHandler(template)
             else:  # TODO(issue #236 and #237): Need to remove this after all the handlers are implemented
                 return SingleTurnListwiseInferenceHandler(template)
         except:
