@@ -51,6 +51,7 @@ class RankLLM(ABC):
 
         if bool(data):
             self._inference_handler = self._create_handler(data)
+            print(f"Successfully created {data['method']} inference handler!")
 
         if self._num_few_shot_examples > 0:
             if not few_shot_file:

@@ -23,15 +23,11 @@ class DuoT5(PairwiseRankLLM):
         device: str = "cuda",
         batch_size: int = 32,
     ):
-        if prompt_mode == "duot5":
-            prompt_template_path = (
-                "src/rank_llm/rerank/prompt_templates/duot5_template.yaml"
-            )
         super().__init__(
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            prompt_template_path=prompt_template_path,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/duot5_template.yaml",
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             device=device,
