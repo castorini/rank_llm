@@ -1,6 +1,8 @@
 from string import Formatter
 from typing import Any, Dict
 
+from transformers import T5Tokenizer
+
 from rank_llm.data import Result
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
@@ -73,21 +75,14 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
 
     # TODO (issue #273): May need to add prefix/suffix generation function later
 
-    def _generate_body(self, query: str, doc1: str, doc2: str) -> str:
-        fmt_values = {"query": query, "doc1": doc1, "doc2": doc2}
-        body_text = self._format_template(template_key="body", fmt_values=fmt_values)
-
-        return body_text
-
-    def generate_prompt(self, result: Result, **kwargs: Any) -> str:
-        try:
-            index1 = kwargs["index1"]
-            index2 = kwargs["index2"]
-            max_token = kwargs["max_token"]
-            tokenizer = kwargs["tokenizer"]
-        except KeyError as e:
-            raise ValueError(f"Missing required parameter: {e}")
-
+    def _generate_body(
+        self,
+        result: Result,
+        index1: int,
+        index2: int,
+        max_token: int,
+        tokenizer: T5Tokenizer,
+    ) -> str:
         doc1_raw = self._convert_doc_to_prompt_content(
             result.candidates[index1].doc, max_length=max_token
         )
@@ -102,5 +97,25 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         doc1 = tokenizer.decode(doc1_tokens, skip_special_tokens=True)
         doc2 = tokenizer.decode(doc2_tokens, skip_special_tokens=True)
 
-        prompt = self._generate_body(query=query, doc1=doc1, doc2=doc2)
+        fmt_values = {"query": query, "doc1": doc1, "doc2": doc2}
+        body_text = self._format_template(template_key="body", fmt_values=fmt_values)
+
+        return body_text
+
+    def generate_prompt(self, result: Result, **kwargs: Any) -> str:
+        try:
+            index1 = kwargs["index1"]
+            index2 = kwargs["index2"]
+            max_token = kwargs["max_token"]
+            tokenizer = kwargs["tokenizer"]
+        except KeyError as e:
+            raise ValueError(f"Missing required parameter: {e}")
+
+        prompt = self._generate_body(
+            result=result,
+            index1=index1,
+            index2=index2,
+            max_token=max_token,
+            tokenizer=tokenizer,
+        )
         return prompt.replace("<unk>", "")
