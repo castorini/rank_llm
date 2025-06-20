@@ -39,6 +39,7 @@ class BaseInferenceHandler(ABC):
         self,
         template: Dict[str, str],
         template_section: Dict[str, TemplateSectionConfig],
+        check_query: bool = False,
         strict: bool = False,
     ):
         # Validate the required template keys
@@ -49,6 +50,11 @@ class BaseInferenceHandler(ABC):
         ]
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
+
+        if check_query:
+            query_present = (
+                False if "prefix" in template or "suffix" in template else True
+            )
 
         # Validate the rest of the template keys
         for template_key, template_text in template.items():
@@ -80,6 +86,14 @@ class BaseInferenceHandler(ABC):
                     raise ValueError(msg)
                 else:
                     print(msg)
+
+            if check_query and "query" in used_placeholders:
+                query_present = True
+
+        if check_query and not query_present:
+            raise ValueError(
+                "query placeholder must be present in prefix and/or suffix"
+            )
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
