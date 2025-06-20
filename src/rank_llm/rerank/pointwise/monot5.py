@@ -16,7 +16,7 @@ class MonoT5(PointwiseRankLLM):
         self,
         model: str,
         prompt_mode: str = "monot5",
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/pointwise/monot5_template.yaml",
         context_size: int = 512,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
@@ -27,7 +27,7 @@ class MonoT5(PointwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            prompt_template_path="src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             device=device,
@@ -107,6 +107,7 @@ class MonoT5(PointwiseRankLLM):
             self._context_size - few_shot_tokens - query_tokens - reserved_for_output
         )
 
+        # TODO (issue #237): modify the inference handler to include fewshot examples
         prompt = self._inference_handler.generate_prompt(
             result=result,
             index=index,
