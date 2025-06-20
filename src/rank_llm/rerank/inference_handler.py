@@ -1,5 +1,8 @@
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
+
+from ftfy import fix_text
 
 from rank_llm.data import Result
 
@@ -29,6 +32,33 @@ class BaseInferenceHandler(ABC):
             - Proper string formatting
         """
         pass
+
+    def _replace_number(self, s: str) -> str:
+        return re.sub(r"\[(\d+)\]", r"(\1)", s)
+
+    def _convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
+        if "text" in doc:
+            content = doc["text"]
+        elif "segment" in doc:
+            content = doc["segment"]
+        elif "contents" in doc:
+            content = doc["contents"]
+        elif "content" in doc:
+            content = doc["content"]
+        elif "body" in doc:
+            content = doc["body"]
+        else:
+            content = doc["passage"]
+        if "title" in doc and doc["title"]:
+            content = "Title: " + doc["title"] + " " + "Content: " + content
+        content = content.strip()
+        content = fix_text(content)
+        # For Japanese should cut by character: content = content[:int(max_length)]
+        content = " ".join(content.split()[: int(max_length)])
+
+        return self._replace_number(content)
 
     def _format_template(
         self, template_key: str, fmt_values: Dict[str, str | int]
@@ -60,7 +90,9 @@ class BaseInferenceHandler(ABC):
         return template_text.format(**fmt_values)
 
     @abstractmethod
-    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
+    def generate_prompt(
+        self, result: Result, **kwargs: Any
+    ) -> List[Dict[str, str]] | str:
         """
         Generates complete prompt(s) for the ranking task.
 
