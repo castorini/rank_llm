@@ -68,7 +68,7 @@ INVALID_POINTWISE_TEMPLATES = [
 tokenizer = T5Tokenizer.from_pretrained("castorini/monot5-3b-msmarco-10k")
 
 
-class TestPairwiseInferenceHandler(unittest.TestCase):
+class TestPointwiseInferenceHandler(unittest.TestCase):
     def test_pointwise_valid_template_initialization(self):
         inference_handler = PointwiseInferenceHandler(VALID_POINTWISE_TEMPLATE)
         self.assertEqual(inference_handler.template, VALID_POINTWISE_TEMPLATE)
