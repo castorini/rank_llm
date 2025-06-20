@@ -16,7 +16,7 @@ class MonoT5(PointwiseRankLLM):
         self,
         model: str,
         prompt_mode: str = "monot5",
-        prompt_template_path: str = "src/rank_llm/rerank/pointwise/monot5_template.yaml",
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
         context_size: int = 512,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from string import Formatter
 from typing import Any, Dict, List, Tuple
 
 from rank_llm.data import Result
@@ -10,7 +9,6 @@ class ListwiseInferenceHandler(BaseInferenceHandler, ABC):
     ALPH_START_IDX = ord("A") - 1
 
     def __init__(self, template: Dict[str, str]):
-        self._formatter = Formatter()
         super().__init__(template)
 
     @abstractmethod
