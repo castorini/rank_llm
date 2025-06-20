@@ -1,4 +1,3 @@
-from string import Formatter
 from typing import Any, Dict
 
 from transformers import T5Tokenizer
@@ -9,7 +8,6 @@ from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 class PairwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
-        self._formatter = Formatter()
         super().__init__(template)
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
