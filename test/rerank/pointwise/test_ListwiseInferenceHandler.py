@@ -99,7 +99,7 @@ class TestPairwiseInferenceHandler(unittest.TestCase):
             result=r, index=0, max_doc_tokens=6000, tokenizer=tokenizer
         )
         prompt_text_2 = inference_handler.generate_prompt(
-            result=r, index=0, max_doc_tokens=6000, tokenizer=tokenizer
+            result=r, index=1, max_doc_tokens=6000, tokenizer=tokenizer
         )
         expected_prompt_1 = "Query: Sample Query Document: Title1: Sample Title1 Content1: Sample Text1 Relevance: "
         expected_prompt_2 = "Query: Sample Query Document: Title2: Sample Title2 Content2: Sample Text2 Relevance: "
