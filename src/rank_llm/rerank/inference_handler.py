@@ -36,19 +36,22 @@ class BaseInferenceHandler(ABC):
         pass
 
     def _general_validation(
-        self, template_section: Dict[str, TemplateSectionConfig], strict: bool = False
+        self,
+        template: Dict[str, str],
+        template_section: Dict[str, TemplateSectionConfig],
+        strict: bool = False,
     ):
         # Validate the required template keys
         missing_template_keys = [
             key
             for key, config in template_section.items()
-            if key not in self.template and config["required"]
+            if key not in template and config["required"]
         ]
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
 
         # Validate the rest of the template keys
-        for template_key, template_text in self.template.items():
+        for template_key, template_text in template.items():
             if template_key == "method":
                 continue
             if template_key not in template_section:

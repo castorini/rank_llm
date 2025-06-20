@@ -33,7 +33,9 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 f'Incorrect method type, expected "pointwise", got {template["method"]}'
             )
 
-        self._general_validation(template_section=TEMPLATE_SECTIONS, strict=strict)
+        self._general_validation(
+            template=template, template_section=TEMPLATE_SECTIONS, strict=strict
+        )
 
     # TODO (issue #273): May need to add prefix/suffix generation function later
 
