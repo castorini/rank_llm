@@ -1,5 +1,6 @@
 import logging
 import math
+import re
 from typing import List, Optional, Tuple
 
 from transformers import T5ForConditionalGeneration, T5Tokenizer
@@ -16,7 +17,7 @@ class DuoT5(PairwiseRankLLM):
         self,
         model: str,
         prompt_mode: str = "duot5",
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/duot5_template.yaml",
         context_size: int = 512,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
@@ -101,7 +102,7 @@ class DuoT5(PairwiseRankLLM):
     def create_prompt(
         self, result: Result, index1: int, index2: int
     ) -> Tuple[str, int]:
-        query = self._replace_number(result.query.text)
+        query = re.sub(r"\[(\d+)\]", r"(\1)", result.query.text)
 
         reserved_for_output = (
             64  # might need to change depending on what the actual output look like
@@ -117,29 +118,14 @@ class DuoT5(PairwiseRankLLM):
             self._context_size - reserved_for_output - query_tokens - few_shot_tokens
         )
 
-        doc1_raw = self.convert_doc_to_prompt_content(
-            result.candidates[index1].doc, max_length=max_token
+        # TODO (issue #237): need to modify the class to be able to add fewshot examples later
+        prompt = self._inference_handler.generate_prompt(
+            result=result,
+            index1=index1,
+            index2=index2,
+            max_token=max_token,
+            tokenizer=self._tokenizer,
         )
-        doc2_raw = self.convert_doc_to_prompt_content(
-            result.candidates[index2].doc, max_length=max_token
-        )
-
-        doc1_tokens = self._tokenizer.encode(
-            doc1_raw, truncation=True, max_length=max_token
-        )
-        doc2_tokens = self._tokenizer.encode(
-            doc2_raw, truncation=True, max_length=max_token
-        )
-
-        doc1 = self._tokenizer.decode(doc1_tokens, skip_special_tokens=True)
-        doc2 = self._tokenizer.decode(doc2_tokens, skip_special_tokens=True)
-
-        prompt = (
-            few_shot_prompt
-            + f"Query: {query} Document0: {doc1} Document1: {doc2} Relevant: "
-        )
-        prompt = prompt.replace("<unk>", "")
-
         return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, prompt: str) -> int:

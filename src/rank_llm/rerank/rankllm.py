@@ -51,6 +51,7 @@ class RankLLM(ABC):
 
         if bool(data):
             self._inference_handler = self._create_handler(data)
+            print(f"Successfully created {data['method']} inference handler!")
 
         if self._num_few_shot_examples > 0:
             if not few_shot_file:
@@ -211,6 +212,9 @@ class RankLLM(ABC):
         from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
             SingleTurnListwiseInferenceHandler,
         )
+        from rank_llm.rerank.pairwise.pairwise_inference_handler import (
+            PairwiseInferenceHandler,
+        )
         from rank_llm.rerank.pointwise.pointwise_inference_handler import (
             PointwiseInferenceHandler,
         )
@@ -222,8 +226,10 @@ class RankLLM(ABC):
                 return MultiTurnListwiseInferenceHandler(template)
             elif template["method"] == "pointwise":
                 return PointwiseInferenceHandler(template)
-            else:  # TODO(issue #236 and #237): Need to remove this after all the handlers are implemented
-                return SingleTurnListwiseInferenceHandler(template)
+            elif template["method"] == "pairwise":
+                return PairwiseInferenceHandler(template)
+            else:
+                raise ValueError("Invalid template method")
         except:
             raise ValueError("Please provide a method section in the template")
 
