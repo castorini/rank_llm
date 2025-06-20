@@ -212,10 +212,11 @@ class RankLLM(ABC):
         from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
             SingleTurnListwiseInferenceHandler,
         )
-        from rank_llm.rerank.pointwise.pointwise_inference_handler import (
-            PointwiseInferenceHandler,
         from rank_llm.rerank.pairwise.pairwise_inference_handler import (
             PairwiseInferenceHandler,
+        )
+        from rank_llm.rerank.pointwise.pointwise_inference_handler import (
+            PointwiseInferenceHandler,
         )
 
         try:
