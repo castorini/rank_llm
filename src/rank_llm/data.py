@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Set, Union
 
 from dacite import from_dict
 
@@ -37,6 +37,13 @@ class Result:
     query: Query
     candidates: list[Candidate] = field(default_factory=list)
     invocations_history: list[InferenceInvocation] = (field(default_factory=list),)
+
+
+@dataclass
+class TemplateSectionConfig:
+    required: bool
+    required_placeholders: Set[str]
+    allowed_placeholders: Set[str]
 
 
 def read_requests_from_file(file_path: str) -> List[Request]:

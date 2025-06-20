@@ -1,14 +1,19 @@
+import re
 from abc import ABC, abstractmethod
+from string import Formatter
 from typing import Any, Dict, List
 
-from rank_llm.data import Result
+from ftfy import fix_text
+
+from rank_llm.data import Result, TemplateSectionConfig
 
 
 class BaseInferenceHandler(ABC):
     def __init__(self, template: Dict[str, str]):
+        self._formatter = Formatter()
         self._validate_template(template=template)
-        print("Template validated successfully!")
         self.template = template
+        print("Template validated successfully!")
 
     @abstractmethod
     def _validate_template(self, template: Dict[str, str]):
@@ -29,6 +34,93 @@ class BaseInferenceHandler(ABC):
             - Proper string formatting
         """
         pass
+
+    def _general_validation(
+        self,
+        template: Dict[str, str],
+        template_section: Dict[str, TemplateSectionConfig],
+        check_query: bool = False,
+        strict: bool = False,
+    ):
+        # Validate the required template keys
+        missing_template_keys = [
+            key
+            for key, config in template_section.items()
+            if key not in template and config["required"]
+        ]
+        if missing_template_keys:
+            raise ValueError(f"Missing required template keys: {missing_template_keys}")
+
+        if check_query:
+            query_present = (
+                False if "prefix" in template or "suffix" in template else True
+            )
+
+        # Validate the rest of the template keys
+        for template_key, template_text in template.items():
+            if template_key == "method":
+                continue
+            if template_key not in template_section:
+                raise ValueError(f"Unsupported template section: {template_key}")
+
+            section = template_section[template_key]
+            required_placeholders = section["required_placeholders"]
+            allowed_placeholders = (
+                required_placeholders | section["allowed_placeholders"]
+            )
+            used_placeholders = {
+                name
+                for _, name, _, _ in self._formatter.parse(template_text)
+                if name is not None
+            }
+            missing_placeholders = required_placeholders - used_placeholders
+            if missing_placeholders:
+                raise ValueError(
+                    f"Missing placeholders in {template_key} section: {missing_placeholders}"
+                )
+
+            unsupported_placeholders = used_placeholders - allowed_placeholders
+            if unsupported_placeholders:
+                msg = f"Unsupported placeholders in {template_key} section: {unsupported_placeholders}"
+                if strict:
+                    raise ValueError(msg)
+                else:
+                    print(msg)
+
+            if check_query and "query" in used_placeholders:
+                query_present = True
+
+        if check_query and not query_present:
+            raise ValueError(
+                "query placeholder must be present in prefix and/or suffix"
+            )
+
+    def _replace_number(self, s: str) -> str:
+        return re.sub(r"\[(\d+)\]", r"(\1)", s)
+
+    def _convert_doc_to_prompt_content(
+        self, doc: Dict[str, Any], max_length: int
+    ) -> str:
+        if "text" in doc:
+            content = doc["text"]
+        elif "segment" in doc:
+            content = doc["segment"]
+        elif "contents" in doc:
+            content = doc["contents"]
+        elif "content" in doc:
+            content = doc["content"]
+        elif "body" in doc:
+            content = doc["body"]
+        else:
+            content = doc["passage"]
+        if "title" in doc and doc["title"]:
+            content = "Title: " + doc["title"] + " " + "Content: " + content
+        content = content.strip()
+        content = fix_text(content)
+        # For Japanese should cut by character: content = content[:int(max_length)]
+        content = " ".join(content.split()[: int(max_length)])
+
+        return self._replace_number(content)
 
     def _format_template(
         self, template_key: str, fmt_values: Dict[str, str | int]
@@ -60,7 +152,9 @@ class BaseInferenceHandler(ABC):
         return template_text.format(**fmt_values)
 
     @abstractmethod
-    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
+    def generate_prompt(
+        self, result: Result, **kwargs: Any
+    ) -> List[Dict[str, str]] | str:
         """
         Generates complete prompt(s) for the ranking task.
 

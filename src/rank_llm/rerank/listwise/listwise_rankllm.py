@@ -1,12 +1,10 @@
 import copy
 import logging
 import random
-import re
 from abc import ABC
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
-from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
@@ -461,33 +459,6 @@ class ListwiseRankLLM(RankLLM, ABC):
                 result.candidates[j + rank_start].score = cut_range[j].score
 
         return result
-
-    def _replace_number(self, s: str) -> str:
-        return re.sub(r"\[(\d+)\]", r"(\1)", s)
-
-    # TODO(issue #237): Need to remove this after ListWiseInferenceHandler is implemented since it is moved there instead
-    def convert_doc_to_prompt_content(
-        self, doc: Dict[str, Any], max_length: int
-    ) -> str:
-        if "text" in doc:
-            content = doc["text"]
-        elif "segment" in doc:
-            content = doc["segment"]
-        elif "contents" in doc:
-            content = doc["contents"]
-        elif "content" in doc:
-            content = doc["content"]
-        elif "body" in doc:
-            content = doc["body"]
-        else:
-            content = doc["passage"]
-        if "title" in doc and doc["title"]:
-            content = "Title: " + doc["title"] + " " + "Content: " + content
-        content = content.strip()
-        content = fix_text(content)
-        # For Japanese should cut by character: content = content[:int(max_length)]
-        content = " ".join(content.split()[: int(max_length)])
-        return self._replace_number(content)
 
     def _add_few_shot_examples(self, conv):
         exs = random.sample(self._examples, self._num_few_shot_examples)

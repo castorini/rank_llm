@@ -16,7 +16,7 @@ class MonoT5(PointwiseRankLLM):
         self,
         model: str,
         prompt_mode: str = "monot5",
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
         context_size: int = 512,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
@@ -107,14 +107,13 @@ class MonoT5(PointwiseRankLLM):
             self._context_size - few_shot_tokens - query_tokens - reserved_for_output
         )
 
-        doc_content = self.convert_doc_to_prompt_content(
-            result.candidates[index].doc, max_length=max_doc_tokens
+        # TODO (issue #237): modify the inference handler to include fewshot examples
+        prompt = self._inference_handler.generate_prompt(
+            result=result,
+            index=index,
+            max_doc_tokens=max_doc_tokens,
+            tokenizer=self._tokenizer,
         )
-
-        prompt = (
-            f"{few_shot_section}" f"Query: {query} Document: {doc_content} Relevant: "
-        )
-        prompt = prompt.replace("<unk>", "")
 
         final_token_count = self.get_num_tokens(prompt)
         assert (
