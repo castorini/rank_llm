@@ -27,7 +27,7 @@ class MonoT5(PointwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            prompt_template_path=prompt_template_path,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             device=device,
@@ -107,14 +107,12 @@ class MonoT5(PointwiseRankLLM):
             self._context_size - few_shot_tokens - query_tokens - reserved_for_output
         )
 
-        doc_content = self.convert_doc_to_prompt_content(
-            result.candidates[index].doc, max_length=max_doc_tokens
+        prompt = self._inference_handler.generate_prompt(
+            result=result,
+            index=index,
+            max_doc_tokens=max_doc_tokens,
+            tokenizer=self._tokenizer,
         )
-
-        prompt = (
-            f"{few_shot_section}" f"Query: {query} Document: {doc_content} Relevant: "
-        )
-        prompt = prompt.replace("<unk>", "")
 
         final_token_count = self.get_num_tokens(prompt)
         assert (
