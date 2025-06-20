@@ -228,8 +228,8 @@ class RankLLM(ABC):
                 return PointwiseInferenceHandler(template)
             elif template["method"] == "pairwise":
                 return PairwiseInferenceHandler(template)
-            else:  # TODO(issue #236 and #237): Need to remove this after all the handlers are implemented
-                return SingleTurnListwiseInferenceHandler(template)
+            else:
+                raise ValueError("Invalid template method")
         except:
             raise ValueError("Please provide a method section in the template")
 

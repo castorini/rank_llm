@@ -42,18 +42,22 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         result: Result,
         index1: int,
         index2: int,
-        max_token: int,
+        single_doc_max_token: int,
         tokenizer: T5Tokenizer,
     ) -> str:
         doc1_raw = self._convert_doc_to_prompt_content(
-            result.candidates[index1].doc, max_length=max_token
+            result.candidates[index1].doc, max_length=single_doc_max_token
         )
         doc2_raw = self._convert_doc_to_prompt_content(
-            result.candidates[index2].doc, max_length=max_token
+            result.candidates[index2].doc, max_length=single_doc_max_token
         )
 
-        doc1_tokens = tokenizer.encode(doc1_raw, truncation=True, max_length=max_token)
-        doc2_tokens = tokenizer.encode(doc2_raw, truncation=True, max_length=max_token)
+        doc1_tokens = tokenizer.encode(
+            doc1_raw, truncation=True, max_length=single_doc_max_token
+        )
+        doc2_tokens = tokenizer.encode(
+            doc2_raw, truncation=True, max_length=single_doc_max_token
+        )
 
         query = self._replace_number(result.query.text)
         doc1 = tokenizer.decode(doc1_tokens, skip_special_tokens=True)
@@ -73,11 +77,13 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         except KeyError as e:
             raise ValueError(f"Missing required parameter: {e}")
 
+        single_doc_max_token = max_token // 2
+
         prompt = self._generate_body(
             result=result,
             index1=index1,
             index2=index2,
-            max_token=max_token,
+            single_doc_max_token=single_doc_max_token,
             tokenizer=tokenizer,
         )
         return prompt.replace("<unk>", "")

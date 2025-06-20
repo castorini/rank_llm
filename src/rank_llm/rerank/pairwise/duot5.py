@@ -118,7 +118,7 @@ class DuoT5(PairwiseRankLLM):
             self._context_size - reserved_for_output - query_tokens - few_shot_tokens
         )
 
-        # TODO (issue #237): need to modify the class to be able to add inference handler later
+        # TODO (issue #237): need to modify the class to be able to add fewshot examples later
         prompt = self._inference_handler.generate_prompt(
             result=result,
             index1=index1,

@@ -80,10 +80,10 @@ class TestPairwiseInferenceHandler(unittest.TestCase):
     def test_body_generation(self):
         pairwise_inference_handler = PairwiseInferenceHandler(VALID_PAIRWISE_TEMPLATE)
         body_text_1 = pairwise_inference_handler._generate_body(
-            result=r, index1=0, index2=1, max_token=6000, tokenizer=tokenizer
+            result=r, index1=0, index2=1, single_doc_max_token=6000, tokenizer=tokenizer
         )
         body_text_2 = pairwise_inference_handler._generate_body(
-            result=r, index1=0, index2=2, max_token=6000, tokenizer=tokenizer
+            result=r, index1=0, index2=2, single_doc_max_token=6000, tokenizer=tokenizer
         )
         expected_body_1 = "Query: Sample Query Document0: Title1: Sample Title1 Content1: Sample Text1 Document1: Title2: Sample Title2 Content2: Sample Text2"
         expected_body_2 = "Query: Sample Query Document0: Title1: Sample Title1 Content1: Sample Text1 Document1: Title3: Sample Title3 Content3: Sample Text3"
