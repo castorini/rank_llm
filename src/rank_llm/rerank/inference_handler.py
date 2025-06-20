@@ -10,10 +10,10 @@ from rank_llm.data import Result, TemplateSectionConfig
 
 class BaseInferenceHandler(ABC):
     def __init__(self, template: Dict[str, str]):
-        self._validate_template(template=template)
-        print("Template validated successfully!")
-        self.template = template
         self._formatter = Formatter()
+        self._validate_template(template=template)
+        self.template = template
+        print("Template validated successfully!")
 
     @abstractmethod
     def _validate_template(self, template: Dict[str, str]):
