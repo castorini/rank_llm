@@ -33,45 +33,9 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
                 f'Incorrect method type, expected "pairwise", got {template["method"]}'
             )
 
-        # Validate the required template keys
-        missing_template_keys = [
-            key
-            for key, config in TEMPLATE_SECTIONS.items()
-            if key not in template and config["required"]
-        ]
-        if missing_template_keys:
-            raise ValueError(f"Missing required template keys: {missing_template_keys}")
-
-        # Validate the rest of the template keys
-        for template_key, template_text in template.items():
-            if template_key == "method":
-                continue
-            if template_key not in TEMPLATE_SECTIONS:
-                raise ValueError(f"Unsupported template section: {template_key}")
-
-            section = TEMPLATE_SECTIONS[template_key]
-            required_placeholders = section["required_placeholders"]
-            allowed_placeholders = (
-                required_placeholders | section["allowed_placeholders"]
-            )
-            used_placeholders = {
-                name
-                for _, name, _, _ in self._formatter.parse(template_text)
-                if name is not None
-            }
-            missing_placeholders = required_placeholders - used_placeholders
-            if missing_placeholders:
-                raise ValueError(
-                    f"Missing placeholders in {template_key} section: {missing_placeholders}"
-                )
-
-            unsupported_placeholders = used_placeholders - allowed_placeholders
-            if unsupported_placeholders:
-                msg = f"Unsupported placeholders in {template_key} section: {unsupported_placeholders}"
-                if strict:
-                    raise ValueError(msg)
-                else:
-                    print(msg)
+        self._general_validation(
+            template=template, template_section=TEMPLATE_SECTIONS, strict=strict
+        )
 
     # TODO (issue #273): May need to add prefix/suffix generation function later
 
