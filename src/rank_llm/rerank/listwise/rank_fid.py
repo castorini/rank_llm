@@ -190,19 +190,16 @@ class RankFiDDistill(ListwiseRankLLM):
         """
 
         max_length = 300 * (20 / (rank_end - rank_start))
+        messages = self._inference_handler.generate_prompt(
+            result=result,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            max_length=max_length,
+        )
 
         # For now, we concat the prompt, because it seems LiT5 is also concatting the stuff
         prompts = [
-            {
-                "text": self._inference_handler.generate_prompt(  # TODO (issue #237): Need to modify this to add fewshot examples
-                    result=result,
-                    index=i,
-                    max_doc_tokens=max_length,
-                    tokenizer=self._tokenizer,
-                    rank_start=rank_start,
-                ),
-            }
-            for i in range(rank_start, rank_end)
+            {"text": messages[i]} for i in range(0, 2 * (rank_end - rank_start), 2)
         ]
 
         return prompts, sum(self.get_num_tokens(prompt["text"]) for prompt in prompts)

@@ -1,2 +1,3 @@
-method: "pointwise"
-body: "Search Query: {query} Passage: [{index}] {doc_content} Relevance Ranking: "
+method: "multiturn_listwise"
+body_user: "Search Query: {query} Passage: [{rank}] {candidate} Relevance Ranking: "
+body_assistant: "PLACEHOLDER"
