@@ -40,7 +40,7 @@ class SafeGenai(ListwiseRankLLM):
         model: str,
         context_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
@@ -48,6 +48,11 @@ class SafeGenai(ListwiseRankLLM):
         key_start_id=None,
         **kwargs,
     ):
+        prompt_template_path = (
+            "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml"
+            if prompt_mode == PromptMode.RANK_GPT_APEER
+            else "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
+        )
         super().__init__(
             model=model,
             context_size=context_size,

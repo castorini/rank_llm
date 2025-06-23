@@ -468,7 +468,7 @@ class RankFiDScore(ListwiseRankLLM):
         query_part = messages[0]["content"]
         body_messages = messages[2:]
 
-        for i in range(rank_start, rank_end):
+        for i in range(0, 2 * (rank_end - rank_start), 2):
             results.append({"query": query_part, "text": body_messages[i]})
             sum_token += len(self._tokenizer.encode(results[-1]["text"]))
 
