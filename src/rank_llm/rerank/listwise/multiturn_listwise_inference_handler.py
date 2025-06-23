@@ -58,7 +58,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         # Validate if assistant section is present
         if "prefix_assistant" not in template and "body_assistant" not in template:
             raise ValueError(
-                "One of prefix_assistant and body_assistant sections must be present if the template method is listwise_conv"
+                "One of prefix_assistant and body_assistant sections must be present if the template method is multiturn_listwise"
             )
         if "prefix_assistant" in template and "prefix_user" not in template:
             raise ValueError(
