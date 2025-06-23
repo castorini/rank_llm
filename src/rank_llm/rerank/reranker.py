@@ -342,8 +342,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.MONOT5),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default MONOT5 template
+                    "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
+                ),
                 ("context_size", 512),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
@@ -375,7 +375,7 @@ class Reranker:
                 batch_size=batch_size,
             )
         elif "duot5" in model_path:
-            # using monot5
+            # using duot5
             print(f"Loading {model_path} ...")
 
             model_full_paths = {"duot5": "castorini/duot5-3b-msmarco-10k"}
@@ -384,8 +384,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.DUOT5),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default DUOT5 template
+                    "src/rank_llm/rerank/prompt_templates/duot5_template.yaml",
+                ),
                 ("context_size", 512),
                 ("device", "cuda"),
                 ("batch_size", 64),

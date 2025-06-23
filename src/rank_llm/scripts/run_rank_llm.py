@@ -22,6 +22,7 @@ def main(args):
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
     top_k_rerank = top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
+    max_queries = args.max_queries
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
@@ -56,6 +57,7 @@ def main(args):
         retrieval_method=retrieval_method,
         top_k_retrieve=top_k_candidates,
         top_k_rerank=top_k_rerank,
+        max_queries=max_queries,
         context_size=context_size,
         device=device,
         num_gpus=num_gpus,
@@ -118,6 +120,12 @@ if __name__ == "__main__":
         type=int,
         default=-1,
         help="the number of top candidates to return from reranking",
+    )
+    parser.add_argument(
+        "--max_queries",
+        type=int,
+        default=None,
+        help="the max number of queries to process from the dataset",
     )
     parser.add_argument(
         "--dataset",
