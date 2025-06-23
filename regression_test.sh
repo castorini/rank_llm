@@ -9,6 +9,7 @@
 TEST_NAMES=(
   "FirstMistral (Alpha, Logits)"
   "RZ"
+  "Qwen (Alpha)"
   "Monot5"
   "Duot5"
 )
@@ -16,15 +17,17 @@ TEST_NAMES=(
 TEST_COMMANDS=(
   "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/first_mistral --top_k_candidates=50 --dataset=dl19 --retrieval_method=bm25 --prompt_mode=rank_GPT --context_size=4096 --use_alpha --use_logits --max_queries=5"
   "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_zephyr_7b_v1_full  --top_k_candidates=50 --dataset=dl19  --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --max_queries=5"
+  "python src/rank_llm/scripts/run_rank_llm.py  --model_path=Qwen/Qwen2.5-7B-Instruct --top_k_candidates=50 --dataset=dl19 --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --max_queries=5"
   "python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl19 --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --max_queries=5"
-   "python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl19 --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --max_queries=5"
+   "python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl19 --retrieval_method=bm25 --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --max_queries=1"
 )
 
 TEST_EXPECTED_SCORES=(
-  0.6892
-  0.6930
-  0.6843
-  0.6914
+  0.7350
+  0.7263
+  0.7808
+  0.7973
+  0.7387
 )
 
 for i in "${!TEST_NAMES[@]}"; do
