@@ -40,7 +40,7 @@ class SafeGenai(ListwiseRankLLM):
         model: str,
         context_size: int,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,

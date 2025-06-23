@@ -1,0 +1,2 @@
+method: "pointwise"
+body: "Search Query: {query} Passage: [{index}] {doc_content} Relevance Ranking: "

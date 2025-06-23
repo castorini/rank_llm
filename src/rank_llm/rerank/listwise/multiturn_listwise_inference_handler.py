@@ -18,8 +18,8 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             # }
             "body_user": {
                 "required": True,
-                "required_placeholders": {"rank", "candidate"},
-                "allowed_placeholders": set(),
+                "required_placeholders": {"candidate"},
+                "allowed_placeholders": {"rank"},
             },
             "system_message": {
                 "required": False,

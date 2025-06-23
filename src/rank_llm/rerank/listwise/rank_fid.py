@@ -33,7 +33,7 @@ class RankFiDDistill(ListwiseRankLLM):
         model: str,
         context_size: int = 150,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
@@ -189,16 +189,18 @@ class RankFiDDistill(ListwiseRankLLM):
         Create a prompt based on the result and given ranking range.
         """
 
+        max_length = 300 * (20 / (rank_end - rank_start))
+
         # For now, we concat the prompt, because it seems LiT5 is also concatting the stuff
         prompts = [
             {
-                "text": self._gen_passage(
-                    result.query.text,
-                    i + 1 - rank_start,
-                    self.convert_doc_to_prompt_content(
-                        result.candidates[i].doc, self.max_tokens()
-                    ),
-                )
+                "text": self._inference_handler.generate_prompt(
+                    result=result,
+                    index=i,
+                    max_doc_tokens=max_length,
+                    tokenizer=self._tokenizer,
+                    rank_start=rank_start,
+                ),
             }
             for i in range(rank_start, rank_end)
         ]
@@ -246,10 +248,6 @@ class RankFiDDistill(ListwiseRankLLM):
 
             return output_token_estimate
 
-    @staticmethod
-    def _gen_passage(query: str, index: int, passage: str) -> str:
-        return f"Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "
-
 
 class RankFiDScore(ListwiseRankLLM):
     def _post_init(self):
@@ -276,7 +274,7 @@ class RankFiDScore(ListwiseRankLLM):
         model: str,
         context_size: int = 150,
         prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
@@ -458,19 +456,19 @@ class RankFiDScore(ListwiseRankLLM):
         results = []
 
         sum_token = 0
+        max_length = 300 * (20 / (rank_end - rank_start))
+
+        messages = self._inference_handler.generate_prompt(
+            result=result,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            max_length=max_length,
+        )
+        query_part = messages[0]["content"]
+        body_messages = messages[2:]
 
         for i in range(rank_start, rank_end):
-            results.append(
-                {
-                    "query": f"question: {query}",
-                    "text": self._gen_passage(
-                        query,
-                        self.convert_doc_to_prompt_content(
-                            result.candidates[i].doc, self.max_tokens()
-                        ),
-                    ),
-                }
-            )
+            results.append({"query": query_part, "text": body_messages[i]})
             sum_token += len(self._tokenizer.encode(results[-1]["text"]))
 
         return results, sum_token
@@ -505,7 +503,3 @@ class RankFiDScore(ListwiseRankLLM):
                 self._output_token_estimate = output_token_estimate
 
             return output_token_estimate
-
-    @staticmethod
-    def _gen_passage(query: str, passage: str) -> str:
-        return f"question: {query} context: {passage}"

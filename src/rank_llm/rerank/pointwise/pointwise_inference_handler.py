@@ -21,7 +21,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             "body": {
                 "required": True,
                 "required_placeholders": {"query", "doc_content"},
-                "allowed_placeholders": set(),
+                "allowed_placeholders": {"index"},
             },
         }
 
@@ -38,7 +38,12 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
     # TODO (issue #273): May need to add prefix/suffix generation function later
 
     def _generate_body(
-        self, result: Result, index: int, max_doc_tokens: int, tokenizer: T5Tokenizer
+        self,
+        result: Result,
+        index: int,
+        max_doc_tokens: int,
+        tokenizer: T5Tokenizer,
+        rank_start: int = 0,
     ) -> str:
         query = self._replace_number(result.query.text)
         doc_raw = self._convert_doc_to_prompt_content(
@@ -49,7 +54,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         )
         doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
-        fmt_values = {"query": query, "doc_content": doc}
+        fmt_values = {
+            "query": query,
+            "doc_content": doc,
+            "index": index + 1 - rank_start,
+        }
         body_text = self._format_template(template_key="body", fmt_values=fmt_values)
 
         return body_text
@@ -59,6 +68,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             index = kwargs["index"]
             max_doc_tokens = kwargs["max_doc_tokens"]
             tokenizer = kwargs["tokenizer"]
+            rank_start = kwargs.get("rank_start", 0)
         except KeyError as e:
             raise ValueError(f"Missing required parameter: {e}")
 
@@ -67,5 +77,6 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             index=index,
             max_doc_tokens=max_doc_tokens,
             tokenizer=tokenizer,
+            rank_start=rank_start,
         )
         return prompt.replace("<unk>", "")
