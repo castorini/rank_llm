@@ -9,6 +9,9 @@ from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
     MultiTurnListwiseInferenceHandler,
 )
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
+from rank_llm.rerank.listwise.rankfid_listwise_inference_handler import (
+    RankFIDListwiseInferenceHandler,
+)
 from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
     SingleTurnListwiseInferenceHandler,
 )
@@ -454,6 +457,30 @@ INVALID_MULTITURN_TEMPLATES = [
         "suffix": "Sample suffix: Rank the provided {num} passages",
     },  # Missing query placeholder in both prefix and suffix
 ]
+VALID_RANKFID_TEMPLATE = {
+    "method": "rankfid_listwise",
+    "query": "question: {query}",
+    "text": "question: {query} context: {passage} index: {index}",
+}
+INVALID_RANKFID_TEMPLATES = [
+    {
+        "method": "singleturn_listwise",
+        "text": "{query} {passage}",
+    },  # Wrong method type
+    {
+        "method": "rankfid_listwise",
+        "query": "question: {query}",
+    },  # Missing text section
+    {
+        "method": "rankfid_listwise",
+        "text": "question: {query} context: {passage}",
+        "unknown_key": "value",
+    },  # Unknown key
+    {
+        "method": "rankfid_listwise",
+        "text": "context: {passage}",
+    },  # Missing query placeholder
+]
 
 
 class TestListwiseInferenceHandler(unittest.TestCase):
@@ -467,6 +494,9 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         multiturn_listwise_inference_handler_2 = MultiTurnListwiseInferenceHandler(
             VALID_MULTITURN_TEMPLATE_2
         )
+        rankfid_inference_handler = RankFIDListwiseInferenceHandler(
+            VALID_RANKFID_TEMPLATE
+        )
         self.assertEqual(
             singleturn_listwise_inference_handler.template, VALID_SINGLETURN_TEMPLATE
         )
@@ -476,6 +506,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(
             multiturn_listwise_inference_handler_2.template, VALID_MULTITURN_TEMPLATE_2
         )
+        self.assertEqual(rankfid_inference_handler.template, VALID_RANKFID_TEMPLATE)
 
     def test_invalid_templates(self):
         for template in INVALID_SINGLETURN_TEMPLATES:
@@ -486,6 +517,10 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             with self.subTest(template=template):
                 with self.assertRaises(ValueError):
                     MultiTurnListwiseInferenceHandler(template)
+        for template in INVALID_RANKFID_TEMPLATES:
+            with self.subTest(template=template):
+                with self.assertRaises(ValueError):
+                    RankFIDListwiseInferenceHandler(template)
 
     def test_prefix_generation(self):
         singleturn_listwise_inference_handler = SingleTurnListwiseInferenceHandler(
@@ -551,6 +586,14 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(singleturn_suffix_text, expected_suffix)
         self.assertEqual(lrl_suffix_text, expected_lrl_suffix)
         self.assertEqual(multiturn_suffix_text, expected_suffix)
+
+    def test_query_generation(self):
+        rankfid_inference_handler = RankFIDListwiseInferenceHandler(
+            VALID_RANKFID_TEMPLATE
+        )
+        query = rankfid_inference_handler._generate_query("test query")
+        expected_query = "question: test query"
+        self.assertEqual(query, expected_query)
 
     def test_body_generation_singleturn(self):
         listwise_inference_handler = SingleTurnListwiseInferenceHandler(
@@ -669,6 +712,25 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         ]
         self.assertEqual(prompt_1, expected_prompt_1)
         self.assertEqual(prompt_2, expected_prompt_2)
+
+    def test_text_generation(self):
+        rankfid_listwise_inference_handler = RankFIDListwiseInferenceHandler(
+            VALID_RANKFID_TEMPLATE
+        )
+        prompts = rankfid_listwise_inference_handler.generate_prompt(
+            result=r, rank_start=0, rank_end=2, max_tokens=6000
+        )
+        expected_prompts = [
+            {
+                "query": "question: Sample Query",
+                "text": "question: Sample Query context: Title: Sample Title Content: Sample Text index: 1",
+            },
+            {
+                "query": "question: Sample Query",
+                "text": "question: Sample Query context: Title: Sample Title Content: Sample Text index: 2",
+            },
+        ]
+        self.assertEqual(prompts, expected_prompts)
 
 
 if __name__ == "__main__":
