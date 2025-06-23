@@ -201,6 +201,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -208,6 +212,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -218,6 +223,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 window_size=window_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -228,6 +234,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -235,6 +245,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -245,6 +256,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
@@ -263,6 +275,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),
@@ -278,6 +294,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 device,
@@ -300,6 +317,7 @@ class Reranker:
                 name=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 device=device,
@@ -334,6 +352,7 @@ class Reranker:
             ]
             [
                 prompt_mode,
+                prompt_template_path,
                 context_size,
                 num_few_shot_examples,
                 few_shot_file,
@@ -348,6 +367,7 @@ class Reranker:
                     else model_path
                 ),
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 context_size=context_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -372,6 +392,7 @@ class Reranker:
             ]
             [
                 prompt_mode,
+                prompt_template_path,
                 context_size,
                 device,
                 batch_size,
@@ -384,6 +405,7 @@ class Reranker:
                     else model_path
                 ),
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 context_size=context_size,
                 device=device,
                 batch_size=batch_size,
@@ -392,6 +414,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 150),
                 ("prompt_mode", PromptMode.LiT5),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -401,6 +427,7 @@ class Reranker:
             (
                 context_size,
                 prompt_mode,
+                prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -412,6 +439,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
@@ -423,6 +451,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 150),
                 ("prompt_mode", PromptMode.LiT5),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 100),
@@ -432,6 +464,7 @@ class Reranker:
             (
                 context_size,
                 prompt_mode,
+                prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
@@ -443,6 +476,7 @@ class Reranker:
                 model=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
@@ -459,6 +493,10 @@ class Reranker:
             keys_and_defaults = [
                 ("context_size", 4096),
                 ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),
@@ -474,6 +512,7 @@ class Reranker:
             [
                 context_size,
                 prompt_mode,
+                prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
                 device,
@@ -492,6 +531,7 @@ class Reranker:
                 name=model_path,
                 context_size=context_size,
                 prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 device=device,
