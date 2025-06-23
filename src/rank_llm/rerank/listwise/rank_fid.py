@@ -188,19 +188,13 @@ class RankFiDDistill(ListwiseRankLLM):
         """
         Create a prompt based on the result and given ranking range.
         """
-
-        max_length = 300 * (20 / (rank_end - rank_start))
-        messages = self._inference_handler.generate_prompt(  # TODO (issue #237): Need to modify this to add fewshot examples
+        # TODO (issue #237): Need to modify this to add fewshot examples
+        prompts = self._inference_handler.generate_prompt(
             result=result,
             rank_start=rank_start,
             rank_end=rank_end,
-            max_length=max_length,
+            max_tokens=self.max_tokens(),
         )
-
-        # For now, we concat the prompt, because it seems LiT5 is also concatting the stuff
-        prompts = [
-            {"text": messages[i]} for i in range(0, 2 * (rank_end - rank_start), 2)
-        ]
 
         return prompts, sum(self.get_num_tokens(prompt["text"]) for prompt in prompts)
 
@@ -449,27 +443,15 @@ class RankFiDScore(ListwiseRankLLM):
         """
         Create a prompt based on the result and given ranking range.
         """
-        query = result.query.text
-        results = []
-
-        sum_token = 0
-        max_length = 300 * (20 / (rank_end - rank_start))
-
         # TODO (issue #237): Need to modify this to add fewshot examples
-        messages = self._inference_handler.generate_prompt(
+        prompts = self._inference_handler.generate_prompt(
             result=result,
             rank_start=rank_start,
             rank_end=rank_end,
-            max_length=max_length,
+            max_tokens=self.max_tokens(),
         )
-        query_part = messages[0]["content"]
-        body_messages = messages[2:]
 
-        for i in range(0, 2 * (rank_end - rank_start), 2):
-            results.append({"query": query_part, "text": body_messages[i]})
-            sum_token += len(self._tokenizer.encode(results[-1]["text"]))
-
-        return results, sum_token
+        return prompts, sum(self.get_num_tokens(prompt["text"]) for prompt in prompts)
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))

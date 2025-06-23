@@ -1,5 +1,3 @@
-method: "multiturn_listwise"
-prefix_user: "question: {query}"
-prefix_assistant: "PLACEHOLDER"
-body_user: "question: {query} context: {candidate}"
-body_assistant: "PLACEHOLDER"
+method: "rankfid_listwise"
+query: "question: {query}"
+text: "question: {query} context: {passage}"
