@@ -190,7 +190,7 @@ class RankFiDDistill(ListwiseRankLLM):
         """
 
         max_length = 300 * (20 / (rank_end - rank_start))
-        messages = self._inference_handler.generate_prompt(
+        messages = self._inference_handler.generate_prompt(  # TODO (issue #237): Need to modify this to add fewshot examples
             result=result,
             rank_start=rank_start,
             rank_end=rank_end,
