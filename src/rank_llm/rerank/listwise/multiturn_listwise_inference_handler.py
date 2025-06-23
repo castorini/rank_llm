@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Tuple
 
-from rank_llm.data import Result
+from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 
@@ -9,43 +9,37 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         super().__init__(template)
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        TEMPLATE_SECTIONS = {
-            # Format:
-            # "template_key": {
-            #    "required": True/False,  # Whether the section itself is mandatory
-            #    "required_placeholders": set(),  # Placeholders that must exist in this section
-            #    "allowed_placeholders": set()    # All allowed placeholders (including required ones)
-            # }
-            "body_user": {
-                "required": True,
-                "required_placeholders": {"candidate"},
-                "allowed_placeholders": {"rank"},
-            },
-            "system_message": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": set(),
-            },
-            "prefix_assistant": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": {"query", "num"},
-            },
-            "body_assistant": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": {"rank"},
-            },
-            "prefix_user": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": {"query", "num"},
-            },
-            "suffix_user": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": {"query", "num"},
-            },
+        TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+            "body_user": TemplateSectionConfig(
+                required=True,
+                required_placeholders={"candidate"},
+                allowed_placeholders={"rank"},
+            ),
+            "system_message": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
+            "prefix_assistant": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders={"query", "num"},
+            ),
+            "body_assistant": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders={"rank"},
+            ),
+            "prefix_user": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders={"query", "num"},
+            ),
+            "suffix_user": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders={"query", "num"},
+            ),
         }
 
         # Validate the method value

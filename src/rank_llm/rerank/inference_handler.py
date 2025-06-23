@@ -46,7 +46,7 @@ class BaseInferenceHandler(ABC):
         missing_template_keys = [
             key
             for key, config in template_section.items()
-            if key not in template and config["required"]
+            if key not in template and config.required
         ]
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
@@ -64,10 +64,8 @@ class BaseInferenceHandler(ABC):
                 raise ValueError(f"Unsupported template section: {template_key}")
 
             section = template_section[template_key]
-            required_placeholders = section["required_placeholders"]
-            allowed_placeholders = (
-                required_placeholders | section["allowed_placeholders"]
-            )
+            required_placeholders = section.required_placeholders
+            allowed_placeholders = required_placeholders | section.allowed_placeholders
             used_placeholders = {
                 name
                 for _, name, _, _ in self._formatter.parse(template_text)
