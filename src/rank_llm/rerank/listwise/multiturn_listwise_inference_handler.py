@@ -12,8 +12,8 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
             "body_user": TemplateSectionConfig(
                 required=True,
-                required_placeholders={"candidate"},
-                allowed_placeholders={"rank", "query"},
+                required_placeholders={"rank", "candidate"},
+                allowed_placeholders=set(),
             ),
             "system_message": TemplateSectionConfig(
                 required=False,

@@ -1,10 +1,10 @@
 from typing import Any, Dict, List
 
 from rank_llm.data import Result, TemplateSectionConfig
-from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
+from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 
-class RankFIDListwiseInferenceHandler(ListwiseInferenceHandler):
+class RankFIDInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: Dict[str, str]):
         super().__init__(template)
 
@@ -23,7 +23,7 @@ class RankFIDListwiseInferenceHandler(ListwiseInferenceHandler):
         }
 
         # Validate the method value
-        if template["method"] != "rankfid_listwise":
+        if template["method"] != "rankfid":
             raise ValueError(
                 f'Incorrect method type, expected "rankfid_listwise", got {template["method"]}'
             )

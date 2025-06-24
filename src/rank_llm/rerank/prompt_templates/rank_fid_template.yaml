@@ -1,2 +1,2 @@
-method: "rankfid_listwise"
+method: "rankfid"
 text: "Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "

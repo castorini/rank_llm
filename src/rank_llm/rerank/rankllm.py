@@ -209,8 +209,8 @@ class RankLLM(ABC):
         from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
             MultiTurnListwiseInferenceHandler,
         )
-        from rank_llm.rerank.listwise.rankfid_listwise_inference_handler import (
-            RankFIDListwiseInferenceHandler,
+        from rank_llm.rerank.listwise.rankfid_inference_handler import (
+            RankFIDInferenceHandler,
         )
         from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
             SingleTurnListwiseInferenceHandler,
@@ -227,8 +227,8 @@ class RankLLM(ABC):
                 return SingleTurnListwiseInferenceHandler(template)
             elif template["method"] == "multiturn_listwise":
                 return MultiTurnListwiseInferenceHandler(template)
-            elif template["method"] == "rankfid_listwise":
-                return RankFIDListwiseInferenceHandler(template)
+            elif template["method"] == "rankfid":
+                return RankFIDInferenceHandler(template)
             elif template["method"] == "pointwise":
                 return PointwiseInferenceHandler(template)
             elif template["method"] == "pairwise":

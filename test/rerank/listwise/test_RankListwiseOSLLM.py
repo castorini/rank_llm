@@ -9,9 +9,7 @@ from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
     MultiTurnListwiseInferenceHandler,
 )
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.listwise.rankfid_listwise_inference_handler import (
-    RankFIDListwiseInferenceHandler,
-)
+from rank_llm.rerank.listwise.rankfid_inference_handler import RankFIDInferenceHandler
 from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
     SingleTurnListwiseInferenceHandler,
 )
@@ -458,7 +456,7 @@ INVALID_MULTITURN_TEMPLATES = [
     },  # Missing query placeholder in both prefix and suffix
 ]
 VALID_RANKFID_TEMPLATE = {
-    "method": "rankfid_listwise",
+    "method": "rankfid",
     "query": "question: {query}",
     "text": "question: {query} context: {passage} index: {index}",
 }
@@ -494,9 +492,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         multiturn_listwise_inference_handler_2 = MultiTurnListwiseInferenceHandler(
             VALID_MULTITURN_TEMPLATE_2
         )
-        rankfid_inference_handler = RankFIDListwiseInferenceHandler(
-            VALID_RANKFID_TEMPLATE
-        )
+        rankfid_inference_handler = RankFIDInferenceHandler(VALID_RANKFID_TEMPLATE)
         self.assertEqual(
             singleturn_listwise_inference_handler.template, VALID_SINGLETURN_TEMPLATE
         )
@@ -520,7 +516,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         for template in INVALID_RANKFID_TEMPLATES:
             with self.subTest(template=template):
                 with self.assertRaises(ValueError):
-                    RankFIDListwiseInferenceHandler(template)
+                    RankFIDInferenceHandler(template)
 
     def test_prefix_generation(self):
         singleturn_listwise_inference_handler = SingleTurnListwiseInferenceHandler(
@@ -588,9 +584,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(multiturn_suffix_text, expected_suffix)
 
     def test_query_generation(self):
-        rankfid_inference_handler = RankFIDListwiseInferenceHandler(
-            VALID_RANKFID_TEMPLATE
-        )
+        rankfid_inference_handler = RankFIDInferenceHandler(VALID_RANKFID_TEMPLATE)
         query = rankfid_inference_handler._generate_query("test query")
         expected_query = "question: test query"
         self.assertEqual(query, expected_query)
@@ -714,7 +708,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(prompt_2, expected_prompt_2)
 
     def test_text_generation(self):
-        rankfid_listwise_inference_handler = RankFIDListwiseInferenceHandler(
+        rankfid_listwise_inference_handler = RankFIDInferenceHandler(
             VALID_RANKFID_TEMPLATE
         )
         prompts = rankfid_listwise_inference_handler.generate_prompt(
