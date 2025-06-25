@@ -118,7 +118,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             content = self._convert_doc_to_prompt_content(cand.doc, max_length)
             content = self._replace_number(content)
             identifier = chr(self.ALPH_START_IDX + rank) if use_alpha else str(rank)
-            body_fmt_values = {"rank": identifier, "candidate": content, "query": query}
+            body_fmt_values = {"rank": identifier, "candidate": content}
             body_text = self._format_template("body_user", body_fmt_values)
 
             if is_conversational:
