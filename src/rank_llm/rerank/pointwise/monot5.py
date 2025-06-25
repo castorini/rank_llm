@@ -7,6 +7,7 @@ from transformers.generation import GenerationConfig
 
 from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
+from rank_llm.rerank.rankllm import PromptMode
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class MonoT5(PointwiseRankLLM):
     def __init__(
         self,
         model: str,
-        prompt_mode: str = "monot5",
+        prompt_mode: Optional[PromptMode] = None,
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
         context_size: int = 512,
         num_few_shot_examples: int = 0,
