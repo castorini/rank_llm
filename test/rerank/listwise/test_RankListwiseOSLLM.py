@@ -395,6 +395,12 @@ VALID_MULTITURN_TEMPLATE_2 = {
     "body_user": "[{rank}] {candidate}\n",
     "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
 }
+VALID_LRL_TEMPLATE = {
+    "method": "singleturn_listwise",
+    "prefix": "Sample prefix: {query}",
+    "body": "[{rank}] {candidate}\n",
+    "suffix": "Sample suffix: {psg_ids}",
+}
 
 # Sample invalid templates for testing validation
 INVALID_SINGLETURN_TEMPLATES = [
@@ -518,6 +524,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         singleturn_listwise_inference_handler = SingleTurnListwiseInferenceHandler(
             VALID_SINGLETURN_TEMPLATE
         )
+        lrl_inference_handler = SingleTurnListwiseInferenceHandler(VALID_LRL_TEMPLATE)
         multiturn_listwise_inference_handler = MultiTurnListwiseInferenceHandler(
             VALID_MULTITURN_TEMPLATE_1
         )
@@ -526,6 +533,9 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             singleturn_suffix_text,
         ) = singleturn_listwise_inference_handler._generate_prefix_suffix(
             1, "test query"
+        )
+        _, lrl_suffix_text = lrl_inference_handler._generate_prefix_suffix(
+            1, "test query", rank_start=0, rank_end=2
         )
         (
             _,
@@ -536,14 +546,17 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         expected_suffix = (
             "Sample suffix: Rank the provided 1 passages based on query: test query"
         )
+        expected_lrl_suffix = "Sample suffix: [PASSAGE1, PASSAGE2]"
 
         self.assertEqual(singleturn_suffix_text, expected_suffix)
+        self.assertEqual(lrl_suffix_text, expected_lrl_suffix)
         self.assertEqual(multiturn_suffix_text, expected_suffix)
 
     def test_body_generation_singleturn(self):
         listwise_inference_handler = SingleTurnListwiseInferenceHandler(
             VALID_SINGLETURN_TEMPLATE
         )
+
         body_text_num = listwise_inference_handler._generate_body(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
@@ -552,6 +565,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=True
         )
         expected_body_alpha = "[A] Title: Sample Title Content: Sample Text\n[B] Title: Sample Title Content: Sample Text\n"
+
         self.assertEqual(body_text_num, expected_body_num)
         self.assertEqual(body_text_alpha, expected_body_alpha)
 
