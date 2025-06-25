@@ -123,7 +123,9 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             for system_message in [self.template.get("system_message", "")]
             if system_message
         ]
-        prefix_text, suffix_text = self._generate_prefix_suffix(num, query)
+        prefix_text, suffix_text = self._generate_prefix_suffix(
+            num=num, query=query, rank_start=rank_start, rank_end=rank_end
+        )
         body_text = self._generate_body(
             result=result,
             rank_start=rank_start,
