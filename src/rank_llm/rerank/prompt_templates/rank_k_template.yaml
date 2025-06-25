@@ -1,0 +1,17 @@
+method: "singleturn_listwise"
+prefix: |-
+  Determine a ranking of the passages based on how relevant they are to the query. 
+  If the query is a question, how relevant a passage is depends on how well it answers the question. 
+  If not, try analyze the intent of the query and assess how well each passage satisfy the intent. 
+  The query may have typos and passages may contain contradicting information. 
+  However, we do not get into fact-checking. We just rank the passages based on they relevancy to the query. 
+
+  Sort them from the most relevant to the least. 
+  Answer with the passage number using a format of `[3] > [2] > [4] = [1] > [5]`. 
+  Ties are acceptable if they are equally relevant. 
+  I need you to be accurate but overthinking it is unnecessary.
+  Output only the ordering without any other text.
+
+  Query: {query}
+body: "\n\n[{rank}] {candidate}"
+suffix: ""

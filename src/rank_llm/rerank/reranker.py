@@ -8,7 +8,12 @@ from rank_llm.rerank import (
     get_genai_api_key,
     get_openai_api_key,
 )
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
+from rank_llm.rerank.listwise import (
+    RankKReranker,
+    RankListwiseOSLLM,
+    SafeGenai,
+    SafeOpenai,
+)
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.pointwise.monot5 import MonoT5
@@ -465,6 +470,52 @@ class Reranker:
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None
+        elif "hltcoe/Rank-K-32B" in model_path:
+            print(f"Loading {model_path} ...")
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("prompt_mode", PromptMode.RANK_GPT),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_k_template.yaml",
+                ),
+                ("num_few_shot_examples", 0),
+                ("device", "cuda"),
+                ("num_gpus", 1),
+                ("variable_passages", False),
+                ("window_size", 20),
+                ("system_message", None),
+                ("use_logits", False),
+                ("use_alpha", False),
+            ]
+            [
+                context_size,
+                prompt_mode,
+                prompt_template_path,
+                num_few_shot_examples,
+                device,
+                num_gpus,
+                variable_passages,
+                window_size,
+                system_message,
+                use_logits,
+                use_alpha,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = RankKReranker(
+                model=(model_path),
+                context_size=context_size,
+                prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
+                num_few_shot_examples=num_few_shot_examples,
+                device=device,
+                num_gpus=num_gpus,
+                variable_passages=variable_passages,
+                window_size=window_size,
+                use_alpha=use_alpha,
+            )
+
+            print(f"Completed loading {model_path}")
         else:
             # supports loading models from huggingface
             print(f"Loading {model_path} ...")
