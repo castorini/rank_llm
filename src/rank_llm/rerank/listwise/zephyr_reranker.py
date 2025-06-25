@@ -10,7 +10,7 @@ class ZephyrReranker:
         self,
         model_path: str = "castorini/rank_zephyr_7b_v1_full",
         context_size: int = 4096,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_mode: Optional[PromptMode] = None,
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,

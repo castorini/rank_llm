@@ -34,7 +34,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode,
+        prompt_mode: Optional[PromptMode] = None,
         prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,

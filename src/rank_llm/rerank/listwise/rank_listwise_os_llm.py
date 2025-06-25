@@ -35,7 +35,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         model: str,
         name: str = "",
         context_size: int = 4096,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_mode: Optional[PromptMode] = None,
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
@@ -111,10 +111,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
-        if prompt_mode != PromptMode.RANK_GPT:
-            raise ValueError(
-                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
-            )
 
         if sglang_batched:
             if Engine is None:

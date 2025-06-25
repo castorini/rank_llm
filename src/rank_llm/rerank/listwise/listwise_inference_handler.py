@@ -1,32 +1,13 @@
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
-from rank_llm.data import Result
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 
-class ListwiseInferenceHandler(BaseInferenceHandler, ABC):
+class ListwiseInferenceHandler(BaseInferenceHandler):
     ALPH_START_IDX = ord("A") - 1
 
     def __init__(self, template: Dict[str, str]):
         super().__init__(template)
-
-    @abstractmethod
-    def _generate_prefix_suffix(
-        self, num: int, query: str, **kwargs: Any
-    ) -> Tuple[str | List[Dict[str, str]], str]:
-        pass
-
-    @abstractmethod
-    def _generate_body(
-        self,
-        result: Result,
-        rank_start: int,
-        rank_end: int,
-        max_length: int,
-        use_alpha: bool,
-    ) -> str | List[Dict[str, str]]:
-        pass
 
     def _clean_response(self, response: str, **kwargs: Any) -> str:
         use_alpha = kwargs.get("use_alpha", False)

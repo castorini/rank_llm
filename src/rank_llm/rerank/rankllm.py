@@ -31,7 +31,7 @@ class RankLLM(ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode,
+        prompt_mode: Optional[PromptMode] = None,
         prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
@@ -42,16 +42,19 @@ class RankLLM(ABC):
         self._num_few_shot_examples = num_few_shot_examples
         self._few_shot_file = few_shot_file
 
-        data = {}  # TODO(issue #236): after default template is added, remove this line
-        if (
-            prompt_template_path is not None
-        ):  # TODO(issue #236): after default template is added, remove condition
+        if prompt_mode:
+            print(
+                "PromptMode is deprecated. Please use prompt_template_path argument with valid template file instead."
+            )
+
+        try:
             with open(prompt_template_path, "r") as file:
                 data = yaml.safe_load(file)
 
-        if bool(data):
-            self._inference_handler = self._create_handler(data)
-            print(f"Successfully created {data['method']} inference handler!")
+                self._inference_handler = self._create_handler(data)
+                print(f"Successfully created {data['method']} inference handler!")
+        except FileNotFoundError:
+            raise ValueError("Prompt template file missing or not found")
 
         if self._num_few_shot_examples > 0:
             if not few_shot_file:
