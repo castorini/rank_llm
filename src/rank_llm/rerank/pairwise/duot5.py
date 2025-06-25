@@ -8,6 +8,7 @@ from transformers.generation import GenerationConfig
 
 from rank_llm.data import Result
 from rank_llm.rerank.pairwise.pairwise_rankllm import PairwiseRankLLM
+from rank_llm.rerank.rankllm import PromptMode
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class DuoT5(PairwiseRankLLM):
     def __init__(
         self,
         model: str,
-        prompt_mode: str = "duot5",
+        prompt_mode: Optional[PromptMode] = None,
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/duot5_template.yaml",
         context_size: int = 512,
         num_few_shot_examples: int = 0,

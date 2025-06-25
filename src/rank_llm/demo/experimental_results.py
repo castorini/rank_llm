@@ -50,7 +50,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_mode=PromptMode.RANK_GPT,
+                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
                 keys=get_openai_api_key(),
             )
         )
@@ -59,7 +59,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_mode=PromptMode.LRL,
+                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml",
                 keys=get_openai_api_key(),
             )
         )
@@ -68,7 +68,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_mode=PromptMode.RANK_GPT_APEER,
+                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
                 keys=get_openai_api_key(),
             )
         )

@@ -145,7 +145,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--prompt_mode",
         type=PromptMode,
-        required=True,
+        required=False,
         choices=list(PromptMode),
     )
     parser.add_argument(

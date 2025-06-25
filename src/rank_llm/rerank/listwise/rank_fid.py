@@ -32,7 +32,7 @@ class RankFiDDistill(ListwiseRankLLM):
         self,
         model: str,
         context_size: int = 150,
-        prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
@@ -264,7 +264,7 @@ class RankFiDScore(ListwiseRankLLM):
         self,
         model: str,
         context_size: int = 150,
-        prompt_mode: PromptMode = PromptMode.LiT5,  # Placeholder for actual mode
+        prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,

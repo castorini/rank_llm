@@ -3,7 +3,6 @@ from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank import (
-    PromptMode,
     RankLLM,
     get_azure_openai_args,
     get_genai_api_key,
@@ -205,7 +204,6 @@ class Reranker:
 
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
@@ -216,7 +214,6 @@ class Reranker:
             ]
             [
                 context_size,
-                prompt_mode,
                 prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
@@ -227,7 +224,6 @@ class Reranker:
             model_coordinator = SafeOpenai(
                 model=model_path,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 window_size=window_size,
                 num_few_shot_examples=num_few_shot_examples,
@@ -238,10 +234,9 @@ class Reranker:
         elif "gemini" in model_path:
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
+                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
@@ -249,7 +244,6 @@ class Reranker:
             ]
             [
                 context_size,
-                prompt_mode,
                 prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
@@ -260,7 +254,6 @@ class Reranker:
             model_coordinator = SafeGenai(
                 model=model_path,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -279,7 +272,6 @@ class Reranker:
 
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
@@ -298,7 +290,6 @@ class Reranker:
             ]
             [
                 context_size,
-                prompt_mode,
                 prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
@@ -321,7 +312,6 @@ class Reranker:
                 ),
                 name=model_path,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -344,7 +334,6 @@ class Reranker:
             model_full_paths = {"monot5": "castorini/monot5-3b-msmarco-10k"}
 
             keys_and_defaults = [
-                ("prompt_mode", PromptMode.MONOT5),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
@@ -356,7 +345,6 @@ class Reranker:
                 ("batch_size", 64),
             ]
             [
-                prompt_mode,
                 prompt_template_path,
                 context_size,
                 num_few_shot_examples,
@@ -371,7 +359,6 @@ class Reranker:
                     if model_path in model_full_paths
                     else model_path
                 ),
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 context_size=context_size,
                 num_few_shot_examples=num_few_shot_examples,
@@ -386,7 +373,6 @@ class Reranker:
             model_full_paths = {"duot5": "castorini/duot5-3b-msmarco-10k"}
 
             keys_and_defaults = [
-                ("prompt_mode", PromptMode.DUOT5),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/duot5_template.yaml",
@@ -396,7 +382,6 @@ class Reranker:
                 ("batch_size", 64),
             ]
             [
-                prompt_mode,
                 prompt_template_path,
                 context_size,
                 device,
@@ -409,7 +394,6 @@ class Reranker:
                     if model_path in model_full_paths
                     else model_path
                 ),
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 context_size=context_size,
                 device=device,
@@ -418,7 +402,6 @@ class Reranker:
         elif "lit5-distill" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
-                ("prompt_mode", PromptMode.LiT5),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
@@ -431,7 +414,6 @@ class Reranker:
             ]
             (
                 context_size,
-                prompt_mode,
                 prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
@@ -443,7 +425,6 @@ class Reranker:
             model_coordinator = RankFiDDistill(
                 model=model_path,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -455,7 +436,6 @@ class Reranker:
         elif "lit5-score" in model_path.lower():
             keys_and_defaults = [
                 ("context_size", 150),
-                ("prompt_mode", PromptMode.LiT5),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
@@ -468,7 +448,6 @@ class Reranker:
             ]
             (
                 context_size,
-                prompt_mode,
                 prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
@@ -480,7 +459,6 @@ class Reranker:
             model_coordinator = RankFiDScore(
                 model=model_path,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
@@ -543,7 +521,6 @@ class Reranker:
             print(f"Loading {model_path} ...")
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
@@ -562,7 +539,6 @@ class Reranker:
             ]
             [
                 context_size,
-                prompt_mode,
                 prompt_template_path,
                 num_few_shot_examples,
                 few_shot_file,
@@ -581,7 +557,6 @@ class Reranker:
                 model=(model_path),
                 name=model_path,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,

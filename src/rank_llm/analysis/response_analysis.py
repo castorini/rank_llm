@@ -14,6 +14,7 @@ from rank_llm.data import Result
 from rank_llm.rerank import PromptMode
 
 
+# TODO (issue #248): need to deprecate prompt_mode and use the regex pattern from the template instead
 class ResponseAnalyzer:
     def __init__(
         self,
