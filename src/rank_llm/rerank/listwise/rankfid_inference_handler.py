@@ -25,7 +25,7 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
         # Validate the method value
         if template["method"] != "rankfid":
             raise ValueError(
-                f'Incorrect method type, expected "rankfid_listwise", got {template["method"]}'
+                f'Incorrect method type, expected "rankfid", got {template["method"]}'
             )
 
         self._general_validation(
