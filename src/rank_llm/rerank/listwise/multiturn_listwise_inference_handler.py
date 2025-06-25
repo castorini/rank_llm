@@ -110,8 +110,6 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         else:
             body_prompt = ""
 
-        query = result.query.text
-        query = self._replace_number(query)
         rank = 0
         for cand in result.candidates[rank_start:rank_end]:
             rank += 1
