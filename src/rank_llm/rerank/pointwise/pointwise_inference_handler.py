@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from transformers import T5Tokenizer
 
-from rank_llm.data import Result
+from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 
@@ -12,17 +12,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
         TEMPLATE_SECTIONS = {
-            # Format:
-            # "template_key": {
-            #    "required": True/False,  # Whether the section itself is mandatory
-            #    "required_placeholders": set(),  # Placeholders that must exist in this section
-            #    "allowed_placeholders": set()    # All allowed placeholders (including required ones)
-            # }
-            "body": {
-                "required": True,
-                "required_placeholders": {"query", "doc_content"},
-                "allowed_placeholders": set(),
-            },
+            "body": TemplateSectionConfig(
+                required=True,
+                required_placeholders={"query", "doc_content"},
+                allowed_placeholders=set(),
+            )
         }
 
         # Validate the method value
@@ -38,7 +32,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
     # TODO (issue #273): May need to add prefix/suffix generation function later
 
     def _generate_body(
-        self, result: Result, index: int, max_doc_tokens: int, tokenizer: T5Tokenizer
+        self,
+        result: Result,
+        index: int,
+        max_doc_tokens: int,
+        tokenizer: T5Tokenizer,
     ) -> str:
         query = self._replace_number(result.query.text)
         doc_raw = self._convert_doc_to_prompt_content(

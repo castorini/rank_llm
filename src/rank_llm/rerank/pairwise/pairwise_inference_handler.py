@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 from transformers import T5Tokenizer
 
-from rank_llm.data import Result
+from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 
@@ -11,18 +11,12 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         super().__init__(template)
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        TEMPLATE_SECTIONS = {
-            # Format:
-            # "template_key": {
-            #    "required": True/False,  # Whether the section itself is mandatory
-            #    "required_placeholders": set(),  # Placeholders that must exist in this section
-            #    "allowed_placeholders": set()    # All allowed placeholders (including required ones)
-            # }
-            "body": {
-                "required": True,
-                "required_placeholders": {"query", "doc1", "doc2"},
-                "allowed_placeholders": set(),
-            },
+        TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+            "body": TemplateSectionConfig(
+                required=True,
+                required_placeholders={"query", "doc1", "doc2"},
+                allowed_placeholders=set(),
+            ),
         }
 
         # Validate the method value

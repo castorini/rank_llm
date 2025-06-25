@@ -11,7 +11,7 @@ class VicunaReranker:
         model_path: str = "castorini/rank_vicuna_7b_v1",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         device: str = "cuda",

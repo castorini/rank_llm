@@ -36,7 +36,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         name: str = "",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -91,9 +91,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
-            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
-            if not prompt_template_path
-            else prompt_template_path,
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,

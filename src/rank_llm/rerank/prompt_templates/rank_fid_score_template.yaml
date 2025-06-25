@@ -1,0 +1,3 @@
+method: "rankfid"
+query: "question: {query}"
+text: "question: {query} context: {passage}"
