@@ -61,6 +61,15 @@ class SafeOpenai(ListwiseRankLLM):
         if not keys:
             raise ValueError("Please provide OpenAI Keys.")
 
+        if prompt_mode and prompt_mode not in [
+            PromptMode.RANK_GPT,
+            PromptMode.RANK_GPT_APEER,
+            PromptMode.LRL,
+        ]:
+            raise ValueError(
+                f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT}, {PromptMode.RANK_GPT_APEER} or {PromptMode.LRL}."
+            )
+
         if prompt_template_path is None:
             if prompt_mode == PromptMode.RANK_GPT:
                 prompt_template_path = (

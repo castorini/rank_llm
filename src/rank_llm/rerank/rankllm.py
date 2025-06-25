@@ -44,7 +44,7 @@ class RankLLM(ABC):
 
         if prompt_mode:
             print(
-                "PromptMode is deprecated. Please use prompt_template_path argument with valid template file instead."
+                "PromptMode is deprecated and will be removed in v0.30.0. Please use the prompt_template_path argument with a valid template file instead."
             )
 
         try:

@@ -111,6 +111,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
+        if prompt_mode and prompt_mode != PromptMode.RANK_GPT:
+            raise ValueError(
+                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
+            )
 
         if sglang_batched:
             if Engine is None:
