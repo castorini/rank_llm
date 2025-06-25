@@ -364,5 +364,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
         self.assertEqual(output, 22)
 
+
 if __name__ == "__main__":
     unittest.main()
