@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Tuple
 
-from rank_llm.data import Result
+from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 
@@ -9,33 +9,27 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         super().__init__(template)
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        TEMPLATE_SECTIONS = {
-            # Format:
-            # "template_key": {
-            #    "required": True/False,  # Whether the section itself is mandatory
-            #    "required_placeholders": set(),  # Placeholders that must exist in this section
-            #    "allowed_placeholders": set()    # All allowed placeholders (including required ones)
-            # }
-            "body": {
-                "required": True,
-                "required_placeholders": {"rank", "candidate"},
-                "allowed_placeholders": set(),
-            },
-            "system_message": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": set(),
-            },
-            "prefix": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": {"query", "num"},
-            },
-            "suffix": {
-                "required": False,
-                "required_placeholders": set(),
-                "allowed_placeholders": {"query", "num", "psg_ids"},
-            },
+        TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+            "body": TemplateSectionConfig(
+                required=True,
+                required_placeholders={"rank", "candidate"},
+                allowed_placeholders=set(),
+            ),
+            "system_message": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
+            "prefix": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders={"query", "num"},
+            ),
+            "suffix": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders={"query", "num", "psg_ids"},
+            ),
         }
 
         # Validate the method value

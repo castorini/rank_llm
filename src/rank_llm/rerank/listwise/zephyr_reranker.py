@@ -11,14 +11,13 @@ class ZephyrReranker:
         model_path: str = "castorini/rank_zephyr_7b_v1_full",
         context_size: int = 4096,
         prompt_mode: PromptMode = PromptMode.RANK_GPT,
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         device: str = "cuda",
         num_gpus: int = 1,
         variable_passages: bool = True,
         window_size: int = 20,
-        system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query",
     ) -> None:
         self._reranker = RankListwiseOSLLM(
             model=model_path,
@@ -31,7 +30,6 @@ class ZephyrReranker:
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,
-            system_message=system_message,
         )
 
     def rerank_batch(

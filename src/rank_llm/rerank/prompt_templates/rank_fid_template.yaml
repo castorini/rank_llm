@@ -1,0 +1,2 @@
+method: "rankfid"
+text: "Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "

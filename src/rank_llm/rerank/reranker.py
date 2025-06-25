@@ -203,8 +203,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default rank_GPT template
+                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -236,8 +236,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default rank_GPT template
+                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -277,8 +277,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default rank_GPT template
+                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),
@@ -416,8 +416,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.LiT5),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default LiT5 template
+                    "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
@@ -453,8 +453,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.LiT5),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default LiT5 template
+                    "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 100),
@@ -495,8 +495,8 @@ class Reranker:
                 ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
-                    None,
-                ),  # TODO(issue #236): Need to modify and add default rank_GPT template
+                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),

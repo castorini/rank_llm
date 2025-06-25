@@ -12,7 +12,7 @@ class LiT5DistillReranker:
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         precision: str = "bfloat16",
@@ -117,7 +117,7 @@ class LiT5ScoreReranker:
         model_path: str = "castorini/LiT5-Score-base",
         context_size: int = 300,
         prompt_mode: PromptMode = PromptMode.LiT5,
-        prompt_template_path: Optional[str] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
         window_size: int = 20,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
     ) -> None:
