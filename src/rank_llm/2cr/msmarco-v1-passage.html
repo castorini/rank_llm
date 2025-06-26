@@ -209,7 +209,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/rank_vicuna_7b_v1  \
   --top_k_candidates=100 --dataset=dl19  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096
 </code></pre></blockquote>
 
@@ -225,7 +226,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/rank_vicuna_7b_v1  \
   --top_k_candidates=100 --dataset=dl20  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096
 </code></pre></blockquote>
 
@@ -282,7 +284,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/rank_zephyr_7b_v1_full  \
   --top_k_candidates=100 --dataset=dl19  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -299,7 +302,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/rank_zephyr_7b_v1_full  \
   --top_k_candidates=100 --dataset=dl20  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -357,7 +361,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/rank_zephyr_7b_v1_full  \
   --top_k_candidates=100 --dataset=dl19  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages \
   --num_passes=3
@@ -375,7 +380,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/rank_zephyr_7b_v1_full  \
   --top_k_candidates=100 --dataset=dl20  \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages \
   --num_passes=3
@@ -434,7 +440,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/monot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -451,7 +458,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/monot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -509,7 +517,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/duot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -526,7 +535,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/duot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -584,7 +594,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/LiT5-Distill-large \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -601,7 +612,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/LiT5-Distill-large \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -659,7 +671,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/rank_vicuna_7b_v1 \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -676,7 +689,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/rank_vicuna_7b_v1 \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -734,7 +748,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/rank_zephyr_7b_v1_full \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -751,7 +766,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/rank_zephyr_7b_v1_full \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -809,7 +825,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/first_mistral \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
@@ -826,7 +843,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/first_mistral \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
@@ -884,7 +902,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=Qwen/Qwen2.5-7B-Instruct \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -901,7 +920,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=Qwen/Qwen2.5-7B-Instruct \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -959,7 +979,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=meta-llama/Llama-3.1-8B-Instruct \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -976,7 +997,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=meta-llama/Llama-3.1-8B-Instruct \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -1034,7 +1056,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gemini-2.0-flash \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -1051,7 +1074,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gemini-2.0-flash \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -1109,7 +1133,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1126,7 +1151,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1184,7 +1210,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1201,7 +1228,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1259,7 +1287,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1276,7 +1305,8 @@ Command to generate and evaluate run on TREC 2019 queries:
 <pre><code>python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml \
+  --retrieval_method=bm25 \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
