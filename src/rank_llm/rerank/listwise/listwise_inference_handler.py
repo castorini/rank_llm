@@ -32,8 +32,9 @@ class ListwiseInferenceHandler(BaseInferenceHandler, ABC):
         self,
         num_examples: int = 0,
         examples: List[Dict[str, List[Dict[str, str]]]] = [],
-        is_messages: bool = True,
+        **kwargs: Any,
     ) -> List[Dict[str, str]] | str:
+        is_messages = kwargs.get("is_messages", True)
         if is_messages:
             few_shot_prompt = []
             for ex in examples[: min(num_examples, len(examples))]:
