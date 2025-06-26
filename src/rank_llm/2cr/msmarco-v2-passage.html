@@ -183,9 +183,9 @@ Instructions for programmatic execution are shown at the bottom of this page (sc
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6678</td>
-<td>0.4958</td>
-<td>0.4505</td>
+<td>0.6682</td>
+<td>0.4954</td>
+<td>0.4502</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -216,7 +216,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/monot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -234,7 +234,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/monot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -252,7 +252,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/monot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -310,7 +310,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/duot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -328,7 +328,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/duot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -346,7 +346,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/duot5-3b-msmarco-10k \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -404,7 +404,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/LiT5-Distill-large \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -422,7 +422,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/LiT5-Distill-large \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -440,7 +440,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/LiT5-Distill-large \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -465,9 +465,9 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6219</td>
-<td>0.4327</td>
-<td>0.4062</td>
+<td>0.6194</td>
+<td>0.4336</td>
+<td>0.3988</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -498,7 +498,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/rank_vicuna_7b_v1 \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -516,7 +516,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/rank_vicuna_7b_v1 \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -534,7 +534,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/rank_vicuna_7b_v1 \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -559,9 +559,9 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.7027</td>
-<td>0.5099</td>
-<td>0.4423</td>
+<td>0.7016</td>
+<td>0.5152</td>
+<td>0.4373</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -592,7 +592,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/rank_zephyr_7b_v1_full \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -610,7 +610,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/rank_zephyr_7b_v1_full \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -628,7 +628,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/rank_zephyr_7b_v1_full \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -654,8 +654,8 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>100</td>
 <td></td>
 <td>0.6849</td>
-<td>0.4928</td>
-<td>0.4445</td>
+<td>0.4893</td>
+<td>0.4470</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -686,7 +686,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/first_mistral \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
@@ -704,7 +704,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/first_mistral \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
@@ -722,7 +722,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=castorini/first_mistral \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages --use_alpha --use_logits
 </code></pre></blockquote>
@@ -747,9 +747,9 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6451</td>
-<td>0.4264</td>
-<td>0.4061</td>
+<td>0.6358</td>
+<td>0.4186</td>
+<td>0.3925</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -780,7 +780,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=Qwen/Qwen2.5-7B-Instruct \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -798,7 +798,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=Qwen/Qwen2.5-7B-Instruct \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -816,7 +816,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=Qwen/Qwen2.5-7B-Instruct \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -841,9 +841,9 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6394</td>
-<td>0.4469</td>
-<td>0.4109</td>
+<td>0.6390</td>
+<td>0.4517</td>
+<td>0.4112</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -874,7 +874,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=meta-llama/Llama-3.1-8B-Instruct \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -892,7 +892,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=meta-llama/Llama-3.1-8B-Instruct \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -910,7 +910,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=meta-llama/Llama-3.1-8B-Instruct \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -968,7 +968,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gemini-2.0-flash \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -986,7 +986,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gemini-2.0-flash \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -1004,7 +1004,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gemini-2.0-flash \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT  \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  \
   --context_size=4096 \
   --variable_passages
 </code></pre></blockquote>
@@ -1029,9 +1029,9 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6830</td>
-<td>0.4947</td>
-<td>0.4676</td>
+<td>0.6868</td>
+<td>0.4878</td>
+<td>0.4703</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -1062,7 +1062,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1080,7 +1080,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1098,7 +1098,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1123,9 +1123,9 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6720</td>
-<td>0.4863</td>
-<td>0.4442</td>
+<td>0.6695</td>
+<td>0.4901</td>
+<td>0.4514</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -1156,7 +1156,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT_APEER \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1174,7 +1174,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT_APEER \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1192,7 +1192,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=rank_GPT_APEER \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1217,9 +1217,9 @@ Command to generate and evaluate run on TREC 2021 queries:
 <td>BM25</td>
 <td>100</td>
 <td></td>
-<td>0.6558</td>
-<td>0.4740</td>
-<td>0.4426</td>
+<td>0.6720</td>
+<td>0.4813</td>
+<td>0.4599</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -1250,7 +1250,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl21 \
   --retrieval_method=bm25 \
-  --prompt_mode=LRL \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1268,7 +1268,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl22 \
   --retrieval_method=bm25 \
-  --prompt_mode=LRL \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>
@@ -1286,7 +1286,7 @@ Command to generate and evaluate run on TREC 2021 queries:
   --model_path=gpt-4o-mini \
   --top_k_candidates=100 --dataset=dl23 \
   --retrieval_method=bm25 \
-  --prompt_mode=LRL \
+  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml \
   --context_size=4096 \
   --variable_passages --use_azure_openai
 </code></pre></blockquote>

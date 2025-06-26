@@ -188,7 +188,7 @@ def format_command(raw):
         .replace("--onnx-encoder", "\\\n  --onnx-encoder")
         .replace("--encoded-corpus", "\\\n  --encoded-corpus")
         .replace("--context_size", "\\\n  --context_size")
-        .replace("--prompt_mode", "\\\n  --prompt_mode")
+        .replace("--prompt_template_path", "\\\n  --prompt_template_path")
         .replace("--top_k_candidates", "\\\n  --top_k_candidates")
         .replace("--retrieval_method", "\\\n  --retrieval_method")
         .replace("--model_path", "\\\n  --model_path")
