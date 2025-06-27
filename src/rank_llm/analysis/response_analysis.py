@@ -68,7 +68,7 @@ class ResponseAnalyzer:
             data=filenames, use_alpha=use_alpha, prompt_mode=prompt_mode
         )
 
-    def read_results_responses(self) -> Tuple[List[str], List[int]]:
+    def read_results_responses(self) -> Tuple[List[str], List[int], str]:
         """
         Reads responses from the specified list of Result objects and produces the total number of passages.
 
@@ -77,14 +77,15 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
+        output_pattern = self._data[0].invocations_history[0].output_pattern
         for result in self._data:
             for inference_invocation in result.invocations_history:
                 responses.append(inference_invocation.response)
                 num_passage = self._get_num_passages(inference_invocation.prompt)
                 num_passages.append(int(num_passage))
-        return responses, num_passages
+        return responses, num_passages, output_pattern
 
-    def read_saved_responses(self) -> Tuple[List[str], List[int]]:
+    def read_saved_responses(self) -> Tuple[List[str], List[int], str]:
         """
         Reads responses from the specified list of files and produces the total number of passages.
 
@@ -93,6 +94,7 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
+        output_pattern = self._data[0].invocations_history[0].output_pattern
         for result in self._data:
             with open(result) as f:
                 invocations_histories = json.load(f)
@@ -101,9 +103,9 @@ class ResponseAnalyzer:
                     responses.append(inference_invocation["response"])
                     num_passage = self._get_num_passages(inference_invocation["prompt"])
                     num_passages.append(int(num_passage))
-        return responses, num_passages
+        return responses, num_passages, output_pattern
 
-    def read_responses(self) -> Tuple[List[str], List[int]]:
+    def read_responses(self) -> Tuple[List[str], List[int], str]:
         """
         Selects what read response class method to call depending on the input type.
 
@@ -119,17 +121,8 @@ class ResponseAnalyzer:
                 "Input data must be a list of file paths or a list of Result objects."
             )
 
-    def _validate_format(self, response: str) -> bool:
-        if self._use_alpha:
-            for c in response:
-                if not c.isupper() and c not in "[]> ":
-                    return False
-            return True
-
-        for c in response:
-            if not c.isdigit() and c not in "[]> ,":
-                return False
-        return True
+    def _validate_format(self, response: str, output_pattern: str) -> bool:
+        return bool(re.match(output_pattern, response.strip()))
 
     def _get_num_passages(self, prompt) -> int:
         match self._prompt_mode:
@@ -177,7 +170,12 @@ class ResponseAnalyzer:
                 raise ValueError(f"Unsupported prompt format.")
 
     def _process_numerical_format(
-        self, response: str, num_passage: int, verbose: bool, stats_dict: Dict[str, int]
+        self,
+        response: str,
+        num_passage: int,
+        verbose: bool,
+        stats_dict: Dict[str, int],
+        output_pattern: str,
     ):
         resp = response
         if "</think>" in resp:
@@ -191,7 +189,7 @@ class ResponseAnalyzer:
         resp = resp.replace("[", "")
         resp = resp.replace("]", "")
         resp = resp.strip()
-        if not self._validate_format(resp):
+        if not self._validate_format(response, output_pattern):
             if verbose:
                 print(resp)
             stats_dict["wrong_format"] += 1
@@ -269,7 +267,7 @@ class ResponseAnalyzer:
         Returns:
             Dict[str, Union[int, float]]: A dictionary object containing (normalized) counts of different types of errors.
         """
-        responses, num_passages = self.read_responses()
+        responses, num_passages, output_pattern = self.read_responses()
 
         stats_dict = {
             "ok": 0,
@@ -284,6 +282,7 @@ class ResponseAnalyzer:
                     num_passage=num_passage,
                     verbose=verbose,
                     stats_dict=stats_dict,
+                    output_pattern=output_pattern,
                 )
             else:
                 self._process_numerical_format(
@@ -291,6 +290,7 @@ class ResponseAnalyzer:
                     num_passage=num_passage,
                     verbose=verbose,
                     stats_dict=stats_dict,
+                    output_pattern=output_pattern,
                 )
         if not normalize:
             return stats_dict
