@@ -30,11 +30,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders={"query", "num", "psg_ids"},
             ),
-            "few_shot": TemplateSectionConfig(
-                required=False,
-                required_placeholders={"examples"},
-                allowed_placeholders=set(),
-            ),
         }
 
         # Validate the method value
@@ -112,7 +107,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             use_alpha = kwargs.get("use_alpha", False)
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
-            is_fewshot_messages = kwargs.get("is_fewshot_messages", True)
         except KeyError as e:
             raise ValueError(f"Missing required parameter: {e}")
 
@@ -141,12 +135,8 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             examples = self._generate_fewshot_prompt(
                 num_examples=num_fewshot_examples,
                 examples=fewshot_examples,
-                is_messages=is_fewshot_messages,
             )
-            if is_fewshot_messages:
-                prompt_messages.extend(examples)
-            else:
-                prompt_text += examples
+            prompt_messages.extend(examples)
         if prefix_text:
             prompt_text += prefix_text
         prompt_text += body_text

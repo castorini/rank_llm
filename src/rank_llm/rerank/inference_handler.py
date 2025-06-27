@@ -154,8 +154,7 @@ class BaseInferenceHandler(ABC):
         self,
         num_examples: int = 0,
         examples: List[Dict[str, List[Dict[str, str]]]] = [],
-        **kwargs: Any,
-    ) -> List[Dict[str, str]] | str:
+    ) -> List[Dict[str, str]]:
         """
         Generates a few-shot prompt based on the provided examples.
         Args:
