@@ -49,7 +49,7 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
         num_examples: int = 0,
         examples: List[Dict[str, List[Dict[str, str]]]] = [],
         **kwargs: Any,
-    ) -> List[Dict[str, str]] | str:
+    ) -> List[Dict[str, str]]:
         pass
 
     def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
