@@ -127,7 +127,11 @@ class ListwiseRankLLM(RankLLM, ABC):
                 if result.invocations_history is None:
                     result.invocations_history = []
                 inference_invocation = InferenceInvocation(
-                    prompt, permutation, in_token_count, out_token_count
+                    prompt,
+                    permutation,
+                    in_token_count,
+                    out_token_count,
+                    self._inference_handler.template["output_pattern"],
                 )
                 result.invocations_history.append(inference_invocation)
             result = self.receive_permutation(
@@ -166,7 +170,11 @@ class ListwiseRankLLM(RankLLM, ABC):
             print(f"Output: {permutation}")
         if populate_invocations_history:
             inference_invocation = InferenceInvocation(
-                prompt, permutation, in_token_count, out_token_count
+                prompt,
+                permutation,
+                in_token_count,
+                out_token_count,
+                self._inference_handler.template["output_pattern"],
             )
             result.invocations_history.append(inference_invocation)
         result = self.receive_permutation(

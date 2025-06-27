@@ -45,6 +45,11 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required_placeholders={"examples"},
                 allowed_placeholders=set(),
             ),
+            "output_pattern": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
         }
 
         # Validate the method value

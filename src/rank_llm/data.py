@@ -30,6 +30,7 @@ class InferenceInvocation:
     response: str
     input_token_count: int
     output_token_count: int
+    output_pattern: str
 
 
 @dataclass
