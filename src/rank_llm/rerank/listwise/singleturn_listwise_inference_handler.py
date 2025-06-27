@@ -30,11 +30,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders={"query", "num", "psg_ids"},
             ),
-            "few_shot": TemplateSectionConfig(
-                required=False,
-                required_placeholders={"examples"},
-                allowed_placeholders=set(),
-            ),
         }
 
         # Validate the method value
@@ -144,16 +139,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         )
         prompt_text = ""
 
-        if num_fewshot_examples > 0 and fewshot_examples:
-            examples = self._generate_fewshot_prompt(
-                num_examples=num_fewshot_examples,
-                examples=fewshot_examples,
-                is_messages=is_fewshot_messages,
-            )
-            if is_fewshot_messages:
-                prompt_messages.extend(examples)
-            else:
-                prompt_text += examples
         if prefix_text:
             prompt_text += prefix_text
         prompt_text += body_text
