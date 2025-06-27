@@ -168,6 +168,7 @@ class SafeGenai(ListwiseRankLLM):
         )
         return response, self.model.count_tokens(response).total_tokens
 
+    # TODO (issue #256): Need to modify gemini implementation to use OpenAI's API and then add fewshot examples
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
@@ -178,9 +179,6 @@ class SafeGenai(ListwiseRankLLM):
                 rank_start=rank_start,
                 rank_end=rank_end,
                 max_length=max_length,
-                num_fewshot_examples=self._num_few_shot_examples,
-                fewshot_examples=self._examples,
-                is_fewshot_messages=False,
             )[-1]["content"]
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():

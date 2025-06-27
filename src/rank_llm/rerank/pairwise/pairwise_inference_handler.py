@@ -36,7 +36,6 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         self,
         num_examples: int = 0,
         examples: List[Dict[str, List[Dict[str, str]]]] = [],
-        **kwargs: Any,
     ) -> str:
         text_examples = []
         pattern = re.compile(

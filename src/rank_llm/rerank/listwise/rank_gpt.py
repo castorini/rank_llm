@@ -250,7 +250,6 @@ class SafeOpenai(ListwiseRankLLM):
                 max_length=max_length,
                 num_fewshot_examples=self._num_few_shot_examples,
                 fewshot_examples=self._examples,
-                is_fewshot_messages=True,
             )
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
