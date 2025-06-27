@@ -30,11 +30,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders={"query", "num", "psg_ids"},
             ),
-            "few_shot": TemplateSectionConfig(
-                required=False,
-                required_placeholders={"examples"},
-                allowed_placeholders=set(),
-            ),
             "output_patterns": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
