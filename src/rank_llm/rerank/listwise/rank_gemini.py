@@ -1,4 +1,3 @@
-import random
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -169,44 +168,19 @@ class SafeGenai(ListwiseRankLLM):
         )
         return response, self.model.count_tokens(response).total_tokens
 
-    def _add_few_shot_examples_text(self, text_prompt: str) -> str:
-        """Adds few-shot examples to a text prompt, returning the combined string."""
-
-        if (
-            self._num_few_shot_examples > 0
-            and hasattr(self, "_examples")
-            and self._examples
-        ):
-            examples_text = []
-            for _ in range(min(self._num_few_shot_examples, len(self._examples))):
-                ex = random.choice(self._examples)
-
-                if "conversations" in ex and len(ex) >= 2:
-                    examples_text.append(
-                        f"Example Input:\n{ex['conversations'][0]['value'].strip()}\n"
-                        f"Example Output:\n{ex['conversations'][1]['value'].strip()}"
-                    )
-
-            final_text = (
-                "In response to the query: [querystart] {QUERY} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance."
-                + f"Examples:\n"
-                + "\n\n".join(examples_text)
-            )
-            return final_text if examples_text else text_prompt
-        else:
-            return text_prompt
-
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
         max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            # TODO (issue #237): Need to modify inference handler to add back fewshot examples
             message = self._inference_handler.generate_prompt(
                 result=result,
                 rank_start=rank_start,
                 rank_end=rank_end,
                 max_length=max_length,
+                num_fewshot_examples=self._num_few_shot_examples,
+                fewshot_examples=self._examples,
+                is_fewshot_messages=False,
             )[-1]["content"]
             num_tokens = self.get_num_tokens(message)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():

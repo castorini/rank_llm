@@ -338,13 +338,15 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         max_length = 300 * (20 / (rank_end - rank_start))
 
         while True:
-            # TODO (issue #237): Need to modify inference handler to add back fewshot examples
             messages = self._inference_handler.generate_prompt(
                 result=result,
                 rank_start=rank_start,
                 rank_end=rank_end,
                 max_length=max_length,
                 use_alpha=self._use_alpha,
+                num_fewshot_examples=self._num_few_shot_examples,
+                fewshot_examples=self._examples,
+                is_fewshot_messages=True,
             )
             prompt = self._tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
