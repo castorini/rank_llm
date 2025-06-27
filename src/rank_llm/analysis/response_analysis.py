@@ -68,7 +68,7 @@ class ResponseAnalyzer:
             data=filenames, use_alpha=use_alpha, prompt_mode=prompt_mode
         )
 
-    def read_results_responses(self) -> Tuple[List[str], List[int], str]:
+    def read_results_responses(self) -> Tuple[List[str], List[int], Tuple[str]]:
         """
         Reads responses from the specified list of Result objects and produces the total number of passages.
 
@@ -77,15 +77,15 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
-        output_pattern = self._data[0].invocations_history[0].output_pattern
+        output_patterns = self._data[0].invocations_history[0].output_patterns
         for result in self._data:
             for inference_invocation in result.invocations_history:
                 responses.append(inference_invocation.response)
                 num_passage = self._get_num_passages(inference_invocation.prompt)
                 num_passages.append(int(num_passage))
-        return responses, num_passages, output_pattern
+        return responses, num_passages, output_patterns
 
-    def read_saved_responses(self) -> Tuple[List[str], List[int], str]:
+    def read_saved_responses(self) -> Tuple[List[str], List[int], Tuple[str, str]]:
         """
         Reads responses from the specified list of files and produces the total number of passages.
 
@@ -94,7 +94,7 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
-        output_pattern = self._data[0].invocations_history[0].output_pattern
+        output_patterns = self._data[0].invocations_history[0].output_patterns
         for result in self._data:
             with open(result) as f:
                 invocations_histories = json.load(f)
@@ -103,7 +103,7 @@ class ResponseAnalyzer:
                     responses.append(inference_invocation["response"])
                     num_passage = self._get_num_passages(inference_invocation["prompt"])
                     num_passages.append(int(num_passage))
-        return responses, num_passages, output_pattern
+        return responses, num_passages, output_patterns
 
     def read_responses(self) -> Tuple[List[str], List[int], str]:
         """
