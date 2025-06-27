@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from transformers import T5Tokenizer
 
@@ -30,6 +30,14 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         )
 
     # TODO (issue #273): May need to add prefix/suffix generation function later
+
+    def _generate_fewshot_prompt(
+        self,
+        num_examples: int = 0,
+        examples: List[Dict[str, List[Dict[str, str]]]] = [],
+        **kwargs: Any,
+    ) -> List[Dict[str, str]] | str:
+        pass
 
     def _generate_body(
         self,
