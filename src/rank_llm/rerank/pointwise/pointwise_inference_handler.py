@@ -79,14 +79,6 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
 
             return "\n".join(text_examples) + "\n\n" if text_examples else ""
 
-    def _generate_fewshot_prompt(
-        self,
-        num_examples: int = 0,
-        examples: List[Dict[str, List[Dict[str, str]]]] = [],
-        **kwargs: Any,
-    ) -> List[Dict[str, str]] | str:
-        pass
-
     def _generate_body(
         self,
         result: Result,
