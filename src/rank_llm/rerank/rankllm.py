@@ -62,6 +62,8 @@ class RankLLM(ABC):
                     "few_shot_examples_file must be provided when num_few_shot_examples > 0"
                 )
             self._load_few_shot_examples(few_shot_file)
+        else:
+            self._examples = []
 
     @abstractmethod
     def run_llm_batched(

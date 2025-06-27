@@ -44,6 +44,14 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
 
         return query_string
 
+    def _generate_fewshot_prompt(
+        self,
+        num_examples: int = 0,
+        examples: List[Dict[str, List[Dict[str, str]]]] = [],
+        **kwargs: Any,
+    ) -> List[Dict[str, str]] | str:
+        pass
+
     def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
         try:
             rank_start = kwargs["rank_start"]

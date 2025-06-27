@@ -243,12 +243,14 @@ class SafeOpenai(ListwiseRankLLM):
         max_length = 300 * (self._window_size // (rank_end - rank_start))
 
         while True:
-            # TODO (issue #237): Need to modify inference handler to add back fewshot examples
             prompt = self._inference_handler.generate_prompt(
                 result=result,
                 rank_start=rank_start,
                 rank_end=rank_end,
                 max_length=max_length,
+                num_fewshot_examples=self._num_few_shot_examples,
+                fewshot_examples=self._examples,
+                is_fewshot_messages=True,
             )
             num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
