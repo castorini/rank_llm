@@ -161,7 +161,7 @@ class BaseInferenceHandler(ABC):
             num_examples (int): Number of examples to include in the few-shot prompt
             examples (List[Dict[str, List[Dict[str, str]]]]): List of example conversations
         Returns:
-            A formatted few-shot prompt as a string or list of messages
+            A list of messages
         """
         pass
 
