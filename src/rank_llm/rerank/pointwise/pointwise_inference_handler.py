@@ -56,12 +56,9 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 fmt_values = {"query": example_query, "doc_content": example_doc}
                 fewshot_text = self._format_template("body", fmt_values=fmt_values)
 
-                if "Relevant" in fewshot_text:
-                    keyword = "Relevant"
-                elif "Relevance" in fewshot_text:
+                keyword = "Relevant"
+                if "Relevance" in fewshot_text:
                     keyword = "Relevance"
-                else:
-                    keyword = "Relevant"
 
                 if keyword in fewshot_text:
                     pos = fewshot_text.rfind(keyword)
