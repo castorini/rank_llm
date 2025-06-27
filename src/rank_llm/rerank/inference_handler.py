@@ -154,7 +154,6 @@ class BaseInferenceHandler(ABC):
         self,
         num_examples: int = 0,
         examples: List[Dict[str, List[Dict[str, str]]]] = [],
-        **kwargs: Any,
     ) -> List[Dict[str, str]] | str:
         """
         Generates a few-shot prompt based on the provided examples.
@@ -162,7 +161,7 @@ class BaseInferenceHandler(ABC):
             num_examples (int): Number of examples to include in the few-shot prompt
             examples (List[Dict[str, List[Dict[str, str]]]]): List of example conversations
         Returns:
-            A formatted few-shot prompt as a string or list of messages
+            A list of fewshot prompt messages or a single prompt message string.
         """
         pass
 

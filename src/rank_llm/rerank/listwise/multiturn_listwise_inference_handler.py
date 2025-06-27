@@ -156,7 +156,6 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             use_alpha = kwargs.get("use_alpha", False)
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
-            is_fewshot_messages = kwargs.get("is_fewshot_messages", True)
         except KeyError as e:
             raise ValueError(f"Missing required parameter: {e}")
 
@@ -169,6 +168,14 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             for system_message in [self.template.get("system_message", "")]
             if system_message
         ]
+
+        if num_fewshot_examples > 0 and fewshot_examples:
+            fewshot_prompt = self._generate_fewshot_prompt(
+                num_examples=num_fewshot_examples,
+                examples=fewshot_examples,
+            )
+            prompt_messages.extend(fewshot_prompt)
+
         prefix_prompt, suffix_text = self._generate_prefix_suffix(num=num, query=query)
         is_conversational_body = "body_assistant" in self.template
         body_prompt = self._generate_body(
@@ -180,24 +187,6 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             is_conversational=is_conversational_body,
         )
 
-        if num_fewshot_examples > 0 and fewshot_examples:
-            if is_fewshot_messages:
-                fewshot_prompt = self._generate_fewshot_prompt(
-                    num_examples=num_fewshot_examples,
-                    examples=fewshot_examples,
-                    is_messages=is_fewshot_messages,
-                )
-                prompt_messages.extend(fewshot_prompt)
-            else:
-                prompt_messages.extend(
-                    [
-                        {"role": "user", "content": fewshot_prompt},
-                        {
-                            "role": "assistant",
-                            "content": "Ok, I understand the examples.",
-                        },
-                    ]
-                )
         if prefix_prompt and isinstance(prefix_prompt, list):
             prompt_messages.extend(prefix_prompt)
         if is_conversational_body and isinstance(body_prompt, list):

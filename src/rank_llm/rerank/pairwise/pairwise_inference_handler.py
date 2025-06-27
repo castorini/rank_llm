@@ -36,7 +36,6 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         self,
         num_examples: int = 0,
         examples: List[Dict[str, List[Dict[str, str]]]] = [],
-        **kwargs: Any,
     ) -> str:
         text_examples = []
         pattern = re.compile(
@@ -66,12 +65,9 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
                     template_key="body", fmt_values=fmt_values
                 )
 
-                if "Relevant" in fewshot_text:
-                    keyword = "Relevant"
-                elif "Relevance" in fewshot_text:
+                keyword = "Relevant"
+                if "Relevance" in fewshot_text:
                     keyword = "Relevance"
-                else:
-                    keyword = "Relevant"
 
                 if keyword in fewshot_text:
                     pos = fewshot_text.rfind(keyword)

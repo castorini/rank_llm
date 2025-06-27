@@ -49,8 +49,8 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
         num_examples: int = 0,
         examples: List[Dict[str, List[Dict[str, str]]]] = [],
         **kwargs: Any,
-    ) -> List[Dict[str, str]] | str:
-        pass
+    ) -> List[Dict[str, str]]:
+        raise NotImplementedError("Fewshot examples are not supported for RankFiD!")
 
     def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
         try:

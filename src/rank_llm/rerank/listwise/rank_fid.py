@@ -34,8 +34,6 @@ class RankFiDDistill(ListwiseRankLLM):
         context_size: int = 150,
         prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
-        num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
@@ -49,8 +47,6 @@ class RankFiDDistill(ListwiseRankLLM):
             context_size=context_size,
             prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
-            num_few_shot_examples=num_few_shot_examples,
-            few_shot_file=few_shot_file,
             window_size=window_size,
         )
         self._precision = precision
@@ -188,7 +184,6 @@ class RankFiDDistill(ListwiseRankLLM):
         """
         Create a prompt based on the result and given ranking range.
         """
-        # TODO (issue #237): Need to modify this to add fewshot examples
         prompts = self._inference_handler.generate_prompt(
             result=result,
             rank_start=rank_start,
@@ -266,8 +261,6 @@ class RankFiDScore(ListwiseRankLLM):
         context_size: int = 150,
         prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
         prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
-        num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
@@ -278,7 +271,6 @@ class RankFiDScore(ListwiseRankLLM):
             context_size=context_size,
             prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
-            num_few_shot_examples=num_few_shot_examples,
             window_size=window_size,
         )
         self._precision = precision
@@ -443,7 +435,6 @@ class RankFiDScore(ListwiseRankLLM):
         """
         Create a prompt based on the result and given ranking range.
         """
-        # TODO (issue #237): Need to modify this to add fewshot examples
         prompts = self._inference_handler.generate_prompt(
             result=result,
             rank_start=rank_start,
