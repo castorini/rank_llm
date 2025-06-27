@@ -6,4 +6,6 @@ suffix: |-
   PASSAGES: {psg_ids}
   Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.
   SORTED_PASSAGES =
-output_pattern: r"^\[PASSAGE\d+(, PASSAGE\d+)*\]$"
+output_patterns: 
+  - r"^\[PASSAGE\d+(, PASSAGE\d+)*\]$" # pattern for raw output
+  - r"PASSAGE\d+" # pattern for rank

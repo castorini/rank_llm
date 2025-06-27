@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set, Union
+from typing import Any, Dict, List, Set, Tuple, Union
 
 from dacite import from_dict
 
@@ -30,7 +30,7 @@ class InferenceInvocation:
     response: str
     input_token_count: int
     output_token_count: int
-    output_pattern: str
+    output_patterns: Tuple[str, str]
 
 
 @dataclass

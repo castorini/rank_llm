@@ -131,7 +131,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                     permutation,
                     in_token_count,
                     out_token_count,
-                    self._inference_handler.template["output_pattern"],
+                    self._inference_handler.template["output_patterns"],
                 )
                 result.invocations_history.append(inference_invocation)
             result = self.receive_permutation(
@@ -174,7 +174,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 permutation,
                 in_token_count,
                 out_token_count,
-                self._inference_handler.template["output_pattern"],
+                self._inference_handler.template["output_patterns"],
             )
             result.invocations_history.append(inference_invocation)
         result = self.receive_permutation(
