@@ -112,20 +112,24 @@ class DuoT5(PairwiseRankLLM):
             f"Query: {query} Document0:  Document1:  Relevant: "
         )
 
-        few_shot_prompt = self._build_pairwise_few_shot_examples()
+        few_shot_prompt = self._inference_handler._generate_fewshot_prompt(
+            num_examples=self._num_few_shot_examples,
+            examples=self._examples,
+        )
         few_shot_tokens = self.get_num_tokens(few_shot_prompt)
 
         max_token = (
             self._context_size - reserved_for_output - query_tokens - few_shot_tokens
         )
 
-        # TODO (issue #237): need to modify the class to be able to add fewshot examples later
         prompt = self._inference_handler.generate_prompt(
             result=result,
             index1=index1,
             index2=index2,
             max_token=max_token,
             tokenizer=self._tokenizer,
+            num_fewshot_examples=self._num_few_shot_examples,
+            fewshot_examples=self._examples,
         )
         return prompt, self.get_num_tokens(prompt)
 
