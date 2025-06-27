@@ -1,7 +1,5 @@
 import copy
 import logging
-import random
-import re
 from abc import ABC
 from datetime import datetime
 from functools import cmp_to_key
@@ -188,32 +186,3 @@ class PointwiseRankLLM(RankLLM, ABC):
             return 1
         else:
             return 0
-
-    def _build_pointwise_few_shot_examples(self):
-        if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
-            examples = []
-            pattern = re.compile(r"Query: (?P<query>.+?) Document: (?P<doc>.+)$")
-
-            exs = random.sample(self._examples, self._num_few_shot_examples)
-            for ex in exs:
-                try:
-                    # assume each value to conversation key have at least 2 values (user: query + doc, assistant: score of relevance)
-                    user_msg = ex["conversations"][0]["value"]
-
-                    match = pattern.match(user_msg)
-                    if not match:
-                        continue
-
-                    example_query = match.group("query").strip()
-                    example_doc = match.group("doc").strip()
-                    example_relevance = ex["conversations"][1]["value"].strip()
-
-                    examples.append(
-                        f"Query: {example_query} Document: {example_doc}\n Relevant: {example_relevance}"
-                    )
-                except (KeyError, IndexError):
-                    continue
-
-            return "\n\n".join(examples) + "\n\n" if examples else ""
-        else:
-            return ""

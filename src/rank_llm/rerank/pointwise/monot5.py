@@ -99,21 +99,22 @@ class MonoT5(PointwiseRankLLM):
         )
         query_tokens = self.get_num_tokens(f"Query: {query} Document:  Relevant: ")
 
-        few_shot_section = ""
-        few_shot_tokens = 0
-        few_shot_section = self._build_pointwise_few_shot_examples()
+        few_shot_section = self._inference_handler._generate_fewshot_prompt(
+            num_examples=self._num_few_shot_examples, examples=self._examples
+        )
         few_shot_tokens = self.get_num_tokens(few_shot_section)
 
         max_doc_tokens = (
             self._context_size - few_shot_tokens - query_tokens - reserved_for_output
         )
 
-        # TODO (issue #237): modify the inference handler to include fewshot examples
         prompt = self._inference_handler.generate_prompt(
             result=result,
             index=index,
             max_doc_tokens=max_doc_tokens,
             tokenizer=self._tokenizer,
+            num_few_shot_examples=self._num_few_shot_examples,
+            fewshot_exampels=self._examples,
         )
 
         final_token_count = self.get_num_tokens(prompt)
