@@ -3,7 +3,7 @@ import logging
 import random
 from abc import ABC
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from tqdm import tqdm
 
@@ -459,25 +459,3 @@ class ListwiseRankLLM(RankLLM, ABC):
                 result.candidates[j + rank_start].score = cut_range[j].score
 
         return result
-
-    def _add_few_shot_examples(self, conv):
-        exs = random.sample(self._examples, self._num_few_shot_examples)
-        for ex in exs:
-            prompt = ex["conversations"][0]["value"]
-            response = ex["conversations"][1]["value"]
-            conv.append_message(conv.roles[0], prompt)
-            conv.append_message(conv.roles[1], response)
-        return conv
-
-    def _add_few_shot_examples_messages(
-        self, messages: List[Dict[str, str]]
-    ) -> List[Dict[str, str]]:
-        if self._num_few_shot_examples > 0 and hasattr(self, "_examples"):
-            for ex in self._examples[
-                : min(self._num_few_shot_examples, len(self._examples))
-            ]:
-                for turn in ex["conversations"]:
-                    messages.append({"role": turn["role"], "content": turn["value"]})
-            return messages
-
-        return messages
