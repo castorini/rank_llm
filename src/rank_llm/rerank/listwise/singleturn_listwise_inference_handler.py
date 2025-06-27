@@ -112,7 +112,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             use_alpha = kwargs.get("use_alpha", False)
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
-            is_fewshot_messages = kwargs.get("is_fewshot_messages", True)
         except KeyError as e:
             raise ValueError(f"Missing required parameter: {e}")
 
@@ -125,6 +124,14 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             for system_message in [self.template.get("system_message", "")]
             if system_message
         ]
+
+        if num_fewshot_examples > 0 and fewshot_examples:
+            examples = self._generate_fewshot_prompt(
+                num_examples=num_fewshot_examples,
+                examples=fewshot_examples,
+            )
+            prompt_messages.extend(examples)
+
         prefix_text, suffix_text = self._generate_prefix_suffix(
             num=num, query=query, rank_start=rank_start, rank_end=rank_end
         )
