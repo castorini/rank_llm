@@ -28,6 +28,17 @@ class ListwiseInferenceHandler(BaseInferenceHandler, ABC):
     ) -> str | List[Dict[str, str]]:
         pass
 
+    def _generate_fewshot_prompt(
+        self,
+        num_examples: int = 0,
+        examples: List[Dict[str, List[Dict[str, str]]]] = [],
+    ) -> List[Dict[str, str]]:
+        few_shot_prompt = []
+        for ex in examples[: min(num_examples, len(examples))]:
+            for turn in ex["conversations"]:
+                few_shot_prompt.append({"role": turn["role"], "content": turn["value"]})
+        return few_shot_prompt
+
     def _clean_response(self, response: str, **kwargs: Any) -> str:
         use_alpha = kwargs.get("use_alpha", False)
 
