@@ -45,7 +45,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders=set(),
             ),
-            "output_pattern": TemplateSectionConfig(
+            "output_patterns": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
                 allowed_placeholders=set(),
