@@ -158,6 +158,14 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             for system_message in [self.template.get("system_message", "")]
             if system_message
         ]
+
+        if num_fewshot_examples > 0 and fewshot_examples:
+            fewshot_prompt = self._generate_fewshot_prompt(
+                num_examples=num_fewshot_examples,
+                examples=fewshot_examples,
+            )
+            prompt_messages.extend(fewshot_prompt)
+
         prefix_prompt, suffix_text = self._generate_prefix_suffix(num=num, query=query)
         is_conversational_body = "body_assistant" in self.template
         body_prompt = self._generate_body(
@@ -169,12 +177,6 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             is_conversational=is_conversational_body,
         )
 
-        if num_fewshot_examples > 0 and fewshot_examples:
-            fewshot_prompt = self._generate_fewshot_prompt(
-                num_examples=num_fewshot_examples,
-                examples=fewshot_examples,
-            )
-            prompt_messages.extend(fewshot_prompt)
         if prefix_prompt and isinstance(prefix_prompt, list):
             prompt_messages.extend(prefix_prompt)
         if is_conversational_body and isinstance(body_prompt, list):

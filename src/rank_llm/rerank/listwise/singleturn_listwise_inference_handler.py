@@ -119,6 +119,14 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             for system_message in [self.template.get("system_message", "")]
             if system_message
         ]
+
+        if num_fewshot_examples > 0 and fewshot_examples:
+            examples = self._generate_fewshot_prompt(
+                num_examples=num_fewshot_examples,
+                examples=fewshot_examples,
+            )
+            prompt_messages.extend(examples)
+
         prefix_text, suffix_text = self._generate_prefix_suffix(
             num=num, query=query, rank_start=rank_start, rank_end=rank_end
         )
@@ -131,12 +139,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         )
         prompt_text = ""
 
-        if num_fewshot_examples > 0 and fewshot_examples:
-            examples = self._generate_fewshot_prompt(
-                num_examples=num_fewshot_examples,
-                examples=fewshot_examples,
-            )
-            prompt_messages.extend(examples)
         if prefix_text:
             prompt_text += prefix_text
         prompt_text += body_text
