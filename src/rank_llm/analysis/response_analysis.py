@@ -11,26 +11,21 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import Result
-from rank_llm.rerank import PromptMode
 
 
-# TODO (issue #248): need to deprecate prompt_mode and use the regex pattern from the template instead
 class ResponseAnalyzer:
     def __init__(
         self,
         data: Union[List[str], List[Result]],
         use_alpha: bool = False,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
     ) -> None:
         self._data = data
         self._use_alpha = use_alpha
-        self._prompt_mode = prompt_mode
 
     @staticmethod
     def from_inline_results(
         results: List[Result],
         use_alpha: bool = False,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
     ) -> "ResponseAnalyzer":
         """
         Method to create a ResponseAnalyzer instance from a list of Result objects.
@@ -43,15 +38,12 @@ class ResponseAnalyzer:
         Returns:
             ResponseAnalyzer: An instance of the ResponseAnalyzer.
         """
-        return ResponseAnalyzer(
-            data=results, use_alpha=use_alpha, prompt_mode=prompt_mode
-        )
+        return ResponseAnalyzer(data=results, use_alpha=use_alpha)
 
     @staticmethod
     def from_stored_files(
         filenames: List[str],
         use_alpha: bool = False,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
     ) -> "ResponseAnalyzer":
         """
         Method to create to create a ResponseAnalyzer instance from a list of filenames.
@@ -64,11 +56,9 @@ class ResponseAnalyzer:
         Returns:
             ResponseAnalyzer: An instance of the ResponseAnalyzer.
         """
-        return ResponseAnalyzer(
-            data=filenames, use_alpha=use_alpha, prompt_mode=prompt_mode
-        )
+        return ResponseAnalyzer(data=filenames, use_alpha=use_alpha)
 
-    def read_results_responses(self) -> Tuple[List[str], List[int], Tuple[str]]:
+    def read_results_responses(self) -> Tuple[List[str], List[int], List[str]]:
         """
         Reads responses from the specified list of Result objects and produces the total number of passages.
 
@@ -81,11 +71,13 @@ class ResponseAnalyzer:
         for result in self._data:
             for inference_invocation in result.invocations_history:
                 responses.append(inference_invocation.response)
-                num_passage = self._get_num_passages(inference_invocation.prompt)
+                num_passage = self._get_num_passages(
+                    inference_invocation.prompt, output_patterns[1]
+                )
                 num_passages.append(int(num_passage))
         return responses, num_passages, output_patterns
 
-    def read_saved_responses(self) -> Tuple[List[str], List[int], Tuple[str, str]]:
+    def read_saved_responses(self) -> Tuple[List[str], List[int], List[str]]:
         """
         Reads responses from the specified list of files and produces the total number of passages.
 
@@ -94,18 +86,24 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
-        output_patterns = self._data[0].invocations_history[0].output_patterns
+        with open(self._data[0]) as f:
+            invocations_histories = json.load(f)
+            output_patterns = invocations_histories[0]["invocations_history"][0][
+                "output_patterns"
+            ]
         for result in self._data:
             with open(result) as f:
                 invocations_histories = json.load(f)
             for entry in invocations_histories:
                 for inference_invocation in entry["invocations_history"]:
                     responses.append(inference_invocation["response"])
-                    num_passage = self._get_num_passages(inference_invocation["prompt"])
+                    num_passage = self._get_num_passages(
+                        inference_invocation["prompt"], output_patterns[1]
+                    )
                     num_passages.append(int(num_passage))
         return responses, num_passages, output_patterns
 
-    def read_responses(self) -> Tuple[List[str], List[int], str]:
+    def read_responses(self) -> Tuple[List[str], List[int], List[str]]:
         """
         Selects what read response class method to call depending on the input type.
 
@@ -122,122 +120,71 @@ class ResponseAnalyzer:
             )
 
     def _validate_format(self, response: str, output_pattern: str) -> bool:
-        return bool(re.match(output_pattern, response.strip()))
+        return bool(re.fullmatch(output_pattern, response.strip()))
 
-    def _get_num_passages(self, prompt) -> int:
-        match self._prompt_mode:
-            case PromptMode.LRL:
-                assert isinstance(prompt, list)
-                assert len(prompt) == 1
-                search_text = prompt[0]["content"]
-                # Look for PASSAGES=[...] and count the number of passages in the list
-                begin = search_text.find("PASSAGES = [")
-                search_text = search_text[begin:]
-                end = search_text.find("]")
-                search_text = search_text[:end]
-                return len(search_text.split(", "))
-            case PromptMode.LiT5:
-                assert type(prompt) == list
-                if not prompt:
-                    return 0
-                # For LiT5, there is one dict with "text" key per passage.
-                assert "text" in prompt[0]
-                return len(prompt)
-            case PromptMode.RANK_GPT:
-                search_text = ""
-                if type(prompt) == str:
-                    search_text = prompt
-                elif type(prompt) == list:
-                    for message in prompt:
-                        search_text += message["content"]
+    def _get_num_passages(self, prompt, rank_id_pattern: str) -> int:
+        search_text = ""
+        if isinstance(prompt, str):
+            search_text = prompt
+        elif isinstance(prompt, list):
+            if isinstance(
+                prompt[0], dict
+            ):  # check if prompt is a list of dicts (e.g., RankGPT style prompts)
+                search_text = " ".join([msg["content"] for msg in prompt])
+            elif isinstance(
+                prompt[0], str
+            ):  # check if prompt is a list of strings (e.g., LiT5 style prompts)
+                if "text" in prompt[0]:
+                    return len(prompt)
                 else:
-                    raise ValueError(f"Unsupported prompt format.")
-                regex = r"(I will provide you with) (\d+) (passages)"
-                match = re.search(regex, search_text)
-                if not match:
-                    raise ValueError(f"Unsupported prompt format.")
-                return int(match.group(2))
-            case PromptMode.RANK_GPT_APEER:
-                assert isinstance(prompt, list)
-                search_text = ""
-                for entry in prompt:
-                    search_text += entry["content"]
-                # No mention of the total number of passages.
-                # Find the last passage identifier instead.
-                matches = re.findall(r"\[\d+\]", search_text)
-                return int(matches[-1][1:-1])
-            case _:
-                raise ValueError(f"Unsupported prompt format.")
+                    raise ValueError(
+                        "Unsupported prompt format: for list of strings (RankFID method), each string should be a dict with 'text' key."
+                    )
+            else:
+                raise ValueError("Unsupported prompt format: list of mixed types.")
+        else:
+            raise ValueError("Unsupported prompt format.")
 
-    def _process_numerical_format(
+        matches = re.findall(rank_id_pattern, search_text)
+        if not matches:
+            raise ValueError(
+                "No passage identifiers found in prompt, please fix the prompt template."
+            )
+
+        # Use a set to ensure unique passage identifiers incase of examples with duplicate IDs
+        return len(set(matches))
+
+    def _process_response(
         self,
         response: str,
         num_passage: int,
         verbose: bool,
         stats_dict: Dict[str, int],
-        output_pattern: str,
-    ):
-        resp = response
-        if "</think>" in resp:
-            parts = resp.split("</think>")
-            resp = parts[-1]
-        resp = resp.replace("[rankstart]", "")
-        resp = resp.replace("[rankend]", "")
-        resp = resp.replace("SORTED_PASSAGES =", "")
-        resp = resp.replace(" ", "")
-        resp = resp.replace("PASSAGE", "")
-        resp = resp.replace("[", "")
-        resp = resp.replace("]", "")
-        resp = resp.strip()
-        if not self._validate_format(response, output_pattern):
-            if verbose:
-                print(resp)
-            stats_dict["wrong_format"] += 1
-            return
-        try:
-            delim = "," if self._prompt_mode == PromptMode.LRL else ">"
-            ranks = resp.split(delim)
-            ranks = [int(rank) for rank in ranks]
-        except ValueError:
-            if verbose:
-                print(resp)
-            stats_dict["wrong_format"] += 1
-            return
-        if len(ranks) < num_passage:
-            stats_dict["missing_documents"] += 1
-            return
-        if len(ranks) > num_passage or len(set(ranks)) < num_passage:
-            stats_dict["repetition"] += 1
-            return
-        for i in range(num_passage):
-            if not i + 1 in set(ranks):
-                stats_dict["missing_documents"] += 1
-                return
-        stats_dict["ok"] += 1
-
-    def _process_alphabetical_format(
-        self, response: str, num_passage: int, verbose: bool, stats_dict: Dict[str, int]
+        output_patterns: List[str],
+        is_alphabetical: bool = False,
     ):
         resp = response.strip()
         if "</think>" in resp:
             parts = resp.split("</think>")
             resp = parts[-1]
+        if len(output_patterns) != 2:
+            raise ValueError(
+                "Output patterns should contain exactly two elements: one for the expected output format and one for the rank ID pattern."
+            )
+        output_pattern = output_patterns[0]
+        rank_id_pattern = output_patterns[1]
 
-        if not self._validate_format(resp):
+        if not self._validate_format(resp, output_pattern):
             if verbose:
                 print(resp)
             stats_dict["wrong_format"] += 1
             return
-        begin, end = 0, 0
-        while begin < len(resp) and not resp[begin].isupper():
-            begin += 1
-        while end < len(resp) and not resp[len(resp) - end - 1].isupper():
-            end += 1
-        try:
-            resp = resp[begin : len(resp) - end]
-            ranks = resp.split("]>[")
-            ranks = [ord(rank) - ord("A") for rank in ranks]
-        except ValueError:
+        matches = re.findall(rank_id_pattern, resp)
+        if is_alphabetical:
+            ranks = [ord(rank) - ord("A") for rank in matches]
+        else:
+            ranks = [int(num) for num in matches]
+        if not ranks:
             if verbose:
                 print(resp)
             stats_dict["wrong_format"] += 1
@@ -249,7 +196,8 @@ class ResponseAnalyzer:
             stats_dict["repetition"] += 1
             return
         for i in range(num_passage):
-            if not i in set(ranks):
+            rank = i if is_alphabetical else i + 1
+            if rank not in set(ranks):
                 stats_dict["missing_documents"] += 1
                 return
         stats_dict["ok"] += 1
@@ -267,7 +215,7 @@ class ResponseAnalyzer:
         Returns:
             Dict[str, Union[int, float]]: A dictionary object containing (normalized) counts of different types of errors.
         """
-        responses, num_passages, output_pattern = self.read_responses()
+        responses, num_passages, output_patterns = self.read_responses()
 
         stats_dict = {
             "ok": 0,
@@ -276,22 +224,14 @@ class ResponseAnalyzer:
             "missing_documents": 0,
         }
         for resp, num_passage in zip(responses, num_passages):
-            if self._use_alpha:
-                self._process_alphabetical_format(
-                    response=resp,
-                    num_passage=num_passage,
-                    verbose=verbose,
-                    stats_dict=stats_dict,
-                    output_pattern=output_pattern,
-                )
-            else:
-                self._process_numerical_format(
-                    response=resp,
-                    num_passage=num_passage,
-                    verbose=verbose,
-                    stats_dict=stats_dict,
-                    output_pattern=output_pattern,
-                )
+            self._process_response(
+                response=resp,
+                num_passage=num_passage,
+                verbose=verbose,
+                stats_dict=stats_dict,
+                output_patterns=output_patterns,
+                is_alphabetical=self._use_alpha,
+            )
         if not normalize:
             return stats_dict
 
@@ -328,12 +268,6 @@ if __name__ == "__main__":
         "--use-alpha",
         action="store_true",
         help="Use alphabetical identifiers instead of the numerical ids",
-    )
-    parser.add_argument(
-        "--prompt-mode",
-        type=PromptMode,
-        default=PromptMode.RANK_GPT,
-        choices=list(PromptMode),
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Verbose output of errors"

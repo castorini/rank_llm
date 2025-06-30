@@ -165,9 +165,7 @@ for model in [
         files.append(
             f"demo_outputs/{dataset}/{model}/inference_invocations_history.json"
         )
-    analyzer = ResponseAnalyzer.from_stored_files(
-        files, use_alpha=use_alpha, prompt_mode=prompt_mode
-    )
+    analyzer = ResponseAnalyzer.from_stored_files(files, use_alpha=use_alpha)
     error_counts = analyzer.count_errors(verbose=True, normalize=True)
     results[model] = error_counts.__repr__()
 

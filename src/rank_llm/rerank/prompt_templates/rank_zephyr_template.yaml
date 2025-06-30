@@ -7,4 +7,4 @@ suffix: |-
   Rank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [2] > [1], Answer concisely and directly and only respond with the ranking results, do not say any word or explain.
 output_patterns: 
   - r"^\[\d+\]( > \[\d+\])*$" # pattern for raw output
-  - r"\[\d+\]" # pattern for rank
+  - r"\[(\d+)\]" # pattern for rank

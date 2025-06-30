@@ -1,2 +1,5 @@
 method: "rankfid"
 text: "Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "
+output_patterns: 
+  - r"^\[\d+\]( > \[\d+\])*$" # pattern for raw output
+  - r"\[(\d+)\]" # pattern for rank

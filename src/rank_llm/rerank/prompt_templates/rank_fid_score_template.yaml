@@ -1,3 +1,6 @@
 method: "rankfid"
 query: "question: {query}"
 text: "question: {query} context: {passage}"
+output_patterns: 
+  - r"^\[\d+\]( > \[\d+\])*$" # pattern for raw output
+  - r"\[(\d+)\]" # pattern for rank

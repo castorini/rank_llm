@@ -8,4 +8,4 @@ suffix: |-
   SORTED_PASSAGES =
 output_patterns: 
   - r"^\[PASSAGE\d+(, PASSAGE\d+)*\]$" # pattern for raw output
-  - r"PASSAGE\d+" # pattern for rank
+  - r"PASSAGE(\d+)" # pattern for rank

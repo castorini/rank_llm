@@ -5,4 +5,4 @@ body: "\n[{rank}] {candidate}"
 suffix: "\nGiven the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
 output_patterns: 
   - r"^\[rankstart\] \[\d+\]( > \[\d+\])* \[rankend\]$" # pattern for raw output
-  - r"\[\d+\]" # pattern for rank
+  - r"\[(\d+)\]" # pattern for rank
