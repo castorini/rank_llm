@@ -195,6 +195,12 @@ class ResponseAnalyzer:
         if "</think>" in resp:
             parts = resp.split("</think>")
             resp = parts[-1]
+        if len(output_patterns) != 2:
+            raise ValueError(
+                "Output patterns should contain exactly two elements: one for the expected output format and one for the rank ID pattern."
+            )
+        output_pattern = output_patterns[0]
+        rank_id_pattern = output_patterns[1]
 
         if not self._validate_format(resp, output_validation_regex):
             if verbose:
