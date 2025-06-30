@@ -54,17 +54,20 @@ VALID_SINGLETURN_TEMPLATE = {
     "prefix": "Sample prefix: Rank these {num} passages for query: {query}",
     "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
     "body": "[{rank}] {candidate}\n",
+    "outptut_patterns": ["test, test"],
 }
 VALID_RANKFID_TEMPLATE = {
     "method": "rankfid",
     "query": "question: {query}",
     "text": "question: {query} context: {passage} index: {index}",
+    "outptut_patterns": ["test, test"],
 }
 VALID_LRL_TEMPLATE = {
     "method": "singleturn_listwise",
     "prefix": "Sample prefix: {query}",
     "body": "[{rank}] {candidate}\n",
     "suffix": "Sample suffix: {psg_ids}",
+    "outptut_patterns": ["test, test"],
 }
 VALID_MULTITURN_TEMPLATE_1 = {
     "method": "multiturn_listwise",
@@ -74,6 +77,7 @@ VALID_MULTITURN_TEMPLATE_1 = {
     "body_user": "[{rank}] {candidate}",
     "body_assistant": "Received passage [{rank}].",
     "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+    "outptut_patterns": ["test, test"],
 }
 VALID_MULTITURN_TEMPLATE_2 = {
     "method": "multiturn_listwise",
@@ -82,18 +86,25 @@ VALID_MULTITURN_TEMPLATE_2 = {
     "prefix_assistant": "Okay, please provide the passages.",
     "body_user": "[{rank}] {candidate}\n",
     "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+    "outptut_patterns": ["test, test"],
 }
 
 # Sample invalid templates for testing validation
 INVALID_SINGLETURN_TEMPLATES = [
-    {"method": "pairwise", "body": "{rank} {candidate}"},  # Wrong method type
+    {
+        "method": "pairwise",
+        "body": "{rank} {candidate}",
+        "outptut_patterns": ["test, test"],
+    },  # Wrong method type
     {
         "method": "singleturn_listwise",
         "body": "Missing rank placeholder {rank}",
+        "outptut_patterns": ["test, test"],
     },  # Missing required placeholder: {candidate}
     {
         "method": "singleturn_listwise",
         "body": "{rank} {candidate}",
+        "outptut_patterns": ["test, test"],
         "unknown_key": "value",
     },  # Unknown key
     {
@@ -101,6 +112,7 @@ INVALID_SINGLETURN_TEMPLATES = [
         "prefix": "{num}",
         "body": "{rank} {candidate}",
         "suffix": "test",
+        "outptut_patterns": ["test, test"],
     },  # Missing query placeholder in both prefix and suffix
 ]
 INVALID_MULTITURN_TEMPLATES = [
@@ -108,16 +120,19 @@ INVALID_MULTITURN_TEMPLATES = [
         "method": "singleturn_listwise",
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
+        "outptut_patterns": ["test, test"],
     },  # Wrong method type
     {
         "method": "multiturn_listwise",
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
         "unknown_key": "value",
+        "outptut_patterns": ["test, test"],
     },  # Unknown key
     {
         "method": "multiturn_listwise",
         "body": "{rank} {candidate}",
+        "outptut_patterns": ["test, test"],
     },  # Missing assistant sections
     {
         "method": "multiturn_listwise",
@@ -125,6 +140,7 @@ INVALID_MULTITURN_TEMPLATES = [
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
         "suffix": "test",
+        "outptut_patterns": ["test, test"],
     },  # Missing prefix_assistant when body_assistant and prefix are both present
     {
         "method": "multiturn_listwise",
@@ -134,25 +150,30 @@ INVALID_MULTITURN_TEMPLATES = [
         "body": "[{rank}] {candidate}",
         "body_assistant": "Received passage [{rank}].",
         "suffix": "Sample suffix: Rank the provided {num} passages",
+        "outptut_patterns": ["test, test"],
     },  # Missing query placeholder in both prefix and suffix
 ]
 INVALID_RANKFID_TEMPLATES = [
     {
         "method": "singleturn_listwise",
         "text": "{query} {passage}",
+        "outptut_patterns": ["test, test"],
     },  # Wrong method type
     {
         "method": "rankfid_listwise",
         "query": "question: {query}",
+        "outptut_patterns": ["test, test"],
     },  # Missing text section
     {
         "method": "rankfid_listwise",
         "text": "question: {query} context: {passage}",
         "unknown_key": "value",
+        "outptut_patterns": ["test, test"],
     },  # Unknown key
     {
         "method": "rankfid_listwise",
         "text": "context: {passage}",
+        "outptut_patterns": ["test, test"],
     },  # Missing query placeholder
 ]
 
