@@ -17,6 +17,7 @@ class PromptMode(Enum):
     MONOT5 = "monot5"
     DUOT5 = "duot5"
     LiT5 = "LiT5"
+    INSERTRANK = "insertrank"
 
     def __str__(self):
         return self.value

@@ -10,6 +10,7 @@ from rank_llm.rerank import (
     get_openai_api_key,
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
+from rank_llm.rerank.listwise.insertrank_reranker import InsertRankReranker
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.pointwise.monot5 import MonoT5
@@ -439,6 +440,43 @@ class Reranker:
                 device=device,
             )
             print(f"Completed loading {model_path}")
+        elif kwargs.get("prompt_mode") == PromptMode.INSERTRANK:
+            # InsertRank reranking model
+            print(f"Loading InsertRank with {model_path} ...")
+            
+            keys_and_defaults = [
+                ("context_size", 4096),
+                ("num_few_shot_examples", 0),
+                ("few_shot_file", None),
+                ("device", "cuda"),
+                ("num_gpus", 1),
+                ("variable_passages", False),
+                ("window_size", 20),
+                ("system_message", None),
+            ]
+            [
+                context_size,
+                num_few_shot_examples,
+                few_shot_file,
+                device,
+                num_gpus,
+                variable_passages,
+                window_size,
+                system_message,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = InsertRankReranker(
+                model_path=model_path,
+                context_size=context_size,
+                num_few_shot_examples=num_few_shot_examples,
+                few_shot_file=few_shot_file,
+                device=device,
+                num_gpus=num_gpus,
+                variable_passages=variable_passages,
+                window_size=window_size,
+                system_message=system_message,
+            )
+            print(f"Completed loading InsertRank with {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             agent = None
