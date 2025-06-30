@@ -20,6 +20,11 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
                 required_placeholders={"query"},
                 allowed_placeholders=set(),
             ),
+            "output_patterns": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
         }
 
         # Validate the method value
