@@ -14,14 +14,14 @@ class TestResponseAnalyzer(unittest.TestCase):
                 candidates=[],
                 invocations_history=[
                     InferenceInvocation(
-                        prompt="I will provide you with 3 passages",
+                        prompt="I will provide you with 3 passages: [1]Test, [2]Test, [3]Test",
                         response="[1] > [2] > [3]",
                         input_token_count=100,
                         output_token_count=50,
                         output_patterns=output_patterns,
                     ),
                     InferenceInvocation(
-                        prompt="I will provide you with 2 passages",
+                        prompt="I will provide you with 2 passages: [1]Test, [2]Test",
                         response="[2] > [1]",
                         input_token_count=80,
                         output_token_count=40,
@@ -34,7 +34,7 @@ class TestResponseAnalyzer(unittest.TestCase):
                 candidates=[],
                 invocations_history=[
                     InferenceInvocation(
-                        prompt="I will provide you with 4 passages",
+                        prompt="I will provide you with 4 passages: [1]Test, [2]Test, [3]Test, [4]Test",
                         response="[4] > [3] > [2] > [1]",
                         input_token_count=120,
                         output_token_count=60,
