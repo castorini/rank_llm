@@ -5,4 +5,6 @@ suffix: |-
   QUESTION: "{query}"
   PASSAGES: {psg_ids}
   Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.
-  SORTED_PASSAGES = 
+  SORTED_PASSAGES =
+output_validation_regex: r"^\[PASSAGE\d+(, PASSAGE\d+)*\]$"
+output_extraction_regex: r"PASSAGE(\d+)"

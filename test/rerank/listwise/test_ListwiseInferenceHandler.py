@@ -54,17 +54,23 @@ VALID_SINGLETURN_TEMPLATE = {
     "prefix": "Sample prefix: Rank these {num} passages for query: {query}",
     "suffix": "Sample suffix: Rank the provided {num} passages based on query: {query}",
     "body": "[{rank}] {candidate}\n",
+    "output_validation_regex": "test",
+    "output_extraction_regex": "test",
 }
 VALID_RANKFID_TEMPLATE = {
     "method": "rankfid",
     "query": "question: {query}",
     "text": "question: {query} context: {passage} index: {index}",
+    "output_validation_regex": "test",
+    "output_extraction_regex": "test",
 }
 VALID_LRL_TEMPLATE = {
     "method": "singleturn_listwise",
     "prefix": "Sample prefix: {query}",
     "body": "[{rank}] {candidate}\n",
     "suffix": "Sample suffix: {psg_ids}",
+    "output_validation_regex": "test",
+    "output_extraction_regex": "test",
 }
 VALID_MULTITURN_TEMPLATE_1 = {
     "method": "multiturn_listwise",
@@ -74,6 +80,8 @@ VALID_MULTITURN_TEMPLATE_1 = {
     "body_user": "[{rank}] {candidate}",
     "body_assistant": "Received passage [{rank}].",
     "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+    "output_validation_regex": "test",
+    "output_extraction_regex": "test",
 }
 VALID_MULTITURN_TEMPLATE_2 = {
     "method": "multiturn_listwise",
@@ -82,18 +90,29 @@ VALID_MULTITURN_TEMPLATE_2 = {
     "prefix_assistant": "Okay, please provide the passages.",
     "body_user": "[{rank}] {candidate}\n",
     "suffix_user": "Sample suffix: Rank the provided {num} passages based on query: {query}",
+    "output_validation_regex": "test",
+    "output_extraction_regex": "test",
 }
 
 # Sample invalid templates for testing validation
 INVALID_SINGLETURN_TEMPLATES = [
-    {"method": "pairwise", "body": "{rank} {candidate}"},  # Wrong method type
+    {
+        "method": "pairwise",
+        "body": "{rank} {candidate}",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
+    },  # Wrong method type
     {
         "method": "singleturn_listwise",
         "body": "Missing rank placeholder {rank}",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Missing required placeholder: {candidate}
     {
         "method": "singleturn_listwise",
         "body": "{rank} {candidate}",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
         "unknown_key": "value",
     },  # Unknown key
     {
@@ -101,6 +120,8 @@ INVALID_SINGLETURN_TEMPLATES = [
         "prefix": "{num}",
         "body": "{rank} {candidate}",
         "suffix": "test",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Missing query placeholder in both prefix and suffix
 ]
 INVALID_MULTITURN_TEMPLATES = [
@@ -108,16 +129,22 @@ INVALID_MULTITURN_TEMPLATES = [
         "method": "singleturn_listwise",
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Wrong method type
     {
         "method": "multiturn_listwise",
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
         "unknown_key": "value",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Unknown key
     {
         "method": "multiturn_listwise",
         "body": "{rank} {candidate}",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Missing assistant sections
     {
         "method": "multiturn_listwise",
@@ -125,6 +152,8 @@ INVALID_MULTITURN_TEMPLATES = [
         "body": "{rank} {candidate}",
         "body_assistant": "{rank}",
         "suffix": "test",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Missing prefix_assistant when body_assistant and prefix are both present
     {
         "method": "multiturn_listwise",
@@ -134,12 +163,16 @@ INVALID_MULTITURN_TEMPLATES = [
         "body": "[{rank}] {candidate}",
         "body_assistant": "Received passage [{rank}].",
         "suffix": "Sample suffix: Rank the provided {num} passages",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Missing query placeholder in both prefix and suffix
 ]
 INVALID_RANKFID_TEMPLATES = [
     {
         "method": "singleturn_listwise",
         "text": "{query} {passage}",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Wrong method type
     {
         "method": "rankfid_listwise",
@@ -149,10 +182,14 @@ INVALID_RANKFID_TEMPLATES = [
         "method": "rankfid_listwise",
         "text": "question: {query} context: {passage}",
         "unknown_key": "value",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Unknown key
     {
         "method": "rankfid_listwise",
         "text": "context: {passage}",
+        "output_validation_regex": "test",
+        "output_extraction_regex": "test",
     },  # Missing query placeholder
 ]
 

@@ -10,6 +10,11 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
         TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+            "method": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
             "body_user": TemplateSectionConfig(
                 required=True,
                 required_placeholders={"rank", "candidate"},
@@ -39,6 +44,16 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required=False,
                 required_placeholders=set(),
                 allowed_placeholders={"query", "num"},
+            ),
+            "output_validation_regex": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
+            "output_extraction_regex": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
             ),
         }
 
