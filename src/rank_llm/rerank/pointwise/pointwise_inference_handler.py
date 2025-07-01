@@ -13,11 +13,16 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
         TEMPLATE_SECTIONS = {
+            "method": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
             "body": TemplateSectionConfig(
                 required=True,
                 required_placeholders={"query", "doc_content"},
                 allowed_placeholders=set(),
-            )
+            ),
         }
 
         # Validate the method value

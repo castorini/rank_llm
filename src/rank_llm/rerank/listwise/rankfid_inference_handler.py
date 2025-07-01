@@ -10,6 +10,11 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
 
     def _validate_template(self, template: Dict[str, str], strict: bool = False):
         TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+            "method": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
             "text": TemplateSectionConfig(
                 required=True,
                 required_placeholders={"query", "passage"},
@@ -18,6 +23,16 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
             "query": TemplateSectionConfig(
                 required=False,
                 required_placeholders={"query"},
+                allowed_placeholders=set(),
+            ),
+            "output_validation_regex": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
+            "output_extraction_regex": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
                 allowed_placeholders=set(),
             ),
         }

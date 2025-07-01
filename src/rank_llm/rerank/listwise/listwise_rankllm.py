@@ -127,7 +127,12 @@ class ListwiseRankLLM(RankLLM, ABC):
                 if result.invocations_history is None:
                     result.invocations_history = []
                 inference_invocation = InferenceInvocation(
-                    prompt, permutation, in_token_count, out_token_count
+                    prompt,
+                    permutation,
+                    in_token_count,
+                    out_token_count,
+                    self._inference_handler.template["output_validation_regex"],
+                    self._inference_handler.template["output_extraction_regex"],
                 )
                 result.invocations_history.append(inference_invocation)
             result = self.receive_permutation(
@@ -166,7 +171,12 @@ class ListwiseRankLLM(RankLLM, ABC):
             print(f"Output: {permutation}")
         if populate_invocations_history:
             inference_invocation = InferenceInvocation(
-                prompt, permutation, in_token_count, out_token_count
+                prompt,
+                permutation,
+                in_token_count,
+                out_token_count,
+                self._inference_handler.template["output_validation_regex"],
+                self._inference_handler.template["output_extraction_regex"],
             )
             result.invocations_history.append(inference_invocation)
         result = self.receive_permutation(
@@ -367,34 +377,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         ) / 1000.0
         return (cost, input_token_count + output_token_count)
 
-    def _clean_response(self, response: str) -> str:
-        if "</think>" in response:
-            response = response.split("</think>")[-1].strip()
-
-        fake_numbers_map = str.maketrans(
-            "⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉①②③④⑤⑥⑦⑧⑨❶❷❸❹❺❻❼❽❾０１２３４５６７８９🄀🄁🄂🄃🄄🄅🄆🄇🄈🄉",
-            "0123456789012345678912345678912345678901234567890123456789",
-        )
-        response = response.translate(fake_numbers_map)
-
-        new_response = ""
-        if self._use_alpha:
-            for c in response:
-                if not c.isalpha():
-                    new_response += " "
-                else:
-                    new_response += str(ord(c) - ALPH_START_IDX)
-            new_response = new_response.strip()
-        else:
-            for c in response:
-                if not c.isdigit():
-                    new_response += " "
-                else:
-                    new_response += c
-            new_response = new_response.strip()
-
-        return new_response
-
     def _remove_duplicate(self, response: List[int]) -> List[int]:
         new_response = []
         for c in response:
@@ -440,7 +422,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         original_rank = [tt for tt in range(len(cut_range))]
         try:
             # Parse and normalize the permutation indices
-            response = self._clean_response(permutation)
+            response = self._inference_handler._clean_response(permutation)
             response = [int(x) - 1 for x in response.split()]
             response = self._remove_duplicate(response)
 
