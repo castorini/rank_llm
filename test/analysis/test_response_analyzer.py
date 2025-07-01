@@ -18,7 +18,7 @@ class TestResponseAnalyzer(unittest.TestCase):
                         input_token_count=100,
                         output_token_count=50,
                         output_validation_regex=r"^\[\d+\]( > \[\d+\])*$",
-                        output_extraction_regex="r\[(\d+)\]",
+                        output_extraction_regex=r"\[(\d+)\]",
                     ),
                     InferenceInvocation(
                         prompt="I will provide you with 2 passages: [1]Test, [2]Test",
@@ -26,7 +26,7 @@ class TestResponseAnalyzer(unittest.TestCase):
                         input_token_count=80,
                         output_token_count=40,
                         output_validation_regex=r"^\[\d+\]( > \[\d+\])*$",
-                        output_extraction_regex="r\[(\d+)\]",
+                        output_extraction_regex=r"\[(\d+)\]",
                     ),
                 ],
             ),
@@ -40,7 +40,7 @@ class TestResponseAnalyzer(unittest.TestCase):
                         input_token_count=120,
                         output_token_count=60,
                         output_validation_regex=r"^\[\d+\]( > \[\d+\])*$",
-                        output_extraction_regex="r\[(\d+)\]",
+                        output_extraction_regex=r"\[(\d+)\]",
                     )
                 ],
             ),
