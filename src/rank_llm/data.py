@@ -30,7 +30,8 @@ class InferenceInvocation:
     response: str
     input_token_count: int
     output_token_count: int
-    output_patterns: List[str] = field(default_factory=list)
+    output_validation_regex: str
+    output_extraction_regex: str
 
 
 @dataclass

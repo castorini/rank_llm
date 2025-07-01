@@ -40,7 +40,12 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders={"query", "num"},
             ),
-            "output_patterns": TemplateSectionConfig(
+            "output_validation_regex": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
+            "output_extraction_regex": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
                 allowed_placeholders=set(),

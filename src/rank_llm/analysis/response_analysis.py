@@ -58,7 +58,7 @@ class ResponseAnalyzer:
         """
         return ResponseAnalyzer(data=filenames, use_alpha=use_alpha)
 
-    def read_results_responses(self) -> Tuple[List[str], List[int], List[str]]:
+    def read_results_responses(self) -> Tuple[List[str], List[int], str, str]:
         """
         Reads responses from the specified list of Result objects and produces the total number of passages.
 
@@ -67,17 +67,22 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
-        output_patterns = self._data[0].invocations_history[0].output_patterns
+        output_validation_regex = (
+            self._data[0].invocations_history[0].output_validation_regex
+        )
+        output_extraction_regex = (
+            self._data[0].invocations_history[0].output_extraction_regex
+        )
         for result in self._data:
             for inference_invocation in result.invocations_history:
                 responses.append(inference_invocation.response)
                 num_passage = self._get_num_passages(
-                    inference_invocation.prompt, output_patterns[1]
+                    inference_invocation.prompt, output_extraction_regex
                 )
                 num_passages.append(int(num_passage))
-        return responses, num_passages, output_patterns
+        return responses, num_passages, output_validation_regex, output_extraction_regex
 
-    def read_saved_responses(self) -> Tuple[List[str], List[int], List[str]]:
+    def read_saved_responses(self) -> Tuple[List[str], List[int], str, str]:
         """
         Reads responses from the specified list of files and produces the total number of passages.
 
@@ -88,9 +93,12 @@ class ResponseAnalyzer:
         responses = []
         with open(self._data[0]) as f:
             invocations_histories = json.load(f)
-            output_patterns = invocations_histories[0]["invocations_history"][0][
-                "output_patterns"
-            ]
+            output_validation_regex = invocations_histories[0]["invocations_history"][
+                0
+            ]["output_validation_regex"]
+            output_extraction_regex = invocations_histories[0]["invocations_history"][
+                0
+            ]["output_extraction_regex"]
         for result in self._data:
             with open(result) as f:
                 invocations_histories = json.load(f)
@@ -98,12 +106,12 @@ class ResponseAnalyzer:
                 for inference_invocation in entry["invocations_history"]:
                     responses.append(inference_invocation["response"])
                     num_passage = self._get_num_passages(
-                        inference_invocation["prompt"], output_patterns[1]
+                        inference_invocation["prompt"], output_extraction_regex
                     )
                     num_passages.append(int(num_passage))
-        return responses, num_passages, output_patterns
+        return responses, num_passages, output_validation_regex, output_extraction_regex
 
-    def read_responses(self) -> Tuple[List[str], List[int], List[str]]:
+    def read_responses(self) -> Tuple[List[str], List[int], str, str]:
         """
         Selects what read response class method to call depending on the input type.
 
@@ -119,40 +127,59 @@ class ResponseAnalyzer:
                 "Input data must be a list of file paths or a list of Result objects."
             )
 
-    def _validate_format(self, response: str, output_pattern: str) -> bool:
-        return bool(re.fullmatch(output_pattern, response.strip()))
+    def _validate_format(self, response: str, output_validation_regex: str) -> bool:
+        return bool(re.fullmatch(output_validation_regex, response.strip()))
 
-    def _get_num_passages(self, prompt, rank_id_pattern: str) -> int:
-        search_text = ""
+    def _get_num_passages(
+        self, prompt: Union[str, List[Union[str, Dict[str, str]]]], rank_id_pattern: str
+    ) -> int:
+        """
+        Count unique passage identifiers in prompt.
+
+        Parameters
+        ----------
+        prompt
+            One of:
+            • A single string.
+            • A list of dicts with "role" and "content" keys (RankGPT style).
+            • A list of strings that contain the substring "text" (LiT-5 style).
+        rank_id_pattern
+            Regex that captures passage IDs.
+
+        Returns
+        -------
+        int
+            Number of **unique** passage IDs.
+
+        Raises
+        ------
+        ValueError
+            If the prompt format is unsupported or no identifiers are found.
+        """
+        if not prompt:
+            return 0
+
+        # Convert remaining prompt types to a single search string
         if isinstance(prompt, str):
             search_text = prompt
-        elif isinstance(prompt, list):
-            if isinstance(
-                prompt[0], dict
-            ):  # check if prompt is a list of dicts (e.g., RankGPT style prompts)
-                search_text = " ".join([msg["content"] for msg in prompt])
-            elif isinstance(
-                prompt[0], str
-            ):  # check if prompt is a list of strings (e.g., LiT5 style prompts)
-                if "text" in prompt[0]:
-                    return len(prompt)
-                else:
-                    raise ValueError(
-                        "Unsupported prompt format: for list of strings (RankFID method), each string should be a dict with 'text' key."
-                    )
-            else:
-                raise ValueError("Unsupported prompt format: list of mixed types.")
+        elif isinstance(prompt, list) and isinstance(prompt[0], dict):  # RankGPT style
+            if "text" in prompt[0]:  # LiT-5 style
+                return len(prompt)
+
+            # RankGPT style (list of dict): extract user messages only
+            user_msgs = [msg["content"] for msg in prompt if msg.get("role") == "user"]
+            search_text = " ".join(user_msgs)
         else:
             raise ValueError("Unsupported prompt format.")
 
-        matches = re.findall(rank_id_pattern, search_text)
-        if not matches:
+        # Extract and count unique rank IDs
+        ids = re.findall(rank_id_pattern, search_text)
+        if not ids:
             raise ValueError(
-                "No passage identifiers found in prompt, please fix the prompt template."
+                "No passage identifiers found in prompt; please fix the prompt template."
             )
 
-        # Use a set to ensure unique passage identifiers incase of examples with duplicate IDs
-        return len(set(matches))
+        return len(set(ids))
 
     def _process_response(
         self,
@@ -160,26 +187,21 @@ class ResponseAnalyzer:
         num_passage: int,
         verbose: bool,
         stats_dict: Dict[str, int],
-        output_patterns: List[str],
+        output_validation_regex: str,
+        output_extraction_regex: str,
         is_alphabetical: bool = False,
     ):
         resp = response.strip()
         if "</think>" in resp:
             parts = resp.split("</think>")
             resp = parts[-1]
-        if len(output_patterns) != 2:
-            raise ValueError(
-                "Output patterns should contain exactly two elements: one for the expected output format and one for the rank ID pattern."
-            )
-        output_pattern = output_patterns[0]
-        rank_id_pattern = output_patterns[1]
 
-        if not self._validate_format(resp, output_pattern):
+        if not self._validate_format(resp, output_validation_regex):
             if verbose:
                 print(resp)
             stats_dict["wrong_format"] += 1
             return
-        matches = re.findall(rank_id_pattern, resp)
+        matches = re.findall(output_extraction_regex, resp)
         if is_alphabetical:
             ranks = [ord(rank) - ord("A") for rank in matches]
         else:
@@ -215,7 +237,12 @@ class ResponseAnalyzer:
         Returns:
             Dict[str, Union[int, float]]: A dictionary object containing (normalized) counts of different types of errors.
         """
-        responses, num_passages, output_patterns = self.read_responses()
+        (
+            responses,
+            num_passages,
+            output_validation_regex,
+            output_extraction_regex,
+        ) = self.read_responses()
 
         stats_dict = {
             "ok": 0,
@@ -229,7 +256,8 @@ class ResponseAnalyzer:
                 num_passage=num_passage,
                 verbose=verbose,
                 stats_dict=stats_dict,
-                output_patterns=output_patterns,
+                output_validation_regex=output_validation_regex,
+                output_extraction_regex=output_extraction_regex,
                 is_alphabetical=self._use_alpha,
             )
         if not normalize:

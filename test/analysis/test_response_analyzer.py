@@ -7,7 +7,6 @@ from src.rank_llm.data import InferenceInvocation, Result
 class TestResponseAnalyzer(unittest.TestCase):
     # create a list of mock Result objects
     def setUp(self):
-        output_patterns = [r"^\[\d+\]( > \[\d+\])*$", r"\[(\d+)\]"]
         self.mock_results = [
             Result(
                 query="Query 1",
@@ -18,14 +17,16 @@ class TestResponseAnalyzer(unittest.TestCase):
                         response="[1] > [2] > [3]",
                         input_token_count=100,
                         output_token_count=50,
-                        output_patterns=output_patterns,
+                        output_validation_regex="test",
+                        output_extraction_regex="test",
                     ),
                     InferenceInvocation(
                         prompt="I will provide you with 2 passages: [1]Test, [2]Test",
                         response="[2] > [1]",
                         input_token_count=80,
                         output_token_count=40,
-                        output_patterns=output_patterns,
+                        output_validation_regex="test",
+                        output_extraction_regex="test",
                     ),
                 ],
             ),
@@ -38,7 +39,8 @@ class TestResponseAnalyzer(unittest.TestCase):
                         response="[4] > [3] > [2] > [1]",
                         input_token_count=120,
                         output_token_count=60,
-                        output_patterns=output_patterns,
+                        output_validation_regex="test",
+                        output_extraction_regex="test",
                     )
                 ],
             ),
@@ -46,7 +48,12 @@ class TestResponseAnalyzer(unittest.TestCase):
 
     def test_read_results_responses(self):
         analyzer = ResponseAnalyzer.from_inline_results(self.mock_results)
-        responses, num_passages, output_patterns = analyzer.read_results_responses()
+        (
+            responses,
+            num_passages,
+            output_validation_regex,
+            output_extraction_regex,
+        ) = analyzer.read_results_responses()
 
         self.assertEqual(len(responses), 3, "Should have 3 responses")
         self.assertEqual(len(num_passages), 3, "Should have 3 num_passages")

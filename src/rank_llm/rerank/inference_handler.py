@@ -58,8 +58,6 @@ class BaseInferenceHandler(ABC):
 
         # Validate the rest of the template keys
         for template_key, template_text in template.items():
-            if template_key == "method" or template_key == "output_patterns":
-                continue
             if template_key not in template_section:
                 raise ValueError(f"Unsupported template section: {template_key}")
 

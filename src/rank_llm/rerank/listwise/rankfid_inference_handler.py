@@ -20,7 +20,12 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
                 required_placeholders={"query"},
                 allowed_placeholders=set(),
             ),
-            "output_patterns": TemplateSectionConfig(
+            "output_validation_regex": TemplateSectionConfig(
+                required=True,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
+            "output_extraction_regex": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
                 allowed_placeholders=set(),
