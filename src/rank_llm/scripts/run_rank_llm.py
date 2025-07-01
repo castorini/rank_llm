@@ -217,7 +217,6 @@ if __name__ == "__main__":
         "--is_thinking",
         action="store_true",
         help="enables thinking mode which increases output token budget to account for the full thinking trace + response.",
-        default=False,
     )
     parser.add_argument(
         "--reasoning_token_budget",
