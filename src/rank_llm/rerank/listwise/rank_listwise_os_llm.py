@@ -348,7 +348,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 fewshot_examples=self._examples,
             )
             prompt = self._tokenizer.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=self._is_thinking,
             )
             prompt = fix_text(prompt)
             num_tokens = self.get_num_tokens(prompt)
