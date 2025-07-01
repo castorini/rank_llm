@@ -177,7 +177,6 @@ INVALID_RANKFID_TEMPLATES = [
     {
         "method": "rankfid_listwise",
         "query": "question: {query}",
-        "output_patterns": ["test, test"],
     },  # Missing text section
     {
         "method": "rankfid_listwise",
