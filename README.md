@@ -346,7 +346,7 @@ If you would like to contribute to the project, please refer to the [contributio
 
 ## 📜️ Release History
 
-+ v0.25.0: PLACEHOLDER, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.md)]
++ v0.25.0: PLACEHOLDER, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.0.md)]
 
 <a id=references></a>
 # ✨ References
