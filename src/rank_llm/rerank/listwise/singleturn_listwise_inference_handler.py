@@ -18,7 +18,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             "body": TemplateSectionConfig(
                 required=True,
                 required_placeholders={"rank", "candidate"},
-                allowed_placeholders=set(),
+                allowed_placeholders={"score"},
             ),
             "system_message": TemplateSectionConfig(
                 required=False,
@@ -104,8 +104,9 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
 
             content = self._convert_doc_to_prompt_content(cand.doc, max_length)
             identifier = chr(self.ALPH_START_IDX + rank) if use_alpha else str(rank)
+            score = f"{cand.score:.3f}"
 
-            fmt_values = {"rank": identifier, "candidate": content}
+            fmt_values = {"rank": identifier, "candidate": content, "score": score}
             single_text = self._format_template(
                 template_key="body", fmt_values=fmt_values
             )
