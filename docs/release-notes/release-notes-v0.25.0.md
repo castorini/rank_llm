@@ -4,7 +4,7 @@
 
 ## Summary of Changes
 
-+ Added support for prompt templates using yaml files. The current default templates can be found [here](src/rank_llm/rerank/prompt_templates)
++ Added support for prompt templates using yaml files. The current default templates can be found [here](/src/rank_llm/rerank/prompt_templates)
     - After this change, prompts for model coordinators are entirely generated based on the prompt templates so prompt_mode is no longer needed and will be deprecated in v0.30.0 (prompt_mode has been changed to an optional argument for creating model coordinators and analyzing responses)
 + Added support for thinking/reasoning models
     - The thinking traces for reasoning models can now be toggled off by setting the `is_thinking` argument to True
@@ -13,9 +13,9 @@
     - For supported model coordinators, the number of few-shot examples to use can be specified via the `num_few_shot_examples` argument and a json file containing the few-shot examples can be used via the `few_shot_file` argument
 + Improved/added test coverage for all new features and added regression tests to check for silent errors
 + Updated documentations:
-    - Added all of the results from the [paper](https://arxiv.org/pdf/2505.19284) to 2CR [pages](src/rank_llm/2cr)
+    - Added all of the results from the [rankllm paper](https://arxiv.org/pdf/2505.19284) to 2CR [pages](/src/rank_llm/2cr)
     - Moved training dependencies to optional dependencies in pyproject
-    - Added [documentation](docs/external-integrations.md) with instructions on using rankllm with external integrations
+    - Added [documentation](/docs/external-integrations.md) with instructions on using rankllm with external integrations
 + Other QoL changes/bug fixes:
     - Updated and optimized first stage corpus caching logic and migrated commonly used corpus to HuggingFace Datasets [repo](https://huggingface.co/datasets/castorini/rank_llm_data) and added support for new indices and topics that's supported by [Pyserini](https://github.com/castorini/pyserini/)
     - Added ability to save the model's inference history via `populate_invocations_history` argument by running CLI command
