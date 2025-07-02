@@ -1,13 +1,16 @@
 method: "singleturn_listwise"
+system_message: "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query"
 prefix: |
-  You are also given the BM25 scores from a lexical retrieval system.
+  I will provide you with {num} passages, each indicated by a numerical identifier []. I will also provide the BM25 scores from a lexical retrieval system.
 
-  Query: {query}
+  Rank the passages based on their relevance to the search query: {query}.
 
 body: |
-  [{rank}]. {candidate}
+  [{rank}] {candidate}
   BM25 score: {score}
 
-suffix: "Rerank the above {num} passages based on their relevance to the query. Consider both the document content and the BM25 scores as signals for relevance. Return the ranking as a list of numbers from 1 to {num}, most relevant first."
+suffix: |-
+  Search Query: {query}.
+  Rerank the above {num} passages based on their relevance to the query. Consider both the document content and the BM25 scores as signals for relevance. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [2] > [1]. Return the ranking as a list of numbers from 1 to {num}, most relevant first. Answer concisely and directly and only respond with the ranking results, do not say any word or explain.
 output_validation_regex: r"^\[\d+\]( > \[\d+\])*$"
 output_extraction_regex: r"\[(\d+)\]" 
