@@ -7,7 +7,7 @@ prefix: |
 
 body: |
   [{rank}] {candidate}
-  BM25 score: {score}
+  BM25 score for passge [{rank}]: {score}
 
 suffix: |-
   Search Query: {query}.
