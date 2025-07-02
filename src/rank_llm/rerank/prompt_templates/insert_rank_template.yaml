@@ -1,11 +1,13 @@
 method: "singleturn_listwise"
-prefix: |-
-  "You are also given the BM25 scores from a lexical retrieval system.\n"
-  "Query: {query}\n\n"
-body: |-
-  "[{rank}]. {candidate}"
-  "BM25 score: {score}\n\n"
-suffix: |-
-  "Rerank the above {num} passages based on their relevance to the query. Consider both the document content and the BM25 scores as signals for relevance. Return the ranking as a list of numbers from 1 to {num}, most relevant first."
+prefix: |
+  You are also given the BM25 scores from a lexical retrieval system.
+
+  Query: {query}
+
+body: |
+  [{rank}]. {candidate}
+  BM25 score: {score}
+
+suffix: "Rerank the above {num} passages based on their relevance to the query. Consider both the document content and the BM25 scores as signals for relevance. Return the ranking as a list of numbers from 1 to {num}, most relevant first."
 output_validation_regex: r"^\[\d+\]( > \[\d+\])*$"
 output_extraction_regex: r"\[(\d+)\]" 

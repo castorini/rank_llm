@@ -1,6 +1,8 @@
 method: "singleturn_listwise"
-prefix: "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
-body: "PASSAGE{rank} = \"{candidate}\"\n"
+prefix: |
+  Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).
+body: |
+  PASSAGE{rank} = "{candidate}"
 suffix: |-
   QUESTION: "{query}"
   PASSAGES: {psg_ids}
