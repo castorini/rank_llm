@@ -147,7 +147,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 tensor_parallel_size=num_gpus,
                 gpu_memory_utilization=0.90,
             )
-            self._tokenizer = self._vllm_handler.get_tokenizer()
+            self._tokenizer = self._vllm_handler._tokenizer
 
     def rerank_batch(
         self,
