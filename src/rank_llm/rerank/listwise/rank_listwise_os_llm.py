@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
-from rank_llm.rerank.vllm_handler import vLLMHandler
+from rank_llm.rerank.vllm_handler import VllmHandler
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -139,7 +139,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
-            self._vllm_handler = vLLMHandler(
+            self._vllm_handler = VllmHandler(
                 model=model,
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
@@ -147,7 +147,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 tensor_parallel_size=num_gpus,
                 gpu_memory_utilization=0.90,
             )
-            self._tokenizer = self._vllm_handler._tokenizer
+            self._tokenizer = self._vllm_handler.get_tokenizer()
 
     def rerank_batch(
         self,
