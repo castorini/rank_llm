@@ -55,4 +55,4 @@ class VllmHandler:
             **kwargs,
         )
 
-        return self._llm.generate(prompts, sampling_params)
+        return self._vllm.generate(prompts, sampling_params)
