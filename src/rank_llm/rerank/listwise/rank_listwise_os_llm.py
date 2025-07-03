@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank import PromptMode
+from rank_llm.rerank.vllm_handler import VllmHandler
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -138,23 +139,15 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
-            self._llm = vllm.LLM(
-                model,
+            self._vllm_handler = VllmHandler(
+                model=model,
                 download_dir=os.getenv("HF_HOME"),
                 enforce_eager=False,
                 max_logprobs=30,
                 tensor_parallel_size=num_gpus,
                 gpu_memory_utilization=0.90,
             )
-            self._tokenizer = self._llm.get_tokenizer()
-
-            if "rank_vicuna" in model:
-                setattr(
-                    self._tokenizer,
-                    "chat_template",
-                    """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}
-                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
-                )
+            self._tokenizer = self._vllm_handler.get_tokenizer()
 
     def rerank_batch(
         self,
@@ -238,25 +231,30 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         if current_window_size is None:
             current_window_size = self._window_size
 
-        if isinstance(self._llm, vllm.LLM):
-            logger.info(f"VLLM Generating!")
+        if hasattr(self, "_vllm_handler"):
+            logger.info("VLLM Generating!")
 
             if self._use_logits:
-                params = vllm.SamplingParams(
-                    min_tokens=2, max_tokens=2, temperature=0.0, logprobs=30
+                outputs = self._vllm_handler.generate_output(
+                    prompts=prompts,
+                    min_tokens=2,
+                    max_tokens=2,
+                    temperature=0.0,
+                    logprobs=30,
                 )
-                outputs = self._llm.generate(prompts, sampling_params=params)
                 arr = [self._get_logits_single_digit(output) for output in outputs]
                 return [(s, len(s)) for s, __ in arr]
             else:
-                sampling_params = vllm.SamplingParams(
-                    temperature=0.0,
-                    max_tokens=self._reasoning_token_budget
-                    if self._is_thinking
-                    else self.num_output_tokens(current_window_size),
+                outputs = self._vllm_handler.generate_output(
+                    prompts=prompts,
                     min_tokens=self.num_output_tokens(current_window_size),
+                    max_tokens=(
+                        self._reasoning_token_budget
+                        if self._is_thinking
+                        else self.num_output_tokens(current_window_size)
+                    ),
+                    temperature=0.0,
                 )
-                outputs = self._llm.generate(prompts, sampling_params)
                 return [
                     (output.outputs[0].text, len(output.outputs[0].token_ids))
                     for output in outputs
