@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 import vllm
+from transformers import PreTrainedTokenizerBase
 from vllm.outputs import RequestOutput
 
 
@@ -33,7 +34,7 @@ class vLLMHandler:
                     {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
             )
 
-    def get_tokenizer(self) -> vllm.Tokenizer:
+    def get_tokenizer(self) -> PreTrainedTokenizerBase:
         return self._tokenizer
 
     def generate_output(
