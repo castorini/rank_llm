@@ -24,7 +24,7 @@ class vLLMHandler:
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
         )
-        self._tokenizer = self._llm.get_tokenizer()
+        self._tokenizer = self._vllm.get_tokenizer()
 
         if "rank_vicuna" in model:
             setattr(
@@ -52,6 +52,7 @@ class vLLMHandler:
             max_tokens=max_tokens,
             temperature=temperature,
             logprobs=logprobs,
+            **kwargs,
         )
 
         return self._llm.generate(prompts, sampling_params)
