@@ -7,11 +7,27 @@ This directory contains the scripts for training the RankLLM model. In addition 
 We recommend using a different environment for training than the one you use for running the inference.
 
 To install the dependencies, run:
+
 ```bash
-conda create --name first python=3.9.18
+conda create --name first python=3.10
 conda activate first
 pip install rank-llm[training]
 pip install flash-attn --no-build-isolation
+pip install deepspeed datasets bitsandbytes
+```
+
+### WatGPU
+
+On WatGPU, proceed as above and then run the following to configure CUDA:
+
+```bash
+conda install -c nvidia cuda-libraries cuda-nvcc
+export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+export DS_SKIP_CUDA_CHECK=1
+cd $CONDA_PREFIX/lib
+ln -s libcurand.so.10 libcurand.so
+cd -
 ```
 
 ## Training
