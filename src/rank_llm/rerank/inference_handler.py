@@ -119,7 +119,7 @@ class BaseInferenceHandler(ABC):
         return self._replace_number(content)
 
     def _format_template(
-        self, template_key: str, fmt_values: Dict[str, str | int]
+        self, template_key: str, fmt_values: Dict[str, str | int], verbose: bool = False
     ) -> str:
         """
         Replaces placeholder keywords in a template section with actual content.
@@ -140,9 +140,10 @@ class BaseInferenceHandler(ABC):
         template_text = self.template.get(template_key, "")
 
         if not template_text:
-            print(
-                f"{template_key} is not a part of the template provided, setting {template_key} part as empty string"
-            )
+            if verbose:
+                print(
+                    f"{template_key} is not a part of the template provided, setting {template_key} part as empty string"
+                )
             return ""
 
         return template_text.format(**fmt_values)

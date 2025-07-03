@@ -65,7 +65,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
     ) -> Tuple[str, str]:
         suffix_placeholders = [
             name
-            for _, name, _, _ in self._formatter.parse(self.template["suffix"])
+            for _, name, _, _ in self._formatter.parse(self.template.get("suffix", ""))
             if name is not None
         ]
 
