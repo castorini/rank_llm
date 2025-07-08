@@ -310,7 +310,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
                 model_coordinator = RankListwiseOSLLM(
                     model=model,
                     context_size=context_size,
-                    prompt_template_path=prompt_mode,
+                    prompt_mode=prompt_mode,
                     num_few_shot_examples=num_few_shot_examples,
                     variable_passages=variable_passages,
                     window_size=window_size,

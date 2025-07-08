@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from rank_llm.rerank.listwise import SafeOpenai
-from rank_llm.rerank.prompt_mode import PromptMode
+from rank_llm.rerank.rankllm import PromptMode
 
 # model, context_size, prompt_template_path, num_few_shot_examples, keys, key_start_id
 valid_inputs = [
@@ -108,7 +108,7 @@ class TestSafeOpenai(unittest.TestCase):
         for (
             model,
             context_size,
-            prompt_template_path,
+            prompt_mode,
             num_few_shot_examples,
             keys,
         ) in failure_inputs:
@@ -116,7 +116,7 @@ class TestSafeOpenai(unittest.TestCase):
                 obj = SafeOpenai(
                     model=model,
                     context_size=context_size,
-                    prompt_template_path=prompt_template_path,
+                    prompt_mode=prompt_mode,
                     num_few_shot_examples=num_few_shot_examples,
                     keys=keys,
                 )
