@@ -422,7 +422,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         original_rank = [tt for tt in range(len(cut_range))]
         try:
             # Parse and normalize the permutation indices
-            response = self._inference_handler._clean_response(permutation)
+            response = self._inference_handler._clean_response(
+                permutation, use_alpha=self._use_alpha
+            )
             response = [int(x) - 1 for x in response.split()]
             response = self._remove_duplicate(response)
 

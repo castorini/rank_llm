@@ -79,7 +79,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             except (KeyError, IndexError):
                 continue
 
-            return "\n".join(text_examples) + "\n\n" if text_examples else ""
+        return "\n".join(text_examples) + "\n\n" if text_examples else ""
 
     def _generate_body(
         self,
