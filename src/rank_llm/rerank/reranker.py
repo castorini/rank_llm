@@ -474,7 +474,6 @@ class Reranker:
             print(f"Loading {model_path} ...")
             keys_and_defaults = [
                 ("context_size", 4096),
-                ("prompt_mode", PromptMode.RANK_GPT),
                 (
                     "prompt_template_path",
                     "src/rank_llm/rerank/prompt_templates/rank_k_template.yaml",
@@ -490,7 +489,6 @@ class Reranker:
             ]
             [
                 context_size,
-                prompt_mode,
                 prompt_template_path,
                 num_few_shot_examples,
                 device,
@@ -505,7 +503,6 @@ class Reranker:
             model_coordinator = RankKReranker(
                 model=(model_path),
                 context_size=context_size,
-                prompt_mode=prompt_mode,
                 prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 device=device,

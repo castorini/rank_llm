@@ -1,7 +1,6 @@
 from typing import Optional
 
 from rank_llm.data import Result
-from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 
 
@@ -10,7 +9,6 @@ class RankKReranker(RankListwiseOSLLM):
         self,
         model: str = "hltcoe/Rank-K-32B",
         context_size: int = 4096,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
         prompt_template_path: Optional[
             str
         ] = "src/rank_llm/rerank/prompt_templates/rank_k_template.yaml",
@@ -24,14 +22,13 @@ class RankKReranker(RankListwiseOSLLM):
         super().__init__(
             model=model,
             context_size=context_size,
-            prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             device=device,
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             is_thinking=True,
-            reasoning_token_budget=10000,
+            reasoning_token_budget=8000,
             window_size=window_size,
             use_alpha=use_alpha,
         )

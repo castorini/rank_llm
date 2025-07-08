@@ -1,5 +1,5 @@
 method: "singleturn_listwise"
-prefix: |-
+prefix: |+
   Determine a ranking of the passages based on how relevant they are to the query. 
   If the query is a question, how relevant a passage is depends on how well it answers the question. 
   If not, try analyze the intent of the query and assess how well each passage satisfy the intent. 
@@ -13,5 +13,7 @@ prefix: |-
   Output only the ordering without any other text.
 
   Query: {query}
-body: "\n\n[{rank}] {candidate}"
-suffix: ""
+
+body: "[{rank}] {candidate}\n\n"
+output_validation_regex: r"^\[\d+\]( (>|=) \[\d+\])*$"
+output_extraction_regex: r"\[(\d+)\]"
