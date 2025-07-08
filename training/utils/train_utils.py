@@ -212,11 +212,13 @@ def train_epoch(
     return completed_steps
 
 
-def initialize_training_state(train_dataloader, args):
+def initialize_training_state(train_dataloader, args, accelerator):
     """Initialize training state variables."""
     overrode_max_train_steps = False
     num_update_steps_per_epoch = math.ceil(
-        len(train_dataloader) / args.gradient_accumulation_steps
+        len(train_dataloader)
+        / args.gradient_accumulation_steps
+        / accelerator.num_processes
     )
 
     if args.max_train_steps is None:
