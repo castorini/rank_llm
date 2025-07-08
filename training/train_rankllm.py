@@ -70,7 +70,7 @@ def main():
     train_dataset, train_dataloader = initialize_dataset_and_loader(args, tokenizer)
 
     overrode_max_train_steps, num_update_steps_per_epoch = initialize_training_state(
-        train_dataloader, args
+        train_dataloader, args, accelerator
     )
     starting_epoch, resume_step, completed_steps = resume_from_checkpoint(
         args, num_update_steps_per_epoch, train_dataloader
@@ -118,9 +118,31 @@ def main():
         )
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
+    logger.info("Starting accelerator.prepare() - this may take a while with DeepSpeed ZeRO-3")
     train_dataloader, model, optimizer, lr_scheduler = accelerator.prepare(
         train_dataloader, model, optimizer, lr_scheduler
     )
+    logger.info("Finished accelerator.prepare() successfully")
+
+    # --------------------------------------------------------------------
+    # DeepSpeed ZeRO-3 is incompatible with the `.no_sync()` context manager
+    # that 🤗 Accelerate uses to implement gradient accumulation.
+    # Newer releases of DeepSpeed (>=0.17) raise an assertion in
+    # `DeepSpeedEngine.no_sync` when ZeRO partitioning is enabled.
+    # Until Accelerate adds a native work-around, we override the method with
+    # a dummy context manager so `accelerator.accumulate(model)` does not
+    # trigger the assertion.  ZeRO-3 already handles gradient accumulation
+    # internally, so skipping the context is safe.
+    # --------------------------------------------------------------------
+    
+    import contextlib, types, deepspeed
+
+    if isinstance(model, deepspeed.DeepSpeedEngine) and model.zero_optimization_partition_gradients():
+        def _null_no_sync(self):
+            return contextlib.nullcontext()
+
+        model.no_sync = types.MethodType(_null_no_sync, model)
+        logger.info("Patched DeepSpeedEngine.no_sync → nullcontext for ZeRO-3")
 
     progress_bar = tqdm(
         range(args.max_train_steps), disable=not accelerator.is_local_main_process
