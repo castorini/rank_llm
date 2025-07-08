@@ -193,7 +193,7 @@ The comperehensive list of our two-click reproduction commands are available on 
 We can run the RankZephyr model with the following command:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
---retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+--retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages
 ```
 
 Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
@@ -207,9 +207,9 @@ If you want to run multiple passes of the model, you can use the `--num_passes` 
 We can run the RankGPT4-o model with the following command:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_mode=rank_GPT_APEER  --context_size=4096 --use_azure_openai
+  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml  --context_size=4096 --use_azure_openai
 ```
-Note that the `--prompt_mode` is set to `rank_GPT_APEER` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
+Note that the `--prompt_template_path` is set to `rank_gpt_apeer` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
 This can be changed to `rank_GPT` to use the original prompt.
 
 ## LiT5
@@ -218,7 +218,7 @@ We can run the LiT5-Distill V2 model (which could rerank 100 documents in a sing
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large-v2 --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=4 \
+        --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  --context_size=150 --batch_size=4 \
     --variable_passages --window_size=100
 ```
 
@@ -226,7 +226,7 @@ We can run the LiT5-Distill original model (which works with a window size of 20
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=32 \
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  --context_size=150 --batch_size=32 \
     --variable_passages
 ```
 
@@ -234,7 +234,7 @@ We can run the LiT5-Score model with the following command:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Score-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5 --context_size=150 --batch_size=8 \
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml --context_size=150 --batch_size=8 \
     --window_size=100 --variable_passages
 ```
 
@@ -244,7 +244,7 @@ The following runs the 3B variant of MonoT5 trained for 10K steps:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=1000 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=monot5 --context_size=512
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml --context_size=512
 ```
 
 Note that we usually rerank 1K candidates with MonoT5.
@@ -253,7 +253,7 @@ Note that we usually rerank 1K candidates with MonoT5.
 The following runs the #B variant of DuoT5 trained for 10K steps:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=duot5
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml
 ```
 
 Since Duo's pairwise comparison has $O(n^2) runtime complexity, we recommend reranking top 50 candidates using DuoT5 models.
@@ -263,7 +263,7 @@ Since Duo's pairwise comparison has $O(n^2) runtime complexity, we recommend rer
 We can run the FirstMistral model, reranking using the first-token logits only with the following command:
 
 ```
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 
 Omit `--use_logits` if you wish to perform traditional listwise reranking.
@@ -281,7 +281,7 @@ Then run the following command:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 --top_k_candidates=100 --dataset=dl20 \
-    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT_APEER  --context_size=4096
+    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml  --context_size=4096
 ```
 
 <a id="model-zoo"></a>

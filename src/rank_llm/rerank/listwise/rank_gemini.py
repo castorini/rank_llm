@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from tqdm import tqdm
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank.rankllm import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
 

@@ -8,7 +8,7 @@ from typing import Any, List, Optional, Tuple
 from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
-from rank_llm.rerank import PromptMode, RankLLM
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +62,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         _modelname = self._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
             _modelname = self._model.split("/")[-2] + "_" + _modelname
-        name = (
-            f"{_modelname}_{self._context_size}_{top_k_candidates}_{self._prompt_mode}"
-        )
+        name = f"{_modelname}_{self._context_size}_{top_k_candidates}"
         if dataset_name:
             name = f"{name}_{dataset_name}"
         if self._num_few_shot_examples > 0:

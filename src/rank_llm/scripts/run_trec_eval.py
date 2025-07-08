@@ -3,7 +3,6 @@ import os
 from argparse import ArgumentParser
 
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod
 
 
@@ -11,9 +10,8 @@ def main(args):
     # TODO: make metrics configurable
     model = args.model_name
     context_size = args.context_size
-    prompt_mode = args.prompt_mode
     rerank_results_dirname = args.rerank_results_dirname
-    output_filename = f"trec_eval_aggregated_results_{model}_{prompt_mode}.jsonl"
+    output_filename = f"trec_eval_aggregated_results_{model}.jsonl"
     with open(output_filename, "w") as output:
         for dataset in ["dl19", "dl20", "dl21", "dl22", "news", "covid"]:
             for retrieval_method in RetrievalMethod:
@@ -25,7 +23,7 @@ def main(args):
                 for top_k_canidadates in [20, 100]:
                     for filename in os.listdir(directory):
                         if not filename.startswith(
-                            f"{model}_{context_size}_{top_k_canidadates}_{prompt_mode}_{dataset}"
+                            f"{model}_{context_size}_{top_k_canidadates}_{dataset}"
                         ):
                             continue
                         if filename.endswith(".json"):
@@ -94,12 +92,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--context_size", type=int, default=4096, help="context size used for model"
-    )
-    parser.add_argument(
-        "--prompt_mode",
-        type=PromptMode,
-        required=True,
-        choices=list(PromptMode),
     )
     parser.add_argument(
         "--rerank_results_dirname",

@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -48,6 +49,11 @@ class RankLLM(ABC):
             )
 
         try:
+            if not isinstance(prompt_template_path, (str, os.PathLike)):
+                raise TypeError(
+                    f"Expected str or PathLike, got {type(prompt_template_path)}"
+                )
+
             with open(prompt_template_path, "r") as file:
                 data = yaml.safe_load(file)
 

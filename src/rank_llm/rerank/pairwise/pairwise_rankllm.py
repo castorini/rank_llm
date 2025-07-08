@@ -144,9 +144,7 @@ class PairwiseRankLLM(RankLLM, ABC):
         _modelname = self._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
             _modelname = self._model.split("/")[-2] + "_" + _modelname
-        name = (
-            f"{_modelname}_{self._context_size}_{top_k_candidates}_{self._prompt_mode}"
-        )
+        name = f"{_modelname}_{self._context_size}_{top_k_candidates}"
         if dataset_name:
             name = f"{name}_{dataset_name}"
 

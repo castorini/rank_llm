@@ -1,15 +1,43 @@
 import unittest
 from unittest.mock import patch
 
-from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise import SafeOpenai
+from rank_llm.rerank.rankllm import PromptMode
 
-# model, context_size, prompt_mode, num_few_shot_examples, keys, key_start_id
+# model, context_size, prompt_template_path, num_few_shot_examples, keys, key_start_id
 valid_inputs = [
-    ("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
-    ("gpt-3.5-turbo", 4096, PromptMode.LRL, 0, "OPEN_AI_API_KEY", 3),
-    ("gpt-4", 4096, PromptMode.RANK_GPT, 0, "OPEN_AI_API_KEY", None),
-    ("gpt-4", 4096, PromptMode.LRL, 0, "OPEN_AI_API_KEY", 3),
+    (
+        "gpt-3.5-turbo",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+        0,
+        "OPEN_AI_API_KEY",
+        None,
+    ),
+    (
+        "gpt-3.5-turbo",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml",
+        0,
+        "OPEN_AI_API_KEY",
+        3,
+    ),
+    (
+        "gpt-4",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+        0,
+        "OPEN_AI_API_KEY",
+        None,
+    ),
+    (
+        "gpt-4",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml",
+        0,
+        "OPEN_AI_API_KEY",
+        3,
+    ),
 ]
 
 failure_inputs = [
@@ -39,7 +67,7 @@ class TestSafeOpenai(unittest.TestCase):
         for (
             model,
             context_size,
-            prompt_mode,
+            prompt_template_path,
             num_few_shot_examples,
             keys,
             key_start_id,
@@ -47,13 +75,12 @@ class TestSafeOpenai(unittest.TestCase):
             obj = SafeOpenai(
                 model=model,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 keys=keys,
             )
             self.assertEqual(obj._model, model)
             self.assertEqual(obj._context_size, context_size)
-            self.assertEqual(obj._prompt_mode, prompt_mode)
             self.assertEqual(obj._num_few_shot_examples, num_few_shot_examples)
             self.assertEqual(obj._keys[0], keys)
             if key_start_id is not None:
@@ -84,7 +111,7 @@ class TestSafeOpenai(unittest.TestCase):
         model_coordinator = SafeOpenai(
             model="gpt-3.5",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
             num_few_shot_examples=0,
             keys="OPEN_AI_API_KEY",
         )
@@ -97,7 +124,7 @@ class TestSafeOpenai(unittest.TestCase):
         model_coordinator = SafeOpenai(
             model="gpt-3.5",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
             num_few_shot_examples=0,
             keys="OPEN_AI_API_KEY",
         )

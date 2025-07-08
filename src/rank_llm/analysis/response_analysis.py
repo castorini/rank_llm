@@ -33,7 +33,6 @@ class ResponseAnalyzer:
         Args:
             results (List[Result]): A list of Result objects.
             use_alpha (bool): Whether to evaluate the alphabetical list instead of the numerical one, defaults to False.
-            prompt_mode (PromptMode): The prompt mode to use for analysis, defaults to RANK_GPT.
 
         Returns:
             ResponseAnalyzer: An instance of the ResponseAnalyzer.
@@ -51,7 +50,6 @@ class ResponseAnalyzer:
         Args:
             filenames (List[str]): A list of filenames where each file contains data to be analyzed.
             use_alpha (bool): Whether to evaluate the alphabetical list instead of the numerical one, defaults to False.
-            prompt_mode (PromptMode): The prompt mode to use for analysis, defaults to RANK_GPT.
 
         Returns:
             ResponseAnalyzer: An instance of the ResponseAnalyzer.
@@ -275,7 +273,7 @@ class ResponseAnalyzer:
 def main(args):
     if args.files:
         response_analyzer = ResponseAnalyzer.from_stored_files(
-            args.files, use_alpha=args.use_alpha, prompt_mode=args.prompt_mode
+            args.files, use_alpha=args.use_alpha
         )
     else:
         print("Error: Please specify the files containing ranking summaries.")

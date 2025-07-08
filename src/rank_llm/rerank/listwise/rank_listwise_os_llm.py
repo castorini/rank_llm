@@ -11,7 +11,7 @@ from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler import VllmHandler
 
 from .listwise_rankllm import ListwiseRankLLM
