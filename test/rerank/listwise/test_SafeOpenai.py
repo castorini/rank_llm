@@ -66,14 +66,14 @@ failure_inputs_prompt_template = [
         4096,
         None,
         0,
-        None,
+        "OPEN_AI_API_KEY",
     ),
     (
         "gpt-4",
         4096,
         None,
         0,
-        None,
+        "OPEN_AI_API_KEY",
     ),  # missing key
 ]
 
