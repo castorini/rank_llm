@@ -326,7 +326,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             window_size,
             system_message,
         ) in failure_inputs_prompt_template:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(TypeError):
                 model_coordinator = RankListwiseOSLLM(
                     model=model,
                     context_size=context_size,
