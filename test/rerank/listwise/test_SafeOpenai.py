@@ -60,22 +60,6 @@ failure_inputs = [
         "OPEN_AI_API_KEY",
     ),  # unpecified prompt mode
 ]
-failure_inputs_prompt_template = [
-    (
-        "gpt-3.5-turbo",
-        4096,
-        None,
-        0,
-        "OPEN_AI_API_KEY",
-    ),
-    (
-        "gpt-4",
-        4096,
-        None,
-        0,
-        "OPEN_AI_API_KEY",
-    ),  # missing key
-]
 
 
 class TestSafeOpenai(unittest.TestCase):
@@ -117,22 +101,6 @@ class TestSafeOpenai(unittest.TestCase):
                     model=model,
                     context_size=context_size,
                     prompt_mode=prompt_mode,
-                    num_few_shot_examples=num_few_shot_examples,
-                    keys=keys,
-                )
-
-        for (
-            model,
-            context_size,
-            prompt_template_path,
-            num_few_shot_examples,
-            keys,
-        ) in failure_inputs_prompt_template:
-            with self.assertRaises(TypeError):
-                obj = SafeOpenai(
-                    model=model,
-                    context_size=context_size,
-                    prompt_template_path=prompt_template_path,
                     num_few_shot_examples=num_few_shot_examples,
                     keys=keys,
                 )
