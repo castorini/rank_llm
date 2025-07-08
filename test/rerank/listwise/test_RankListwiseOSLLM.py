@@ -5,6 +5,7 @@ from dacite import from_dict
 
 from rank_llm.data import Result
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
+from rank_llm.rerank.rankllm import PromptMode
 
 # model, context_size, prompt_template_path, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
@@ -86,12 +87,95 @@ failure_inputs = [
     (
         "castorini/rank_zephyr_7b_v1_full",
         4096,
-        None,
+        PromptMode.UNSPECIFIED,
         0,
         True,
         30,
         "Default Message",
     ),
+    (
+        "castorini/rank_zephyr_7b_v1_full",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_fp16",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_fp16",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda_fp16",
+        4096,
+        PromptMode.UNSPECIFIED,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda_fp16",
+        4096,
+        PromptMode.LRL,
+        0,
+        True,
+        30,
+        "Default Message",
+    ),
+]
+failure_inputs_prompt_template = [
     (
         "castorini/rank_zephyr_7b_v1_full",
         4096,
@@ -111,60 +195,6 @@ failure_inputs = [
         "Default Message",
     ),
     (
-        "castorini/rank_vicuna_7b_v1",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_fp16",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_fp16",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda_fp16",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
         "castorini/rank_vicuna_7b_v1_noda_fp16",
         4096,
         None,
@@ -174,7 +204,6 @@ failure_inputs = [
         "Default Message",
     ),
 ]
-
 
 r = from_dict(
     data_class=Result,
@@ -261,9 +290,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             self.assertEqual(model_coordinator._model, model)
             self.assertEqual(model_coordinator._context_size, context_size)
             self.assertEqual(
-                model_coordinator._prompt_template_path, prompt_template_path
-            )
-            self.assertEqual(
                 model_coordinator._num_few_shot_examples, num_few_shot_examples
             )
             self.assertEqual(model_coordinator._variable_passages, variable_passages)
@@ -274,12 +300,32 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         for (
             model,
             context_size,
-            prompt_template_path,
+            prompt_mode,
             num_few_shot_examples,
             variable_passages,
             window_size,
             system_message,
         ) in failure_inputs:
+            with self.assertRaises(ValueError):
+                model_coordinator = RankListwiseOSLLM(
+                    model=model,
+                    context_size=context_size,
+                    prompt_template_path=prompt_mode,
+                    num_few_shot_examples=num_few_shot_examples,
+                    variable_passages=variable_passages,
+                    window_size=window_size,
+                    system_message=system_message,
+                )
+
+        for (
+            model,
+            context_size,
+            prompt_template_path,
+            num_few_shot_examples,
+            variable_passages,
+            window_size,
+            system_message,
+        ) in failure_inputs_prompt_template:
             with self.assertRaises(ValueError):
                 model_coordinator = RankListwiseOSLLM(
                     model=model,

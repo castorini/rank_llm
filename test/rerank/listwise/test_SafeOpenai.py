@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from rank_llm.rerank.listwise import SafeOpenai
+from rank_llm.rerank.prompt_mode import PromptMode
 
 # model, context_size, prompt_template_path, num_few_shot_examples, keys, key_start_id
 valid_inputs = [
@@ -40,48 +41,40 @@ valid_inputs = [
 ]
 
 failure_inputs = [
+    ("gpt-3.5-turbo", 4096, PromptMode.RANK_GPT, 0, None),  # missing key
+    ("gpt-3.5-turbo", 4096, PromptMode.LRL, 0, None),  # missing key
     (
         "gpt-3.5-turbo",
         4096,
-        "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
-        0,
-        None,
-    ),  # missing key
-    (
-        "gpt-3.5-turbo",
-        4096,
-        "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml",
-        0,
-        None,
-    ),  # missing key
-    (
-        "gpt-3.5-turbo",
-        4096,
-        None,
+        PromptMode.UNSPECIFIED,
         0,
         "OPEN_AI_API_KEY",
     ),  # unpecified prompt mode
+    ("gpt-4", 4096, PromptMode.RANK_GPT, 0, None),  # missing key
+    ("gpt-4", 4096, PromptMode.LRL, 0, None),  # missing key
     (
         "gpt-4",
         4096,
-        "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
-        0,
-        None,
-    ),  # missing key
-    (
-        "gpt-4",
-        4096,
-        "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml",
-        0,
-        None,
-    ),  # missing key
-    (
-        "gpt-4",
-        4096,
-        None,
+        PromptMode.UNSPECIFIED,
         0,
         "OPEN_AI_API_KEY",
     ),  # unpecified prompt mode
+]
+failure_inputs_prompt_template = [
+    (
+        "gpt-3.5-turbo",
+        4096,
+        None,
+        0,
+        None,
+    ),
+    (
+        "gpt-4",
+        4096,
+        None,
+        0,
+        None,
+    ),  # missing key
 ]
 
 
@@ -104,7 +97,6 @@ class TestSafeOpenai(unittest.TestCase):
             )
             self.assertEqual(obj._model, model)
             self.assertEqual(obj._context_size, context_size)
-            self.assertEqual(obj._prompt_template_path, prompt_template_path)
             self.assertEqual(obj._num_few_shot_examples, num_few_shot_examples)
             self.assertEqual(obj._keys[0], keys)
             if key_start_id is not None:
@@ -120,6 +112,22 @@ class TestSafeOpenai(unittest.TestCase):
             num_few_shot_examples,
             keys,
         ) in failure_inputs:
+            with self.assertRaises(BaseException):
+                obj = SafeOpenai(
+                    model=model,
+                    context_size=context_size,
+                    prompt_template_path=prompt_template_path,
+                    num_few_shot_examples=num_few_shot_examples,
+                    keys=keys,
+                )
+
+        for (
+            model,
+            context_size,
+            prompt_template_path,
+            num_few_shot_examples,
+            keys,
+        ) in failure_inputs_prompt_template:
             with self.assertRaises(BaseException):
                 obj = SafeOpenai(
                     model=model,
