@@ -48,7 +48,7 @@ model_path: str = Field(default="rank_zephyr")
 top_n: int = Field(default=3)
 window_size: int = Field(default=20)
 context_size: int = Field(default=4096)
-prompt_mode: str = Field(default="rank_GPT")
+prompt_template_path: str
 num_gpus: int = Field(default=1)
 num_few_shot_examples: int = Field(default=0)
 few_shot_file: Optional[str] = Field(default=None)
@@ -86,7 +86,7 @@ pip install "rerankers[rankllm]"
 model: str = "rank_zephyr",
 window_size: int = 20,
 context_size: int = 4096,
-prompt_mode: PromptMode = PromptMode.RANK_GPT,
+prompt_template_path: str,
 num_few_shot_examples: int = 0,
 few_shot_file: Optional[str] = None,
 num_gpus: int = 1,
@@ -133,9 +133,8 @@ context_size: int = Field(
   description="Maximum number of tokens for the context window.",
   default=4096
 )
-prompt_mode: PromptMode = Field(
-  description="Prompt format and strategy used when invoking the reranking model.",
-  default=PromptMode.RANK_GPT
+prompt_template_path: str = Field(
+  description="Yaml file for the prompt template, please refer to offician RankLLM repo for examples and usage.",
 )
 num_gpus: int = Field(
   description="Number of GPUs to use for inference if applicable.",

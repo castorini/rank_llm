@@ -4,15 +4,14 @@ from unittest.mock import MagicMock, patch
 from dacite import from_dict
 
 from rank_llm.data import Result
-from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
 
-# model, context_size, prompt_mode, num_few_shot_examples, variable_passages, window_size, system_message
+# model, context_size, prompt_template_path, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
     (
         "castorini/rank_zephyr_7b_v1_full",
         4096,
-        PromptMode.RANK_GPT,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         0,
         True,
         10,
@@ -21,7 +20,7 @@ valid_inputs = [
     (
         "castorini/rank_zephyr_7b_v1_full",
         4096,
-        PromptMode.RANK_GPT,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         0,
         False,
         10,
@@ -30,20 +29,52 @@ valid_inputs = [
     (
         "castorini/rank_zephyr_7b_v1_full",
         4096,
-        PromptMode.RANK_GPT,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         0,
         True,
         30,
         "Default Message",
     ),
-    ("castorini/rank_zephyr_7b_v1_full", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
-    ("castorini/rank_vicuna_7b_v1", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
-    ("castorini/rank_vicuna_7b_v1_noda", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
-    ("castorini/rank_vicuna_7b_v1_fp16", 4096, PromptMode.RANK_GPT, 0, True, 10, ""),
+    (
+        "castorini/rank_zephyr_7b_v1_full",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+        0,
+        True,
+        10,
+        "",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+        0,
+        True,
+        10,
+        "",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_noda",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+        0,
+        True,
+        10,
+        "",
+    ),
+    (
+        "castorini/rank_vicuna_7b_v1_fp16",
+        4096,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+        0,
+        True,
+        10,
+        "",
+    ),
     (
         "castorini/rank_vicuna_7b_v1_noda_fp16",
         4096,
-        PromptMode.RANK_GPT,
+        "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         0,
         True,
         10,
@@ -55,7 +86,7 @@ failure_inputs = [
     (
         "castorini/rank_zephyr_7b_v1_full",
         4096,
-        PromptMode.UNSPECIFIED,
+        None,
         0,
         True,
         30,
@@ -64,7 +95,7 @@ failure_inputs = [
     (
         "castorini/rank_zephyr_7b_v1_full",
         4096,
-        PromptMode.LRL,
+        None,
         0,
         True,
         30,
@@ -73,7 +104,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1",
         4096,
-        PromptMode.UNSPECIFIED,
+        None,
         0,
         True,
         30,
@@ -82,7 +113,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1",
         4096,
-        PromptMode.LRL,
+        None,
         0,
         True,
         30,
@@ -91,7 +122,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1_noda",
         4096,
-        PromptMode.UNSPECIFIED,
+        None,
         0,
         True,
         30,
@@ -100,7 +131,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1_noda",
         4096,
-        PromptMode.LRL,
+        None,
         0,
         True,
         30,
@@ -109,7 +140,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1_fp16",
         4096,
-        PromptMode.UNSPECIFIED,
+        None,
         0,
         True,
         30,
@@ -118,7 +149,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1_fp16",
         4096,
-        PromptMode.LRL,
+        None,
         0,
         True,
         30,
@@ -127,7 +158,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1_noda_fp16",
         4096,
-        PromptMode.UNSPECIFIED,
+        None,
         0,
         True,
         30,
@@ -136,7 +167,7 @@ failure_inputs = [
     (
         "castorini/rank_vicuna_7b_v1_noda_fp16",
         4096,
-        PromptMode.LRL,
+        None,
         0,
         True,
         30,
@@ -212,7 +243,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         for (
             model,
             context_size,
-            prompt_mode,
+            prompt_template_path,
             num_few_shot_examples,
             variable_passages,
             window_size,
@@ -221,7 +252,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             model_coordinator = RankListwiseOSLLM(
                 model=model,
                 context_size=context_size,
-                prompt_mode=prompt_mode,
+                prompt_template_path=prompt_template_path,
                 num_few_shot_examples=num_few_shot_examples,
                 variable_passages=variable_passages,
                 window_size=window_size,
@@ -229,7 +260,9 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             )
             self.assertEqual(model_coordinator._model, model)
             self.assertEqual(model_coordinator._context_size, context_size)
-            self.assertEqual(model_coordinator._prompt_mode, prompt_mode)
+            self.assertEqual(
+                model_coordinator._prompt_template_path, prompt_template_path
+            )
             self.assertEqual(
                 model_coordinator._num_few_shot_examples, num_few_shot_examples
             )
@@ -241,7 +274,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         for (
             model,
             context_size,
-            prompt_mode,
+            prompt_template_path,
             num_few_shot_examples,
             variable_passages,
             window_size,
@@ -251,7 +284,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
                 model_coordinator = RankListwiseOSLLM(
                     model=model,
                     context_size=context_size,
-                    prompt_mode=prompt_mode,
+                    prompt_template_path=prompt_template_path,
                     num_few_shot_examples=num_few_shot_examples,
                     variable_passages=variable_passages,
                     window_size=window_size,
@@ -267,7 +300,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=10,
@@ -283,7 +316,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
@@ -302,7 +335,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
@@ -322,7 +355,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
@@ -350,7 +383,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
             context_size=4096,
-            prompt_mode=PromptMode.RANK_GPT,
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,

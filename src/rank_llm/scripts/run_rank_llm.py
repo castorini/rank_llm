@@ -9,7 +9,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
@@ -26,7 +26,6 @@ def main(args):
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
-    prompt_mode = args.prompt_mode
     prompt_template_path = args.prompt_template_path
     num_few_shot_examples = args.num_few_shot_examples
     few_shot_file = args.few_shot_file
@@ -61,7 +60,6 @@ def main(args):
         context_size=context_size,
         device=device,
         num_gpus=num_gpus,
-        prompt_mode=prompt_mode,
         prompt_template_path=prompt_template_path,
         num_few_shot_examples=num_few_shot_examples,
         few_shot_file=few_shot_file,
