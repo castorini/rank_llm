@@ -1,6 +1,9 @@
 import logging
 import os
 
+import contextlib
+import types
+import deepspeed
 import datasets
 import transformers
 from accelerate import Accelerator, DistributedDataParallelKwargs
@@ -123,20 +126,10 @@ def main():
         train_dataloader, model, optimizer, lr_scheduler
     )
     logger.info("Finished accelerator.prepare() successfully")
-
-    # --------------------------------------------------------------------
-    # DeepSpeed ZeRO-3 is incompatible with the `.no_sync()` context manager
-    # that 🤗 Accelerate uses to implement gradient accumulation.
-    # Newer releases of DeepSpeed (>=0.17) raise an assertion in
-    # `DeepSpeedEngine.no_sync` when ZeRO partitioning is enabled.
-    # Until Accelerate adds a native work-around, we override the method with
-    # a dummy context manager so `accelerator.accumulate(model)` does not
-    # trigger the assertion.  ZeRO-3 already handles gradient accumulation
-    # internally, so skipping the context is safe.
-    # --------------------------------------------------------------------
     
-    import contextlib, types, deepspeed
-
+    
+    # TODO: remove this when updated to newer accelerate. 
+    # This is a workaround, newer accelerate already addressed this https://github.com/huggingface/accelerate/issues/3481, just not pushed to PyPI yet.
     if isinstance(model, deepspeed.DeepSpeedEngine) and model.zero_optimization_partition_gradients():
         def _null_no_sync(self):
             return contextlib.nullcontext()
