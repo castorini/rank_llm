@@ -185,24 +185,6 @@ failure_inputs_prompt_template = [
         30,
         "Default Message",
     ),
-    (
-        "castorini/rank_vicuna_7b_v1",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda_fp16",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
 ]
 
 r = from_dict(

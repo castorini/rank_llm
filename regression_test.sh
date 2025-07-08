@@ -15,11 +15,11 @@ TEST_NAMES=(
 )
 
 TEST_COMMANDS=(
-  "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/first_mistral --top_k_candidates=50 --dataset=dl19 --retrieval_method=bm25 --context_size=4096 --use_alpha --use_logits --max_queries=3"
-  "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_zephyr_7b_v1_full  --top_k_candidates=50 --dataset=dl20  --retrieval_method=SPLADE++_EnsembleDistil_ONNX  --context_size=4096 --max_queries=3"
-  "python src/rank_llm/scripts/run_rank_llm.py  --model_path=Qwen/Qwen2.5-7B-Instruct --top_k_candidates=50 --dataset=dl21 --retrieval_method=bm25  --context_size=4096 --variable_passages --max_queries=3"
-  "python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl22 --retrieval_method=bm25  --context_size=4096 --variable_passages --max_queries=3"
-   "python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl23 --retrieval_method=bm25  --context_size=4096 --variable_passages --max_queries=1"
+  "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/first_mistral --top_k_candidates=50 --dataset=dl19 --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context_size=4096 --use_alpha --use_logits --max_queries=3"
+  "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/rank_zephyr_7b_v1_full  --top_k_candidates=50 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context_size=4096 --max_queries=3"
+  "python src/rank_llm/scripts/run_rank_llm.py --model_path=Qwen/Qwen2.5-7B-Instruct --top_k_candidates=50 --dataset=dl21 --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context_size=4096 --variable_passages --max_queries=3"
+  "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl22 --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml --context_size=4096 --variable_passages --max_queries=3"
+   "python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl23 --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml --context_size=4096 --variable_passages --max_queries=1"
 )
 
 TEST_EXPECTED_SCORES=(

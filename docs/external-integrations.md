@@ -134,7 +134,7 @@ context_size: int = Field(
   default=4096
 )
 prompt_template_path: str = Field(
-  description="Yaml file for the prompt template, please refer to offician RankLLM repo for examples and usage.",
+  description="Yaml file for the prompt template, please refer to the official RankLLM repo for examples and usage.",
 )
 num_gpus: int = Field(
   description="Number of GPUs to use for inference if applicable.",
