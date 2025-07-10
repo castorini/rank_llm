@@ -11,6 +11,7 @@ To install the dependencies, run:
 conda create -f rank_llm_training_env.yml
 conda activate rank_llm_training
 pip install flash-attn --no-build-isolation
+
 export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 cd $CONDA_PREFIX/lib
@@ -22,7 +23,7 @@ cd -
 
 To fine-tune a model for RankLLM, one can run:
 ```bash
-DS_SKIP_CUDA_CHECK=1 NCCL_IB_DISABLE=1 NCCL_P2P_DISABLE=1 accelerate launch train_rankllm.py \
+DS_SKIP_CUDA_CHECK=1 NCCL_IB_DISABLE=1 NCCL_P2P_DISABLE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch train_rankllm.py \
     --model_name_or_path <path-to-model> \
     --train_dataset_path <path-to-train-dataset> \
     --num_train_epochs <num-epochs> \
