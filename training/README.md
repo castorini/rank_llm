@@ -11,6 +11,11 @@ To install the dependencies, run:
 conda create -f rank_llm_training_env.yml
 conda activate rank_llm_training
 pip install flash-attn --no-build-isolation
+export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+cd $CONDA_PREFIX/lib
+ln -s libcurand.so.10 libcurand.so
+cd -
 ```
 
 ## Training
