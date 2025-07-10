@@ -7,7 +7,7 @@ OUTPUT_DIR="models/ranking/RankZephyr"  # Directory to save the trained model
 
 mkdir -p "${OUTPUT_DIR}"
 
-accelerate launch \
+DS_SKIP_CUDA_CHECK=1 NCCL_IB_DISABLE=1 NCCL_P2P_DISABLE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch \
     --config_file "configs/accel_config_deepspeed.yaml" \
     train_rankllm.py \
     --model_name_or_path "${BASE_MODEL}" \
