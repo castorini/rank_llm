@@ -1,10 +1,10 @@
+import contextlib
 import logging
 import os
-
-import contextlib
 import types
-import deepspeed
+
 import datasets
+import deepspeed
 import transformers
 from accelerate import Accelerator, DistributedDataParallelKwargs
 from accelerate.logging import get_logger
@@ -121,16 +121,21 @@ def main():
         )
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
-    logger.info("Starting accelerator.prepare() - this may take a while with DeepSpeed ZeRO-3")
+    logger.info(
+        "Starting accelerator.prepare() - this may take a while with DeepSpeed ZeRO-3"
+    )
     train_dataloader, model, optimizer, lr_scheduler = accelerator.prepare(
         train_dataloader, model, optimizer, lr_scheduler
     )
     logger.info("Finished accelerator.prepare() successfully")
-    
-    
-    # TODO: remove this when updated to newer accelerate. 
+
+    # TODO: remove this when updated to newer accelerate.
     # This is a workaround, newer accelerate already addressed this https://github.com/huggingface/accelerate/issues/3481, just not pushed to PyPI yet.
-    if isinstance(model, deepspeed.DeepSpeedEngine) and model.zero_optimization_partition_gradients():
+    if (
+        isinstance(model, deepspeed.DeepSpeedEngine)
+        and model.zero_optimization_partition_gradients()
+    ):
+
         def _null_no_sync(self):
             return contextlib.nullcontext()
 
@@ -170,11 +175,11 @@ def main():
         if completed_steps >= args.max_train_steps:
             break
 
-    if args.with_tracking:
-        accelerator.end_training()
-
     if args.output_dir is not None:
         save_checkpoint(model, tokenizer, accelerator, args.output_dir)
+
+    if args.with_tracking:
+        accelerator.end_training()
 
 
 if __name__ == "__main__":

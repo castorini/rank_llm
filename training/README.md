@@ -8,9 +8,8 @@ We recommend using a different environment for training than the one you use for
 
 To install the dependencies, run:
 ```bash
-conda create --name first python=3.9.18
-conda activate first
-pip install rank-llm[training]
+conda create -f rank_llm_training_env.yml
+conda activate rank_llm_training
 pip install flash-attn --no-build-isolation
 ```
 
@@ -18,7 +17,7 @@ pip install flash-attn --no-build-isolation
 
 To fine-tune a model for RankLLM, one can run:
 ```bash
-accelerate launch train_rankllm.py \
+DS_SKIP_CUDA_CHECK=1 NCCL_IB_DISABLE=1 NCCL_P2P_DISABLE=1 accelerate launch train_rankllm.py \
     --model_name_or_path <path-to-model> \
     --train_dataset_path <path-to-train-dataset> \
     --num_train_epochs <num-epochs> \
