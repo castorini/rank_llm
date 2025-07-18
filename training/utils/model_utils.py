@@ -223,6 +223,7 @@ def initialize_model_and_tokenizer(args):
     """
     Initialize the model, tokenizer, and config based on provided arguments.
     """
+    logger.info("Starting model and tokenizer initialization...")
     if args.resume_from_checkpoint:
         config = AutoConfig.from_pretrained(
             args.resume_from_checkpoint,
@@ -284,6 +285,7 @@ def initialize_model_and_tokenizer(args):
             trust_remote_code=args.trust_remote_code,
         )
     elif args.model_name_or_path:
+        logger.info(f"Loading model from {args.model_name_or_path}...")
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name_or_path,
             from_tf=bool(".ckpt" in args.model_name_or_path),
@@ -294,6 +296,7 @@ def initialize_model_and_tokenizer(args):
             low_cpu_mem_usage=args.low_cpu_mem_usage,
             trust_remote_code=args.trust_remote_code,
         )
+        logger.info("Model loaded successfully!")
     else:
         logger.info("Training new model from scratch")
         model = AutoModelForCausalLM.from_config(
@@ -308,10 +311,15 @@ def initialize_model_and_tokenizer(args):
         tokenizer.add_special_tokens({"pad_token": "<|end_of_text|>"})
 
     # Resize embeddings if necessary
+    logger.info("Checking tokenizer and model compatibility...")
     embedding_size = model.get_input_embeddings().weight.shape[0]
     if len(tokenizer) > embedding_size:
+        logger.info(
+            f"Resizing token embeddings from {embedding_size} to {len(tokenizer)}"
+        )
         model.resize_token_embeddings(len(tokenizer))
 
+    logger.info("Model and tokenizer initialization completed successfully!")
     return tokenizer, model
 
 

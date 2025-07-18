@@ -8,17 +8,22 @@ We recommend using a different environment for training than the one you use for
 
 To install the dependencies, run:
 ```bash
-conda create --name first python=3.9.18
-conda activate first
-pip install rank-llm[training]
+conda create -f rank_llm_training_env.yml
+conda activate rank_llm_training
 pip install flash-attn --no-build-isolation
+
+export LIBRARY_PATH=$CONDA_PREFIX/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+cd $CONDA_PREFIX/lib
+ln -s libcurand.so.10 libcurand.so
+cd -
 ```
 
 ## Training
 
 To fine-tune a model for RankLLM, one can run:
 ```bash
-accelerate launch train_rankllm.py \
+DS_SKIP_CUDA_CHECK=1 NCCL_IB_DISABLE=1 NCCL_P2P_DISABLE=1 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True accelerate launch train_rankllm.py \
     --model_name_or_path <path-to-model> \
     --train_dataset_path <path-to-train-dataset> \
     --num_train_epochs <num-epochs> \
