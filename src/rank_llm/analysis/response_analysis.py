@@ -1,4 +1,5 @@
 import argparse
+import ast
 import json
 import os
 import re
@@ -126,6 +127,7 @@ class ResponseAnalyzer:
             )
 
     def _validate_format(self, response: str, output_validation_regex: str) -> bool:
+        output_validation_regex = ast.literal_eval(output_validation_regex)
         return bool(re.fullmatch(output_validation_regex, response.strip()))
 
     def _get_num_passages(
@@ -171,6 +173,7 @@ class ResponseAnalyzer:
             raise ValueError("Unsupported prompt format.")
 
         # Extract and count unique rank IDs
+        rank_id_pattern = ast.literal_eval(rank_id_pattern)
         ids = re.findall(rank_id_pattern, search_text)
         if not ids:
             raise ValueError(
@@ -199,6 +202,7 @@ class ResponseAnalyzer:
                 print(resp)
             stats_dict["wrong_format"] += 1
             return
+        output_extraction_regex = ast.literal_eval(output_extraction_regex)
         matches = re.findall(output_extraction_regex, resp)
         if is_alphabetical:
             ranks = [ord(rank) - ord("A") for rank in matches]

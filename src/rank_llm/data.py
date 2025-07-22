@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 from dacite import from_dict
 
@@ -30,8 +30,8 @@ class InferenceInvocation:
     response: str
     input_token_count: int
     output_token_count: int
-    output_validation_regex: str
-    output_extraction_regex: str
+    output_validation_regex: Optional[str] = None
+    output_extraction_regex: Optional[str] = None
 
 
 @dataclass

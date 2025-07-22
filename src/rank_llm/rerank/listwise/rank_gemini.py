@@ -69,7 +69,10 @@ class SafeGenai(ListwiseRankLLM):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide Genai API Keys.")
-        if prompt_mode not in [PromptMode.RANK_GPT_APEER, PromptMode.RANK_GPT]:
+        if prompt_mode and prompt_mode not in [
+            PromptMode.RANK_GPT_APEER,
+            PromptMode.RANK_GPT,
+        ]:
             raise ValueError(
                 f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_GPT_APEER} or {PromptMode.RANK_GPT}."
             )
