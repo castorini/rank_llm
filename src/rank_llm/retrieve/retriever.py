@@ -197,7 +197,7 @@ class Retriever:
                                 print(f"Error decoding JSON from line: {e}")
                                 continue
                         print(
-                            f"Successfully loaded {max_k_file} to get top {k} candidates"
+                            f"Successfully loaded {max_k_file} to get top {k} candidates per query."
                         )
                         return results
                 except Exception as local_error:
