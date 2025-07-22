@@ -196,6 +196,9 @@ class Retriever:
                             except json.JSONDecodeError as e:
                                 print(f"Error decoding JSON from line: {e}")
                                 continue
+                        print(
+                            f"Successfully loaded {max_k_file} to get top {k} candidates"
+                        )
                         return results
                 except Exception as local_error:
                     print(f"Local file invalid, attempting HF download: {local_error}")
