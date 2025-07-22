@@ -185,15 +185,17 @@ class Retriever:
                 max_k_file and max_k >= k
             ):  # try to see if retrieving from local file works
                 try:
+                    results = []
                     with open(max_k_file, "r") as f:
-                        results = [
-                            from_dict(data_class=Request, data=json.loads(line))
-                            for i, line in enumerate(f)
-                            if i < k
-                        ]
-                        print(
-                            f"Successfully loaded {max_k_file} to get top {k} candidates"
-                        )
+                        for line in f:
+                            try:
+                                data = json.loads(line)
+                                data["candidates"] = data.get("candidates", [])[:k]
+                                request_obj = from_dict(data_class=Request, data=data)
+                                results.append(request_obj)
+                            except json.JSONDecodeError as e:
+                                print(f"Error decoding JSON from line: {e}")
+                                continue
                         return results
                 except Exception as local_error:
                     print(f"Local file invalid, attempting HF download: {local_error}")
