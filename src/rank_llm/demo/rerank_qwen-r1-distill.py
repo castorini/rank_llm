@@ -22,6 +22,7 @@ model_coordinator = RankListwiseOSLLM(
     model="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
     is_thinking=True,
     reasoning_token_budget=30000,
+    prompt_template_path="src/rank_llm/rerank/prompt_templates/qwen_thinking_template.yaml",
 )
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
