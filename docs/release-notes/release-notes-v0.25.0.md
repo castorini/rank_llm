@@ -1,6 +1,7 @@
 # RankLLM Release Notes (v0.25.0)
 
 + **Release date:** PLACEHOLDER, 2025
++ **Pyserini dependency:** v1.2.0
 
 ## Summary of Changes
 
