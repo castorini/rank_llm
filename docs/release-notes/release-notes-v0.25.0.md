@@ -32,19 +32,21 @@ Sorted by number of commits:
 + Daniel Guo ([clides](https://github.com/clides))
 + Sahel Sharifymoghaddam ([sahel-sh](https://github.com/sahel-sh))
 + Lily Ge ([lilyjge](https://github.com/lilyjge))
++ Steven Chen ([wu-ming233](https://github.com/wu-ming233))
++ Anthony Miyaguchi ([acmiyaguchi](https://github.com/acmiyaguchi))
 
 ### All Time
 
-All contributors with 500 or more additions, sorted by number of additions, [according to GitHub](https://github.com/castorini/rank_llm/graphs/contributors?selectedMetric=additions):
+All contributors with 3 or more commits, sorted by number of commits, [according to GitHub](https://github.com/castorini/rank_llm/graphs/contributors):
 
 + Sahel Sharifymoghaddam ([sahel-sh](https://github.com/sahel-sh))
-+ Ronak ([ronakice](https://github.com/ronakice))
 + Daniel Guo ([clides](https://github.com/clides))
++ Ronak ([ronakice](https://github.com/ronakice))
 + Ryan Nguyen ([xpbowler](https://github.com/xpbowler))
-+ Yidi Chen ([XKTZ](https://github.com/XKTZ))
-+ Akintunde Oladipo ([theyorubayesian](https://github.com/theyorubayesian))
-+ Steven Chen ([wu-ming233](https://github.com/wu-ming233))
-+ charlie-liuu ([charlie-liuu](https://github.com/charlie-liuu))
-+ Jason Zhang ([yilinjz](https://github.com/yilinjz))
 + Andre Slavescu ([AndreSlavescu](https://github.com/AndreSlavescu))
-+ Richard Fan ([Richard5678](https://github.com/Richard5678))
++ Steven Chen ([wu-ming233](https://github.com/wu-ming233))
++ andrewxucs ([andrewxucs](https://github.com/andrewxucs))
++ Jason Zhang ([yilinjz](https://github.com/yilinjz))
++ Yidi Chen ([XKTZ](https://github.com/XKTZ))
++ Patrick Yi ([pjyi2147](https://github.com/pjyi2147))
++ Lily Ge ([lilyjge](https://github.com/lilyjge))
