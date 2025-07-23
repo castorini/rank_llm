@@ -79,9 +79,13 @@ class SafeOpenai(ListwiseRankLLM):
                 prompt_template_path = (
                     "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml"
                 )
-            else:
+            elif prompt_mode == PromptMode.LRL:
                 prompt_template_path = (
                     "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml"
+                )
+            else:
+                raise ValueError(
+                    "Either `prompt_mode` or `prompt_template_path` must be specified."
                 )
         super().__init__(
             model=model,

@@ -13,7 +13,7 @@ from rank_llm.evaluation.trec_eval import EvalFunction
 
 # from rank_llm.rerank import Reranker, get_openai_api_key
 from rank_llm.rerank.listwise import ZephyrReranker  # , SafeOpenai, VicunaReranker,
-from rank_llm.retrieve.retriever import Retriever
+from rank_llm.retrieve.retriever import Retriever  # , RetrievalMethod
 from rank_llm.retrieve.topics_dict import TOPICS
 
 # ------ Retrieval ------
@@ -40,17 +40,19 @@ reranker = ZephyrReranker()
 # model_coordinator = SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key())
 # reranker = Reranker(model_coordinator)
 
-rerank_results = reranker.rerank_batch(requests=retrieved_results)
+kwargs = {"populate_invocations_history": True}
+rerank_results = reranker.rerank_batch(requests=retrieved_results, **kwargs)
 # -----------------------
 
 # ----- Evaluation ------
 
 # Evaluate retrieved results.
-ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, TOPICS[dataset_name])
+topics = TOPICS[dataset_name]
+ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, topics)
 print(ndcg_10_retrieved)
 
 # Evaluate rerank results.
-ndcg_10_rerank = EvalFunction.from_results(rerank_results, TOPICS[dataset_name])
+ndcg_10_rerank = EvalFunction.from_results(rerank_results, topics)
 print(ndcg_10_rerank)
 
 # By default ndcg@10 is the eval metric, other value can be specified:
