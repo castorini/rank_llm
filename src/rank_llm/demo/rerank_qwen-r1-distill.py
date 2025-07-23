@@ -25,7 +25,7 @@ model_coordinator = RankListwiseOSLLM(
 )
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
-rerank_results = reranker.rerank_batch(requests[:1], **kwargs)
+rerank_results = reranker.rerank_batch(requests, **kwargs)
 
 # Analyze the response
 analyzer = ResponseAnalyzer.from_inline_results(rerank_results, use_alpha=False)

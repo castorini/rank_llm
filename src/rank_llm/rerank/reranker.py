@@ -464,7 +464,7 @@ class Reranker:
             print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
-            agent = None
+            model_coordinator = None
         else:
             # supports loading models from huggingface
             print(f"Loading {model_path} ...")
