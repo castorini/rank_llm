@@ -56,11 +56,11 @@ for FirstMistral.
 Once trained, one can run inference with the trained model by running the commands below **from the project root**:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=training/models/ranking/RankZephyr/epoch_2 --top_k_candidates=100 --dataset=dl20 \
---retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context_size=4096 --variable_passages --use_alpha --num_gpus 1
+--retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context_size=4096 --variable_passages --num_gpus 1
 ```
 for RankZephyr and
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=training/models/ranking/FirstMistral/epoch_2 --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=training/models/ranking/FirstMistral/epoch_2 --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 for FirstMistral.
 
