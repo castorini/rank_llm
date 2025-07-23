@@ -15,7 +15,12 @@ from rank_llm.retrieve import Retriever
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
-model_coordinator = SafeGenai("gemini-2.0-flash-001", 4096, keys=get_genai_api_key())
+model_coordinator = SafeGenai(
+    "gemini-2.0-flash-001",
+    4096,
+    keys=get_genai_api_key(),
+    prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+)
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
 rerank_results = reranker.rerank_batch(requests, **kwargs)

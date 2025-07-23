@@ -7,7 +7,7 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## News
-- **[2024.05.25]** Our [RankLLM](https://arxiv.org/abs/2505.19284) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
+- **[2024.05.25]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
 
 ## Overview
 We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
@@ -116,7 +116,7 @@ from rank_llm.rerank.listwise import (
     VicunaReranker,
     ZephyrReranker,
 )
-from rank_llm.retrieve.retriever import Retriever
+from rank_llm.retrieve.retriever import RetrievalMethod, Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
 # -------- Retrieval --------
@@ -143,17 +143,19 @@ reranker = ZephyrReranker()
 # model_coordinator = SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key())
 # reranker = Reranker(model_coordinator)
 
-rerank_results = reranker.rerank_batch(requests=retrieved_results)
+kwargs = {"populate_invocations_history": True}
+rerank_results = reranker.rerank_batch(requests=retrieved_results, **kwargs)
 # ---------------------------
 
 # ------- Evaluation --------
 
 # Evaluate retrieved results.
-ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, TOPICS[dataset_name])
+topics = TOPICS[dataset_name]
+ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, topics)
 print(ndcg_10_retrieved)
 
 # Evaluate rerank results.
-ndcg_10_rerank = EvalFunction.from_results(rerank_results, TOPICS[dataset_name])
+ndcg_10_rerank = EvalFunction.from_results(rerank_results, topics)
 print(ndcg_10_rerank)
 
 # By default ndcg@10 is the eval metric, other value can be specified:
@@ -349,15 +351,23 @@ If you would like to contribute to the project, please refer to the [contributio
 
 If you use RankLLM, please cite the following relevant papers:
 
-[[2505.19284] RankLLM: A Python Package for Reranking with LLMs](https://arxiv.org/abs/2505.19284)
+[[2505.19284] RankLLM: A Python Package for Reranking with LLMs](https://dl.acm.org/doi/10.1145/3726302.3730331)
 
 <!-- {% raw %} -->
 ```
-@ARTICLE{sharifymoghaddam2025rankllm,
-  title   = {{RankLLM}: A Python Package for Reranking with LLMs},
-  author  = {Sahel Sharifymoghaddam and Ronak Pradeep and Andre Slavescu and Ryan Nguyen and Andrew Xu and Zijian Chen and Yilin Zhang and Yidi Chen and Jasper Xian and Jimmy Lin},
-  year    = {2025},
-  journal = {arXiv:2505.19284}
+@inproceedings{sharifymoghaddam2025rankllm,
+author = {Sharifymoghaddam, Sahel and Pradeep, Ronak and Slavescu, Andre and Nguyen, Ryan and Xu, Andrew and Chen, Zijian and Zhang, Yilin and Chen, Yidi and Xian, Jasper and Lin, Jimmy},
+title = {{RankLLM}: A Python Package for Reranking with LLMs},
+year = {2025},
+isbn = {9798400715921},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+booktitle = {Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {3681–3690},
+numpages = {10},
+keywords = {information retrieval, large language models, python, reranking},
+location = {Padua, Italy},
+series = {SIGIR '25}
 }
 ```
 <!-- {% endraw %} -->

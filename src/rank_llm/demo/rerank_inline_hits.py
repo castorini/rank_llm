@@ -73,11 +73,15 @@ request_dict = {
         },
     ],
 }
-
 request = from_dict(data_class=Request, data=request_dict)
+
 reranker = ZephyrReranker()
 kwargs = {"populate_invocations_history": True}
 rerank_results = reranker.rerank(request=request, **kwargs)
+
+# Explicitly free up before creating another reranker.
+del reranker
+
 reranker = VicunaReranker()
 rerank_results = reranker.rerank(request=request, **kwargs)
 print(rerank_results)
