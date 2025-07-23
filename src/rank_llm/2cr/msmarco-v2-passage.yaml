@@ -93,7 +93,7 @@ conditions:
     display: "First Mistral"
     display-html: "First Mistral"
     display-row: "[1]"
-    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages --use_alpha --use_logits
+    command: python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=$topics --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml  --context_size=4096 --variable_passages --use_alpha --use_logits
     topics:
       - topic_key: dl21
         eval_key: dl21-passage

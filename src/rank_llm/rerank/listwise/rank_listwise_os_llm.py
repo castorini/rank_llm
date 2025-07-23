@@ -37,7 +37,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         name: str = "",
         context_size: int = 4096,
         prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -88,6 +88,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - GPU acceleration is supported and recommended for faster computations.
         TODO: Make repetition_penalty configurable
         """
+        if prompt_template_path is None:
+            prompt_template_path = (
+                "src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml"
+                if use_alpha
+                else "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
+            )
         super().__init__(
             model=model,
             context_size=context_size,

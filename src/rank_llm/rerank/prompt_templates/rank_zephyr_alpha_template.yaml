@@ -1,0 +1,11 @@
+method: "singleturn_listwise"
+system_message: "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query"
+prefix: |
+  I will provide you with {num} passages, each indicated by an alphabetical identifier []. Rank the passages based on their relevance to the search query: {query}.
+body: |
+  [{rank}] {candidate}
+suffix: |-
+  Search Query: {query}.
+  Rank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [B] > [A], Answer concisely and directly and only respond with the ranking results, do not say any word or explain.
+output_validation_regex: r"^\[[A-Z]\]( > \[[A-Z]\])*$"
+output_extraction_regex: r"\[([A-Z])\]" 
