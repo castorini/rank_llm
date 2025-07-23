@@ -12,8 +12,13 @@ from rank_llm.retrieve import Retriever
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
-requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
-model_coordinator = SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key())
+requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)[:2]
+model_coordinator = SafeOpenai(
+    "gpt-4o-mini",
+    4096,
+    keys=get_openai_api_key(),
+    prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+)
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
 rerank_results = reranker.rerank_batch(requests, **kwargs)

@@ -31,7 +31,8 @@ print(recall_20)
 
 # Rerank
 reranker = VicunaReranker()
-rerank_results = reranker.rerank_batch(retrieved_results)
+kwargs = {"populate_invocations_history": True}
+rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
 
 # Analyze response:
 analyzer = ResponseAnalyzer.from_inline_results(rerank_results)
@@ -46,8 +47,7 @@ print(eval_result)
 retrieved_results = Retriever.from_dataset_with_prebuilt_index(
     dataset_name, RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL
 )
-reranker = VicunaReranker()
-rerank_results = reranker.rerank_batch(retrieved_results)
+rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
 
 # Analyze response:
 analyzer = ResponseAnalyzer.from_inline_results(rerank_results)

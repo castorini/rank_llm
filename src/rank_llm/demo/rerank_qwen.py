@@ -13,6 +13,7 @@ from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.retrieve import Retriever
+from rank_llm.retrieve.topics_dict import TOPICS
 
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
@@ -30,6 +31,7 @@ error_counts = analyzer.count_errors()
 print(error_counts.__repr__())
 
 # Eval
+topics = TOPICS[dataset_name]
 rerank_ndcg_10 = EvalFunction.from_results(rerank_results, topics)
 print(rerank_ndcg_10)
 
