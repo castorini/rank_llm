@@ -1,5 +1,6 @@
 import os
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,15 +19,16 @@ from rank_llm.retrieve.topics_dict import TOPICS
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 model_coordinator = RankListwiseOSLLM(
     model="deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
     is_thinking=True,
     reasoning_token_budget=30000,
-    prompt_template_path="src/rank_llm/rerank/prompt_templates/qwen_thinking_template.yaml",
+    prompt_template_path=(TEMPLATES / "qwen_thinking_template.yaml"),
 )
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
-rerank_results = reranker.rerank_batch(requests[:1], **kwargs)
+rerank_results = reranker.rerank_batch(requests, **kwargs)
 
 # Analyze the response
 analyzer = ResponseAnalyzer.from_inline_results(rerank_results, use_alpha=False)

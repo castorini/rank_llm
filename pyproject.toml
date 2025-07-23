@@ -80,3 +80,6 @@ include = [
     "rank_llm.retrieve",
 ]
 namespaces = false
+
+[tool.setuptools.package-data]
+"rank_llm.rerank.prompt_templates" = ["*.yaml"] 

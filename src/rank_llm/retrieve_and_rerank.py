@@ -162,7 +162,6 @@ def retrieve(
 
     requests: List[Request] = []
     if retrieval_mode == RetrievalMode.DATASET:
-        host: str = kwargs.get("host", "http://localhost:8081")
         dataset: Union[str, List[str], List[Dict[str, Any]]] = kwargs.get(
             "dataset", None
         )
@@ -170,6 +169,7 @@ def retrieve(
             raise ValueError("Must provide a dataset")
 
         if interactive:
+            host: str = kwargs.get("host", "http://localhost:8081")
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
             )

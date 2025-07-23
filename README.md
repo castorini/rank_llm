@@ -61,9 +61,10 @@ conda install -c conda-forge openjdk=21 maven -y
 pip install "rank-llm[pyserini]"
 ```
 
-## Install Dependencies
+## Install [all] Dependencies
 ```bash
-pip install -r requirements.txt
+pip install -e .[all]      # local installation for development
+pip install rank-llm[all]  # or pip installation
 ```
 
 ## Install SGLang, or TensorRT-LLM (Optional)
