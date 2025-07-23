@@ -33,7 +33,7 @@ from transformers.file_utils import (
     is_torch_fx_proxy,
     replace_return_docstrings,
 )
-from transformers.generation_utils import GenerationMixin
+from transformers.generation import GenerationMixin
 from transformers.modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,
