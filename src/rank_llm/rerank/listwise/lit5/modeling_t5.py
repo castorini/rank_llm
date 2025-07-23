@@ -33,6 +33,7 @@ from transformers.file_utils import (
     is_torch_fx_proxy,
     replace_return_docstrings,
 )
+from transformers.generation_utils import GenerationMixin
 from transformers.modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,
@@ -1612,7 +1613,7 @@ class T5Model(T5PreTrainedModel):
 @add_start_docstrings(
     """T5 Model with a `language modeling` head on top. """, T5_START_DOCSTRING
 )
-class T5ForConditionalGeneration(T5PreTrainedModel):
+class T5ForConditionalGeneration(T5PreTrainedModel, GenerationMixin):
     _keys_to_ignore_on_load_missing = [
         r"encoder\.embed_tokens\.weight",
         r"decoder\.embed_tokens\.weight",
