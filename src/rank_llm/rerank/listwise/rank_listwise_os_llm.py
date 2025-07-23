@@ -88,14 +88,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - GPU acceleration is supported and recommended for faster computations.
         TODO: Make repetition_penalty configurable
         """
-        if use_alpha:
-            prompt_template_path = (
-                "src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml"
-            )
-        else:
-            prompt_template_path = (
-                "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
-            )
+        if prompt_template_path is None:
+            if use_alpha:
+                prompt_template_path = "src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml"
+            else:
+                prompt_template_path = (
+                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
+                )
         super().__init__(
             model=model,
             context_size=context_size,

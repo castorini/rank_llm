@@ -175,17 +175,6 @@ failure_inputs = [
         "Default Message",
     ),
 ]
-failure_inputs_prompt_template = [
-    (
-        "castorini/rank_zephyr_7b_v1_full",
-        4096,
-        None,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-]
 
 r = from_dict(
     data_class=Result,
@@ -293,26 +282,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
                     model=model,
                     context_size=context_size,
                     prompt_mode=prompt_mode,
-                    num_few_shot_examples=num_few_shot_examples,
-                    variable_passages=variable_passages,
-                    window_size=window_size,
-                    system_message=system_message,
-                )
-
-        for (
-            model,
-            context_size,
-            prompt_template_path,
-            num_few_shot_examples,
-            variable_passages,
-            window_size,
-            system_message,
-        ) in failure_inputs_prompt_template:
-            with self.assertRaises(TypeError):
-                model_coordinator = RankListwiseOSLLM(
-                    model=model,
-                    context_size=context_size,
-                    prompt_template_path=prompt_template_path,
                     num_few_shot_examples=num_few_shot_examples,
                     variable_passages=variable_passages,
                     window_size=window_size,
