@@ -42,7 +42,7 @@ Please note that using JDK 11 is not supported and may lead to errors.
 ## Create Conda Environment
 
 ```bash
-conda create -n rankllm python=3.10
+conda create -n rankllm python=3.11
 conda activate rankllm
 ```
 
