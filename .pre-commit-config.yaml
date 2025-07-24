@@ -3,7 +3,7 @@ repos:
     rev: 23.12.1
     hooks:
     -   id: black
-        language_version: "3.10"
+        language_version: "3.11"
 
 -   repo: https://github.com/pycqa/isort
     rev: 5.13.2
@@ -11,7 +11,7 @@ repos:
     -   id: isort
         args:
             - --profile=black
-        language_version: "3.10"
+        language_version: "3.11"
 
 -   repo: https://github.com/pycqa/flake8
     rev: 7.0.0
@@ -19,4 +19,4 @@ repos:
     -   id: flake8
         args: [--ignore=E501, --select=F401]
         additional_dependencies: [flake8-import-order]
-        language_version: "3.10"
+        language_version: "3.11"

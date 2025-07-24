@@ -17,7 +17,7 @@ We offer a suite of rerankers - pointwise models like MonoT5, pairwise models li
 </p>
 
 ## Releases
-current_version = 0.21.0
+current_version = 0.25.0
 
 ## Content
 1. [Installation](#installation)
@@ -42,7 +42,7 @@ Please note that using JDK 11 is not supported and may lead to errors.
 ## Create Conda Environment
 
 ```bash
-conda create -n rankllm python=3.10
+conda create -n rankllm python=3.11
 conda activate rankllm
 ```
 
