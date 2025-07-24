@@ -1,6 +1,6 @@
 # RankLLM Release Notes (v0.25.0)
 
-+ **Release date:** PLACEHOLDER, 2025
++ **Release date:** July 23, 2025
 + **Pyserini dependency:** v1.2.0
 
 ## Summary of Changes
@@ -15,7 +15,7 @@
 + Improved/added test coverage for all new features and added regression tests to check for silent errors
 + Updated documentations:
     - Added all of the results from the [rankllm paper](https://arxiv.org/pdf/2505.19284) to 2CR [pages](/src/rank_llm/2cr)
-    - Moved training dependencies to optional dependencies in pyproject
+    - Updated training python dependencies to 3.10 and moved them to optional dependencies in pyproject, created conda config file to install environment and dependencies
     - Added [documentation](/docs/external-integrations.md) with instructions on using rankllm with external integrations
 + Other QoL changes/bug fixes:
     - Updated and optimized first stage corpus caching logic and migrated commonly used corpus to HuggingFace Datasets [repo](https://huggingface.co/datasets/castorini/rank_llm_data) and added support for new indices and topics that's supported by [Pyserini](https://github.com/castorini/pyserini/)
@@ -23,6 +23,7 @@
     - Added ability to choose the number of queries to run via `max_queries` argument so tests/experiments can be ran faster with fewer queries
     - Bug fix: improved clean response function to effectively remove thinking traces as well as better handling of "fake" digits
     - Bug fix: added chat template to rank_vicuna's tokenizer
+    - Bug fix: fixed rank_fid's LLM generation error with newer versions of Huggingface transformers (v4.50+)
 
 ## Contributors
 
