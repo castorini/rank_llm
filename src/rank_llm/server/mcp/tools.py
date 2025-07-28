@@ -101,7 +101,11 @@ def register_rankllm_tools(mcp: FastMCP):
                 query=Query(text=query_text, qid=query_id),
                 candidates=[
                     Candidate(
-                        docid=c["docid"], score=c["score"], doc={"contents": c["doc"]}
+                        docid=c["docid"],
+                        score=c["score"],
+                        doc={"contents": c["doc"]}
+                        if type(c["doc"]) is str
+                        else c["doc"],
                     )
                     for c in candidates
                 ],

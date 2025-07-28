@@ -48,6 +48,9 @@ training = [
     "torch>=2.4.0",
     "numpy>=1.26.4"
 ]
+server = [
+    "fastmcp>=2.10.6"
+]
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
