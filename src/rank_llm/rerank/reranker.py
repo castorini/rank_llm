@@ -255,73 +255,6 @@ class Reranker:
                 window_size=window_size,
                 keys=genai_keys,
             )
-
-        elif "vicuna" in model_path or "zephyr" in model_path:
-            # RankVicuna or RankZephyr model suite
-            print(f"Loading {model_path} ...")
-
-            model_full_paths = {
-                "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
-                "rank_vicuna": "castorini/rank_vicuna_7b_v1",
-            }
-
-            keys_and_defaults = [
-                ("context_size", 4096),
-                (
-                    "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
-                ),
-                ("num_few_shot_examples", 0),
-                ("few_shot_file", None),
-                ("device", "cuda"),
-                ("num_gpus", 1),
-                ("variable_passages", False),
-                ("window_size", 20),
-                ("system_message", None),
-                ("sglang_batched", False),
-                ("tensorrt_batched", False),
-                ("use_logits", False),
-                ("use_alpha", False),
-            ]
-            [
-                context_size,
-                prompt_template_path,
-                num_few_shot_examples,
-                few_shot_file,
-                device,
-                num_gpus,
-                variable_passages,
-                window_size,
-                system_message,
-                sglang_batched,
-                tensorrt_batched,
-                use_logits,
-                use_alpha,
-            ] = extract_kwargs(keys_and_defaults, **kwargs)
-
-            model_coordinator = RankListwiseOSLLM(
-                model=(
-                    model_full_paths[model_path]
-                    if model_path in model_full_paths
-                    else model_path
-                ),
-                name=model_path,
-                context_size=context_size,
-                prompt_template_path=prompt_template_path,
-                num_few_shot_examples=num_few_shot_examples,
-                few_shot_file=few_shot_file,
-                device=device,
-                num_gpus=num_gpus,
-                variable_passages=variable_passages,
-                window_size=window_size,
-                system_message=system_message,
-                sglang_batched=sglang_batched,
-                tensorrt_batched=tensorrt_batched,
-                use_logits=use_logits,
-                use_alpha=use_alpha,
-            )
-
-            print(f"Completed loading {model_path}")
         elif "monot5" in model_path:
             # using monot5
             print(f"Loading {model_path} ...")
@@ -468,6 +401,10 @@ class Reranker:
         else:
             # supports loading models from huggingface
             print(f"Loading {model_path} ...")
+            model_full_paths = {
+                "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
+                "rank_vicuna": "castorini/rank_vicuna_7b_v1",
+            }
             keys_and_defaults = [
                 ("context_size", 4096),
                 (
@@ -503,7 +440,11 @@ class Reranker:
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
-                model=(model_path),
+                model=(
+                    model_full_paths[model_path]
+                    if model_path in model_full_paths
+                    else model_path
+                ),
                 name=model_path,
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
