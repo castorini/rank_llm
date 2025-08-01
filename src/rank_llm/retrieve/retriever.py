@@ -191,7 +191,7 @@ class Retriever:
                             for line in f
                         ]
                         for result in results:
-                            results.candidates = result.candidates[:k]
+                            result.candidates = result.candidates[:k]
                         print(
                             f"Successfully loaded {max_k_file} to get top {k} candidates"
                         )
