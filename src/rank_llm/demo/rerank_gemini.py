@@ -1,5 +1,6 @@
 import os
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -15,7 +16,13 @@ from rank_llm.retrieve import Retriever
 # By default uses BM25 for retrieval
 dataset_name = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
-model_coordinator = SafeGenai("gemini-2.0-flash-001", 4096, keys=get_genai_api_key())
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
+model_coordinator = SafeGenai(
+    "gemini-2.0-flash-001",
+    4096,
+    keys=get_genai_api_key(),
+    prompt_template_path=(TEMPLATES / "rank_zephyr_template.yaml"),
+)
 reranker = Reranker(model_coordinator)
 kwargs = {"populate_invocations_history": True}
 rerank_results = reranker.rerank_batch(requests, **kwargs)

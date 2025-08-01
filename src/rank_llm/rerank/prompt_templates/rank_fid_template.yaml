@@ -1,0 +1,4 @@
+method: "rankfid"
+text: "Search Query: {query} Passage: [{index}] {passage} Relevance Ranking: "
+output_validation_regex: r"^\[\d+\]( > \[\d+\])*$"
+output_extraction_regex: r"\[(\d+)\]" 

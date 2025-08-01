@@ -9,7 +9,6 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.analysis.estimate_costs import EstimationMode
-from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise import SafeOpenai
 from rank_llm.retrieve import TOPICS, PyseriniRetriever, RetrievalMethod
 
@@ -22,7 +21,7 @@ def main(args):
     top_k_candidates = args.top_k_candidates
     num_few_shot_examples = args.num_few_shot_examples
     retrieval_method = RetrievalMethod.BM25
-    prompt_mode = args.prompt_mode
+    prompt_template_path = args.prompt_template_path
     costs = {}
     for dataset in TOPICS.keys():
         print("#" * 20)
@@ -31,7 +30,7 @@ def main(args):
         model_coordinator = SafeOpenai(
             model=model_name,
             context_size=context_size,
-            prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             keys=openai_keys,
         )
@@ -65,7 +64,7 @@ def main(args):
 
 
 """
-python src/rank_llm/analysis/estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_mode=rank_GPT
+python src/rank_llm/analysis/estimate_costs.py --estimation_mode=create_prpts --model_name=gpt-3.5-turbo --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml
 """
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -100,10 +99,9 @@ if __name__ == "__main__":
         help="the number of examples provided in prompt",
     )
     parser.add_argument(
-        "--prompt_mode",
-        type=PromptMode,
+        "--prompt_template_path",
+        type=str,
         required=True,
-        choices=list(PromptMode),
     )
     args = parser.parse_args()
     main(args)

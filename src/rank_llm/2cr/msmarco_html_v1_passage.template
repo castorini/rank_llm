@@ -188,11 +188,9 @@ $rows
 <a href="https://arxiv.org/pdf/2312.02724.pdf">RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!</a>
 <i>arXiv:2312.02724</i>, December 2023.</p>
 
-<li><p>[3] Thibault Formal, Carlos Lassance, Benjamin Piwowarski, and Stéphane Clinchant
-<a href="https://arxiv.org/abs/2205.04733">From Distillation to Hard Negative Sampling: Making Sparse Neural IR Models More Effective.</a>
-<i>Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2022), May 2022.</i></p></li>
-
-
+<li><p>[3] Sahel Sharifymoghaddam, Ronak Pradeep, Andre Slavescu, Ryan Nguyen, Andrew Xu, Zijian Chen, Yilin Zhang, Yidi Chen, Jasper Xian, and Jimmy Lin.
+<a href="https://arxiv.org/pdf/2505.19284">RankLLM: A Python Package for Reranking with LLMs</a>
+<i>Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2025), May 2025.</i></p></li>
 </ul>
 
 <div style="padding-top: 20px"/>

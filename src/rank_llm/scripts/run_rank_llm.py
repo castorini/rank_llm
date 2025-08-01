@@ -9,7 +9,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
@@ -22,11 +22,13 @@ def main(args):
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
     top_k_rerank = top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
+    max_queries = args.max_queries
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
-    prompt_mode = args.prompt_mode
+    prompt_template_path = args.prompt_template_path
     num_few_shot_examples = args.num_few_shot_examples
+    few_shot_file = args.few_shot_file
     shuffle_candidates = args.shuffle_candidates
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
@@ -37,6 +39,9 @@ def main(args):
     stride = args.stride
     window_size = args.window_size
     system_message = args.system_message
+    populate_invocations_history = args.populate_invocations_history
+    is_thinking = args.is_thinking
+    reasoning_token_budget = args.reasoning_token_budget
     use_logits = args.use_logits
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
@@ -51,11 +56,13 @@ def main(args):
         retrieval_method=retrieval_method,
         top_k_retrieve=top_k_candidates,
         top_k_rerank=top_k_rerank,
+        max_queries=max_queries,
         context_size=context_size,
         device=device,
         num_gpus=num_gpus,
-        prompt_mode=prompt_mode,
+        prompt_template_path=prompt_template_path,
         num_few_shot_examples=num_few_shot_examples,
+        few_shot_file=few_shot_file,
         shuffle_candidates=shuffle_candidates,
         print_prompts_responses=print_prompts_responses,
         use_azure_openai=use_azure_openai,
@@ -64,6 +71,9 @@ def main(args):
         window_size=window_size,
         stride=stride,
         system_message=system_message,
+        populate_invocations_history=populate_invocations_history,
+        is_thinking=is_thinking,
+        reasoning_token_budget=reasoning_token_budget,
         use_logits=use_logits,
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
@@ -110,6 +120,12 @@ if __name__ == "__main__":
         help="the number of top candidates to return from reranking",
     )
     parser.add_argument(
+        "--max_queries",
+        type=int,
+        default=None,
+        help="the max number of queries to process from the dataset",
+    )
+    parser.add_argument(
         "--dataset",
         type=str,
         required=True,
@@ -127,8 +143,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--prompt_mode",
         type=PromptMode,
-        required=True,
+        required=False,
         choices=list(PromptMode),
+    )
+    parser.add_argument(
+        "--prompt_template_path",
+        type=str,
+        required=False,
+        help="yaml file path for the prompt template",
     )
     parser.add_argument(
         "--shuffle_candidates",
@@ -146,6 +168,13 @@ if __name__ == "__main__":
         required=False,
         default=0,
         help="number of in context examples to provide",
+    )
+    parser.add_argument(
+        "--few_shot_file",
+        type=str,
+        required=False,
+        default=None,
+        help="path to JSONL file containing few-shot examples.",
     )
     parser.add_argument(
         "--variable_passages",
@@ -176,6 +205,22 @@ if __name__ == "__main__":
         type=str,
         default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         help="the system message used in prompts",
+    )
+    parser.add_argument(
+        "--populate_invocations_history",
+        action="store_true",
+        help="write a file with the prompts and raw responses from LLM",
+    )
+    parser.add_argument(
+        "--is_thinking",
+        action="store_true",
+        help="enables thinking mode which increases output token budget to account for the full thinking trace + response.",
+    )
+    parser.add_argument(
+        "--reasoning_token_budget",
+        type=int,
+        default=10000,
+        help="number of output token budget for thinking traces on reasoning models",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
     parser.add_argument(

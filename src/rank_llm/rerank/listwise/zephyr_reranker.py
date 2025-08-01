@@ -1,8 +1,8 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank import PromptMode
 from rank_llm.rerank.listwise import RankListwiseOSLLM
+from rank_llm.rerank.rankllm import PromptMode
 
 
 class ZephyrReranker:
@@ -10,24 +10,26 @@ class ZephyrReranker:
         self,
         model_path: str = "castorini/rank_zephyr_7b_v1_full",
         context_size: int = 4096,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_mode: Optional[PromptMode] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         device: str = "cuda",
         num_gpus: int = 1,
         variable_passages: bool = True,
         window_size: int = 20,
-        system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query",
     ) -> None:
         self._reranker = RankListwiseOSLLM(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
             device=device,
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,
-            system_message=system_message,
         )
 
     def rerank_batch(

@@ -1,12 +1,13 @@
 import logging
 import math
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers.generation import GenerationConfig
 
 from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
+from rank_llm.rerank.rankllm import PromptMode
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,11 @@ class MonoT5(PointwiseRankLLM):
     def __init__(
         self,
         model: str,
-        prompt_mode: str = "monot5",
+        prompt_mode: Optional[PromptMode] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
         context_size: int = 512,
+        num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         device: str = "cuda",
         batch_size: int = 32,
     ):
@@ -24,6 +28,9 @@ class MonoT5(PointwiseRankLLM):
             model=model,
             context_size=context_size,
             prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
             device=device,
             batch_size=batch_size,
         )
@@ -86,16 +93,36 @@ class MonoT5(PointwiseRankLLM):
 
     def create_prompt(self, result: Result, index: int) -> Tuple[str, int]:
         query = result.query.text
-        input = f"Query: {query} Document: {self.convert_doc_to_prompt_content(result.candidates[index].doc, max_length=self._context_size)}"
-        prompt = (
-            self._tokenizer.decode(
-                self._tokenizer.encode(input)[: (self._context_size - 32)]
-            )[:-4]
-            + " Relevant: "
-        )
-        prompt = prompt.replace("<unk>", "")
 
-        return prompt, self.get_num_tokens(prompt)
+        reserved_for_output = (
+            64  # might need to change depending on what the actual output look like
+        )
+        query_tokens = self.get_num_tokens(f"Query: {query} Document:  Relevant: ")
+
+        few_shot_section = self._inference_handler._generate_fewshot_prompt(
+            num_examples=self._num_few_shot_examples, examples=self._examples
+        )
+        few_shot_tokens = self.get_num_tokens(few_shot_section)
+
+        max_doc_tokens = (
+            self._context_size - few_shot_tokens - query_tokens - reserved_for_output
+        )
+
+        prompt = self._inference_handler.generate_prompt(
+            result=result,
+            index=index,
+            max_doc_tokens=max_doc_tokens,
+            tokenizer=self._tokenizer,
+            num_few_shot_examples=self._num_few_shot_examples,
+            fewshot_exampels=self._examples,
+        )
+
+        final_token_count = self.get_num_tokens(prompt)
+        assert (
+            final_token_count <= self._context_size - reserved_for_output
+        ), f"Prompt overflow: {final_token_count} > {self._context_size - reserved_for_output}"
+
+        return prompt, final_token_count
 
     def get_num_tokens(self, prompt: str) -> int:
         return len(self._tokenizer.encode(prompt))

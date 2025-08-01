@@ -7,7 +7,7 @@ import tiktoken
 from tqdm import tqdm
 
 from rank_llm.data import Request, Result
-from rank_llm.rerank import PromptMode
+from rank_llm.rerank.rankllm import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -17,15 +17,17 @@ class SafeOpenai(ListwiseRankLLM):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode = PromptMode.RANK_GPT,
+        prompt_mode: Optional[PromptMode] = None,
+        prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
         window_size: int = 20,
         keys=None,
         key_start_id=None,
         proxy=None,
-        api_type: str = None,
-        api_base: str = None,
-        api_version: str = None,
+        api_type: Optional[str] = None,
+        api_base: Optional[str] = None,
+        api_version: Optional[str] = None,
     ) -> None:
         """
         Creates instance of the SafeOpenai class, a specialized version of RankLLM designed for safely handling OpenAI API calls with
@@ -54,14 +56,12 @@ class SafeOpenai(ListwiseRankLLM):
         - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
-        super().__init__(
-            model, context_size, prompt_mode, num_few_shot_examples, window_size
-        )
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide OpenAI Keys.")
-        if prompt_mode not in [
+
+        if prompt_mode and prompt_mode not in [
             PromptMode.RANK_GPT,
             PromptMode.RANK_GPT_APEER,
             PromptMode.LRL,
@@ -69,6 +69,33 @@ class SafeOpenai(ListwiseRankLLM):
             raise ValueError(
                 f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT}, {PromptMode.RANK_GPT_APEER} or {PromptMode.LRL}."
             )
+
+        if prompt_template_path is None:
+            if prompt_mode == PromptMode.RANK_GPT:
+                prompt_template_path = (
+                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml"
+                )
+            elif prompt_mode == PromptMode.RANK_GPT_APEER:
+                prompt_template_path = (
+                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml"
+                )
+            elif prompt_mode == PromptMode.LRL:
+                prompt_template_path = (
+                    "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml"
+                )
+            else:
+                raise ValueError(
+                    "Either `prompt_mode` or `prompt_template_path` must be specified."
+                )
+        super().__init__(
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
+            window_size=window_size,
+        )
 
         self._output_token_estimate = None
         self._keys = keys
@@ -182,42 +209,6 @@ class SafeOpenai(ListwiseRankLLM):
             encoding = tiktoken.get_encoding("cl100k_base")
         return response, len(encoding.encode(response))
 
-    def _get_prefix_for_rank_gpt_prompt(
-        self, query: str, num: int
-    ) -> List[Dict[str, str]]:
-        return [
-            {
-                "role": "system",
-                "content": "You are RankGPT, an intelligent assistant that can rank passages based on their relevancy to the query.",
-            },
-            {
-                "role": "user",
-                "content": f"I will provide you with {num} passages, each indicated by number identifier []. \nRank the passages based on their relevance to query: {query}.",
-            },
-            {"role": "assistant", "content": "Okay, please provide the passages."},
-        ]
-
-    def _get_suffix_for_rank_gpt_prompt(self, query: str, num: int) -> str:
-        return f"Search Query: {query}. \nRank the {num} passages above based on their relevance to the search query. The passages should be listed in descending order using identifiers. The most relevant passages should be listed first. The output format should be [] > [], e.g., [1] > [2]. Only response the ranking results, do not say any word or explain."
-
-    def _get_prefix_for_rank_gpt_apeer_prompt(
-        self, query: str, num: int
-    ) -> List[Dict[str, str]]:
-        # APEER
-        return [
-            {
-                "role": "system",
-                "content": "As RankGPT, your task is to evaluate and rank unique passages based on their relevance and accuracy to a given query. Prioritize passages that directly address the query and provide detailed, correct answers. Ignore factors such as length, complexity, or writing style unless they seriously hinder readability.",
-            },
-            {
-                "role": "user",
-                "content": f"In response to the query: [querystart] {query} [queryend], rank the passages. Ignore aspects like length, complexity, or writing style, and concentrate on passages that provide a comprehensive understanding of the query. Take into account any inaccuracies or vagueness in the passages when determining their relevance.",
-            },
-        ]
-
-    def _get_suffix_for_rank_gpt_apeer_prompt(self, query: str, num: int) -> str:
-        return f"Given the query: [querystart] {query} [queryend], produce a succinct and clear ranking of all passages, from most to least relevant, using their identifiers. The format should be [rankstart] [most relevant passage ID] > [next most relevant passage ID] > ... > [least relevant passage ID] [rankend]. Refrain from including any additional commentary or explanations in your ranking."
-
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
@@ -253,54 +244,18 @@ class SafeOpenai(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        if self._prompt_mode in [PromptMode.RANK_GPT, PromptMode.RANK_GPT_APEER]:
-            return self.create_rank_gpt_prompt(result, rank_start, rank_end)
-        else:
-            return self.create_LRL_prompt(result, rank_start, rank_end)
+        max_length = 300 * (self._window_size // (rank_end - rank_start))
 
-    def create_rank_gpt_prompt(
-        self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
-        query = result.query.text
-        num = len(result.candidates[rank_start:rank_end])
-
-        max_length = 300 * (self._window_size / (rank_end - rank_start))
         while True:
-            messages = (
-                self._get_prefix_for_rank_gpt_apeer_prompt(query, num)
-                if self._prompt_mode == PromptMode.RANK_GPT_APEER
-                else self._get_prefix_for_rank_gpt_prompt(query, num)
+            prompt = self._inference_handler.generate_prompt(
+                result=result,
+                rank_start=rank_start,
+                rank_end=rank_end,
+                max_length=max_length,
+                num_fewshot_examples=self._num_few_shot_examples,
+                fewshot_examples=self._examples,
             )
-            rank = 0
-            for cand in result.candidates[rank_start:rank_end]:
-                rank += 1
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-                if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-                    messages[-1][
-                        "content"
-                    ] += f"\n[{rank}] {self._replace_number(content)}"
-                else:
-                    messages.append(
-                        {
-                            "role": "user",
-                            "content": f"[{rank}] {self._replace_number(content)}",
-                        }
-                    )
-                    messages.append(
-                        {"role": "assistant", "content": f"Received passage [{rank}]."}
-                    )
-            if self._prompt_mode == PromptMode.RANK_GPT_APEER:
-                messages[-1][
-                    "content"
-                ] += f"\n{self._get_suffix_for_rank_gpt_apeer_prompt(query, num)}"
-            else:
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": self._get_suffix_for_rank_gpt_prompt(query, num),
-                    }
-                )
-            num_tokens = self.get_num_tokens(messages)
+            num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens():
                 break
             else:
@@ -309,39 +264,8 @@ class SafeOpenai(ListwiseRankLLM):
                     (num_tokens - self.max_tokens() + self.num_output_tokens())
                     // ((rank_end - rank_start) * 4),
                 )
-        return messages, self.get_num_tokens(messages)
 
-    def create_LRL_prompt(
-        self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
-        query = result.query.text
-        num = len(result.candidates[rank_start:rank_end])
-        max_length = 300 * (20 / (rank_end - rank_start))
-        psg_ids = []
-        while True:
-            message = "Sort the list PASSAGES by how good each text answers the QUESTION (in descending order of relevancy).\n"
-            rank = 0
-            for cand in result.candidates[rank_start:rank_end]:
-                rank += 1
-                psg_id = f"PASSAGE{rank}"
-                content = self.convert_doc_to_prompt_content(cand.doc, max_length)
-                message += f'{psg_id} = "{self._replace_number(content)}"\n'
-                psg_ids.append(psg_id)
-            message += f'QUESTION = "{query}"\n'
-            message += "PASSAGES = [" + ", ".join(psg_ids) + "]\n"
-            message += "Sort the PASSAGES by their relevance to the Query. The answer should be a sorted list of PASSAGE ids (e.g., [PASSAGE2, ..., PASSAGE1]). Do not include any additional words or explanations.\n"
-            message += "SORTED_PASSAGES = "
-            messages = [{"role": "user", "content": message}]
-            num_tokens = self.get_num_tokens(messages)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens():
-                break
-            else:
-                max_length -= max(
-                    1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // ((rank_end - rank_start) * 4),
-                )
-        return messages, self.get_num_tokens(messages)
+        return prompt, num_tokens
 
     def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""

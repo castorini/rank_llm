@@ -6,7 +6,10 @@
 [![Generic badge](https://img.shields.io/badge/arXiv-2309.15088-red.svg)](https://arxiv.org/abs/2309.15088)
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
+## News
+- **[2024.05.25]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
 
+## Overview
 We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
 <p align="center">
@@ -14,7 +17,7 @@ We offer a suite of rerankers - pointwise models like MonoT5, pairwise models li
 </p>
 
 ## Releases
-current_version = 0.21.0
+current_version = 0.25.0
 
 ## Content
 1. [Installation](#installation)
@@ -39,7 +42,7 @@ Please note that using JDK 11 is not supported and may lead to errors.
 ## Create Conda Environment
 
 ```bash
-conda create -n rankllm python=3.10
+conda create -n rankllm python=3.11
 conda activate rankllm
 ```
 
@@ -53,9 +56,15 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 conda install -c conda-forge openjdk=21 maven -y
 ```
 
-## Install Dependencies
+### Install retriever dependencies if you want to use the retriever
 ```bash
-pip install -r requirements.txt
+pip install "rank-llm[pyserini]"
+```
+
+## Install [all] Dependencies
+```bash
+pip install -e .[all]      # local installation for development
+pip install rank-llm[all]  # or pip installation
 ```
 
 ## Install SGLang, or TensorRT-LLM (Optional)
@@ -80,6 +89,19 @@ pip install -e .[tensorrt-llm]      # local installation for development
 pip install rank-llm[tensorrt-llm]  # or pip installation
 ```
 
+## Install Training (Optional)
+
+```bash
+pip install -e .[training]      # local installation for development
+pip install rank-llm[training]  # or pip installation
+```
+
+Remember to also install flash-attn to use as optimized implementation of attention mechanism used in Transformer models.
+
+```bash
+pip install flash-attn --no-build-isolation
+```
+
 <a id="quick-start"></a>
 # ⏳ Quick Start
 The following code snippet is a minimal walk through of retrieval, reranking, evalaution, and invocations analysis of top 100 retrieved documents for queries from `DL19`. In this example `BM25` is used as the retriever and `RankZephyr` as the reranker. Additional sample snippets are available to run under the `src/rank_llm/demo` directory.
@@ -95,7 +117,7 @@ from rank_llm.rerank.listwise import (
     VicunaReranker,
     ZephyrReranker,
 )
-from rank_llm.retrieve.retriever import Retriever
+from rank_llm.retrieve.retriever import RetrievalMethod, Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
 # -------- Retrieval --------
@@ -122,17 +144,19 @@ reranker = ZephyrReranker()
 # model_coordinator = SafeOpenai("gpt-4o-mini", 4096, keys=get_openai_api_key())
 # reranker = Reranker(model_coordinator)
 
-rerank_results = reranker.rerank_batch(requests=retrieved_results)
+kwargs = {"populate_invocations_history": True}
+rerank_results = reranker.rerank_batch(requests=retrieved_results, **kwargs)
 # ---------------------------
 
 # ------- Evaluation --------
 
 # Evaluate retrieved results.
-ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, TOPICS[dataset_name])
+topics = TOPICS[dataset_name]
+ndcg_10_retrieved = EvalFunction.from_results(retrieved_results, topics)
 print(ndcg_10_retrieved)
 
 # Evaluate rerank results.
-ndcg_10_rerank = EvalFunction.from_results(rerank_results, TOPICS[dataset_name])
+ndcg_10_rerank = EvalFunction.from_results(rerank_results, topics)
 print(ndcg_10_rerank)
 
 # By default ndcg@10 is the eval metric, other value can be specified:
@@ -172,7 +196,7 @@ The comperehensive list of our two-click reproduction commands are available on 
 We can run the RankZephyr model with the following command:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
---retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages
+--retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages
 ```
 
 Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
@@ -186,9 +210,9 @@ If you want to run multiple passes of the model, you can use the `--num_passes` 
 We can run the RankGPT4-o model with the following command:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_mode=rank_GPT_APEER  --context_size=4096 --use_azure_openai
+  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml  --context_size=4096 --use_azure_openai
 ```
-Note that the `--prompt_mode` is set to `rank_GPT_APEER` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
+Note that the `--prompt_template_path` is set to `rank_gpt_apeer` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
 This can be changed to `rank_GPT` to use the original prompt.
 
 ## LiT5
@@ -197,7 +221,7 @@ We can run the LiT5-Distill V2 model (which could rerank 100 documents in a sing
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large-v2 --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=4 \
+        --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  --context_size=150 --batch_size=4 \
     --variable_passages --window_size=100
 ```
 
@@ -205,7 +229,7 @@ We can run the LiT5-Distill original model (which works with a window size of 20
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Distill-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5  --context_size=150 --batch_size=32 \
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml  --context_size=150 --batch_size=32 \
     --variable_passages
 ```
 
@@ -213,7 +237,7 @@ We can run the LiT5-Score model with the following command:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/LiT5-Score-large --top_k_candidates=100 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=LiT5 --context_size=150 --batch_size=8 \
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml --context_size=150 --batch_size=8 \
     --window_size=100 --variable_passages
 ```
 
@@ -223,7 +247,7 @@ The following runs the 3B variant of MonoT5 trained for 10K steps:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msmarco-10k --top_k_candidates=1000 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=monot5 --context_size=512
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/monot5_template.yaml --context_size=512
 ```
 
 Note that we usually rerank 1K candidates with MonoT5.
@@ -232,7 +256,7 @@ Note that we usually rerank 1K candidates with MonoT5.
 The following runs the #B variant of DuoT5 trained for 10K steps:
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/duot5-3b-msmarco-10k --top_k_candidates=50 --dataset=dl19 \
-    --retrieval_method=bm25 --prompt_mode=duot5
+    --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/duot5_template.yaml
 ```
 
 Since Duo's pairwise comparison has $O(n^2) runtime complexity, we recommend reranking top 50 candidates using DuoT5 models.
@@ -242,7 +266,7 @@ Since Duo's pairwise comparison has $O(n^2) runtime complexity, we recommend rer
 We can run the FirstMistral model, reranking using the first-token logits only with the following command:
 
 ```
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 
 Omit `--use_logits` if you wish to perform traditional listwise reranking.
@@ -260,7 +284,7 @@ Then run the following command:
 
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 --top_k_candidates=100 --dataset=dl20 \
-    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_mode=rank_GPT_APEER  --context_size=4096
+    --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml  --context_size=4096
 ```
 
 <a id="model-zoo"></a>
@@ -318,13 +342,40 @@ The following is a table specifically for our monoT5 suite of models hosted on H
 We recommend the Med models for biomedical retrieval. We also provide both 10K (generally better OOD effectiveness) and 100K checkpoints (better in-domain).
 # Training
 Please check the `training` directory for finetuning open-source listwise rerankers.
+# External Integrations
+RankLLM is implemented in many popular toolkits such as LlamaIndex, rerankers, and LangChain. For usage of RankLLM in those toolkits and examples, please check this external integrations [README](docs/external-integrations.md)
 # Community Contribution
 If you would like to contribute to the project, please refer to the [contribution guidelines](CONTRIBUTING.md).
+
+## 📜️ Release History
+
++ v0.25.0: July 23, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.0.md)]
 
 <a id=references></a>
 # ✨ References
 
 If you use RankLLM, please cite the following relevant papers:
+
+[[2505.19284] RankLLM: A Python Package for Reranking with LLMs](https://dl.acm.org/doi/10.1145/3726302.3730331)
+
+<!-- {% raw %} -->
+```
+@inproceedings{sharifymoghaddam2025rankllm,
+author = {Sharifymoghaddam, Sahel and Pradeep, Ronak and Slavescu, Andre and Nguyen, Ryan and Xu, Andrew and Chen, Zijian and Zhang, Yilin and Chen, Yidi and Xian, Jasper and Lin, Jimmy},
+title = {{RankLLM}: A Python Package for Reranking with LLMs},
+year = {2025},
+isbn = {9798400715921},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+booktitle = {Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {3681–3690},
+numpages = {10},
+keywords = {information retrieval, large language models, python, reranking},
+location = {Padua, Italy},
+series = {SIGIR '25}
+}
+```
+<!-- {% endraw %} -->
 
 [[2309.15088] RankVicuna: Zero-Shot Listwise Document Reranking with Open-Source Large Language Models](https://arxiv.org/abs/2309.15088)
 

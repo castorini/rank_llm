@@ -1,7 +1,10 @@
+import contextlib
 import logging
 import os
+import types
 
 import datasets
+import deepspeed
 import transformers
 from accelerate import Accelerator, DistributedDataParallelKwargs
 from accelerate.logging import get_logger
@@ -70,7 +73,7 @@ def main():
     train_dataset, train_dataloader = initialize_dataset_and_loader(args, tokenizer)
 
     overrode_max_train_steps, num_update_steps_per_epoch = initialize_training_state(
-        train_dataloader, args
+        train_dataloader, args, accelerator
     )
     starting_epoch, resume_step, completed_steps = resume_from_checkpoint(
         args, num_update_steps_per_epoch, train_dataloader
@@ -118,9 +121,26 @@ def main():
         )
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
+    logger.info(
+        "Starting accelerator.prepare() - this may take a while with DeepSpeed ZeRO-3"
+    )
     train_dataloader, model, optimizer, lr_scheduler = accelerator.prepare(
         train_dataloader, model, optimizer, lr_scheduler
     )
+    logger.info("Finished accelerator.prepare() successfully")
+
+    # TODO: remove this when updated to newer accelerate.
+    # This is a workaround, newer accelerate already addressed this https://github.com/huggingface/accelerate/issues/3481, just not pushed to PyPI yet.
+    if (
+        isinstance(model, deepspeed.DeepSpeedEngine)
+        and model.zero_optimization_partition_gradients()
+    ):
+
+        def _null_no_sync(self):
+            return contextlib.nullcontext()
+
+        model.no_sync = types.MethodType(_null_no_sync, model)
+        logger.info("Patched DeepSpeedEngine.no_sync → nullcontext for ZeRO-3")
 
     progress_bar = tqdm(
         range(args.max_train_steps), disable=not accelerator.is_local_main_process
@@ -155,11 +175,11 @@ def main():
         if completed_steps >= args.max_train_steps:
             break
 
-    if args.with_tracking:
-        accelerator.end_training()
-
     if args.output_dir is not None:
         save_checkpoint(model, tokenizer, accelerator, args.output_dir)
+
+    if args.with_tracking:
+        accelerator.end_training()
 
 
 if __name__ == "__main__":

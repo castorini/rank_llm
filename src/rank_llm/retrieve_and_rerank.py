@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from rank_llm.data import Query, Request
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
@@ -21,6 +21,7 @@ def retrieve_and_rerank(
     retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
     top_k_retrieve: int = 50,
     top_k_rerank: int = 10,
+    max_queries: Optional[int] = None,
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
     qid: int = 1,
@@ -38,7 +39,10 @@ def retrieve_and_rerank(
     # Get reranking model_coordinator
     reranker = Reranker(
         Reranker.create_model_coordinator(
-            model_path, default_model_coordinator, interactive, **kwargs
+            model_path,
+            default_model_coordinator,
+            interactive,
+            **kwargs,
         )
     )
 
@@ -54,6 +58,9 @@ def retrieve_and_rerank(
         dataset=dataset,
         **kwargs,
     )
+
+    if max_queries is not None:
+        requests = requests[: min(len(requests), max_queries)]
 
     for request in requests:
         request.candidates = request.candidates[:top_k_retrieve]
@@ -155,7 +162,6 @@ def retrieve(
 
     requests: List[Request] = []
     if retrieval_mode == RetrievalMode.DATASET:
-        host: str = kwargs.get("host", "http://localhost:8081")
         dataset: Union[str, List[str], List[Dict[str, Any]]] = kwargs.get(
             "dataset", None
         )
@@ -163,6 +169,7 @@ def retrieve(
             raise ValueError("Must provide a dataset")
 
         if interactive:
+            host: str = kwargs.get("host", "http://localhost:8081")
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
             )

@@ -10,7 +10,7 @@ sys.path.append(parent)
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.data import DataWriter
 from rank_llm.evaluation.trec_eval import EvalFunction
-from rank_llm.rerank import PromptMode, Reranker, get_genai_api_key, get_openai_api_key
+from rank_llm.rerank import Reranker, get_genai_api_key, get_openai_api_key
 from rank_llm.rerank.listwise import (
     RankListwiseOSLLM,
     SafeGenai,
@@ -42,7 +42,6 @@ def create_reranker(name: str):
                 model="castorini/first_mistral",
                 use_logits=True,
                 use_alpha=True,
-                vllm_batched=True,
             )
         )
     if name == "rank_gpt":
@@ -50,7 +49,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_mode=PromptMode.RANK_GPT,
+                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
                 keys=get_openai_api_key(),
             )
         )
@@ -59,7 +58,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_mode=PromptMode.LRL,
+                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml",
                 keys=get_openai_api_key(),
             )
         )
@@ -68,7 +67,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_mode=PromptMode.RANK_GPT_APEER,
+                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
                 keys=get_openai_api_key(),
             )
         )
@@ -86,13 +85,6 @@ def create_reranker(name: str):
         return Reranker(
             RankListwiseOSLLM(
                 model="meta-llama/Llama-3.1-8B-Instruct",
-            )
-        )
-    if name == "r1-distill":
-        return Reranker(
-            RankListwiseOSLLM(
-                model="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
-                window_size=10,
             )
         )
 
@@ -159,22 +151,12 @@ for model in [
     "lrl",
 ]:
     use_alpha = True if model == "mistral" else False
-    if model == "lit5":
-        prompt_mode = PromptMode.LiT5
-    elif model == "rank_gpt_apeer":
-        prompt_mode = PromptMode.RANK_GPT_APEER
-    elif model == "lrl":
-        prompt_mode = PromptMode.LRL
-    else:
-        prompt_mode = PromptMode.RANK_GPT
     files = []
     for dataset in ["dl19", "dl20", "dl21", "dl22", "dl23"]:
         files.append(
             f"demo_outputs/{dataset}/{model}/inference_invocations_history.json"
         )
-    analyzer = ResponseAnalyzer.from_stored_files(
-        files, use_alpha=use_alpha, prompt_mode=prompt_mode
-    )
+    analyzer = ResponseAnalyzer.from_stored_files(files, use_alpha=use_alpha)
     error_counts = analyzer.count_errors(verbose=True, normalize=True)
     results[model] = error_counts.__repr__()
 

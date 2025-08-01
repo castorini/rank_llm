@@ -9,10 +9,6 @@
 <td></td>
 <td>$s4</td>
 <td>$s5</td>
-<td>$s6</td>
-<td></td>
-<td>$s7</td>
-<td>$s8</td>
 </tr>
 <tr class="hide-table-padding">
 <td></td>
@@ -60,12 +56,6 @@ Command to generate and evaluate run on TREC 2019 queries:
     Command to generate run on dev queries:
 
   <blockquote class="mycode">
-<pre><code>$cmd3
-</code></pre></blockquote>
-
-  <blockquote class="mycode">
-<pre><code>${eval_cmd3}</code></pre>
-  </blockquote>
 
   </div>
 </div>

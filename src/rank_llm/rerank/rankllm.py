@@ -1,13 +1,19 @@
+import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import yaml
 
 from rank_llm.data import Request, Result
+from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 logger = logging.getLogger(__name__)
 
 
+# TODO(issue #236): Need to remove this after all the inference handlers are added
 class PromptMode(Enum):
     UNSPECIFIED = "unspecified"
     RANK_GPT = "rank_GPT"
@@ -22,10 +28,48 @@ class PromptMode(Enum):
 
 
 class RankLLM(ABC):
-    def __init__(self, model: str, context_size: int, prompt_mode: PromptMode) -> None:
+    def __init__(
+        self,
+        model: str,
+        context_size: int,
+        prompt_mode: Optional[PromptMode] = None,
+        prompt_template_path: Optional[str] = None,
+        num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
+    ) -> None:
         self._model = model
         self._context_size = context_size
         self._prompt_mode = prompt_mode
+        self._num_few_shot_examples = num_few_shot_examples
+        self._few_shot_file = few_shot_file
+
+        if prompt_mode:
+            print(
+                "PromptMode is deprecated and will be removed in v0.30.0. Please use the prompt_template_path argument with a valid template file instead."
+            )
+
+        try:
+            if not isinstance(prompt_template_path, (str, os.PathLike)):
+                raise TypeError(
+                    f"Expected str or PathLike, got {type(prompt_template_path)}"
+                )
+
+            with open(prompt_template_path, "r") as file:
+                data = yaml.safe_load(file)
+
+                self._inference_handler = self._create_handler(data)
+                print(f"Successfully created {data['method']} inference handler!")
+        except FileNotFoundError:
+            raise ValueError("Prompt template file missing or not found")
+
+        if self._num_few_shot_examples > 0:
+            if not few_shot_file:
+                raise ValueError(
+                    "few_shot_examples_file must be provided when num_few_shot_examples > 0"
+                )
+            self._load_few_shot_examples(few_shot_file)
+        else:
+            self._examples = []
 
     @abstractmethod
     def run_llm_batched(
@@ -170,3 +214,48 @@ class RankLLM(ABC):
         Returns the output filename used when writing rerank results to file
         """
         pass
+
+    def _create_handler(self, template: Dict[str, str]) -> BaseInferenceHandler:
+        # TODO(issue #236 and #237): Need to modify function to select correct inference handler
+        from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
+            MultiTurnListwiseInferenceHandler,
+        )
+        from rank_llm.rerank.listwise.rankfid_inference_handler import (
+            RankFIDInferenceHandler,
+        )
+        from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
+            SingleTurnListwiseInferenceHandler,
+        )
+        from rank_llm.rerank.pairwise.pairwise_inference_handler import (
+            PairwiseInferenceHandler,
+        )
+        from rank_llm.rerank.pointwise.pointwise_inference_handler import (
+            PointwiseInferenceHandler,
+        )
+
+        try:
+            if template["method"] == "singleturn_listwise":
+                return SingleTurnListwiseInferenceHandler(template)
+            elif template["method"] == "multiturn_listwise":
+                return MultiTurnListwiseInferenceHandler(template)
+            elif template["method"] == "rankfid":
+                return RankFIDInferenceHandler(template)
+            elif template["method"] == "pointwise":
+                return PointwiseInferenceHandler(template)
+            elif template["method"] == "pairwise":
+                return PairwiseInferenceHandler(template)
+            else:
+                raise ValueError("Invalid template method")
+        except:
+            raise ValueError("Please provide a method section in the template")
+
+    def _load_few_shot_examples(self, file_path: str):
+        try:
+            with open(file_path, "r") as json_file:
+                self._examples = json.load(json_file)
+        except FileNotFoundError:
+            raise ValueError(f"Few-shot examples file not found: {file_path}")
+        except json.JSONDecodeError:
+            raise ValueError(
+                f"Invalid JSON format in few-shot examples file: {file_path}"
+            )

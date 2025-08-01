@@ -1,0 +1,5 @@
+method: "rankfid"
+query: "question: {query}"
+text: "question: {query} context: {passage}"
+output_validation_regex: r"^\[\d+\]( > \[\d+\])*$"
+output_extraction_regex: r"\[(\d+)\]" 

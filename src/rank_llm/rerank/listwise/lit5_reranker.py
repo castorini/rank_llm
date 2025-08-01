@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
@@ -11,14 +11,20 @@ class LiT5DistillReranker:
         self,
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
-        prompt_mode: PromptMode = PromptMode.LiT5,
+        prompt_mode: Optional[PromptMode] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
+        precision: str = "bfloat16",
         window_size: int = 20,
+        device: str = "cuda",
     ) -> None:
         model_coordinator = RankFiDDistill(
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
+            precision=precision,
             window_size=window_size,
+            device=device,
         )
         self._reranker = Reranker(model_coordinator)
 
@@ -106,7 +112,8 @@ class LiT5ScoreReranker:
         self,
         model_path: str = "castorini/LiT5-Score-base",
         context_size: int = 300,
-        prompt_mode: PromptMode = PromptMode.LiT5,
+        prompt_mode: Optional[PromptMode] = None,
+        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
         window_size: int = 20,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
     ) -> None:
@@ -114,6 +121,7 @@ class LiT5ScoreReranker:
             model=model_path,
             context_size=context_size,
             prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
             window_size=window_size,
         )
         self._reranker = Reranker(model_coordinator)

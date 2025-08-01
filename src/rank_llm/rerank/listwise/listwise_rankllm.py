@@ -1,16 +1,14 @@
 import copy
 import logging
 import random
-import re
 from abc import ABC
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, List, Optional, Tuple
 
-from ftfy import fix_text
 from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
-from rank_llm.rerank import PromptMode, RankLLM
+from rank_llm.rerank.rankllm import PromptMode, RankLLM
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +34,21 @@ class ListwiseRankLLM(RankLLM, ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: PromptMode,
-        num_few_shot_examples: int,
-        window_size: int,
+        prompt_mode: Optional[PromptMode] = None,
+        prompt_template_path: Optional[str] = None,
+        num_few_shot_examples: int = 0,
+        few_shot_file: Optional[str] = None,
+        window_size: int = 20,
         use_alpha: bool = False,
     ) -> None:
-        super().__init__(model, context_size, prompt_mode)
-        self._num_few_shot_examples = num_few_shot_examples
+        super().__init__(
+            model=model,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
+        )
         self._window_size = window_size
         self._use_alpha = use_alpha
 
@@ -56,9 +62,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         _modelname = self._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
             _modelname = self._model.split("/")[-2] + "_" + _modelname
-        name = (
-            f"{_modelname}_{self._context_size}_{top_k_candidates}_{self._prompt_mode}"
-        )
+        name = f"{_modelname}_{self._context_size}_{top_k_candidates}"
         if dataset_name:
             name = f"{name}_{dataset_name}"
         if self._num_few_shot_examples > 0:
@@ -121,10 +125,17 @@ class ListwiseRankLLM(RankLLM, ABC):
                 if result.invocations_history is None:
                     result.invocations_history = []
                 inference_invocation = InferenceInvocation(
-                    prompt, permutation, in_token_count, out_token_count
+                    prompt,
+                    permutation,
+                    in_token_count,
+                    out_token_count,
+                    self._inference_handler.template["output_validation_regex"],
+                    self._inference_handler.template["output_extraction_regex"],
                 )
                 result.invocations_history.append(inference_invocation)
-            result = self.receive_permutation(result, permutation, rank_start, rank_end)
+            result = self.receive_permutation(
+                result, permutation, rank_start, rank_end, logging
+            )
 
         return results
 
@@ -158,10 +169,17 @@ class ListwiseRankLLM(RankLLM, ABC):
             print(f"Output: {permutation}")
         if populate_invocations_history:
             inference_invocation = InferenceInvocation(
-                prompt, permutation, in_token_count, out_token_count
+                prompt,
+                permutation,
+                in_token_count,
+                out_token_count,
+                self._inference_handler.template["output_validation_regex"],
+                self._inference_handler.template["output_extraction_regex"],
             )
             result.invocations_history.append(inference_invocation)
-        result = self.receive_permutation(result, permutation, rank_start, rank_end)
+        result = self.receive_permutation(
+            result, permutation, rank_start, rank_end, logging
+        )
         return result
 
     def shuffle_and_rescore(
@@ -357,28 +375,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         ) / 1000.0
         return (cost, input_token_count + output_token_count)
 
-    def _clean_response(self, response: str) -> str:
-        if "</think>" in response:
-            answer_start_index = response.find("</think>") + len("</think>")
-            response = response[answer_start_index:]
-        new_response = ""
-        if self._use_alpha:
-            for c in response:
-                if not c.isalpha():
-                    new_response += " "
-                else:
-                    new_response += str(ord(c) - ALPH_START_IDX)
-            new_response = new_response.strip()
-        else:
-            for c in response:
-                if not c.isdigit():
-                    new_response += " "
-                else:
-                    new_response += c
-            new_response = new_response.strip()
-
-        return new_response
-
     def _remove_duplicate(self, response: List[int]) -> List[int]:
         new_response = []
         for c in response:
@@ -387,7 +383,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         return new_response
 
     def receive_permutation(
-        self, result: Result, permutation: str, rank_start: int, rank_end: int
+        self,
+        result: Result,
+        permutation: str,
+        rank_start: int,
+        rank_end: int,
+        logging: bool = False,
     ) -> Result:
         """
         Processes and applies a permutation to the ranking results.
@@ -414,17 +415,24 @@ class ListwiseRankLLM(RankLLM, ABC):
             Items not mentioned in the permutation string remain in their original sequence but are moved after
             the permuted items.
         """
-
-        # Parse and normalize the permutation indices
-        response = self._clean_response(permutation)
-        response = [int(x) - 1 for x in response.split()]
-        response = self._remove_duplicate(response)
-
-        # Extract the relevant candidates and create a mapping for new order
+        # Extract the relevant candidates
         cut_range = copy.deepcopy(result.candidates[rank_start:rank_end])
         original_rank = [tt for tt in range(len(cut_range))]
-        response = [ss for ss in response if ss in original_rank]
-        response = response + [tt for tt in original_rank if tt not in response]
+        try:
+            # Parse and normalize the permutation indices
+            response = self._inference_handler._clean_response(
+                permutation, use_alpha=self._use_alpha
+            )
+            response = [int(x) - 1 for x in response.split()]
+            response = self._remove_duplicate(response)
+
+            # Create a mapping for new order
+            response = [ss for ss in response if ss in original_rank]
+            response = response + [tt for tt in original_rank if tt not in response]
+        except Exception as e:
+            if logging:
+                print(f"exception {e} happened while handling response {permutation}")
+            response = original_rank
 
         # Update candidates in the new order
         for j, x in enumerate(response):
@@ -433,29 +441,3 @@ class ListwiseRankLLM(RankLLM, ABC):
                 result.candidates[j + rank_start].score = cut_range[j].score
 
         return result
-
-    def _replace_number(self, s: str) -> str:
-        return re.sub(r"\[(\d+)\]", r"(\1)", s)
-
-    def convert_doc_to_prompt_content(
-        self, doc: Dict[str, Any], max_length: int
-    ) -> str:
-        if "text" in doc:
-            content = doc["text"]
-        elif "segment" in doc:
-            content = doc["segment"]
-        elif "contents" in doc:
-            content = doc["contents"]
-        elif "content" in doc:
-            content = doc["content"]
-        elif "body" in doc:
-            content = doc["body"]
-        else:
-            content = doc["passage"]
-        if "title" in doc and doc["title"]:
-            content = "Title: " + doc["title"] + " " + "Content: " + content
-        content = content.strip()
-        content = fix_text(content)
-        # For Japanese should cut by character: content = content[:int(max_length)]
-        content = " ".join(content.split()[: int(max_length)])
-        return self._replace_number(content)
