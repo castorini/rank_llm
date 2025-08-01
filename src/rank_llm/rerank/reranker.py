@@ -472,7 +472,7 @@ class Reranker:
                 ("context_size", 4096),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                    None,
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),

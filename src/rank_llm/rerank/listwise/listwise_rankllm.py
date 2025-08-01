@@ -183,7 +183,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return result
 
     def shuffle_and_rescore(
-        rerank_results: List[Result], rank_start: int, rank_end: int
+        self, rerank_results: List[Result], rank_start: int, rank_end: int
     ):
         """
         Shuffles candidates between rank_start and rank_end, and rescales scores based on new rank.
@@ -201,8 +201,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             )
             # Rescore all candidates with 1/rank
             for i, cand in enumerate(rerank_result.candidates):
-                cand["score"] = 1.0 / (i + 1)
-                cand["rank"] = i + 1
+                cand.score = 1.0 / (i + 1)
 
     def sliding_windows_batched(
         self,

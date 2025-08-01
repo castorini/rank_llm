@@ -188,9 +188,10 @@ class Retriever:
                     with open(max_k_file, "r") as f:
                         results = [
                             from_dict(data_class=Request, data=json.loads(line))
-                            for i, line in enumerate(f)
-                            if i < k
+                            for line in f
                         ]
+                        for result in results:
+                            results.candidates = result.candidates[:k]
                         print(
                             f"Successfully loaded {max_k_file} to get top {k} candidates"
                         )
