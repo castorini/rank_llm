@@ -1,5 +1,4 @@
 import time
-from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
@@ -112,11 +111,6 @@ class SafeOpenai(ListwiseRankLLM):
             openai.api_base = api_base
             self.use_azure_ai = True
 
-    class CompletionMode(Enum):
-        UNSPECIFIED = 0
-        CHAT = 1
-        TEXT = 2
-
     def rerank_batch(
         self,
         requests: List[Request],
@@ -152,23 +146,13 @@ class SafeOpenai(ListwiseRankLLM):
     def _call_completion(
         self,
         *args,
-        completion_mode: CompletionMode,
         return_text=False,
         reduce_length=False,
         **kwargs,
     ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
-                if completion_mode == self.CompletionMode.CHAT:
-                    completion = openai.chat.completions.create(
-                        *args, **kwargs, timeout=30
-                    )
-                elif completion_mode == self.CompletionMode.TEXT:
-                    completion = openai.Completion.create(*args, **kwargs)
-                else:
-                    raise ValueError(
-                        "Unsupported completion mode: %V" % completion_mode
-                    )
+                completion = openai.chat.completions.create(*args, **kwargs, timeout=30)
                 break
             except Exception as e:
                 print("Error in completion call")
@@ -183,11 +167,7 @@ class SafeOpenai(ListwiseRankLLM):
                 openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)
         if return_text:
-            completion = (
-                completion.choices[0].message.content
-                if completion_mode == self.CompletionMode.CHAT
-                else completion.choices[0].text
-            )
+            completion = completion.choices[0].message.content
         return completion
 
     def run_llm(
@@ -199,7 +179,6 @@ class SafeOpenai(ListwiseRankLLM):
         response = self._call_completion(
             messages=prompt,
             temperature=0,
-            completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
             **{model_key: self._model},
         )
