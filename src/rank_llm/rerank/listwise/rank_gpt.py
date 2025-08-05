@@ -1,4 +1,5 @@
 import time
+from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
@@ -9,6 +10,8 @@ from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class SafeOpenai(ListwiseRankLLM):
@@ -71,17 +74,11 @@ class SafeOpenai(ListwiseRankLLM):
 
         if prompt_template_path is None:
             if prompt_mode == PromptMode.RANK_GPT:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_gpt_template.yaml"
             elif prompt_mode == PromptMode.RANK_GPT_APEER:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_gpt_apeer_template.yaml"
             elif prompt_mode == PromptMode.LRL:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_lrl_template.yaml"
             else:
                 raise ValueError(
                     "Either `prompt_mode` or `prompt_template_path` must be specified."

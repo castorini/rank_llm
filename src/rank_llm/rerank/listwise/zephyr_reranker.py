@@ -1,8 +1,11 @@
+from importlib.resources import files
 from typing import Any, List, Optional
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class ZephyrReranker:
@@ -11,7 +14,7 @@ class ZephyrReranker:
         model_path: str = "castorini/rank_zephyr_7b_v1_full",
         context_size: int = 4096,
         prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+        prompt_template_path: str = (TEMPLATES / "rank_zephyr_template.yaml"),
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         device: str = "cuda",

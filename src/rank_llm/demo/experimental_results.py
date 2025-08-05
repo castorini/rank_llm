@@ -1,5 +1,6 @@
 import os
 import sys
+from importlib.resources import files
 from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +24,8 @@ from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.retrieve.retriever import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 def create_reranker(name: str):
@@ -49,7 +52,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+                prompt_template_path=(TEMPLATES / "rank_gpt_template.yaml"),
                 keys=get_openai_api_key(),
             )
         )
@@ -58,7 +61,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml",
+                prompt_template_path=(TEMPLATES / "rank_lrl_template.yaml"),
                 keys=get_openai_api_key(),
             )
         )
@@ -67,7 +70,7 @@ def create_reranker(name: str):
             SafeOpenai(
                 "gpt-4o-mini",
                 4096,
-                prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml",
+                prompt_template_path=(TEMPLATES / "rank_gpt_apeer_template.yaml"),
                 keys=get_openai_api_key(),
             )
         )

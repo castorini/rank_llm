@@ -1,3 +1,4 @@
+from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
@@ -8,6 +9,8 @@ from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
 from rank_llm.rerank.listwise.lit5.model import FiD, FiDCrossAttentionScore
 from rank_llm.rerank.rankllm import PromptMode
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class RankFiDDistill(ListwiseRankLLM):
@@ -33,7 +36,7 @@ class RankFiDDistill(ListwiseRankLLM):
         model: str,
         context_size: int = 150,
         prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
+        prompt_template_path: str = (TEMPLATES / "rank_fid_template.yaml"),
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
@@ -260,7 +263,7 @@ class RankFiDScore(ListwiseRankLLM):
         model: str,
         context_size: int = 150,
         prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
+        prompt_template_path: str = (TEMPLATES / "rank_fid_score_template.yaml"),
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
