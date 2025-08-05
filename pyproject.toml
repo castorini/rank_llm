@@ -51,7 +51,6 @@ training = [
 all = [
   "rank-llm[sglang]",
   "rank-llm[genai]",
-  "rank-llm[tensorrt-llm]",
   "rank-llm[pyserini]"
 ]
 
