@@ -7,7 +7,7 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## News
-- **[0.25.2]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
+- **[0.25.3]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
 
 ## Overview
 We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
@@ -17,7 +17,7 @@ We offer a suite of rerankers - pointwise models like MonoT5, pairwise models li
 </p>
 
 ## Releases
-current_version = 0.25.2
+current_version = 0.25.3
 
 ## Content
 1. [Installation](#installation)
@@ -349,7 +349,7 @@ If you would like to contribute to the project, please refer to the [contributio
 
 ## 📜️ Release History
 
-+ v0.25.2: July 23, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.0.md)]
++ v0.25.3: July 23, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.0.md)]
 
 <a id=references></a>
 # ✨ References

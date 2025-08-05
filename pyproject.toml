@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rank-llm"
-version = "0.25.2"
+version = "0.25.3"
 description = "A Package for reranking with LLMs (pointwise, pairwise, and listwise)"
 readme = "README.md"
 authors = [
@@ -58,7 +58,7 @@ all = [
 Homepage = "https://github.com/castorini/rank_llm"
 
 [tool.bumpver]
-current_version = "0.25.2"
+current_version = "0.25.3"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
