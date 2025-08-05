@@ -90,29 +90,27 @@ def create_reranker(name: str):
 
 
 rerankers = [
-    # "monot5",
-    # "duot5",
-    # "lit5",
-    # "rv",
-    # "rz",
-    # "mistral",
-    # "qwen",
-    # "llama",
-    # "gemini",
-    # "rank_gpt",
-    # "rank_gpt_apeer",
-    # "lrl",
-    "r1-distill",
+    "monot5",
+    "duot5",
+    "lit5",
+    "rv",
+    "rz",
+    "mistral",
+    "qwen",
+    "llama",
+    "gemini",
+    "rank_gpt",
+    "rank_gpt_apeer",
+    "lrl",
 ]
 results = {}
 for key in rerankers:
     reranker = create_reranker(key)
-    window_size = 10 if reranker == "r1-distill" else 20
     for dataset in ["dl19", "dl20", "dl21", "dl22", "dl23"]:
         retrieved_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
         topics = TOPICS[dataset]
         ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
-        kwargs = {"populate_invocations_history": True, "window_size": window_size}
+        kwargs = {"populate_invocations_history": True}
         rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
 
         # Save results
