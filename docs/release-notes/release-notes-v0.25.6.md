@@ -1,4 +1,4 @@
-# RankLLM Release Notes (v0.25.1-v0.25.6)
+# RankLLM Release Notes (v0.25.6)
 
 + **Release date:** August 5, 2025
 + **Pyserini dependency:** v1.2.0

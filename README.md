@@ -349,7 +349,8 @@ If you would like to contribute to the project, please refer to the [contributio
 
 ## 📜️ Release History
 
-+ v0.25.6: August 5, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.1-v0.25.6.md)]
++ v0.25.6: August 5, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.6.md)]
++ v0.25.0: July 23, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.0.md)]
 
 <a id=references></a>
 # ✨ References
