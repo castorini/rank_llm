@@ -1,4 +1,5 @@
 import time
+from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from tqdm import tqdm
@@ -32,6 +33,9 @@ def populate_generation_config(**kwargs) -> Dict[str, Any]:
     return generation_config
 
 
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
+
+
 class SafeGenai(ListwiseRankLLM):
     # TODO switch to the new genai api?
     def __init__(
@@ -49,13 +53,9 @@ class SafeGenai(ListwiseRankLLM):
     ):
         if not prompt_template_path:
             if prompt_mode == PromptMode.RANK_GPT_APEER:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_gpt_apeer_template.yaml"
             elif prompt_mode == PromptMode.RANK_GPT:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_zephyr_template.yaml"
             else:
                 raise ValueError(
                     "Either `prompt_mode` or `prompt_template_path` must be specified."

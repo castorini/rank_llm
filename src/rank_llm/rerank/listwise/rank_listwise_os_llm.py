@@ -3,6 +3,7 @@ import os
 import random
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
+from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
@@ -28,6 +29,8 @@ except:
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class RankListwiseOSLLM(ListwiseRankLLM):
@@ -90,9 +93,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         """
         if prompt_template_path is None:
             prompt_template_path = (
-                "src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml"
+                TEMPLATES / "rank_zephyr_alpha_template.yaml"
                 if use_alpha
-                else "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
+                else TEMPLATES / "rank_zephyr_template.yaml"
             )
         super().__init__(
             model=model,
