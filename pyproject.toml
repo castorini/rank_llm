@@ -48,6 +48,12 @@ training = [
     "torch>=2.4.0",
     "numpy>=1.26.4"
 ]
+all = [
+  "rank-llm[sglang]",
+  "rank-llm[genai]",
+  "rank-llm[tensorrt_llm"],
+  "rank-llm[pyserini]"
+]
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
