@@ -49,7 +49,6 @@ training = [
     "numpy>=1.26.4"
 ]
 all = [
-  "rank-llm[sglang]",
   "rank-llm[genai]",
   "rank-llm[pyserini]"
 ]
