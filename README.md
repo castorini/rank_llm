@@ -17,7 +17,7 @@ We offer a suite of rerankers - pointwise models like MonoT5, pairwise models li
 </p>
 
 ## Releases
-current_version = "0.25.4"
+current_version = "0.25.6"
 
 ## Content
 1. [Installation](#installation)
