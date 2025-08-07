@@ -1,7 +1,12 @@
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
-from transformers import T5Tokenizer
+try:
+    from transformers import T5Tokenizer
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    T5Tokenizer = None
 
 from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
@@ -96,7 +101,7 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         index1: int,
         index2: int,
         single_doc_max_token: int,
-        tokenizer: T5Tokenizer,
+        tokenizer: Union["T5Tokenizer", Any],
     ) -> str:
         doc1_raw = self._convert_doc_to_prompt_content(
             result.candidates[index1].doc, max_length=single_doc_max_token

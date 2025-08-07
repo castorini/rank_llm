@@ -27,6 +27,12 @@ requires-python = ">= 3.11"
 dependencies = {file = ["requirements.txt"]}
 
 [project.optional-dependencies]
+vllm = [
+    "vllm>=0.4.0"
+]
+transformers = [
+    "transformers>=4.40.1"
+]
 sglang = [
     "sglang[all]~=0.4.0"
 ]
@@ -50,7 +56,9 @@ training = [
 ]
 all = [
   "rank-llm[genai]",
-  "rank-llm[pyserini]"
+  "rank-llm[pyserini]",
+  "rank-llm[vllm]",
+  "rank-llm[transformers]"
 ]
 
 [project.urls]
