@@ -24,30 +24,37 @@ import torch
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from torch.utils.checkpoint import checkpoint
-from transformers.activations import ACT2FN
-from transformers.file_utils import (
-    DUMMY_INPUTS,
-    DUMMY_MASK,
-    add_start_docstrings,
-    add_start_docstrings_to_model_forward,
-    is_torch_fx_proxy,
-    replace_return_docstrings,
-)
-from transformers.generation import GenerationMixin
-from transformers.modeling_outputs import (
-    BaseModelOutput,
-    BaseModelOutputWithPastAndCrossAttentions,
-    Seq2SeqLMOutput,
-    Seq2SeqModelOutput,
-)
-from transformers.modeling_utils import (
-    PreTrainedModel,
-    find_pruneable_heads_and_indices,
-    prune_linear_layer,
-)
-from transformers.models.t5.configuration_t5 import T5Config
-from transformers.utils import logging
-from transformers.utils.model_parallel_utils import assert_device_map, get_device_map
+
+try:
+    from transformers.activations import ACT2FN
+    from transformers.file_utils import (
+        DUMMY_INPUTS,
+        DUMMY_MASK,
+        add_start_docstrings,
+        add_start_docstrings_to_model_forward,
+        is_torch_fx_proxy,
+        replace_return_docstrings,
+    )
+    from transformers.generation import GenerationMixin
+    from transformers.modeling_outputs import (
+        BaseModelOutput,
+        BaseModelOutputWithPastAndCrossAttentions,
+        Seq2SeqLMOutput,
+        Seq2SeqModelOutput,
+    )
+    from transformers.modeling_utils import (
+        PreTrainedModel,
+        find_pruneable_heads_and_indices,
+        prune_linear_layer,
+    )
+    from transformers.models.t5.configuration_t5 import T5Config
+    from transformers.utils import logging
+    from transformers.utils.model_parallel_utils import assert_device_map, get_device_map
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    raise ImportError(
+        "transformers is required for the lit5 model. Please install it with: pip install rank_llm[transformers]"
+    )
 
 logger = logging.get_logger(__name__)
 
