@@ -1,8 +1,20 @@
 from typing import Any, Dict, List, Optional
 
-import vllm
-from transformers import PreTrainedTokenizerBase
-from vllm.outputs import RequestOutput
+try:
+    import vllm
+    from vllm.outputs import RequestOutput
+    VLLM_AVAILABLE = True
+except ImportError:
+    VLLM_AVAILABLE = False
+    vllm = None
+    RequestOutput = None
+
+try:
+    from transformers import PreTrainedTokenizerBase
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    PreTrainedTokenizerBase = None
 
 
 class VllmHandler:
@@ -16,6 +28,11 @@ class VllmHandler:
         gpu_memory_utilization: float,
         **kwargs: Any,
     ):
+        if not VLLM_AVAILABLE:
+            raise ImportError(
+                "vLLM is not installed. Please install it with: pip install rank_llm[vllm]"
+            )
+        
         self._vllm = vllm.LLM(
             model=model,
             download_dir=download_dir,
@@ -35,6 +52,10 @@ class VllmHandler:
             )
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "transformers is not installed. Please install it with: pip install rank_llm[transformers]"
+            )
         return self._tokenizer
 
     def generate_output(
@@ -46,6 +67,11 @@ class VllmHandler:
         logprobs: Optional[int] = None,
         **kwargs: Any,
     ) -> List[RequestOutput]:
+        if not VLLM_AVAILABLE:
+            raise ImportError(
+                "vLLM is not installed. Please install it with: pip install rank_llm[vllm]"
+            )
+        
         # TODO: Implement rest of vllm arguments (from kwargs) in the future if necessary
         sampling_params = vllm.SamplingParams(
             min_tokens=min_tokens,

@@ -4,12 +4,18 @@ import random
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from importlib.resources import files
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
-import vllm
 from ftfy import fix_text
 from tqdm import tqdm
+
+try:
+    import vllm
+    VLLM_AVAILABLE = True
+except ImportError:
+    VLLM_AVAILABLE = False
+    vllm = None
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
@@ -225,7 +231,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def _get_logits_single_digit(
         self,
-        output: vllm.RequestOutput,
+        output: Union["vllm.RequestOutput", Any],
         effective_location: int = 1,
         total: Tuple[int, int] = (1, 9),
     ):
