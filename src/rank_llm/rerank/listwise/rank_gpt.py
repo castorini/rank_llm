@@ -27,6 +27,7 @@ class SafeOpenai(ListwiseRankLLM):
         keys=None,
         key_start_id=None,
         proxy=None,
+        base_url: Optional[str] = None,
         api_type: Optional[str] = None,
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
@@ -99,6 +100,10 @@ class SafeOpenai(ListwiseRankLLM):
         self._cur_key_id = self._cur_key_id % len(self._keys)
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
+
+        if base_url:
+            openai.base_url = base_url
+
         self.use_azure_ai = False
 
         if all([api_type, api_base, api_version]):
