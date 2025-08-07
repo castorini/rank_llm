@@ -1,6 +1,11 @@
 import logging
 
-from .api_keys import get_azure_openai_args, get_genai_api_key, get_openai_api_key
+from .api_keys import (
+    get_azure_openai_args,
+    get_genai_api_key,
+    get_openai_api_key,
+    get_openrouter_api_key,
+)
 from .identity_reranker import IdentityReranker
 from .rankllm import RankLLM
 from .reranker import Reranker
@@ -15,5 +20,6 @@ __all__ = [
     "get_azure_openai_args",
     "get_openai_api_key",
     "get_genai_api_key",
+    "get_openrouter_api_key",
     "Reranker",
 ]

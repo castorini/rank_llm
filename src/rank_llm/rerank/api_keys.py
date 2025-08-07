@@ -43,3 +43,10 @@ def get_genai_api_key(genai_path=genai_path) -> str:
         print(os.getenv(genai_path))
         return os.getenv(genai_path)
     return None
+
+
+def get_openrouter_api_key() -> str:
+    load_dotenv(dotenv_path=f".env.local")
+    if os.getenv("OPENROUTER_API_KEY") is not None:
+        return os.getenv("OPENROUTER_API_KEY")
+    return None
