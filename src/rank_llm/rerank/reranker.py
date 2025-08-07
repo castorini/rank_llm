@@ -7,6 +7,7 @@ from rank_llm.rerank import (
     get_azure_openai_args,
     get_genai_api_key,
     get_openai_api_key,
+    get_openrouter_api_key,
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
@@ -190,10 +191,41 @@ class Reranker:
         Return: rerank model_coordinator -- Option<RankLLM>
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
+        use_openrouter: bool = kwargs.get("use_openrouter", False)
 
         if interactive and default_model_coordinator is not None:
             # Default rerank model_coordinator
             model_coordinator = default_model_coordinator
+        elif use_openrouter:
+            keys_and_defaults = [
+                ("context_size", 4096),
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+                ),
+                ("num_few_shot_examples", 0),
+                ("few_shot_file", None),
+                ("window_size", 20),
+            ]
+            [
+                context_size,
+                prompt_template_path,
+                num_few_shot_examples,
+                few_shot_file,
+                window_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+            openrouter_keys = get_openrouter_api_key()
+            model_coordinator = SafeOpenai(
+                model=model_path,
+                context_size=context_size,
+                prompt_template_path=prompt_template_path,
+                window_size=window_size,
+                num_few_shot_examples=num_few_shot_examples,
+                few_shot_file=few_shot_file,
+                keys=openrouter_keys,
+                base_url="https://openrouter.ai/api/v1/",
+                **(get_azure_openai_args() if use_azure_openai else {}),
+            )
         elif "gpt" in model_path or use_azure_openai:
             # GPT based reranking models
 

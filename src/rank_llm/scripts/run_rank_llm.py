@@ -19,6 +19,7 @@ def main(args):
     query = ""
     batch_size = args.batch_size
     use_azure_openai = args.use_azure_openai
+    use_openrouter = args.use_openrouter
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
     top_k_rerank = top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
@@ -66,6 +67,7 @@ def main(args):
         shuffle_candidates=shuffle_candidates,
         print_prompts_responses=print_prompts_responses,
         use_azure_openai=use_azure_openai,
+        use_openrouter=use_openrouter,
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
@@ -103,6 +105,12 @@ if __name__ == "__main__":
         action="store_true",
         help="If True, use Azure OpenAI. Requires env var to be set: "
         "`AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`",
+    )
+    parser.add_argument(
+        "--use_openrouter",
+        action="store_true",
+        help="If True, use OpenRouter. Requires env var to be set: "
+        "`OPENROUTER_API_KEY`",
     )
     parser.add_argument(
         "--context_size", type=int, default=4096, help="context size used for model"
