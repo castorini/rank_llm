@@ -4,8 +4,15 @@ import re
 from importlib.resources import files
 from typing import List, Optional, Tuple
 
-from transformers import T5ForConditionalGeneration, T5Tokenizer
-from transformers.generation import GenerationConfig
+try:
+    from transformers import T5ForConditionalGeneration, T5Tokenizer
+    from transformers.generation import GenerationConfig
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    T5ForConditionalGeneration = None
+    T5Tokenizer = None
+    GenerationConfig = None
 
 from rank_llm.data import Result
 from rank_llm.rerank.pairwise.pairwise_rankllm import PairwiseRankLLM
@@ -28,6 +35,11 @@ class DuoT5(PairwiseRankLLM):
         device: str = "cuda",
         batch_size: int = 32,
     ):
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "transformers is not installed. Please install it with: pip install rank_llm[transformers]"
+            )
+        
         super().__init__(
             model=model,
             context_size=context_size,

@@ -61,6 +61,22 @@ conda install -c conda-forge openjdk=21 maven -y
 pip install "rank-llm[pyserini]"
 ```
 
+## Core Optional Dependencies
+
+### Install vLLM Support (Optional)
+For local model inference using vLLM:
+```bash
+pip install -e .[vllm]      # local installation for development
+pip install rank-llm[vllm]  # or pip installation
+```
+
+### Install Transformers Support (Optional)
+For T5-based models (DuoT5, MonoT5, etc.):
+```bash
+pip install -e .[transformers]      # local installation for development
+pip install rank-llm[transformers]  # or pip installation
+```
+
 ## Install [all] Dependencies
 ```bash
 pip install -e .[all]      # local installation for development
