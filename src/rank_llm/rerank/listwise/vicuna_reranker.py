@@ -22,6 +22,7 @@ class VicunaReranker:
         variable_passages: bool = False,
         window_size: int = 20,
         system_message: Optional[str] = None,
+        batch_size: int = 32,
     ) -> None:
         self._reranker = RankListwiseOSLLM(
             model=model_path,
@@ -35,6 +36,7 @@ class VicunaReranker:
             variable_passages=variable_passages,
             window_size=window_size,
             system_message=system_message,
+            batch_size=batch_size,
         )
 
     def rerank_batch(

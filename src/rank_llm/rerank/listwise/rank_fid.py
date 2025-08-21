@@ -41,6 +41,7 @@ class RankFiDDistill(ListwiseRankLLM):
         stride: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
+        batch_size: int = 32,
     ) -> None:
         """
         Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
@@ -51,15 +52,13 @@ class RankFiDDistill(ListwiseRankLLM):
             prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
             window_size=window_size,
+            stride=stride,
+            device=device,
+            batch_size=batch_size,
         )
         self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = FiD.from_pretrained(model).to(device).eval()
-
-        self._device = device
-
-        self._window_size = window_size
-        self._stride = stride
 
         self._answer_maxlength = len(
             " > ".join(map(lambda x: f"[{x}]", range(1, window_size + 1)))
@@ -121,13 +120,12 @@ class RankFiDDistill(ListwiseRankLLM):
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        window_size: int = kwargs.get("window_size", self._window_size)
+        window_size: int = self._window_size
         window_size = min(window_size, top_k_retrieve)
-        stride: int = kwargs.get("stride", self._stride)
+        stride: int = self._stride
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
-        batch_size = kwargs.get("batch_size", 1)
 
         if len(set([len(req.candidates) for req in requests])) != 1:
             raise ValueError("Batched requests must have the same number of candidates")
@@ -135,8 +133,8 @@ class RankFiDDistill(ListwiseRankLLM):
         result = []
 
         with tqdm(range(0, len(requests))) as bar:
-            for i in range(0, len(requests), batch_size):
-                batch = requests[i : min(i + batch_size, len(requests))]
+            for i in range(0, len(requests), self._batch_size):
+                batch = requests[i : min(i + self._batch_size, len(requests))]
                 batch_result = self.sliding_windows_batched(
                     batch,
                     rank_start=max(rank_start, 0),
@@ -168,7 +166,7 @@ class RankFiDDistill(ListwiseRankLLM):
         return self._run_llm_by_length_unified(prompt_infos)
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+        self, results: List[Result], rank_start: int, rank_end: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 
@@ -268,6 +266,7 @@ class RankFiDScore(ListwiseRankLLM):
         stride: int = 10,
         precision: str = "bfloat16",
         device: str = "cuda",
+        batch_size: int = 32,
     ) -> None:
         super().__init__(
             model=model,
@@ -275,15 +274,13 @@ class RankFiDScore(ListwiseRankLLM):
             prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
             window_size=window_size,
+            stride=stride,
+            device=device,
+            batch_size=batch_size,
         )
         self._precision = precision
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = FiDCrossAttentionScore.from_pretrained(model).to(device).eval()
-
-        self._device = device
-        self._window_size = window_size
-        self._stride = stride
-
         self._output_token_estimate = None
 
         self._post_init()
@@ -373,13 +370,12 @@ class RankFiDScore(ListwiseRankLLM):
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        window_size: int = kwargs.get("window_size", self._window_size)
+        window_size: int = self._window_size
         window_size = min(window_size, top_k_retrieve)
-        stride: int = kwargs.get("stride", self._stride)
+        stride: int = self._stride
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
-        batch_size = kwargs.get("batch_size", 1)
 
         if len(set([len(req.candidates) for req in requests])) != 1:
             raise ValueError("Batched requests must have the same number of candidates")
@@ -387,8 +383,8 @@ class RankFiDScore(ListwiseRankLLM):
         result = []
 
         with tqdm(range(0, len(requests))) as bar:
-            for i in range(0, len(requests), batch_size):
-                batch = requests[i : min(i + batch_size, len(requests))]
+            for i in range(0, len(requests), self._batch_size):
+                batch = requests[i : min(i + self._batch_size, len(requests))]
                 batch_result = self.sliding_windows_batched(
                     batch,
                     rank_start=max(rank_start, 0),
@@ -422,7 +418,7 @@ class RankFiDScore(ListwiseRankLLM):
         return self._run_llm_by_length_unified(processed_prompts)
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+        self, results: List[Result], rank_start: int, rank_end: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 

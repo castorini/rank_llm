@@ -38,8 +38,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
+        device: str = "cuda",
         window_size: int = 20,
+        stride: int = 10,
         use_alpha: bool = False,
+        batch_size: int = 32,
     ) -> None:
         super().__init__(
             model=model,
@@ -50,7 +53,10 @@ class ListwiseRankLLM(RankLLM, ABC):
             few_shot_file=few_shot_file,
         )
         self._window_size = window_size
+        self._device = device
         self._use_alpha = use_alpha
+        self._batch_size = batch_size
+        self._stride = stride
 
     def get_output_filename(
         self,
@@ -104,9 +110,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         prompts = []
         logger.info("Loading prompts.")
-        prompts = self.create_prompt_batched(
-            results, rank_start, rank_end, batch_size=32
-        )
+        prompts = self.create_prompt_batched(results, rank_start, rank_end)
         if logging:
             for prompt in prompts:
                 logger.debug(f"Prompt: {prompt[0]}\n")

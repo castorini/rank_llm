@@ -47,6 +47,7 @@ class SafeGenai(ListwiseRankLLM):
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
+        batch_size: int = 32,
         keys=None,
         key_start_id=None,
         **kwargs,
@@ -68,6 +69,7 @@ class SafeGenai(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            batch_size=batch_size,
         )
         if not genai:
             raise ImportError(
@@ -222,7 +224,7 @@ class SafeGenai(ListwiseRankLLM):
             return _output_token_estimate
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+        self, results: List[Result], rank_start: int, rank_end: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 

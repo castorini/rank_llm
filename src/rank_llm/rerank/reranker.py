@@ -207,6 +207,7 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("batch_size", 32),
             ]
             [
                 context_size,
@@ -214,6 +215,7 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                batch_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
             openrouter_keys = get_openrouter_api_key()
             model_coordinator = SafeOpenai(
@@ -223,6 +225,7 @@ class Reranker:
                 window_size=window_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
+                batch_size=batch_size,
                 keys=openrouter_keys,
                 base_url="https://openrouter.ai/api/v1/",
                 **(get_azure_openai_args() if use_azure_openai else {}),
@@ -239,6 +242,7 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("batch_size", 32),
                 ("base_url", None),
             ]
             [
@@ -247,6 +251,7 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                batch_size,
                 base_url,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
@@ -258,6 +263,7 @@ class Reranker:
                 window_size=window_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
+                batch_size=batch_size,
                 keys=openai_keys,
                 base_url=base_url,
                 **(get_azure_openai_args() if use_azure_openai else {}),
@@ -272,6 +278,7 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("batch_size", 32),
             ]
             [
                 context_size,
@@ -279,6 +286,7 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                batch_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             genai_keys = get_genai_api_key()
@@ -289,6 +297,7 @@ class Reranker:
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
+                batch_size=batch_size,
                 keys=genai_keys,
             )
         elif "monot5" in model_path:
@@ -306,7 +315,7 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),
-                ("batch_size", 64),
+                ("batch_size", 32),
             ]
             [
                 prompt_template_path,
@@ -343,7 +352,7 @@ class Reranker:
                 ),
                 ("context_size", 512),
                 ("device", "cuda"),
-                ("batch_size", 64),
+                ("batch_size", 32),
             ]
             [
                 prompt_template_path,
@@ -375,6 +384,7 @@ class Reranker:
                 ("window_size", 20),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
+                ("batch_size", 32),
             ]
             (
                 context_size,
@@ -384,6 +394,7 @@ class Reranker:
                 window_size,
                 precision,
                 device,
+                batch_size,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankFiDDistill(
@@ -395,6 +406,7 @@ class Reranker:
                 window_size=window_size,
                 precision=precision,
                 device=device,
+                batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
         elif "lit5-score" in model_path.lower():
@@ -409,6 +421,7 @@ class Reranker:
                 ("window_size", 100),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
+                ("batch_size", 32),
             ]
             (
                 context_size,
@@ -418,6 +431,7 @@ class Reranker:
                 window_size,
                 precision,
                 device,
+                batch_size,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankFiDScore(
@@ -429,6 +443,7 @@ class Reranker:
                 window_size=window_size,
                 precision=precision,
                 device=device,
+                batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
@@ -458,6 +473,7 @@ class Reranker:
                 ("reasoning_token_budget", 10000),
                 ("use_logits", False),
                 ("use_alpha", False),
+                ("batch_size", 32),
             ]
             [
                 context_size,
@@ -473,6 +489,7 @@ class Reranker:
                 reasoning_token_budget,
                 use_logits,
                 use_alpha,
+                batch_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
@@ -495,6 +512,7 @@ class Reranker:
                 reasoning_token_budget=reasoning_token_budget,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
+                batch_size=batch_size,
             )
 
             print(f"Completed loading {model_path}")

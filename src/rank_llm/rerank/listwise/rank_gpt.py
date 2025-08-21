@@ -24,6 +24,7 @@ class SafeOpenai(ListwiseRankLLM):
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
+        batch_size: int = 32,
         keys=None,
         key_start_id=None,
         proxy=None,
@@ -92,6 +93,7 @@ class SafeOpenai(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            batch_size=batch_size,
         )
 
         self._output_token_estimate = None
