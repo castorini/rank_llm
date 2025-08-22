@@ -120,9 +120,6 @@ class RankFiDDistill(ListwiseRankLLM):
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        window_size: int = self._window_size
-        window_size = min(window_size, top_k_retrieve)
-        stride: int = self._stride
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -141,8 +138,8 @@ class RankFiDDistill(ListwiseRankLLM):
                     rank_end=min(
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
-                    window_size=window_size,
-                    stride=stride,
+                    window_size=min(self._window_size, top_k_retrieve),
+                    stride=self._stride,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
@@ -370,9 +367,6 @@ class RankFiDScore(ListwiseRankLLM):
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        window_size: int = self._window_size
-        window_size = min(window_size, top_k_retrieve)
-        stride: int = self._stride
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -391,8 +385,8 @@ class RankFiDScore(ListwiseRankLLM):
                     rank_end=min(
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
-                    window_size=window_size,
-                    stride=stride,
+                    window_size=min(self._window_size, top_k_retrieve),
+                    stride=self._stride,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
