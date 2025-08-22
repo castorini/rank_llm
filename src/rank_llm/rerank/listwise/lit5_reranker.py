@@ -18,6 +18,7 @@ class LiT5DistillReranker:
         prompt_template_path: str = (TEMPLATES / "rank_fid_template.yaml"),
         precision: str = "bfloat16",
         window_size: int = 20,
+        stride: int = 10,
         device: str = "cuda",
         batch_size: int = 32,
     ) -> None:
@@ -28,6 +29,7 @@ class LiT5DistillReranker:
             prompt_template_path=prompt_template_path,
             precision=precision,
             window_size=window_size,
+            stride=stride,
             device=device,
             batch_size=batch_size,
         )
@@ -114,6 +116,7 @@ class LiT5ScoreReranker:
         prompt_mode: Optional[PromptMode] = None,
         prompt_template_path: str = (TEMPLATES / "rank_fid_score_template.yaml"),
         window_size: int = 20,
+        stride: int = 10,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
         batch_size: int = 32,
     ) -> None:
@@ -123,6 +126,7 @@ class LiT5ScoreReranker:
             prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
             window_size=window_size,
+            stride=stride,
             batch_size=batch_size,
         )
         self._reranker = Reranker(model_coordinator)
@@ -183,10 +187,7 @@ class LiT5ScoreReranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
-                batch_size (int): The batch size used for processing multiple requests at once.
         Returns:
             Result: the rerank result which contains the reranked candidates.
 
