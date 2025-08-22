@@ -40,7 +40,7 @@ class RankFiDDistill(ListwiseRankLLM):
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
-        device: str = "cuda",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         batch_size: int = 32,
     ) -> None:
         """
@@ -138,7 +138,7 @@ class RankFiDDistill(ListwiseRankLLM):
                     rank_end=min(
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
-                    window_size=min(self._window_size, top_k_retrieve),
+                    top_k_retrieve=top_k_retrieve,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
@@ -261,7 +261,7 @@ class RankFiDScore(ListwiseRankLLM):
         window_size: int = 20,
         stride: int = 10,
         precision: str = "bfloat16",
-        device: str = "cuda",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         batch_size: int = 32,
     ) -> None:
         super().__init__(
@@ -384,7 +384,7 @@ class RankFiDScore(ListwiseRankLLM):
                     rank_end=min(
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
-                    window_size=min(self._window_size, top_k_retrieve),
+                    top_k_retrieve=top_k_retrieve,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,

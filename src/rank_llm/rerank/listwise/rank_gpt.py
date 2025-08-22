@@ -48,6 +48,7 @@ class SafeOpenai(ListwiseRankLLM):
         by default.
         - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
         - stride (int, optional): The stride size for moving the window. Defaults to 10.
+        - batch_size (int, optional): The size of the batch for processing requests. Defaults to 32.
         - keys (Union[List[str], str], optional): A list of OpenAI API keys or a single OpenAI API key.
         - key_start_id (int, optional): The starting index for the OpenAI API key cycle.
         - proxy (str, optional): The proxy configuration for OpenAI API calls.
@@ -138,7 +139,7 @@ class SafeOpenai(ListwiseRankLLM):
                 request,
                 rank_start=max(rank_start, 0),
                 rank_end=min(rank_end, len(request.candidates)),
-                window_size=min(self._window_size, top_k_retrieve),
+                top_k_retrieve=top_k_retrieve,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
                 populate_invocations_history=populate_invocations_history,

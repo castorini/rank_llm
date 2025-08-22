@@ -189,7 +189,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             rank_end=min(
                 rank_end, len(requests[0].candidates)
             ),  # TODO: Fails arbitrary hit sizes
-            window_size=min(self._window_size, top_k_retrieve),
+            top_k_retrieve=top_k_retrieve,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
             populate_invocations_history=populate_invocations_history,

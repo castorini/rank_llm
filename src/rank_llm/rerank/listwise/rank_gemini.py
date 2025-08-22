@@ -131,7 +131,7 @@ class SafeGenai(ListwiseRankLLM):
                 request,
                 rank_start=max(rank_start, 0),
                 rank_end=min(rank_end, len(request.candidates)),
-                window_size=min(self._window_size, top_k_retrieve),
+                top_k_retrieve=top_k_retrieve,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
                 populate_invocations_history=populate_invocations_history,

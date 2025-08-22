@@ -1,6 +1,8 @@
 from importlib.resources import files
 from typing import Any, List, Optional
 
+import torch
+
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.rankllm import PromptMode
@@ -19,7 +21,7 @@ class LiT5DistillReranker:
         precision: str = "bfloat16",
         window_size: int = 20,
         stride: int = 10,
-        device: str = "cuda",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         batch_size: int = 32,
     ) -> None:
         model_coordinator = RankFiDDistill(
@@ -118,6 +120,7 @@ class LiT5ScoreReranker:
         window_size: int = 20,
         stride: int = 10,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         batch_size: int = 32,
     ) -> None:
         model_coordinator = RankFiDScore(
@@ -127,6 +130,7 @@ class LiT5ScoreReranker:
             prompt_template_path=prompt_template_path,
             window_size=window_size,
             stride=stride,
+            device=device,
             batch_size=batch_size,
         )
         self._reranker = Reranker(model_coordinator)

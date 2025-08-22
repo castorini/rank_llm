@@ -1,6 +1,8 @@
 from importlib.resources import files
 from typing import Any, List, Optional
 
+import torch
+
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
@@ -17,10 +19,12 @@ class ZephyrReranker:
         prompt_template_path: str = (TEMPLATES / "rank_zephyr_template.yaml"),
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
-        device: str = "cuda",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         num_gpus: int = 1,
         variable_passages: bool = True,
         window_size: int = 20,
+        stride: int = 10,
+        batch_size: int = 32,
     ) -> None:
         self._reranker = RankListwiseOSLLM(
             model=model_path,
@@ -33,6 +37,8 @@ class ZephyrReranker:
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,
+            stride=stride,
+            batch_size=batch_size,
         )
 
     def rerank_batch(
