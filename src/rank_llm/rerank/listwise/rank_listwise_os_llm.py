@@ -47,6 +47,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         num_gpus: int = 1,
         variable_passages: bool = False,
         window_size: int = 20,
+        stride: int = 10,
         system_message: Optional[str] = None,
         is_thinking: bool = False,
         reasoning_token_budget: int = 10000,
@@ -54,6 +55,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         use_alpha: bool = False,
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
+        batch_size: int = 32,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -73,12 +75,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - num_gpus (int, optional): Number of GPUs to use for model loading and inference. Defaults to 1.
          - variable_passages (bool, optional): Indicates whether the number of passages to rank can vary. Defaults to False.
          - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
+         - stride (int, optional): The stride size for moving the window. Defaults to 10.
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
          - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
          - tensorrt_batched (bool, optional): Indicates whether batched inference using TensorRT-LLM is leveraged. Defaults to False.
+        - batch_size (int, optional): The size of the batch for processing requests. Defaults to 32.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -105,9 +109,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            stride=stride,
             use_alpha=use_alpha,
+            device=device,
+            batch_size=batch_size,
         )
-        self._device = device
         self._sglang_batched = sglang_batched
         self._tensorrt_batched = tensorrt_batched
         self._name = name
@@ -169,9 +175,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        window_size: int = kwargs.get("window_size", 20)
-        window_size = min(window_size, top_k_retrieve)
-        stride: int = kwargs.get("stride", 10)
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -186,8 +189,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             rank_end=min(
                 rank_end, len(requests[0].candidates)
             ),  # TODO: Fails arbitrary hit sizes
-            window_size=window_size,
-            stride=stride,
+            top_k_retrieve=top_k_retrieve,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
             populate_invocations_history=populate_invocations_history,
@@ -383,7 +385,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         results: List[Result],
         rank_start: int,
         rank_end: int,
-        batch_size: int = 32,
     ) -> List[Tuple[str, int]]:
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
@@ -393,7 +394,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         all_completed_prompts = []
 
         with ThreadPoolExecutor() as executor:
-            for batch in tqdm(chunks(results, batch_size), desc="Processing batches"):
+            for batch in tqdm(
+                chunks(results, self._batch_size), desc="Processing batches"
+            ):
                 completed_prompts = list(
                     executor.map(
                         lambda result: self.create_prompt(result, rank_start, rank_end),
