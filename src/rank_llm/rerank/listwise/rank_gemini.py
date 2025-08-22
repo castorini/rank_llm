@@ -47,6 +47,7 @@ class SafeGenai(ListwiseRankLLM):
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
+        stride: int = 10,
         batch_size: int = 32,
         keys=None,
         key_start_id=None,
@@ -69,6 +70,7 @@ class SafeGenai(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            stride=stride,
             batch_size=batch_size,
         )
         if not genai:
@@ -130,7 +132,6 @@ class SafeGenai(ListwiseRankLLM):
                 rank_start=max(rank_start, 0),
                 rank_end=min(rank_end, len(request.candidates)),
                 window_size=min(self._window_size, top_k_retrieve),
-                stride=self._stride,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
                 populate_invocations_history=populate_invocations_history,

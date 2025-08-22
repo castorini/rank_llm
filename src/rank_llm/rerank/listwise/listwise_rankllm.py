@@ -213,7 +213,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         window_size: int,
-        stride: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_invocations_history: bool = False,
@@ -225,12 +224,12 @@ class ListwiseRankLLM(RankLLM, ABC):
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
-            stride (int): The stride size for moving the window.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
         Returns:
             List[Result]: The list of result objects after applying the sliding window technique.
         """
+        stride = self._stride
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -267,7 +266,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         rank_start: int,
         rank_end: int,
         window_size: int,
-        stride: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_invocations_history: bool = True,
@@ -279,12 +277,12 @@ class ListwiseRankLLM(RankLLM, ABC):
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
             window_size (int): The size of each sliding window.
-            stride (int): The stride size for moving the window.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
         Returns:
             Result: The result object after applying the sliding window technique.
         """
+        stride = self._stride
         rerank_result = Result(
             query=copy.deepcopy(request.query),
             candidates=copy.deepcopy(request.candidates),

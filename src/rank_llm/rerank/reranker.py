@@ -44,8 +44,6 @@ class Reranker:
             batched (bool, optional): Whether to use batched processing. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window_size.
         Returns:
             List[Result]: A list containing the reranked candidates.
@@ -77,8 +75,6 @@ class Reranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             Result: the rerank result which contains the reranked candidates.
@@ -207,6 +203,7 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("stride", 10),
                 ("batch_size", 32),
             ]
             [
@@ -215,6 +212,7 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                stride,
                 batch_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
             openrouter_keys = get_openrouter_api_key()
@@ -223,6 +221,7 @@ class Reranker:
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
                 window_size=window_size,
+                stride=stride,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 batch_size=batch_size,
@@ -242,6 +241,7 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("stride", 10),
                 ("batch_size", 32),
                 ("base_url", None),
             ]
@@ -251,6 +251,7 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                stride,
                 batch_size,
                 base_url,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
@@ -261,6 +262,7 @@ class Reranker:
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
                 window_size=window_size,
+                stride=stride,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 batch_size=batch_size,
@@ -278,6 +280,7 @@ class Reranker:
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("stride", 10),
                 ("batch_size", 32),
             ]
             [
@@ -286,6 +289,7 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                stride,
                 batch_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
@@ -297,6 +301,7 @@ class Reranker:
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
+                stride=stride,
                 batch_size=batch_size,
                 keys=genai_keys,
             )
@@ -380,6 +385,7 @@ class Reranker:
                     "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
                 ),
                 ("window_size", 20),
+                ("stride", 10),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
                 ("batch_size", 32),
@@ -388,6 +394,7 @@ class Reranker:
                 context_size,
                 prompt_template_path,
                 window_size,
+                stride,
                 precision,
                 device,
                 batch_size,
@@ -398,6 +405,7 @@ class Reranker:
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
                 window_size=window_size,
+                stride=stride,
                 precision=precision,
                 device=device,
                 batch_size=batch_size,
@@ -411,6 +419,7 @@ class Reranker:
                     "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
                 ),
                 ("window_size", 100),
+                ("stride", 10),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
                 ("batch_size", 32),
@@ -419,6 +428,7 @@ class Reranker:
                 context_size,
                 prompt_template_path,
                 window_size,
+                stride,
                 precision,
                 device,
                 batch_size,
@@ -429,6 +439,7 @@ class Reranker:
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
                 window_size=window_size,
+                stride=stride,
                 precision=precision,
                 device=device,
                 batch_size=batch_size,
@@ -456,6 +467,7 @@ class Reranker:
                 ("num_gpus", 1),
                 ("variable_passages", False),
                 ("window_size", 20),
+                ("stride", 10),
                 ("system_message", None),
                 ("is_thinking", False),
                 ("reasoning_token_budget", 10000),
@@ -472,6 +484,7 @@ class Reranker:
                 num_gpus,
                 variable_passages,
                 window_size,
+                stride,
                 system_message,
                 is_thinking,
                 reasoning_token_budget,
@@ -495,6 +508,7 @@ class Reranker:
                 num_gpus=num_gpus,
                 variable_passages=variable_passages,
                 window_size=window_size,
+                stride=stride,
                 system_message=system_message,
                 is_thinking=is_thinking,
                 reasoning_token_budget=reasoning_token_budget,

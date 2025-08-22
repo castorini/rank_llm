@@ -47,6 +47,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         num_gpus: int = 1,
         variable_passages: bool = False,
         window_size: int = 20,
+        stride: int = 10,
         system_message: Optional[str] = None,
         is_thinking: bool = False,
         reasoning_token_budget: int = 10000,
@@ -74,6 +75,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - num_gpus (int, optional): Number of GPUs to use for model loading and inference. Defaults to 1.
          - variable_passages (bool, optional): Indicates whether the number of passages to rank can vary. Defaults to False.
          - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
+         - stride (int, optional): The stride size for moving the window. Defaults to 10.
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
          - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
@@ -107,6 +109,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            stride=stride,
             use_alpha=use_alpha,
             device=device,
             batch_size=batch_size,
@@ -187,7 +190,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 rank_end, len(requests[0].candidates)
             ),  # TODO: Fails arbitrary hit sizes
             window_size=min(self._window_size, top_k_retrieve),
-            stride=self._stride,
             shuffle_candidates=shuffle_candidates,
             logging=logging,
             populate_invocations_history=populate_invocations_history,

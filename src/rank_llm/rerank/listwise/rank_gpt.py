@@ -24,6 +24,7 @@ class SafeOpenai(ListwiseRankLLM):
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
+        stride: int = 10,
         batch_size: int = 32,
         keys=None,
         key_start_id=None,
@@ -46,6 +47,7 @@ class SafeOpenai(ListwiseRankLLM):
         the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
         by default.
         - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
+        - stride (int, optional): The stride size for moving the window. Defaults to 10.
         - keys (Union[List[str], str], optional): A list of OpenAI API keys or a single OpenAI API key.
         - key_start_id (int, optional): The starting index for the OpenAI API key cycle.
         - proxy (str, optional): The proxy configuration for OpenAI API calls.
@@ -93,6 +95,7 @@ class SafeOpenai(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            stride=stride,
             batch_size=batch_size,
         )
 
@@ -136,7 +139,6 @@ class SafeOpenai(ListwiseRankLLM):
                 rank_start=max(rank_start, 0),
                 rank_end=min(rank_end, len(request.candidates)),
                 window_size=min(self._window_size, top_k_retrieve),
-                stride=self._stride,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
                 populate_invocations_history=populate_invocations_history,

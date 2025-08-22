@@ -139,7 +139,6 @@ class RankFiDDistill(ListwiseRankLLM):
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
                     window_size=min(self._window_size, top_k_retrieve),
-                    stride=self._stride,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
@@ -386,7 +385,6 @@ class RankFiDScore(ListwiseRankLLM):
                         rank_end, len(requests[0].candidates)
                     ),  # TODO: Fails arbitrary hit sizes
                     window_size=min(self._window_size, top_k_retrieve),
-                    stride=self._stride,
                     shuffle_candidates=shuffle_candidates,
                     logging=logging,
                     populate_invocations_history=populate_invocations_history,
