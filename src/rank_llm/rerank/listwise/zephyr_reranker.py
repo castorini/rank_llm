@@ -1,6 +1,8 @@
 from importlib.resources import files
 from typing import Any, List, Optional
 
+import torch
+
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
@@ -17,10 +19,12 @@ class ZephyrReranker:
         prompt_template_path: str = (TEMPLATES / "rank_zephyr_template.yaml"),
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
-        device: str = "cuda",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         num_gpus: int = 1,
         variable_passages: bool = True,
         window_size: int = 20,
+        stride: int = 10,
+        batch_size: int = 32,
     ) -> None:
         self._reranker = RankListwiseOSLLM(
             model=model_path,
@@ -33,6 +37,8 @@ class ZephyrReranker:
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,
+            stride=stride,
+            batch_size=batch_size,
         )
 
     def rerank_batch(
@@ -55,8 +61,6 @@ class ZephyrReranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             List[Result]: A list containing the reranked results.
@@ -93,8 +97,6 @@ class ZephyrReranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             Result: the rerank result which contains the reranked candidates.

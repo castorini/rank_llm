@@ -21,7 +21,7 @@ requests = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
 # Rerank multiple requests with LiT5 Distill
 lit5_d_model_coordinator = LiT5DistillReranker("castorini/LiT5-Distill-large")
 lit5_d_reranker = Reranker(lit5_d_model_coordinator)
-kwargs = {"populate_invocations_history": True, "batch_size": 32}
+kwargs = {"populate_invocations_history": True}
 rerank_results = lit5_d_reranker.rerank_batch(requests, **kwargs)
 print(rerank_results)
 

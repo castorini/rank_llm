@@ -48,7 +48,7 @@ def main(args):
             )
         elif estimation_mode == EstimationMode.MAX_CONTEXT_LENGTH:
             cost, token_count = model_coordinator.get_ranking_cost_upperbound(
-                num_queries, rank_start=0, rank_end=100, window_size=20, stride=10
+                num_queries, rank_start=0, rank_end=100
             )
         else:
             raise ValueError(f"Invalide estimation mode: {estimation_mode}")
