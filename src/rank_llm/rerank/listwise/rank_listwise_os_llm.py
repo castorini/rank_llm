@@ -14,6 +14,7 @@ from tqdm import tqdm
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler import VllmHandler
+from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -56,6 +57,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
         batch_size: int = 32,
+        base_url: Optional[str] = None,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -124,6 +126,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
+        self._base_url = base_url
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
@@ -154,15 +157,21 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
-            self._vllm_handler = VllmHandler(
-                model=model,
-                download_dir=os.getenv("HF_HOME"),
-                enforce_eager=False,
-                max_logprobs=30,
-                tensor_parallel_size=num_gpus,
-                gpu_memory_utilization=0.90,
-            )
-            self._tokenizer = self._vllm_handler.get_tokenizer()
+            if self._base_url:
+                self._vllm_handler = VllmHandlerWithOpenAISDK(base_url=self._base_url, max_output_tokens=self._reasoning_token_budget)
+                if self._use_logits:
+                    raise ValueError("Vllm Generate must be used for using logits rather than the openai sdk with base_url")
+                self._tokenizer = self._vllm_handler.get_tokenizer()
+            else:
+                self._vllm_handler = VllmHandler(
+                    model=model,
+                    download_dir=os.getenv("HF_HOME"),
+                    enforce_eager=False,
+                    max_logprobs=30,
+                    tensor_parallel_size=num_gpus,
+                    gpu_memory_utilization=0.90,
+                )
+                self._tokenizer = self._vllm_handler.get_tokenizer()
 
     def rerank_batch(
         self,
@@ -182,7 +191,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         # reranking using vllm or sglang
         if len(set([len(req.candidates) for req in requests])) != 1:
             raise ValueError("Batched requests must have the same number of candidates")
-
         return self.sliding_windows_batched(
             requests,
             rank_start=max(rank_start, 0),
@@ -244,7 +252,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if hasattr(self, "_vllm_handler"):
             logger.info("VLLM Generating!")
-
+            if self._base_url:
+                result = self._vllm_handler.chat_completions(prompts)
+                print(result[0])
+                return result
             if self._use_logits:
                 outputs = self._vllm_handler.generate_output(
                     prompts=prompts,

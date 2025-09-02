@@ -245,9 +245,14 @@ class ListwiseRankLLM(RankLLM, ABC):
         end_pos = rank_end
         start_pos = rank_end - window_size
 
+        # print(stride)
+        # print(window_size)
+        # print(end_pos)
+        # print(start_pos, flush=True)
         # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
         # start_pos + stride != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
         while end_pos > rank_start and start_pos + stride != rank_start:
+            # print("in the window while loop", flush=True)
             if logging:
                 logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
             start_pos = max(start_pos, rank_start)
