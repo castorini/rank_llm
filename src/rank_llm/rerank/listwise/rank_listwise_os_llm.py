@@ -180,7 +180,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         )
 
         # reranking using vllm or sglang
-        if self._batch_size > 1 and len(set([len(req.candidates) for req in requests])) != 1:
+        if (
+            self._batch_size > 1
+            and len(set([len(req.candidates) for req in requests])) != 1
+        ):
             raise ValueError("Batched requests must have the same number of candidates")
 
         return self.sliding_windows_batched(
@@ -260,7 +263,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     prompts=prompts,
                     min_tokens=self.num_output_tokens(current_window_size),
                     max_tokens=(
-                        self._reasoning_token_budget + self.num_output_tokens(current_window_size)
+                        self._reasoning_token_budget
+                        + self.num_output_tokens(current_window_size)
                         if self._is_thinking
                         else self.num_output_tokens(current_window_size)
                     ),
