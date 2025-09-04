@@ -23,6 +23,8 @@ def main():
         retrieve_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
         qrels = TOPICS[dataset]
         retrieve_ndcg_10 = EvalFunction.from_results(retrieve_results, qrels)
+        # Some of the datasets have different number of retrieved candidates per query.
+        batch_size = 1 if dataset in ["scidocs", "dbpedia", "nfc"] else 32
         reranker = Reranker(
             RankListwiseOSLLM(
                 context_size=4096 * 8,
@@ -31,7 +33,7 @@ def main():
                 reasoning_token_budget=3072,
                 window_size=20,
                 stride=10,
-                batch_size=1,
+                batch_size=batch_size,
                 num_gpus=1,
                 prompt_template_path=(TEMPLATES / "reasonrank_template.yaml"),
             )
