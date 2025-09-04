@@ -3,7 +3,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from tqdm import tqdm
-from transformers import T5Tokenizer
+
+try:
+    from transformers import T5Tokenizer
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    T5Tokenizer = None
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
@@ -46,6 +52,11 @@ class RankFiDDistill(ListwiseRankLLM):
         """
         Creates instance of the RankFiDDistill class, a specialized version of RankLLM designed from Lit5-Distill.
         """
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "transformers is not installed. Please install it with: pip install rank_llm[transformers]"
+            )
+        
         super().__init__(
             model=model,
             context_size=context_size,
@@ -264,6 +275,11 @@ class RankFiDScore(ListwiseRankLLM):
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         batch_size: int = 32,
     ) -> None:
+        if not TRANSFORMERS_AVAILABLE:
+            raise ImportError(
+                "transformers is not installed. Please install it with: pip install rank_llm[transformers]"
+            )
+        
         super().__init__(
             model=model,
             context_size=context_size,

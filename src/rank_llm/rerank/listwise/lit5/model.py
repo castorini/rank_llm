@@ -3,7 +3,14 @@ import types
 
 import torch
 from torch import nn
-from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
+
+try:
+    from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration, T5Stack
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    raise ImportError(
+        "transformers is required for the lit5 model. Please install it with: pip install rank_llm[transformers]"
+    )
 
 from .modeling_t5 import (
     T5ForConditionalGeneration as T5ConditionalGenerationCrossAttentionScore,
