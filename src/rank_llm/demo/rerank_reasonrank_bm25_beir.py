@@ -1,4 +1,5 @@
 import json
+import multiprocessing as mp
 import os
 import sys
 from importlib.resources import files
@@ -18,13 +19,13 @@ from rank_llm.retrieve.topics_dict import TOPICS
 
 
 def main():
-    for dataset in ["scidocs", "dbpedia", "nfc", "covid", "news", "signal", "robust04"]:
+    for dataset in ["scifact", "dbpedia", "nfc", "covid", "news", "signal", "robust04"]:
         TEMPLATES = files("rank_llm.rerank.prompt_templates")
         retrieve_results = Retriever.from_dataset_with_prebuilt_index(dataset, k=100)
         qrels = TOPICS[dataset]
         retrieve_ndcg_10 = EvalFunction.from_results(retrieve_results, qrels)
         # Some of the datasets have different number of retrieved candidates per query.
-        batch_size = 1 if dataset in ["scidocs", "dbpedia", "nfc"] else 32
+        batch_size = 1 if dataset in ["scifact", "dbpedia", "nfc"] else 32
         reranker = Reranker(
             RankListwiseOSLLM(
                 context_size=4096 * 8,
@@ -57,4 +58,5 @@ def main():
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn", force=True)
     main()
