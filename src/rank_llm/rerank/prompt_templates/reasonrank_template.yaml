@@ -1,0 +1,11 @@
+method: "singleturn_listwise"
+system_message: "You are RankLLM, an intelligent assistant that can rank passages based on their relevance to the query. Given a query and a passage list, you first thinks about the reasoning process in the mind and then provides the answer (i.e., the reranked passage list). The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., <think> reasoning process here </think> <answer> answer here </answer>."
+prefix: |
+  I will provide you with {num} passages, each indicated by a numerical identifier []. Rank the passages based on their relevance to the search query: {query}.
+body: |
+  [{rank}] {candidate}
+suffix: |-
+  Search Query: {query}.
+  Rank the {num} passages above based on their relevance to the search query. All the passages should be included and listed using identifiers, in descending order of relevance. The format of the answer should be [] > [], e.g., [2] > [1].
+output_validation_regex: r"^\[\d+\]( > \[\d+\])*$"
+output_extraction_regex: r"\[(\d+)\]" 
