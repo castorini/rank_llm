@@ -40,9 +40,12 @@ from transformers.modeling_outputs import (
     Seq2SeqLMOutput,
     Seq2SeqModelOutput,
 )
-from transformers.modeling_utils import PreTrainedModel, prune_linear_layer
+from transformers.modeling_utils import PreTrainedModel
 from transformers.models.t5.configuration_t5 import T5Config
-from transformers.pytorch_utils import find_pruneable_heads_and_indices
+from transformers.pytorch_utils import (
+    find_pruneable_heads_and_indices,
+    prune_linear_layer,
+)
 from transformers.utils import logging
 from transformers.utils.model_parallel_utils import assert_device_map, get_device_map
 
