@@ -47,7 +47,7 @@ try:
         prune_linear_layer,
     )
 except:
-    from trainsformers.pytorch_utils import (
+    from transformers.pytorch_utils import (
         find_pruneable_heads_and_indices,
         prune_linear_layer,
     )
