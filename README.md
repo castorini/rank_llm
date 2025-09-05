@@ -7,6 +7,8 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## News
+- **[2025.08.25]** Added support for OpenRouter API - Release [v0.25.7](docs/release-notes/release-notes-v0.25.7.md)
+- **[2025.07.23]** Added support for custom prompt templates with YAML files - Release [v0.25.0](docs/release-notes/release-notes-v0.25.0.md). You can now integrate your own prompt and language model with just a few lines of code. Checkout the [Reasonrank integration](https://github.com/castorini/rank_llm/pull/306) as an example.
 - **[2025.05.25]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
 
 ## Overview
