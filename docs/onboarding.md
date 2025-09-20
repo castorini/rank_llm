@@ -42,7 +42,7 @@ Generally, the approaches can be divided into three categories: pointwise (scori
 In this guide, we will focus on the listwise approach.
 For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
 
-> Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed, this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025. 
+> Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed, this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025.
 
 ### Understanding Listwise Reranking
 
@@ -133,7 +133,7 @@ Results:
 ndcg_cut_10             all     0.8201
 ```
 
-Note that the result you get may vary slightly with the number above. 
+Note that the result you get may vary slightly with the number above.
 
 _Where is the first-stage retrieval?_
 It is hidden in the `--retrieval_method=SPLADE++_EnsembleDistil_ONNX` flag.
@@ -185,7 +185,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.8198          | 0.7885           | 2         |
 | 0.8199          | 0.7906          | 1         |
 | 0.8198          | 0.7865           | 1         |
-
+| 0.8162          | 0.7829           | 1         |
 
 If your result is present in the table above, please increase its frequency by 1.
 If your result is not present, add a new row to the table with frequency 1.
@@ -201,3 +201,4 @@ After editing the table above, add a log entry here as well like the previous gu
 + Results reproduced by [@Yaohui2019](https://github.com/Yaohui2019) on 2025-04-25 (commit [`d3a7a3c`](https://github.com/castorini/rank_llm/commit/d3a7a3c1690534b6f8f35c23a54e38321372d57d))
 + Results reproduced by [@Vik7am10](https://github.com/Vik7am10) on 2025-06-19 (commit [`baf3b39`](https://github.com/castorini/rank_llm/commit/baf3b39c06cb49c604960efcfa09aa83cfb0990c))
 + Results reproduced by [@kxwtan](https://github.com/kxwtan) on 2025-06-28 (commit [`e26abac`](https://github.com/castorini/rank_llm/commit/e26abaca5429ef4abc5e8d8f342c12e194fb230a))
++ Results reproduced by [@FarmersWrap](https://github.com/FarmersWrap) on 2025-09-20 (commit [`e84b530`](https://github.com/castorini/rank_llm/commit/e84b530d7c81cc6c5bc42cb8ca66932ac8c1a276))
