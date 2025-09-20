@@ -42,7 +42,7 @@ Generally, the approaches can be divided into three categories: pointwise (scori
 In this guide, we will focus on the listwise approach.
 For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
 
-> Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed, this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025.
+> Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed, this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025. 
 
 ### Understanding Listwise Reranking
 
@@ -133,7 +133,7 @@ Results:
 ndcg_cut_10             all     0.8201
 ```
 
-Note that the result you get may vary slightly with the number above.
+Note that the result you get may vary slightly with the number above. 
 
 _Where is the first-stage retrieval?_
 It is hidden in the `--retrieval_method=SPLADE++_EnsembleDistil_ONNX` flag.
@@ -186,6 +186,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.8199          | 0.7906          | 1         |
 | 0.8198          | 0.7865           | 1         |
 | 0.8162          | 0.7829           | 1         |
+
 
 If your result is present in the table above, please increase its frequency by 1.
 If your result is not present, add a new row to the table with frequency 1.
