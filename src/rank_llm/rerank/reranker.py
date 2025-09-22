@@ -1,4 +1,5 @@
 from pathlib import Path
+from importlib.resources import files
 from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
@@ -14,6 +15,8 @@ from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class Reranker:
@@ -198,7 +201,7 @@ class Reranker:
                 ("context_size", 4096),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+                    (TEMPLATES / "rank_gpt_template.yaml"),
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
@@ -236,7 +239,7 @@ class Reranker:
                 ("context_size", 4096),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+                    (TEMPLATES / "rank_gpt_template.yaml"),
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
@@ -275,7 +278,7 @@ class Reranker:
                 ("context_size", 4096),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                    (TEMPLATES / "rank_zephyr_template.yaml"),
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
@@ -314,7 +317,7 @@ class Reranker:
             keys_and_defaults = [
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
+                    (TEMPLATES / "monot5_template.yaml"),
                 ),
                 ("context_size", 512),
                 ("num_few_shot_examples", 0),
@@ -353,7 +356,7 @@ class Reranker:
             keys_and_defaults = [
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/duot5_template.yaml",
+                    (TEMPLATES / "duot5_template.yaml"),
                 ),
                 ("context_size", 512),
                 ("device", "cuda"),
@@ -382,7 +385,7 @@ class Reranker:
                 ("context_size", 150),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
+                    (TEMPLATES / "rank_fid_template.yaml"),
                 ),
                 ("window_size", 20),
                 ("stride", 10),
@@ -416,7 +419,7 @@ class Reranker:
                 ("context_size", 150),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
+                    (TEMPLATES / "rank_fid_score_template.yaml"),
                 ),
                 ("window_size", 100),
                 ("stride", 10),
