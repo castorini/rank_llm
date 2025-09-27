@@ -33,6 +33,7 @@ def run_mode(thinking: bool):
     model_coordinator = RankListwiseOSLLM(
         model="nvidia/NVIDIA-Nemotron-Nano-9B-v2",
         prompt_template_path=template_path,
+        is_thinking=thinking,
     )
     reranker = Reranker(model_coordinator)
 
