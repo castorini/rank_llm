@@ -25,8 +25,7 @@ class EvalFunction:
         eval_args: list[str] = ["-c", "-m", "ndcg_cut.10"],
     ) -> str:
         """
-        This method processes a list of Result objects and immediately evaluates them,
-        returning the evaluation result as a string.
+        This method processes a trec run file and evaluates it returning the evaluation result as a string.
 
         Args:
             run_file: A tsv file with results stored in trec format.
@@ -36,7 +35,7 @@ class EvalFunction:
             str: Evaluation results as a string.
         """
 
-        # make a deep copy of eval_args to preserve its default value for the next
+        # make a deep copy of eval_args to preserve its default value for the next run
         args = []
         args.extend(eval_args)
         args.append(qrels)
@@ -71,7 +70,7 @@ class EvalFunction:
                 qid = result.query.qid
                 for rank, cand in enumerate(result.candidates, start=1):
                     file.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n")
-        # make a deep copy of eval_args to preserve its default value for the next
+        # make a deep copy of eval_args to preserve its default value for the next run
         args = []
         args.extend(eval_args)
         args.append(qrels)
