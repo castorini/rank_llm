@@ -163,6 +163,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     model=model, base_url=base_url
                 )
             else:
+                self._base_url = None
                 self._vllm_handler = VllmHandler(
                     model=model,
                     download_dir=os.getenv("HF_HOME"),

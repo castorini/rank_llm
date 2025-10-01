@@ -49,16 +49,15 @@ class VllmHandlerWithOpenAISDK:
         except Exception as e:
             print(response)
             print(e)
-            return "error", 0
+            return str(e), 0
 
     async def _all_inferences(
-        self, prompts: list[str] | list[list[dict[str, str]]], **kwargs
+        self, prompts: list[list[dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         tasks = [asyncio.create_task(self._one_inference(p, **kwargs)) for p in prompts]
         return await asyncio.gather(*tasks)
 
-    # Optional sync wrapper (OK in plain scripts; avoid inside Jupyter/FastAPI)
     def chat_completions(
-        self, prompts: list[str] | list[list[dict[str, str]]], **kwargs
+        self, prompts: list[list[dict[str, str]]], **kwargs
     ) -> List[Tuple[str, int]]:
         return asyncio.run(self._all_inferences(prompts, **kwargs))
