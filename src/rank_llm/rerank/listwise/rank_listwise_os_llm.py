@@ -127,6 +127,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
+        self._base_url = base_url
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
@@ -157,13 +158,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
-            if base_url:
-                self._base_url = base_url
+            if self._base_url:
                 self._vllm_handler = VllmHandlerWithOpenAISDK(
                     model=model, base_url=base_url
                 )
             else:
-                self._base_url = None
                 self._vllm_handler = VllmHandler(
                     model=model,
                     download_dir=os.getenv("HF_HOME"),
