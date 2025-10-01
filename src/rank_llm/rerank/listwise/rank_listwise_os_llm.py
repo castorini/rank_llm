@@ -14,6 +14,7 @@ from tqdm import tqdm
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler import VllmHandler
+from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -56,6 +57,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
         batch_size: int = 32,
+        base_url: Optional[str] = None,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -64,7 +66,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
          - context_size (int, optional): Maximum number of tokens that can be handled in a single prompt. Defaults to 4096.
-        - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
+         - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
          indicating that this class is designed primarily for listwise ranking tasks following the RANK_GPT methodology.
          - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
          the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
@@ -82,7 +84,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
          - tensorrt_batched (bool, optional): Indicates whether batched inference using TensorRT-LLM is leveraged. Defaults to False.
-        - batch_size (int, optional): The size of the batch for processing requests. Defaults to 32.
+         - batch_size (int, optional): The size of the batch for processing requests. Defaults to 32.
+         - base_url (str, optional): When specified the Open AI API compatiable vllm handler is used.
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
@@ -124,6 +127,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
+        self._base_url = base_url
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
@@ -154,14 +158,19 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
-            self._vllm_handler = VllmHandler(
-                model=model,
-                download_dir=os.getenv("HF_HOME"),
-                enforce_eager=False,
-                max_logprobs=30,
-                tensor_parallel_size=num_gpus,
-                gpu_memory_utilization=0.90,
-            )
+            if self._base_url:
+                self._vllm_handler = VllmHandlerWithOpenAISDK(
+                    model=model, base_url=base_url
+                )
+            else:
+                self._vllm_handler = VllmHandler(
+                    model=model,
+                    download_dir=os.getenv("HF_HOME"),
+                    enforce_eager=False,
+                    max_logprobs=30,
+                    tensor_parallel_size=num_gpus,
+                    gpu_memory_utilization=0.90,
+                )
             self._tokenizer = self._vllm_handler.get_tokenizer()
 
     def rerank_batch(
@@ -259,15 +268,26 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 arr = [self._get_logits_single_digit(output) for output in outputs]
                 return [(s, len(s)) for s, __ in arr]
             else:
+                max_tokens = (
+                    self._reasoning_token_budget
+                    + self.num_output_tokens(current_window_size)
+                    if self._is_thinking
+                    else self.num_output_tokens(current_window_size)
+                )
+                if self._base_url:
+                    kwargs = {
+                        "max_tokens": max_tokens,
+                        "temperature": 0,
+                        # TODO: expose the reasoning effort as an init param if needed.
+                        "reasoning": {"effort": "medium", "summary": "detailed"},
+                    }
+                    return self._vllm_handler.chat_completions(
+                        prompts=prompts, max_tokens=max_tokens, temperature=0
+                    )
                 outputs = self._vllm_handler.generate_output(
                     prompts=prompts,
                     min_tokens=self.num_output_tokens(current_window_size),
-                    max_tokens=(
-                        self._reasoning_token_budget
-                        + self.num_output_tokens(current_window_size)
-                        if self._is_thinking
-                        else self.num_output_tokens(current_window_size)
-                    ),
+                    max_tokens=max_tokens,
                     temperature=0.0,
                 )
                 return [
@@ -347,7 +367,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, int] | Tuple[List[Dict[str, str]], int]:
         max_length = 300 * (20 / (rank_end - rank_start))
 
         while True:
@@ -360,14 +380,18 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 num_fewshot_examples=self._num_few_shot_examples,
                 fewshot_examples=self._examples,
             )
-            prompt = self._tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=self._is_thinking,
-            )
-            prompt = fix_text(prompt)
-            num_tokens = self.get_num_tokens(prompt)
+            # only apply the chat template when llm.generate is being used since it expects a prerpared prompt. The chat api expects list[dict[str, str]]
+            if self._base_url:
+                num_tokens = self.get_num_tokens(messages)
+            else:
+                prompt = self._tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    enable_thinking=self._is_thinking,
+                )
+                prompt = fix_text(prompt)
+                num_tokens = self.get_num_tokens(prompt)
             if num_tokens <= self.max_tokens() - self.num_output_tokens(
                 rank_end - rank_start
             ):
@@ -382,6 +406,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     )
                     // ((rank_end - rank_start) * 4),
                 )
+        if self._base_url:
+            return messages, self.get_num_tokens(messages)
         return prompt, self.get_num_tokens(prompt)
 
     def create_prompt_batched(
@@ -389,7 +415,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         results: List[Result],
         rank_start: int,
         rank_end: int,
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, int] | Tuple[List[Dict[str, str]], int]]:
         def chunks(lst, n):
             """Yield successive n-sized chunks from lst."""
             for i in range(0, len(lst), n):
@@ -410,8 +436,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 all_completed_prompts.extend(completed_prompts)
         return all_completed_prompts
 
-    def get_num_tokens(self, prompt: str) -> int:
-        return len(self._tokenizer.encode(prompt))
+    def get_num_tokens(self, prompt: str | List[Dict[str, str]]) -> int:
+        text = prompt
+        if isinstance(prompt, list):
+            text = "".join(
+                f"{message['role']}: {message['content']}\n" for message in prompt
+            )
+        return len(self._tokenizer.encode(text))
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
