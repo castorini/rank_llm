@@ -23,6 +23,7 @@ class VllmHandler:
             max_logprobs=max_logprobs,
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
+            **kwargs,
         )
         self._tokenizer = self._vllm.get_tokenizer()
 
