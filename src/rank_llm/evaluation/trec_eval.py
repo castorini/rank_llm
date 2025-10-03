@@ -2,6 +2,7 @@ import os
 import platform
 import subprocess
 import tempfile
+from pathlib import Path
 from typing import List
 
 import pandas as pd
@@ -17,6 +18,32 @@ from rank_llm.data import Result
 
 
 class EvalFunction:
+    @staticmethod
+    def from_trec_runfile(
+        run_file: str,
+        qrels: str,
+        eval_args: list[str] = ["-c", "-m", "ndcg_cut.10"],
+    ) -> str:
+        """
+        This method processes a trec run file and evaluates it returning the evaluation result as a string.
+
+        Args:
+            run_file: A tsv file with results stored in trec format.
+            qrels (str): Path to the qrels file.
+
+        Returns:
+            str: Evaluation results as a string.
+        """
+
+        # make a deep copy of eval_args to preserve its default value for the next run
+        args = []
+        args.extend(eval_args)
+        args.append(qrels)
+        args.append(run_file)
+        eval_result = EvalFunction.eval(args, trunc=True)
+
+        return eval_result
+
     @staticmethod
     def from_results(
         results: List[Result],
@@ -43,7 +70,7 @@ class EvalFunction:
                 qid = result.query.qid
                 for rank, cand in enumerate(result.candidates, start=1):
                     file.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n")
-        # make a deep copy of eval_args to preserve its default value for the next
+        # make a deep copy of eval_args to preserve its default value for the next run
         args = []
         args.extend(eval_args)
         args.append(qrels)
@@ -65,10 +92,13 @@ class EvalFunction:
         Returns:
             str: Path to the truncated qrels file.
         """
-        if get_qrels_file is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+        if not Path(qrels).exists():
+            if get_qrels_file is None:
+                raise ImportError(
+                    "Please install rank-llm with `pip install .[pyserini]`."
+                )
+            qrels = get_qrels_file(qrels)
 
-        qrels = get_qrels_file(qrels)
         run = pd.read_csv(run, sep="\s+", header=None)
         qrels = pd.read_csv(qrels, sep="\s+", header=None)
         run[0] = run[0].astype(str)

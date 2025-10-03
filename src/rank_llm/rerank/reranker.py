@@ -474,6 +474,7 @@ class Reranker:
                 ("use_logits", False),
                 ("use_alpha", False),
                 ("batch_size", 32),
+                ("base_url", None),
             ]
             [
                 context_size,
@@ -491,6 +492,7 @@ class Reranker:
                 use_logits,
                 use_alpha,
                 batch_size,
+                base_url,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
@@ -515,6 +517,7 @@ class Reranker:
                 use_logits=use_logits,
                 use_alpha=use_alpha,
                 batch_size=batch_size,
+                base_url=base_url,
             )
 
             print(f"Completed loading {model_path}")
