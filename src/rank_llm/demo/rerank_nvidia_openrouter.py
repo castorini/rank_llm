@@ -27,50 +27,42 @@ model = "nvidia/nemotron-nano-9b-v2:free"
 print(f"Testing {len(requests)} queries")
 
 # Test with thinking
-try:
-    thinking_coordinator = SafeOpenai(
-        model, 4096, keys=get_openrouter_api_key(),
-        base_url="https://openrouter.ai/api/v1/",
-        prompt_template_path=(TEMPLATES / "nemotron_thinking_template.yaml"),
-    )
-    thinking_reranker = Reranker(thinking_coordinator)
-    print(f"Using {model} with thinking mode")
-    
-    thinking_results = thinking_reranker.rerank_batch(requests, populate_invocations_history=True)
-    
-    # Save thinking results
-    writer = DataWriter(thinking_results)
-    Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
-    writer.write_in_jsonl_format("demo_outputs/nemotron_thinking_results.jsonl")
-    writer.write_in_trec_eval_format("demo_outputs/nemotron_thinking_results.txt")
-    writer.write_inference_invocations_history("demo_outputs/nemotron_thinking_invocations.json")
-    
-    print("Thinking mode results saved")
-    
-except Exception as e:
-    print(f"Thinking mode failed: {e}")
+thinking_coordinator = SafeOpenai(
+    model, 4096, keys=get_openrouter_api_key(),
+    base_url="https://openrouter.ai/api/v1/",
+    prompt_template_path=(TEMPLATES / "nemotron_thinking_template.yaml"),
+)
+thinking_reranker = Reranker(thinking_coordinator)
+print(f"Using {model} with thinking mode")
+
+thinking_results = thinking_reranker.rerank_batch(requests, populate_invocations_history=True)
+
+# Save thinking results
+writer = DataWriter(thinking_results)
+Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
+writer.write_in_jsonl_format("demo_outputs/nemotron_thinking_results.jsonl")
+writer.write_in_trec_eval_format("demo_outputs/nemotron_thinking_results.txt")
+writer.write_inference_invocations_history("demo_outputs/nemotron_thinking_invocations.json")
+
+print("Thinking mode results saved")
 
 # Test without thinking
-try:
-    non_thinking_coordinator = SafeOpenai(
-        model, 4096, keys=get_openrouter_api_key(),
-        base_url="https://openrouter.ai/api/v1/",
-        prompt_template_path=(TEMPLATES / "nemotron_non_thinking_template.yaml"),
-    )
-    non_thinking_reranker = Reranker(non_thinking_coordinator)
-    print(f"Using {model} with non-thinking mode")
-    
-    non_thinking_results = non_thinking_reranker.rerank_batch(requests, populate_invocations_history=True)
-    
-    # Save non-thinking results
-    writer = DataWriter(non_thinking_results)
-    writer.write_in_jsonl_format("demo_outputs/nemotron_non_thinking_results.jsonl")
-    writer.write_in_trec_eval_format("demo_outputs/nemotron_non_thinking_results.txt")
-    writer.write_inference_invocations_history("demo_outputs/nemotron_non_thinking_invocations.json")
-    
-    print("Non-thinking mode results saved")
-    
-except Exception as e:
-    print(f"Non-thinking mode failed: {e}")
+non_thinking_coordinator = SafeOpenai(
+    model, 4096, keys=get_openrouter_api_key(),
+    base_url="https://openrouter.ai/api/v1/",
+    prompt_template_path=(TEMPLATES / "nemotron_non_thinking_template.yaml"),
+)
+non_thinking_reranker = Reranker(non_thinking_coordinator)
+print(f"Using {model} with non-thinking mode")
+
+non_thinking_results = non_thinking_reranker.rerank_batch(requests, populate_invocations_history=True)
+
+# Save non-thinking results
+writer = DataWriter(non_thinking_results)
+writer.write_in_jsonl_format("demo_outputs/nemotron_non_thinking_results.jsonl")
+writer.write_in_trec_eval_format("demo_outputs/nemotron_non_thinking_results.txt")
+writer.write_inference_invocations_history("demo_outputs/nemotron_non_thinking_invocations.json")
+
+print("Non-thinking mode results saved")
 
 print("Results saved to demo_outputs/")
