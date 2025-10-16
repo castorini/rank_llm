@@ -1,4 +1,5 @@
 import argparse
+from importlib.resources import files
 
 import torch
 from flask import Flask, jsonify, request
@@ -7,6 +8,9 @@ from rank_llm.rerank import IdentityReranker, get_azure_openai_args, get_openai_
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
+
 
 """ API URL FORMAT
 
@@ -31,7 +35,7 @@ def create_app(model, port, use_azure_openai=False):
             model=f"castorini/first_mistral",
             name=model,
             context_size=8192,
-            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml",
+            prompt_template_path=(TEMPLATES / "rank_zephyr_alpha_template.yaml"),
             num_few_shot_examples=0,
             device="cuda",
             num_gpus=1,
@@ -47,7 +51,7 @@ def create_app(model, port, use_azure_openai=False):
             model=f"castorini/{model}_7b_v1_full",
             name=model,
             context_size=4096,
-            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+            prompt_template_path=(TEMPLATES / "rank_zephyr_template.yaml"),
             num_few_shot_examples=0,
             device="cuda",
             num_gpus=1,
@@ -61,7 +65,7 @@ def create_app(model, port, use_azure_openai=False):
             model=f"castorini/{model}_7b_v1",
             name=model,
             context_size=4096,
-            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+            prompt_template_path=(TEMPLATES / "rank_zephyr_template.yaml"),
             num_few_shot_examples=0,
             device="cuda",
             num_gpus=1,
@@ -75,7 +79,7 @@ def create_app(model, port, use_azure_openai=False):
         default_model_coordinator = SafeOpenai(
             model=model,
             context_size=8192,
-            prompt_template_path="src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+            prompt_template_path=(TEMPLATES / "rank_gpt_template.yaml"),
             num_few_shot_examples=0,
             keys=openai_keys,
             **(get_azure_openai_args() if use_azure_openai else {}),
