@@ -212,27 +212,34 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self, logits: Dict[str, "Logit"], total: Tuple[int, int]
     ) -> Tuple[str, Dict[int, float]]:
         if self._use_alpha:
-            evaluations = {
-                ord(logit.decoded_token): logit.logprob
-                for logit in logits.values()
-                if len(logit.decoded_token) == 1
-                and logit.decoded_token.isalpha()
-                and ALPH_START_IDX + 1
-                <= ord(logit.decoded_token)
-                <= ALPH_START_IDX + self._window_size
-            }
+            evaluations: Dict[int, float] = {}
+            for logit in logits.values():
+                token = logit.decoded_token
+                if (
+                    len(token) == 1
+                    and token.isalpha()
+                    and ALPH_START_IDX + 1
+                    <= ord(token)
+                    <= ALPH_START_IDX + self._window_size
+                ):
+                    idx = ord(token)
+                    prev = evaluations.get(idx, float("-inf"))
+                    if logit.logprob > prev:
+                        evaluations[idx] = logit.logprob
             sorted_evaluations = sorted(evaluations.items(), key=lambda x: -x[1])
             result_string = ">".join([f"[{chr(x)}]" for x, y in sorted_evaluations])
         else:
-            evaluations = {
-                int(logit.decoded_token): logit.logprob
-                for logit in logits.values()
-                if logit.decoded_token.isnumeric()
-                and not unicodedata.name(logit.decoded_token).startswith(
+            evaluations: Dict[int, float] = {}
+            for logit in logits.values():
+                token = logit.decoded_token
+                if token.isnumeric() and not unicodedata.name(token).startswith(
                     ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT", "CJK UNIFIED")
-                )
-                and total[0] <= int(logit.decoded_token) <= total[1]
-            }
+                ):
+                    val = int(token)
+                    if total[0] <= val <= total[1]:
+                        prev = evaluations.get(val, float("-inf"))
+                        if logit.logprob > prev:
+                            evaluations[val] = logit.logprob
             sorted_evaluations = sorted(evaluations.items(), key=lambda x: -x[1])
             result_string = ">".join([f"[{x}]" for x, y in sorted_evaluations])
 
@@ -241,7 +248,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def _get_logits_single_digit(
         self,
         output: vllm.RequestOutput,
-        effective_location: int = 1,
+        effective_location: int = 0,
         total: Tuple[int, int] = (1, 9),
     ):
         logits = output.outputs[0].logprobs[effective_location]
@@ -259,10 +266,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             logger.info("VLLM Generating!")
 
             if self._use_logits:
+                prepared_prompts = [
+                    p + "[" if isinstance(p, str) else p for p in prompts
+                ]
                 outputs = self._vllm_handler.generate_output(
-                    prompts=prompts,
-                    min_tokens=2,
-                    max_tokens=2,
+                    prompts=prepared_prompts,
+                    min_tokens=1,
+                    max_tokens=1,
                     temperature=0.0,
                     logprobs=30,
                 )
