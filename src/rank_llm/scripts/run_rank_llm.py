@@ -36,7 +36,9 @@ def main(args):
     num_few_shot_examples = args.num_few_shot_examples
     device = "cuda" if torch.cuda.is_available() else "cpu"
     variable_passages = args.variable_passages
-    retrieval_mode = RetrievalMode.DATASET
+    retrieval_mode = (
+        RetrievalMode.DATASET if args.dataset else RetrievalMode.LOAD_FROM_FILE
+    )
     num_passes = args.num_passes
     stride = args.stride
     window_size = args.window_size
@@ -48,6 +50,16 @@ def main(args):
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
+    requests_file = args.requests_file
+
+    if args.requests_file:
+        if args.retrieval_method:
+            parser.error("--retrieval_method must not be used with --requests_file")
+        if not os.path.exists(args.requests_file):
+            parser.error(f"--requests_file not found: {args.requests_file}")
+
+    if args.dataset and not args.retrieval_method:
+        parser.error("--retrieval_method is required when --dataset is provided")
 
     _ = retrieve_and_rerank(
         model_path=model_path,
@@ -82,6 +94,7 @@ def main(args):
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
         tensorrt_batched=tensorrt_batched,
+        requests_file=requests_file,
     )
 
 
@@ -142,20 +155,25 @@ if __name__ == "__main__":
         default=None,
         help="the max number of queries to process from the dataset",
     )
-    parser.add_argument(
+    retrieval_input_group = parser.add_mutually_exclusive_group(required=True)
+    retrieval_input_group.add_argument(
         "--dataset",
         type=str,
-        required=True,
-        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits 4- filename containing retrieved results",
+        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits",
     )
-    parser.add_argument(
-        "--num_gpus", type=int, default=1, help="the number of GPUs to use"
+    retrieval_input_group.add_argument(
+        "--requests_file",
+        type=str,
+        help=f"Path to a JSONL file containing requests",
     )
     parser.add_argument(
         "--retrieval_method",
         type=RetrievalMethod,
-        required=True,
+        help="Required if --dataset is used; must be omitted with --requests_file",
         choices=list(RetrievalMethod),
+    )
+    parser.add_argument(
+        "--num_gpus", type=int, default=1, help="the number of GPUs to use"
     )
     parser.add_argument(
         "--prompt_mode",

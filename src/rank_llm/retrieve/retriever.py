@@ -17,6 +17,7 @@ from . import PyseriniRetriever, RetrievalMethod
 class RetrievalMode(Enum):
     DATASET = "dataset"
     CUSTOM = "custom"
+    LOAD_FROM_FILE = "load_from_file"
 
     def __str__(self):
         return self.value

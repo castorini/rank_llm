@@ -1,7 +1,8 @@
 import copy
+import os
 from typing import Any, Dict, List, Optional, Union
 
-from rank_llm.data import Query, Request
+from rank_llm.data import Query, Request, read_requests_from_file
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
@@ -125,6 +126,41 @@ def retrieve_and_rerank(
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
         else:
             print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+    elif (
+        retrieval_mode == RetrievalMode.LOAD_FROM_FILE
+        and reranker.get_model_coordinator() is not None
+    ):
+        writer = DataWriter(rerank_results)
+
+        # TODO: create arguments for these file names and path them here also for qrel file name
+        path = Path(f"")
+        path.mkdir(parents=True, exist_ok=True)
+        writer.write_in_jsonl_format(
+            os.path.join(path, f"{task}-rrf-{fusion}_top100.jsonl")
+        )
+        writer.write_in_trec_eval_format(
+            os.path.join(path, f"{task}-rrf-{fusion}_top100.txt")
+        )
+        writer.write_inference_invocations_history(
+            os.path.join(path, f"{task}-rrf-{fusion}_top100_invocations.json")
+        )
+        keys_and_defaults = [
+            ("qrels_file", ""),
+        ]
+        [qrels_file] = extract_kwargs(keys_and_defaults, **kwargs)
+        if qrels_file:
+            from rank_llm.evaluation.trec_eval import EvalFunction
+
+            print("Evaluating:")
+            EvalFunction.from_results(
+                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.1"]
+            )
+            EvalFunction.from_results(
+                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.5"]
+            )
+            EvalFunction.from_results(
+                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.10"]
+            )
 
     if interactive:
         return (rerank_results, reranker.get_model_coordinator())
@@ -211,5 +247,11 @@ def retrieve(
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
+    elif retrieval_mode == RetrievalMode.LOAD_FROM_FILE:
+        keys_and_defaults = [
+            ("requests_file", ""),
+        ]
+        [requests_file] = extract_kwargs(keys_and_defaults, **kwargs)
+        requests = read_requests_from_file(requests_file)
 
     return requests
