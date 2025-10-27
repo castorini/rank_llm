@@ -28,6 +28,11 @@ def main(args):
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
+    requests_file = args.requests_file
+    qrels_file = args.qrels_file
+    output_jsonl_file = args.output_jsonl_file
+    output_trec_file = args.output_trec_file
+    invocations_history_file = args.invocations_history_file
     prompt_template_path = args.prompt_template_path
     num_few_shot_examples = args.num_few_shot_examples
     few_shot_file = args.few_shot_file
@@ -50,7 +55,7 @@ def main(args):
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
-    requests_file = args.requests_file
+    populate_invocations_history = args.populate_invocations_history
 
     if args.requests_file:
         if args.retrieval_method:
@@ -67,6 +72,11 @@ def main(args):
         batch_size=batch_size,
         dataset=dataset,
         retrieval_mode=retrieval_mode,
+        requests_file=requests_file,
+        qrels_file=qrels_file,
+        output_jsonl_file=output_jsonl_file,
+        output_trec_file=output_trec_file,
+        invocations_history_file=invocations_history_file,
         retrieval_method=retrieval_method,
         top_k_retrieve=top_k_candidates,
         top_k_rerank=top_k_rerank,
@@ -94,7 +104,7 @@ def main(args):
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
         tensorrt_batched=tensorrt_batched,
-        requests_file=requests_file,
+        populate_invocations_history=populate_invocations_history,
     )
 
 
@@ -161,15 +171,39 @@ if __name__ == "__main__":
         type=str,
         help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits",
     )
+    parser.add_argument(
+        "--retrieval_method",
+        type=RetrievalMethod,
+        help="Required if --dataset is used; must be omitted with --requests_file",
+        choices=list(RetrievalMethod),
+    )
     retrieval_input_group.add_argument(
         "--requests_file",
         type=str,
         help=f"Path to a JSONL file containing requests",
     )
     parser.add_argument(
-        "--retrieval_method",
+        "--qrels_file",
         type=RetrievalMethod,
-        help="Required if --dataset is used; must be omitted with --requests_file",
+        help="Only used with --requests_file; when present the Trec eval will be executed using this qrels file",
+        choices=list(RetrievalMethod),
+    )
+    parser.add_argument(
+        "--output_jsonl_file",
+        type=RetrievalMethod,
+        help="Only used with --requests_file; when present, the ranked results will be saved in this JSONL file.",
+        choices=list(RetrievalMethod),
+    )
+    parser.add_argument(
+        "--output_trec_file",
+        type=RetrievalMethod,
+        help="Only used with --requests_file; when present, the ranked results will be saved in this txt file in trec format.",
+        choices=list(RetrievalMethod),
+    )
+    parser.add_argument(
+        "--invocations_history_file",
+        type=RetrievalMethod,
+        help="Only used with --requests_file and --populate_invocations_history; when present, the LLM invocations history (prompts, completions, and input/output token counts) will be stored in this file.",
         choices=list(RetrievalMethod),
     )
     parser.add_argument(
@@ -277,6 +311,11 @@ if __name__ == "__main__":
         "--tensorrt_batched",
         action="store_true",
         help="whether to run the model in batches using tensorrtllm backend",
+    )
+    infer_backend_group.add_argument(
+        "--populate_invocations_history",
+        action="store_true",
+        help="whether to store the LLM invocations history (prompts, completions and input/output token counts)",
     )
     args = parser.parse_args()
     main(args)

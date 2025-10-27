@@ -1,5 +1,5 @@
 import copy
-import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from rank_llm.data import Query, Request, read_requests_from_file
@@ -131,22 +131,36 @@ def retrieve_and_rerank(
         and reranker.get_model_coordinator() is not None
     ):
         writer = DataWriter(rerank_results)
-
-        # TODO: create arguments for these file names and path them here also for qrel file name
-        path = Path(f"")
-        path.mkdir(parents=True, exist_ok=True)
-        writer.write_in_jsonl_format(
-            os.path.join(path, f"{task}-rrf-{fusion}_top100.jsonl")
-        )
-        writer.write_in_trec_eval_format(
-            os.path.join(path, f"{task}-rrf-{fusion}_top100.txt")
-        )
-        writer.write_inference_invocations_history(
-            os.path.join(path, f"{task}-rrf-{fusion}_top100_invocations.json")
-        )
         keys_and_defaults = [
-            ("qrels_file", ""),
+            ("output_jsonl_file", ""),
+            ("output_trec_file", ""),
+            ("invocations_history_file", ""),
         ]
+        [
+            output_jsonl_file,
+            output_trec_file,
+            invocations_history_file,
+        ] = extract_kwargs(keys_and_defaults, **kwargs)
+        if output_jsonl_file:
+            path = Path(output_jsonl_file)
+            path.mkdir(parents=True, exist_ok=True)
+            writer.write_in_jsonl_format(output_jsonl_file)
+        if output_trec_file:
+            path = Path(output_trec_file)
+            path.mkdir(parents=True, exist_ok=True)
+            writer.write_in_trec_eval_format(output_trec_file)
+        keys_and_defaults = [("populate_invocations_history", "")]
+        [populate_invocations_history] = extract_kwargs(keys_and_defaults, **kwargs)
+        if populate_invocations_history:
+            if invocations_history_file:
+                path = Path(invocations_history_file)
+                path.mkdir(parents=True, exist_ok=True)
+                writer.write_inference_invocations_history(invocations_history_file)
+            else:
+                raise ValueError(
+                    "--invocations_history_file must be a valid jsonl file to store invocations history."
+                )
+        keys_and_defaults = [("qrels_file", "")]
         [qrels_file] = extract_kwargs(keys_and_defaults, **kwargs)
         if qrels_file:
             from rank_llm.evaluation.trec_eval import EvalFunction
