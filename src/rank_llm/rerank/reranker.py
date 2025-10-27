@@ -1,5 +1,5 @@
-from pathlib import Path
 from importlib.resources import files
+from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
