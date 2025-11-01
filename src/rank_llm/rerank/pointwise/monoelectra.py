@@ -16,7 +16,7 @@ TEMPLATES = files("rank_llm.rerank.prompt_templates")
 class MonoELECTRA(PointwiseRankLLM):
     def __init__(
         self,
-        model: str = "crystina-z/monoELECTRA_LCE_nneg31",
+        model: str = "castorini/monoelectra-base",
         prompt_template_path: str = (TEMPLATES / "monoelectra_template.yaml"),
         context_size: int = 512,
         device: str = "cuda",

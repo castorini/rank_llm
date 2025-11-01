@@ -349,7 +349,7 @@ class Reranker:
             # using monoelectra
             print(f"Loading {model_path} ...")
 
-            model_full_paths = {"monoelectra": "crystina-z/monoELECTRA_LCE_nneg31"}
+            model_full_paths = {"monoelectra": "castorini/monoelectra-base"}
 
             keys_and_defaults = [
                 (
