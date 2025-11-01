@@ -266,11 +266,11 @@ python src/rank_llm/scripts/run_rank_llm.py --model_path=monoelectra --top_k_can
 Or with the full model path:
 
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py --model_path=crystina-z/monoELECTRA_LCE_nneg31 --top_k_candidates=1000 --dataset=dl19 \
+python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monoelectra-base --top_k_candidates=1000 --dataset=dl19 \
     --retrieval_method=bm25 --context_size=512
 ```
 
-Note that MonoELECTRA is an encoder-only model and does not use a prompt template. Like MonoT5, we usually rerank 1K candidates with MonoELECTRA.
+Like MonoT5, we usually rerank 1K candidates with MonoELECTRA.
 
 ## DuoT5
 The following runs the #B variant of DuoT5 trained for 10K steps:
@@ -452,6 +452,25 @@ If you use one of the monoT5 models please cite the following relevant paper:
 }
 ```
 
+
+If you use the monoELECTRA model, please consider citing:
+
+[Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking](https://cs.uwaterloo.ca/~jimmylin/publications/Pradeep_etal_ECIR2022.pdf)
+```
+@inproceedings{squeezemonoelectra2022,
+author = {Pradeep, Ronak and Liu, Yuqi and Zhang, Xinyu and Li, Yilin and Yates, Andrew and Lin, Jimmy},
+title = {Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking},
+year = {2022},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+booktitle = {Advances in Information Retrieval: 44th European Conference on IR Research, ECIR 2022, Stavanger, Norway, April 10–14, 2022, Proceedings, Part I},
+pages = {655–670},
+numpages = {16},
+location = {Stavanger, Norway}
+}
+
+
+```
 If you use the FirstMistral model, please consider citing:
 
 [[2411.05508] An Early FIRST Reproduction and Improvements to Single-Token Decoding for Fast Listwise Reranking](https://arxiv.org/abs/2411.05508)
