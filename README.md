@@ -254,6 +254,24 @@ python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msm
 
 Note that we usually rerank 1K candidates with MonoT5.
 
+## MonoELECTRA
+
+The following runs the MonoELECTRA model:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py --model_path=monoelectra --top_k_candidates=1000 --dataset=dl19 \
+    --retrieval_method=bm25 --context_size=512
+```
+
+Or with the full model path:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py --model_path=crystina-z/monoELECTRA_LCE_nneg31 --top_k_candidates=1000 --dataset=dl19 \
+    --retrieval_method=bm25 --context_size=512
+```
+
+Note that MonoELECTRA is an encoder-only model and does not use a prompt template. Like MonoT5, we usually rerank 1K candidates with MonoELECTRA.
+
 ## DuoT5
 The following runs the #B variant of DuoT5 trained for 10K steps:
 ```bash
