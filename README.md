@@ -457,20 +457,19 @@ If you use the monoELECTRA model, please consider citing:
 
 [Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking](https://cs.uwaterloo.ca/~jimmylin/publications/Pradeep_etal_ECIR2022.pdf)
 ```
-@inproceedings{squeezemonoelectra2022,
-author = {Pradeep, Ronak and Liu, Yuqi and Zhang, Xinyu and Li, Yilin and Yates, Andrew and Lin, Jimmy},
-title = {Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking},
-year = {2022},
-publisher = {Springer-Verlag},
-address = {Berlin, Heidelberg},
-booktitle = {Advances in Information Retrieval: 44th European Conference on IR Research, ECIR 2022, Stavanger, Norway, April 10–14, 2022, Proceedings, Part I},
-pages = {655–670},
-numpages = {16},
-location = {Stavanger, Norway}
+@inproceedings{pradeep2022monoelectra,
+  author = {Pradeep, Ronak and Liu, Yuqi and Zhang, Xinyu and Li, Yilin and Yates, Andrew and Lin, Jimmy},
+  title = {Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking},
+  year = {2022},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+  booktitle = {Advances in Information Retrieval: 44th European Conference on IR Research, ECIR 2022, Stavanger, Norway, April 10–14, 2022, Proceedings, Part I},
+  pages = {655–670},
+  numpages = {16},
+  location = {Stavanger, Norway}
 }
-
-
 ```
+
 If you use the FirstMistral model, please consider citing:
 
 [[2411.05508] An Early FIRST Reproduction and Improvements to Single-Token Decoding for Fast Listwise Reranking](https://arxiv.org/abs/2411.05508)
