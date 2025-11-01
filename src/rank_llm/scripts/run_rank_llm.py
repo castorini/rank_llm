@@ -55,7 +55,6 @@ def main(args):
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
-    populate_invocations_history = args.populate_invocations_history
 
     if args.requests_file:
         if args.retrieval_method:
@@ -104,7 +103,6 @@ def main(args):
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
         tensorrt_batched=tensorrt_batched,
-        populate_invocations_history=populate_invocations_history,
     )
 
 
@@ -184,27 +182,23 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--qrels_file",
-        type=RetrievalMethod,
+        type=str,
         help="Only used with --requests_file; when present the Trec eval will be executed using this qrels file",
-        choices=list(RetrievalMethod),
     )
     parser.add_argument(
         "--output_jsonl_file",
-        type=RetrievalMethod,
+        type=str,
         help="Only used with --requests_file; when present, the ranked results will be saved in this JSONL file.",
-        choices=list(RetrievalMethod),
     )
     parser.add_argument(
         "--output_trec_file",
-        type=RetrievalMethod,
+        type=str,
         help="Only used with --requests_file; when present, the ranked results will be saved in this txt file in trec format.",
-        choices=list(RetrievalMethod),
     )
     parser.add_argument(
         "--invocations_history_file",
-        type=RetrievalMethod,
+        type=str,
         help="Only used with --requests_file and --populate_invocations_history; when present, the LLM invocations history (prompts, completions, and input/output token counts) will be stored in this file.",
-        choices=list(RetrievalMethod),
     )
     parser.add_argument(
         "--num_gpus", type=int, default=1, help="the number of GPUs to use"
@@ -311,11 +305,6 @@ if __name__ == "__main__":
         "--tensorrt_batched",
         action="store_true",
         help="whether to run the model in batches using tensorrtllm backend",
-    )
-    infer_backend_group.add_argument(
-        "--populate_invocations_history",
-        action="store_true",
-        help="whether to store the LLM invocations history (prompts, completions and input/output token counts)",
     )
     args = parser.parse_args()
     main(args)

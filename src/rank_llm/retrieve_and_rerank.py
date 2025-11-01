@@ -2,7 +2,7 @@ import copy
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from rank_llm.data import Query, Request, read_requests_from_file
+from rank_llm.data import DataWriter, Query, Request, read_requests_from_file
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
@@ -80,7 +80,6 @@ def retrieve_and_rerank(
         # Reranker is of type RankLLM
         for pass_ct in range(num_passes):
             print(f"Pass {pass_ct + 1} of {num_passes}:")
-
             rerank_results = reranker.rerank_batch(
                 requests,
                 rank_end=top_k_retrieve,
@@ -143,18 +142,18 @@ def retrieve_and_rerank(
         ] = extract_kwargs(keys_and_defaults, **kwargs)
         if output_jsonl_file:
             path = Path(output_jsonl_file)
-            path.mkdir(parents=True, exist_ok=True)
+            path.parent.mkdir(parents=True, exist_ok=True)
             writer.write_in_jsonl_format(output_jsonl_file)
         if output_trec_file:
             path = Path(output_trec_file)
-            path.mkdir(parents=True, exist_ok=True)
+            path.parent.mkdir(parents=True, exist_ok=True)
             writer.write_in_trec_eval_format(output_trec_file)
-        keys_and_defaults = [("populate_invocations_history", "")]
+        keys_and_defaults = [("populate_invocations_history", False)]
         [populate_invocations_history] = extract_kwargs(keys_and_defaults, **kwargs)
         if populate_invocations_history:
             if invocations_history_file:
                 path = Path(invocations_history_file)
-                path.mkdir(parents=True, exist_ok=True)
+                path.parent.mkdir(parents=True, exist_ok=True)
                 writer.write_inference_invocations_history(invocations_history_file)
             else:
                 raise ValueError(
