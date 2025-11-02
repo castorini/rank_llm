@@ -186,6 +186,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.8199          | 0.7906          | 1         |
 | 0.8198          | 0.7865           | 1         |
 | 0.8162          | 0.7829           | 1         |
+| 0.8144          | 0.7892           | 1         |
 
 
 If your result is present in the table above, please increase its frequency by 1.
@@ -203,3 +204,4 @@ After editing the table above, add a log entry here as well like the previous gu
 + Results reproduced by [@Vik7am10](https://github.com/Vik7am10) on 2025-06-19 (commit [`baf3b39`](https://github.com/castorini/rank_llm/commit/baf3b39c06cb49c604960efcfa09aa83cfb0990c))
 + Results reproduced by [@kxwtan](https://github.com/kxwtan) on 2025-06-28 (commit [`e26abac`](https://github.com/castorini/rank_llm/commit/e26abaca5429ef4abc5e8d8f342c12e194fb230a))
 + Results reproduced by [@FarmersWrap](https://github.com/FarmersWrap) on 2025-09-20 (commit [`e84b530`](https://github.com/castorini/rank_llm/commit/e84b530d7c81cc6c5bc42cb8ca66932ac8c1a276))
++ Results reproduced by [@Raptors65](https://github.com/Raptors65) on 2025-11-01 (commit [`37faf8b`](https://github.com/castorini/rank_llm/commit/37faf8bf482b090ba90295d480dc8d324364d17f))
