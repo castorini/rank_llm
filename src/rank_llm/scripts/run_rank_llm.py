@@ -42,7 +42,7 @@ def main(args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     variable_passages = args.variable_passages
     retrieval_mode = (
-        RetrievalMode.DATASET if args.dataset else RetrievalMode.LOAD_FROM_FILE
+        RetrievalMode.DATASET if args.dataset else RetrievalMode.CACHED_FILE
     )
     num_passes = args.num_passes
     stride = args.stride
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     retrieval_input_group.add_argument(
         "--dataset",
         type=str,
-        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits",
+        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits; must be used when --requests_file is not specified",
     )
     parser.add_argument(
         "--retrieval_method",
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     retrieval_input_group.add_argument(
         "--requests_file",
         type=str,
-        help=f"Path to a JSONL file containing requests",
+        help=f"Path to a JSONL file containing requests; must be used when --dataset is not specified.",
     )
     parser.add_argument(
         "--qrels_file",

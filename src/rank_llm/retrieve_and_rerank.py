@@ -126,7 +126,7 @@ def retrieve_and_rerank(
         else:
             print(f"Skipping evaluation as {dataset} is not in TOPICS.")
     elif (
-        retrieval_mode == RetrievalMode.LOAD_FROM_FILE
+        retrieval_mode == RetrievalMode.CACHED_FILE
         and reranker.get_model_coordinator() is not None
     ):
         writer = DataWriter(rerank_results)
@@ -260,7 +260,7 @@ def retrieve(
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
-    elif retrieval_mode == RetrievalMode.LOAD_FROM_FILE:
+    elif retrieval_mode == RetrievalMode.CACHED_FILE:
         keys_and_defaults = [
             ("requests_file", ""),
         ]
