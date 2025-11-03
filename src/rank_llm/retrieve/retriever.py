@@ -17,6 +17,7 @@ from . import PyseriniRetriever, RetrievalMethod
 class RetrievalMode(Enum):
     DATASET = "dataset"
     CUSTOM = "custom"
+    CACHED_FILE = "cached_file"
 
     def __str__(self):
         return self.value

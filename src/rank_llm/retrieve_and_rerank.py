@@ -1,7 +1,8 @@
 import copy
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from rank_llm.data import Query, Request
+from rank_llm.data import DataWriter, Query, Request, read_requests_from_file
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
@@ -79,7 +80,6 @@ def retrieve_and_rerank(
         # Reranker is of type RankLLM
         for pass_ct in range(num_passes):
             print(f"Pass {pass_ct + 1} of {num_passes}:")
-
             rerank_results = reranker.rerank_batch(
                 requests,
                 rank_end=top_k_retrieve,
@@ -125,6 +125,55 @@ def retrieve_and_rerank(
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
         else:
             print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+    elif (
+        retrieval_mode == RetrievalMode.CACHED_FILE
+        and reranker.get_model_coordinator() is not None
+    ):
+        writer = DataWriter(rerank_results)
+        keys_and_defaults = [
+            ("output_jsonl_file", ""),
+            ("output_trec_file", ""),
+            ("invocations_history_file", ""),
+        ]
+        [
+            output_jsonl_file,
+            output_trec_file,
+            invocations_history_file,
+        ] = extract_kwargs(keys_and_defaults, **kwargs)
+        if output_jsonl_file:
+            path = Path(output_jsonl_file)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            writer.write_in_jsonl_format(output_jsonl_file)
+        if output_trec_file:
+            path = Path(output_trec_file)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            writer.write_in_trec_eval_format(output_trec_file)
+        keys_and_defaults = [("populate_invocations_history", False)]
+        [populate_invocations_history] = extract_kwargs(keys_and_defaults, **kwargs)
+        if populate_invocations_history:
+            if invocations_history_file:
+                path = Path(invocations_history_file)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                writer.write_inference_invocations_history(invocations_history_file)
+            else:
+                raise ValueError(
+                    "--invocations_history_file must be a valid jsonl file to store invocations history."
+                )
+        keys_and_defaults = [("qrels_file", "")]
+        [qrels_file] = extract_kwargs(keys_and_defaults, **kwargs)
+        if qrels_file:
+            from rank_llm.evaluation.trec_eval import EvalFunction
+
+            print("Evaluating:")
+            EvalFunction.from_results(
+                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.1"]
+            )
+            EvalFunction.from_results(
+                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.5"]
+            )
+            EvalFunction.from_results(
+                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.10"]
+            )
 
     if interactive:
         return (rerank_results, reranker.get_model_coordinator())
@@ -211,5 +260,11 @@ def retrieve(
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
+    elif retrieval_mode == RetrievalMode.CACHED_FILE:
+        keys_and_defaults = [
+            ("requests_file", ""),
+        ]
+        [requests_file] = extract_kwargs(keys_and_defaults, **kwargs)
+        requests = read_requests_from_file(requests_file)
 
     return requests
