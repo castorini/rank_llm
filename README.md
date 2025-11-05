@@ -254,6 +254,24 @@ python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msm
 
 Note that we usually rerank 1K candidates with MonoT5.
 
+## MonoELECTRA
+
+The following runs the MonoELECTRA model:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py --model_path=monoelectra --top_k_candidates=1000 --dataset=dl19 \
+    --retrieval_method=bm25 --context_size=512
+```
+
+Or with the full model path:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monoelectra-base --top_k_candidates=1000 --dataset=dl19 \
+    --retrieval_method=bm25 --context_size=512
+```
+
+Like MonoT5, we usually rerank 1K candidates with MonoELECTRA.
+
 ## DuoT5
 The following runs the #B variant of DuoT5 trained for 10K steps:
 ```bash
@@ -431,6 +449,24 @@ If you use one of the monoT5 models please cite the following relevant paper:
   author = {Ronak Pradeep and Rodrigo Nogueira and Jimmy Lin},
   year = {2021},
   journal = {arXiv:2101.05667},
+}
+```
+
+
+If you use the monoELECTRA model, please consider citing:
+
+[Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking](https://cs.uwaterloo.ca/~jimmylin/publications/Pradeep_etal_ECIR2022.pdf)
+```
+@inproceedings{pradeep2022monoelectra,
+  author = {Pradeep, Ronak and Liu, Yuqi and Zhang, Xinyu and Li, Yilin and Yates, Andrew and Lin, Jimmy},
+  title = {Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking},
+  year = {2022},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+  booktitle = {Advances in Information Retrieval: 44th European Conference on IR Research, ECIR 2022, Stavanger, Norway, April 10–14, 2022, Proceedings, Part I},
+  pages = {655–670},
+  numpages = {16},
+  location = {Stavanger, Norway}
 }
 ```
 

@@ -13,6 +13,7 @@ from rank_llm.rerank import (
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pairwise.duot5 import DuoT5
+from rank_llm.rerank.pointwise.monoelectra import MonoELECTRA
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
@@ -344,6 +345,39 @@ class Reranker:
                 context_size=context_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
+                device=device,
+                batch_size=batch_size,
+            )
+        elif "monoelectra" in model_path.lower():
+            # using monoelectra
+            print(f"Loading {model_path} ...")
+
+            model_full_paths = {"monoelectra": "castorini/monoelectra-base"}
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/monoelectra_template.yaml",
+                ),
+                ("context_size", 512),
+                ("device", "cuda"),
+                ("batch_size", 32),
+            ]
+            [
+                prompt_template_path,
+                context_size,
+                device,
+                batch_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = MonoELECTRA(
+                model=(
+                    model_full_paths[model_path.lower()]
+                    if model_path.lower() in model_full_paths
+                    else model_path
+                ),
+                prompt_template_path=prompt_template_path,
+                context_size=context_size,
                 device=device,
                 batch_size=batch_size,
             )
