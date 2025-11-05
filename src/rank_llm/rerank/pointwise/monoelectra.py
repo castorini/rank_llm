@@ -131,8 +131,8 @@ class MonoELECTRA(PointwiseRankLLM):
             self._context_size - query_tokens - 10
         )  # Reserve for special tokens
 
-        doc_tokens = self._tokenizer.encode(doc_text, add_special_tokens=False)
-        if len(doc_tokens) > max_doc_tokens:
+        if self.get_num_tokens(doc_text) > max_doc_tokens:
+            doc_tokens = self._tokenizer.encode(doc_text, add_special_tokens=False)
             doc_tokens = doc_tokens[:max_doc_tokens]
             doc_text = self._tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
@@ -141,11 +141,7 @@ class MonoELECTRA(PointwiseRankLLM):
         prompt = f"QUERY: {query} DOCUMENT: {doc_text}"
 
         # Calculate final token count
-        final_token_count = len(
-            self._tokenizer.encode(
-                query, doc_text, truncation=True, max_length=self._context_size
-            )
-        )
+        final_token_count = self.get_num_tokens(prompt)
 
         return prompt, final_token_count
 

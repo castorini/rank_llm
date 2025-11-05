@@ -1,4 +1,2 @@
 method: pointwise
 body: "Query: {query} Document: {doc_content} Relevant:"
-
-
