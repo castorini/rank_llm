@@ -124,7 +124,7 @@ Please refer to the [instructions here](https://github.com/castorini/rank_llm?ta
 #### Running the RankZephyr Model
 We can run the RankZephyr model with the command:
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
+export VLLM_USE_V1=0 && python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages
 ```
 The results should be something like:
@@ -156,8 +156,8 @@ Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with Firs
 Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following command to run FirstMistral:
 
 #### Run end to end - FirstMistral
-```
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
+```bash
+export VLLM_USE_V1=0 && python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistral --top_k_candidates=100 --dataset=dl20 --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml  --context_size=4096 --variable_passages --use_logits --use_alpha --num_gpus 1
 ```
 The results should be something like:
 ```
