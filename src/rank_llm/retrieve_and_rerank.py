@@ -273,27 +273,19 @@ def retrieve(
                 f"Requests file {requests_file} does not exist locally, proceeding to download from huggingface."
             )
 
-            path_parts = requests_file.split("/")
-            if len(path_parts) != 3:
-                raise ValueError(
-                    "Invalid requests_file path for huggingface download, need to be in the format of 'retrieve_results/MODEL_NAME/request_file_name.jsonl"
-                )
-            model_name = path_parts[1]
-            local_dir = os.path.join("retrieve_results", model_name)
-            os.makedirs(local_dir, exist_ok=True)
-
             try:
                 local_file_path = hf_hub_download(
                     repo_id="castorini/rank_llm_data",
                     filename=requests_file,
                     repo_type="dataset",
-                    local_dir=local_dir,
+                    local_dir=".",
                 )
                 print(f"Successfully downloaded requests file to {local_file_path}")
                 requests = read_requests_from_file(local_file_path)
             except Exception as e:
-                if os.path.exists(local_dir) and not os.listdir(local_dir):
-                    os.rmdir(local_dir)
+                dir_path = os.path.dirname(requests_file)
+                if os.path.exists(dir_path) and not os.listdir(dir_path):
+                    os.rmdir(dir_path)
                 raise ValueError(
                     f"Error downloading requests file from huggingface: {e}"
                 )
