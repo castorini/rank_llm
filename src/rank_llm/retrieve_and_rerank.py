@@ -1,6 +1,9 @@
 import copy
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
+from huggingface_hub import hf_hub_download
 
 from rank_llm.data import DataWriter, Query, Request, read_requests_from_file
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
@@ -265,6 +268,35 @@ def retrieve(
             ("requests_file", ""),
         ]
         [requests_file] = extract_kwargs(keys_and_defaults, **kwargs)
-        requests = read_requests_from_file(requests_file)
+        if not os.path.exists(requests_file):
+            print(
+                f"Requests file {requests_file} does not exist locally, proceeding to download from huggingface."
+            )
+
+            path_parts = requests_file.split("/")
+            if len(path_parts) != 3:
+                raise ValueError(
+                    "Invalid requests_file path for huggingface download, need to be in the format of 'retrieve_results/MODEL_NAME/request_file_name.jsonl"
+                )
+            model_name = path_parts[1]
+            local_dir = os.path.join("retrieve_results", model_name)
+            os.makedirs(local_dir, exist_ok=True)
+
+            try:
+                local_file_path = hf_hub_download(
+                    repo_id="castorini/rank_llm_data",
+                    filename=requests_file,
+                    repo_type="dataset",
+                    local_dir=local_dir,
+                )
+                print(f"Successfully downloaded requests file to {local_file_path}")
+                requests = read_requests_from_file(local_file_path)
+            except Exception as e:
+                os.rmdir(local_dir)
+                raise ValueError(
+                    f"Error downloading requests file from huggingface: {e}"
+                )
+        else:
+            requests = read_requests_from_file(requests_file)
 
     return requests

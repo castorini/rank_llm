@@ -59,8 +59,6 @@ def main(args):
     if args.requests_file:
         if args.retrieval_method:
             parser.error("--retrieval_method must not be used with --requests_file")
-        if not os.path.exists(args.requests_file):
-            parser.error(f"--requests_file not found: {args.requests_file}")
 
     if args.dataset and not args.retrieval_method:
         parser.error("--retrieval_method is required when --dataset is provided")
