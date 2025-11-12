@@ -292,7 +292,8 @@ def retrieve(
                 print(f"Successfully downloaded requests file to {local_file_path}")
                 requests = read_requests_from_file(local_file_path)
             except Exception as e:
-                os.rmdir(local_dir)
+                if os.path.exists(local_dir) and not os.listdir(local_dir):
+                    os.rmdir(local_dir)
                 raise ValueError(
                     f"Error downloading requests file from huggingface: {e}"
                 )
