@@ -7,17 +7,17 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     env:
-      # Put all heavy temp / cache stuff on the big /mnt disk
+      # Put heavy temp / cache on the large /mnt disk
       TMPDIR: /mnt/tmp
-      PIP_CACHE_DIR: /mnt/pip-cache
-      PIP_NO_CACHE_DIR: "1"
       PRE_COMMIT_HOME: /mnt/pre-commit-cache
+      PIP_NO_CACHE_DIR: "1"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare temp/cache directories
+      - name: Prepare temp/cache directories on /mnt
         run: |
-          mkdir -p "$TMPDIR" "$PIP_CACHE_DIR" "$PRE_COMMIT_HOME"
+          sudo mkdir -p "$TMPDIR" "$PRE_COMMIT_HOME"
+          sudo chown "$USER":"$USER" "$TMPDIR" "$PRE_COMMIT_HOME"
           df -h /
           df -h /mnt
 
@@ -28,7 +28,6 @@ jobs:
       - name: Install Linter and Formatter Dependencies
         run: |
           python -m pip install --upgrade pip
-          # PIP_* env vars above ensure temp/cache go to /mnt
           pip install pre-commit black isort
 
       - name: Run Lint
@@ -43,14 +42,14 @@ jobs:
         test-suite: [analysis, evaluation, rerank]
     env:
       TMPDIR: /mnt/tmp
-      PIP_CACHE_DIR: /mnt/pip-cache
       PIP_NO_CACHE_DIR: "1"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare temp/cache directories
+      - name: Prepare temp directory on /mnt
         run: |
-          mkdir -p "$TMPDIR" "$PIP_CACHE_DIR"
+          sudo mkdir -p "$TMPDIR"
+          sudo chown "$USER":"$USER" "$TMPDIR"
           df -h /
           df -h /mnt
 
@@ -66,7 +65,6 @@ jobs:
       - name: Install Repo Dependencies
         run: |
           python -m pip install --upgrade pip
-          # --no-cache-dir is redundant with PIP_NO_CACHE_DIR, but harmless
           pip install --no-cache-dir -e .
 
       - name: Run Tests
