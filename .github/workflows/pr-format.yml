@@ -38,6 +38,18 @@ jobs:
         run: |
           df -h
           du -sh .
+      - name: Show disk + inodes + tmp usage
+        run: |
+          echo "=== BLOCK SPACE ==="
+          df -hT /
+          df -hT /tmp || true
+      
+          echo "=== INODES ==="
+          df -hi /
+      
+          echo "=== Big dirs under \$HOME and /tmp ==="
+          du -sh ~/.cache || true
+          du -sh /tmp || true
       - name: Install Repo Dependencies
         run: |
           pip install -e .
