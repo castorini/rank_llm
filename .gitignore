@@ -170,3 +170,6 @@ token_counts/
 retrieve_results/
 repro/
 demo_outputs/
+indexes/
+inference_invocations_history/
+topics/
