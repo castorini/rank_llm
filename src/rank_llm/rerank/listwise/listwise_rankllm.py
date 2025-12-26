@@ -123,7 +123,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         for index, (result, (prompt, in_token_count)) in enumerate(
             zip(results, prompts)
         ):
-            permutation, out_token_count = batched_results[index]
+            permutation, usage = batched_results[index]
+            in_token_count = usage.get("prompt_tokens") or usage.get("input_tokens")
+            out_token_count = usage.get("completion_tokens") or usage.get(
+                "output_tokens"
+            )
             if logging:
                 logger.debug(f"output: {permutation}")
             if populate_invocations_history:
@@ -134,8 +138,13 @@ class ListwiseRankLLM(RankLLM, ABC):
                     permutation,
                     in_token_count,
                     out_token_count,
-                    self._inference_handler.template["output_validation_regex"],
-                    self._inference_handler.template["output_extraction_regex"],
+                    token_usage=usage,
+                    output_validation_regex=self._inference_handler.template[
+                        "output_validation_regex"
+                    ],
+                    output_extraction_regex=self._inference_handler.template[
+                        "output_extraction_regex"
+                    ],
                 )
                 result.invocations_history.append(inference_invocation)
             result = self.receive_permutation(

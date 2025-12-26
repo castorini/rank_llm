@@ -258,7 +258,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self,
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, Dict[str, int]]]:
         if current_window_size is None:
             current_window_size = self._window_size
 
@@ -287,19 +287,33 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 if self._base_url:
                     kwargs = {
-                        "max_tokens": max_tokens,
+                        # "max_tokens": max_tokens,
+                        "max_output_tokens": max_tokens,
                         "temperature": 0,
-                        # TODO: expose the reasoning effort as an init param if needed.
-                        "reasoning": {"effort": "medium", "summary": "detailed"},
                     }
+                    if self._is_thinking:
+                        reasoning_effort = "medium"
+                        if self._reasoning_token_budget >= 4 * 4096:
+                            reasoning_effort = "high"
+                        elif self._reasoning_token_budget < 4096:
+                            reasoning_effort = "low"
+                        # TODO: expose the reasoning effort as an init param if needed.
+                        kwargs["reasoning"] = {
+                            "effort": reasoning_effort,
+                            "summary": "detailed",
+                        }
+                    print(kwargs)
                     return self._vllm_handler.chat_completions(
-                        prompts=prompts, max_tokens=max_tokens, temperature=0
+                        prompts=prompts, **kwargs
                     )
+                    # return self._vllm_handler.chat_completions(
+                    #     prompts=prompts, max_tokens=max_tokens, temperature=0
+                    # )
                 outputs = self._vllm_handler.generate_output(
                     prompts=prompts,
                     min_tokens=self.num_output_tokens(current_window_size),
                     max_tokens=max_tokens,
-                    temperature=0.0,
+                    temperature=0.5,
                 )
                 return [
                     (output.outputs[0].text, len(output.outputs[0].token_ids))
@@ -345,7 +359,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, int, int]:
         # Now forward the run_llm into run_llm_batched
         if current_window_size is None:
             current_window_size = self._window_size

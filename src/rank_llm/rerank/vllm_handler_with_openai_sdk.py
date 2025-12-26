@@ -1,11 +1,8 @@
 import asyncio
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Dict, List, Tuple
 
 from openai import AsyncOpenAI, OpenAI
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
-
-Message = Dict[str, str]
-PromptLike = Union[str, Message, Sequence[Message]]
 
 
 class VllmHandlerWithOpenAISDK:
@@ -33,31 +30,40 @@ class VllmHandlerWithOpenAISDK:
 
     async def _one_inference(
         self, messages: list[dict[str, str]], **kwargs
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, Dict[str, int]]:
         assert isinstance(messages, list)
         assert isinstance(messages[0], dict)
         response = None
         try:
-            response = await self._client.chat.completions.create(
+            response = await self._client.responses.create(
                 model=self._model,
-                messages=messages,
+                input=messages,
                 **kwargs,
             )
-            text = response.choices[0].message.content
-            toks = len(self._tokenizer.encode(text))
+            # Extract text from response.output
+            response_dict = response.model_dump(mode="python")
+            text = ""
+            for item in response_dict.get("output", []):
+                if item.get("type") == "message":
+                    for part in item.get("content", []):
+                        if part.get("type") in ["text", "output_text"]:
+                            text += part.get("text", "")
+            toks = response.usage.model_dump(mode="json")
+            print(toks)
+            # toks = len(self._tokenizer.encode(text))
             return text, toks
         except Exception as e:
             print(response)
             print(e)
-            return str(e), 0
+            return str(e), {}
 
     async def _all_inferences(
         self, prompts: list[list[dict[str, str]]], **kwargs
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, Dict[str, int]]]:
         tasks = [asyncio.create_task(self._one_inference(p, **kwargs)) for p in prompts]
         return await asyncio.gather(*tasks)
 
     def chat_completions(
         self, prompts: list[list[dict[str, str]]], **kwargs
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, Dict[str, int]]]:
         return asyncio.run(self._all_inferences(prompts, **kwargs))
