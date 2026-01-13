@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rank-llm"
-version = "0.25.0"
-description = "A Package for running prompt decoders like RankVicuna"
+version = "0.25.7"
+description = "A Package for reranking with LLMs (pointwise, pairwise, and listwise)"
 readme = "README.md"
 authors = [
     { name = "Sahel Sharifymoghaddam", email = "sahel.sharifymoghaddam@uwaterloo.ca" },
@@ -30,8 +30,8 @@ dependencies = {file = ["requirements.txt"]}
 sglang = [
     "sglang[all]~=0.4.0"
 ]
-tensorrt_llm = [
-    "tensorrt_llm[all]>=0.14.0"
+tensorrt-llm = [
+    "tensorrt-llm[all]>=0.14.0"
 ]
 genai = [
     "google-generativeai>=0.8.2"
@@ -48,15 +48,16 @@ training = [
     "torch>=2.4.0",
     "numpy>=1.26.4"
 ]
-server = [
-    "fastmcp>=2.10.6"
+all = [
+  "rank-llm[genai]",
+  "rank-llm[pyserini]"
 ]
 
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
 
 [tool.bumpver]
-current_version = "0.25.0"
+current_version = "0.25.7"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
@@ -69,7 +70,7 @@ push = false
     'current_version = "{version}"', 'version = "{version}"'
 ]
 "README.md" = [
-    "{version}",
+    'current_version = "{version}"',
 ]
 
 [tool.setuptools.packages.find]

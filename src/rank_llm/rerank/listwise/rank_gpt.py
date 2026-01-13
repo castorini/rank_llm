@@ -1,5 +1,5 @@
 import time
-from enum import Enum
+from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
@@ -10,6 +10,8 @@ from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 
 from .listwise_rankllm import ListwiseRankLLM
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class SafeOpenai(ListwiseRankLLM):
@@ -22,9 +24,12 @@ class SafeOpenai(ListwiseRankLLM):
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
+        stride: int = 10,
+        batch_size: int = 32,
         keys=None,
         key_start_id=None,
         proxy=None,
+        base_url: Optional[str] = None,
         api_type: Optional[str] = None,
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
@@ -42,6 +47,8 @@ class SafeOpenai(ListwiseRankLLM):
         the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
         by default.
         - window_size (int, optional): The window size for handling text inputs. Defaults to 20.
+        - stride (int, optional): The stride size for moving the window. Defaults to 10.
+        - batch_size (int, optional): The size of the batch for processing requests. Defaults to 32.
         - keys (Union[List[str], str], optional): A list of OpenAI API keys or a single OpenAI API key.
         - key_start_id (int, optional): The starting index for the OpenAI API key cycle.
         - proxy (str, optional): The proxy configuration for OpenAI API calls.
@@ -72,17 +79,11 @@ class SafeOpenai(ListwiseRankLLM):
 
         if prompt_template_path is None:
             if prompt_mode == PromptMode.RANK_GPT:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_gpt_template.yaml"
             elif prompt_mode == PromptMode.RANK_GPT_APEER:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_gpt_apeer_template.yaml"
             elif prompt_mode == PromptMode.LRL:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_lrl_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_lrl_template.yaml"
             else:
                 raise ValueError(
                     "Either `prompt_mode` or `prompt_template_path` must be specified."
@@ -95,6 +96,8 @@ class SafeOpenai(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            stride=stride,
+            batch_size=batch_size,
         )
 
         self._output_token_estimate = None
@@ -103,6 +106,10 @@ class SafeOpenai(ListwiseRankLLM):
         self._cur_key_id = self._cur_key_id % len(self._keys)
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
+
+        if base_url:
+            openai.base_url = base_url
+
         self.use_azure_ai = False
 
         if all([api_type, api_base, api_version]):
@@ -111,11 +118,6 @@ class SafeOpenai(ListwiseRankLLM):
             openai.api_type = api_type
             openai.api_base = api_base
             self.use_azure_ai = True
-
-    class CompletionMode(Enum):
-        UNSPECIFIED = 0
-        CHAT = 1
-        TEXT = 2
 
     def rerank_batch(
         self,
@@ -128,9 +130,6 @@ class SafeOpenai(ListwiseRankLLM):
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        window_size: int = kwargs.get("window_size", 20)
-        window_size = min(window_size, top_k_retrieve)
-        stride: int = kwargs.get("stride", 10)
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -140,8 +139,7 @@ class SafeOpenai(ListwiseRankLLM):
                 request,
                 rank_start=max(rank_start, 0),
                 rank_end=min(rank_end, len(request.candidates)),
-                window_size=window_size,
-                stride=stride,
+                top_k_retrieve=top_k_retrieve,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
                 populate_invocations_history=populate_invocations_history,
@@ -152,23 +150,13 @@ class SafeOpenai(ListwiseRankLLM):
     def _call_completion(
         self,
         *args,
-        completion_mode: CompletionMode,
         return_text=False,
         reduce_length=False,
         **kwargs,
     ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
-                if completion_mode == self.CompletionMode.CHAT:
-                    completion = openai.chat.completions.create(
-                        *args, **kwargs, timeout=30
-                    )
-                elif completion_mode == self.CompletionMode.TEXT:
-                    completion = openai.Completion.create(*args, **kwargs)
-                else:
-                    raise ValueError(
-                        "Unsupported completion mode: %V" % completion_mode
-                    )
+                completion = openai.chat.completions.create(*args, **kwargs, timeout=30)
                 break
             except Exception as e:
                 print("Error in completion call")
@@ -183,11 +171,7 @@ class SafeOpenai(ListwiseRankLLM):
                 openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)
         if return_text:
-            completion = (
-                completion.choices[0].message.content
-                if completion_mode == self.CompletionMode.CHAT
-                else completion.choices[0].text
-            )
+            completion = completion.choices[0].message.content
         return completion
 
     def run_llm(
@@ -199,7 +183,6 @@ class SafeOpenai(ListwiseRankLLM):
         response = self._call_completion(
             messages=prompt,
             temperature=0,
-            completion_mode=SafeOpenai.CompletionMode.CHAT,
             return_text=True,
             **{model_key: self._model},
         )

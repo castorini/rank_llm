@@ -19,6 +19,8 @@ def main(args):
     query = ""
     batch_size = args.batch_size
     use_azure_openai = args.use_azure_openai
+    use_openrouter = args.use_openrouter
+    base_url = args.base_url
     context_size = args.context_size
     top_k_candidates = args.top_k_candidates
     top_k_rerank = top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
@@ -26,6 +28,11 @@ def main(args):
     dataset = args.dataset
     num_gpus = args.num_gpus
     retrieval_method = args.retrieval_method
+    requests_file = args.requests_file
+    qrels_file = args.qrels_file
+    output_jsonl_file = args.output_jsonl_file
+    output_trec_file = args.output_trec_file
+    invocations_history_file = args.invocations_history_file
     prompt_template_path = args.prompt_template_path
     num_few_shot_examples = args.num_few_shot_examples
     few_shot_file = args.few_shot_file
@@ -34,7 +41,9 @@ def main(args):
     num_few_shot_examples = args.num_few_shot_examples
     device = "cuda" if torch.cuda.is_available() else "cpu"
     variable_passages = args.variable_passages
-    retrieval_mode = RetrievalMode.DATASET
+    retrieval_mode = (
+        RetrievalMode.DATASET if args.dataset else RetrievalMode.CACHED_FILE
+    )
     num_passes = args.num_passes
     stride = args.stride
     window_size = args.window_size
@@ -47,12 +56,24 @@ def main(args):
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
 
+    if args.requests_file:
+        if args.retrieval_method:
+            parser.error("--retrieval_method must not be used with --requests_file")
+
+    if args.dataset and not args.retrieval_method:
+        parser.error("--retrieval_method is required when --dataset is provided")
+
     _ = retrieve_and_rerank(
         model_path=model_path,
         query=query,
         batch_size=batch_size,
         dataset=dataset,
         retrieval_mode=retrieval_mode,
+        requests_file=requests_file,
+        qrels_file=qrels_file,
+        output_jsonl_file=output_jsonl_file,
+        output_trec_file=output_trec_file,
+        invocations_history_file=invocations_history_file,
         retrieval_method=retrieval_method,
         top_k_retrieve=top_k_candidates,
         top_k_rerank=top_k_rerank,
@@ -66,6 +87,8 @@ def main(args):
         shuffle_candidates=shuffle_candidates,
         print_prompts_responses=print_prompts_responses,
         use_azure_openai=use_azure_openai,
+        use_openrouter=use_openrouter,
+        base_url=base_url,
         variable_passages=variable_passages,
         num_passes=num_passes,
         window_size=window_size,
@@ -105,6 +128,19 @@ if __name__ == "__main__":
         "`AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`",
     )
     parser.add_argument(
+        "--use_openrouter",
+        action="store_true",
+        help="If True, use OpenRouter. Requires env var to be set: "
+        "`OPENROUTER_API_KEY`",
+    )
+    parser.add_argument(
+        "--base_url",
+        type=str,
+        default=None,
+        help="If using a non-OpenAI model, pass your base URL and provide API key. "
+        "Requires env var to be set: `OPENAI_API_KEY`",
+    )
+    parser.add_argument(
         "--context_size", type=int, default=4096, help="context size used for model"
     )
     parser.add_argument(
@@ -125,20 +161,45 @@ if __name__ == "__main__":
         default=None,
         help="the max number of queries to process from the dataset",
     )
-    parser.add_argument(
+    retrieval_input_group = parser.add_mutually_exclusive_group(required=True)
+    retrieval_input_group.add_argument(
         "--dataset",
         type=str,
-        required=True,
-        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits 4- filename containing retrieved results",
-    )
-    parser.add_argument(
-        "--num_gpus", type=int, default=1, help="the number of GPUs to use"
+        help=f"Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits; must be used when --requests_file is not specified",
     )
     parser.add_argument(
         "--retrieval_method",
         type=RetrievalMethod,
-        required=True,
+        help="Required if --dataset is used; must be omitted with --requests_file",
         choices=list(RetrievalMethod),
+    )
+    retrieval_input_group.add_argument(
+        "--requests_file",
+        type=str,
+        help=f"Path to a JSONL file containing requests; must be used when --dataset is not specified.",
+    )
+    parser.add_argument(
+        "--qrels_file",
+        type=str,
+        help="Only used with --requests_file; when present the Trec eval will be executed using this qrels file",
+    )
+    parser.add_argument(
+        "--output_jsonl_file",
+        type=str,
+        help="Only used with --requests_file; when present, the ranked results will be saved in this JSONL file.",
+    )
+    parser.add_argument(
+        "--output_trec_file",
+        type=str,
+        help="Only used with --requests_file; when present, the ranked results will be saved in this txt file in trec format.",
+    )
+    parser.add_argument(
+        "--invocations_history_file",
+        type=str,
+        help="Only used with --requests_file and --populate_invocations_history; when present, the LLM invocations history (prompts, completions, and input/output token counts) will be stored in this file.",
+    )
+    parser.add_argument(
+        "--num_gpus", type=int, default=1, help="the number of GPUs to use"
     )
     parser.add_argument(
         "--prompt_mode",

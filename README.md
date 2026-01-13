@@ -7,7 +7,9 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache-blue.svg?style=flat)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## News
-- **[2024.05.25]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
+- **[2025.08.25]** Added support for OpenRouter API - Release [v0.25.7](docs/release-notes/release-notes-v0.25.7.md)
+- **[2025.07.23]** Added support for custom prompt templates with YAML files - Release [v0.25.0](docs/release-notes/release-notes-v0.25.0.md). You can now integrate your own prompt and language model with just a few lines of code. Checkout the [Reasonrank integration](https://github.com/castorini/rank_llm/pull/306) as an example.
+- **[2025.05.25]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
 
 ## Overview
 We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang), or [TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
@@ -17,7 +19,7 @@ We offer a suite of rerankers - pointwise models like MonoT5, pairwise models li
 </p>
 
 ## Releases
-current_version = 0.25.0
+current_version = "0.25.7"
 
 ## Content
 1. [Installation](#installation)
@@ -252,6 +254,24 @@ python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monot5-3b-msm
 
 Note that we usually rerank 1K candidates with MonoT5.
 
+## MonoELECTRA
+
+The following runs the MonoELECTRA model:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py --model_path=monoelectra --top_k_candidates=1000 --dataset=dl19 \
+    --retrieval_method=bm25 --context_size=512
+```
+
+Or with the full model path:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py --model_path=castorini/monoelectra-base --top_k_candidates=1000 --dataset=dl19 \
+    --retrieval_method=bm25 --context_size=512
+```
+
+Like MonoT5, we usually rerank 1K candidates with MonoELECTRA.
+
 ## DuoT5
 The following runs the #B variant of DuoT5 trained for 10K steps:
 ```bash
@@ -349,6 +369,8 @@ If you would like to contribute to the project, please refer to the [contributio
 
 ## 📜️ Release History
 
++ v0.25.7: August 25, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.7.md)]
++ v0.25.6: August 5, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.6.md)]
 + v0.25.0: July 23, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.0.md)]
 
 <a id=references></a>
@@ -427,6 +449,24 @@ If you use one of the monoT5 models please cite the following relevant paper:
   author = {Ronak Pradeep and Rodrigo Nogueira and Jimmy Lin},
   year = {2021},
   journal = {arXiv:2101.05667},
+}
+```
+
+
+If you use the monoELECTRA model, please consider citing:
+
+[Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking](https://cs.uwaterloo.ca/~jimmylin/publications/Pradeep_etal_ECIR2022.pdf)
+```
+@inproceedings{pradeep2022monoelectra,
+  author = {Pradeep, Ronak and Liu, Yuqi and Zhang, Xinyu and Li, Yilin and Yates, Andrew and Lin, Jimmy},
+  title = {Squeezing Water from a Stone: A Bag of Tricks for Further Improving Cross-Encoder Effectiveness for Reranking},
+  year = {2022},
+  publisher = {Springer-Verlag},
+  address = {Berlin, Heidelberg},
+  booktitle = {Advances in Information Retrieval: 44th European Conference on IR Research, ECIR 2022, Stavanger, Norway, April 10–14, 2022, Proceedings, Part I},
+  pages = {655–670},
+  numpages = {16},
+  location = {Stavanger, Norway}
 }
 ```
 

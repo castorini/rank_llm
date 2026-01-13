@@ -1,4 +1,5 @@
 import time
+from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from tqdm import tqdm
@@ -32,6 +33,9 @@ def populate_generation_config(**kwargs) -> Dict[str, Any]:
     return generation_config
 
 
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
+
+
 class SafeGenai(ListwiseRankLLM):
     # TODO switch to the new genai api?
     def __init__(
@@ -43,19 +47,17 @@ class SafeGenai(ListwiseRankLLM):
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
         window_size: int = 20,
+        stride: int = 10,
+        batch_size: int = 32,
         keys=None,
         key_start_id=None,
         **kwargs,
     ):
         if not prompt_template_path:
             if prompt_mode == PromptMode.RANK_GPT_APEER:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_gpt_apeer_template.yaml"
             elif prompt_mode == PromptMode.RANK_GPT:
-                prompt_template_path = (
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml"
-                )
+                prompt_template_path = TEMPLATES / "rank_zephyr_template.yaml"
             else:
                 raise ValueError(
                     "Either `prompt_mode` or `prompt_template_path` must be specified."
@@ -68,6 +70,8 @@ class SafeGenai(ListwiseRankLLM):
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
             window_size=window_size,
+            stride=stride,
+            batch_size=batch_size,
         )
         if not genai:
             raise ImportError(
@@ -118,9 +122,6 @@ class SafeGenai(ListwiseRankLLM):
     ) -> List[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        window_size: int = kwargs.get("window_size", 20)
-        window_size = min(window_size, top_k_retrieve)
-        stride: int = kwargs.get("stride", 10)
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -130,8 +131,7 @@ class SafeGenai(ListwiseRankLLM):
                 request,
                 rank_start=max(rank_start, 0),
                 rank_end=min(rank_end, len(request.candidates)),
-                window_size=window_size,
-                stride=stride,
+                top_k_retrieve=top_k_retrieve,
                 shuffle_candidates=shuffle_candidates,
                 logging=logging,
                 populate_invocations_history=populate_invocations_history,
@@ -222,7 +222,7 @@ class SafeGenai(ListwiseRankLLM):
             return _output_token_estimate
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int, batch_size: int
+        self, results: List[Result], rank_start: int, rank_end: int
     ) -> List[Tuple[List[Dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 

@@ -1,3 +1,4 @@
+from importlib.resources import files
 from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
@@ -7,12 +8,16 @@ from rank_llm.rerank import (
     get_azure_openai_args,
     get_genai_api_key,
     get_openai_api_key,
+    get_openrouter_api_key,
 )
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pairwise.duot5 import DuoT5
+from rank_llm.rerank.pointwise.monoelectra import MonoELECTRA
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class Reranker:
@@ -43,8 +48,6 @@ class Reranker:
             batched (bool, optional): Whether to use batched processing. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window_size.
         Returns:
             List[Result]: A list containing the reranked candidates.
@@ -76,8 +79,6 @@ class Reranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
         Returns:
             Result: the rerank result which contains the reranked candidates.
@@ -190,22 +191,24 @@ class Reranker:
         Return: rerank model_coordinator -- Option<RankLLM>
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
+        use_openrouter: bool = kwargs.get("use_openrouter", False)
+        base_url: Optional[str] = kwargs.get("base_url")
 
         if interactive and default_model_coordinator is not None:
             # Default rerank model_coordinator
             model_coordinator = default_model_coordinator
-        elif "gpt" in model_path or use_azure_openai:
-            # GPT based reranking models
-
+        elif use_openrouter:
             keys_and_defaults = [
                 ("context_size", 4096),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml",
+                    (TEMPLATES / "rank_gpt_template.yaml"),
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("stride", 10),
+                ("batch_size", 32),
             ]
             [
                 context_size,
@@ -213,6 +216,48 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                stride,
+                batch_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+            openrouter_keys = get_openrouter_api_key()
+            model_coordinator = SafeOpenai(
+                model=model_path,
+                context_size=context_size,
+                prompt_template_path=prompt_template_path,
+                window_size=window_size,
+                stride=stride,
+                num_few_shot_examples=num_few_shot_examples,
+                few_shot_file=few_shot_file,
+                batch_size=batch_size,
+                keys=openrouter_keys,
+                base_url="https://openrouter.ai/api/v1/",
+                **(get_azure_openai_args() if use_azure_openai else {}),
+            )
+        elif "gpt" in model_path or use_azure_openai or base_url:
+            # GPT based reranking models
+
+            keys_and_defaults = [
+                ("context_size", 4096),
+                (
+                    "prompt_template_path",
+                    (TEMPLATES / "rank_gpt_template.yaml"),
+                ),
+                ("num_few_shot_examples", 0),
+                ("few_shot_file", None),
+                ("window_size", 20),
+                ("stride", 10),
+                ("batch_size", 32),
+                ("base_url", None),
+            ]
+            [
+                context_size,
+                prompt_template_path,
+                num_few_shot_examples,
+                few_shot_file,
+                window_size,
+                stride,
+                batch_size,
+                base_url,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             openai_keys = get_openai_api_key()
@@ -221,9 +266,12 @@ class Reranker:
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
                 window_size=window_size,
+                stride=stride,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
+                batch_size=batch_size,
                 keys=openai_keys,
+                base_url=base_url,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
         elif "gemini" in model_path:
@@ -231,11 +279,13 @@ class Reranker:
                 ("context_size", 4096),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                    (TEMPLATES / "rank_zephyr_template.yaml"),
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("window_size", 20),
+                ("stride", 10),
+                ("batch_size", 32),
             ]
             [
                 context_size,
@@ -243,6 +293,8 @@ class Reranker:
                 num_few_shot_examples,
                 few_shot_file,
                 window_size,
+                stride,
+                batch_size,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             genai_keys = get_genai_api_key()
@@ -253,75 +305,10 @@ class Reranker:
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
                 window_size=window_size,
+                stride=stride,
+                batch_size=batch_size,
                 keys=genai_keys,
             )
-
-        elif "vicuna" in model_path or "zephyr" in model_path:
-            # RankVicuna or RankZephyr model suite
-            print(f"Loading {model_path} ...")
-
-            model_full_paths = {
-                "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
-                "rank_vicuna": "castorini/rank_vicuna_7b_v1",
-            }
-
-            keys_and_defaults = [
-                ("context_size", 4096),
-                (
-                    "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
-                ),
-                ("num_few_shot_examples", 0),
-                ("few_shot_file", None),
-                ("device", "cuda"),
-                ("num_gpus", 1),
-                ("variable_passages", False),
-                ("window_size", 20),
-                ("system_message", None),
-                ("sglang_batched", False),
-                ("tensorrt_batched", False),
-                ("use_logits", False),
-                ("use_alpha", False),
-            ]
-            [
-                context_size,
-                prompt_template_path,
-                num_few_shot_examples,
-                few_shot_file,
-                device,
-                num_gpus,
-                variable_passages,
-                window_size,
-                system_message,
-                sglang_batched,
-                tensorrt_batched,
-                use_logits,
-                use_alpha,
-            ] = extract_kwargs(keys_and_defaults, **kwargs)
-
-            model_coordinator = RankListwiseOSLLM(
-                model=(
-                    model_full_paths[model_path]
-                    if model_path in model_full_paths
-                    else model_path
-                ),
-                name=model_path,
-                context_size=context_size,
-                prompt_template_path=prompt_template_path,
-                num_few_shot_examples=num_few_shot_examples,
-                few_shot_file=few_shot_file,
-                device=device,
-                num_gpus=num_gpus,
-                variable_passages=variable_passages,
-                window_size=window_size,
-                system_message=system_message,
-                sglang_batched=sglang_batched,
-                tensorrt_batched=tensorrt_batched,
-                use_logits=use_logits,
-                use_alpha=use_alpha,
-            )
-
-            print(f"Completed loading {model_path}")
         elif "monot5" in model_path:
             # using monot5
             print(f"Loading {model_path} ...")
@@ -331,13 +318,13 @@ class Reranker:
             keys_and_defaults = [
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
+                    (TEMPLATES / "monot5_template.yaml"),
                 ),
                 ("context_size", 512),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
                 ("device", "cuda"),
-                ("batch_size", 64),
+                ("batch_size", 32),
             ]
             [
                 prompt_template_path,
@@ -361,6 +348,39 @@ class Reranker:
                 device=device,
                 batch_size=batch_size,
             )
+        elif "monoelectra" in model_path.lower():
+            # using monoelectra
+            print(f"Loading {model_path} ...")
+
+            model_full_paths = {"monoelectra": "castorini/monoelectra-base"}
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/monoelectra_template.yaml",
+                ),
+                ("context_size", 512),
+                ("device", "cuda"),
+                ("batch_size", 32),
+            ]
+            [
+                prompt_template_path,
+                context_size,
+                device,
+                batch_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = MonoELECTRA(
+                model=(
+                    model_full_paths[model_path.lower()]
+                    if model_path.lower() in model_full_paths
+                    else model_path
+                ),
+                prompt_template_path=prompt_template_path,
+                context_size=context_size,
+                device=device,
+                batch_size=batch_size,
+            )
         elif "duot5" in model_path:
             # using duot5
             print(f"Loading {model_path} ...")
@@ -370,11 +390,11 @@ class Reranker:
             keys_and_defaults = [
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/duot5_template.yaml",
+                    (TEMPLATES / "duot5_template.yaml"),
                 ),
                 ("context_size", 512),
                 ("device", "cuda"),
-                ("batch_size", 64),
+                ("batch_size", 32),
             ]
             [
                 prompt_template_path,
@@ -399,33 +419,33 @@ class Reranker:
                 ("context_size", 150),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
+                    (TEMPLATES / "rank_fid_template.yaml"),
                 ),
-                ("num_few_shot_examples", 0),
-                ("few_shot_file", None),
                 ("window_size", 20),
+                ("stride", 10),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
+                ("batch_size", 32),
             ]
             (
                 context_size,
                 prompt_template_path,
-                num_few_shot_examples,
-                few_shot_file,
                 window_size,
+                stride,
                 precision,
                 device,
+                batch_size,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankFiDDistill(
                 model=model_path,
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
-                num_few_shot_examples=num_few_shot_examples,
-                few_shot_file=few_shot_file,
                 window_size=window_size,
+                stride=stride,
                 precision=precision,
                 device=device,
+                batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
         elif "lit5-score" in model_path.lower():
@@ -433,33 +453,33 @@ class Reranker:
                 ("context_size", 150),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
+                    (TEMPLATES / "rank_fid_score_template.yaml"),
                 ),
-                ("num_few_shot_examples", 0),
-                ("few_shot_file", None),
                 ("window_size", 100),
+                ("stride", 10),
                 ("precision", "bfloat16"),
                 ("device", "cuda"),
+                ("batch_size", 32),
             ]
             (
                 context_size,
                 prompt_template_path,
-                num_few_shot_examples,
-                few_shot_file,
                 window_size,
+                stride,
                 precision,
                 device,
+                batch_size,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankFiDScore(
                 model=model_path,
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
-                num_few_shot_examples=num_few_shot_examples,
-                few_shot_file=few_shot_file,
                 window_size=window_size,
+                stride=stride,
                 precision=precision,
                 device=device,
+                batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
@@ -468,11 +488,15 @@ class Reranker:
         else:
             # supports loading models from huggingface
             print(f"Loading {model_path} ...")
+            model_full_paths = {
+                "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
+                "rank_vicuna": "castorini/rank_vicuna_7b_v1",
+            }
             keys_and_defaults = [
                 ("context_size", 4096),
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml",
+                    None,
                 ),
                 ("num_few_shot_examples", 0),
                 ("few_shot_file", None),
@@ -480,11 +504,14 @@ class Reranker:
                 ("num_gpus", 1),
                 ("variable_passages", False),
                 ("window_size", 20),
+                ("stride", 10),
                 ("system_message", None),
                 ("is_thinking", False),
                 ("reasoning_token_budget", 10000),
                 ("use_logits", False),
                 ("use_alpha", False),
+                ("batch_size", 32),
+                ("base_url", None),
             ]
             [
                 context_size,
@@ -495,15 +522,22 @@ class Reranker:
                 num_gpus,
                 variable_passages,
                 window_size,
+                stride,
                 system_message,
                 is_thinking,
                 reasoning_token_budget,
                 use_logits,
                 use_alpha,
+                batch_size,
+                base_url,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
-                model=(model_path),
+                model=(
+                    model_full_paths[model_path]
+                    if model_path in model_full_paths
+                    else model_path
+                ),
                 name=model_path,
                 context_size=context_size,
                 prompt_template_path=prompt_template_path,
@@ -513,11 +547,14 @@ class Reranker:
                 num_gpus=num_gpus,
                 variable_passages=variable_passages,
                 window_size=window_size,
+                stride=stride,
                 system_message=system_message,
                 is_thinking=is_thinking,
                 reasoning_token_budget=reasoning_token_budget,
                 use_logits=use_logits,
                 use_alpha=use_alpha,
+                batch_size=batch_size,
+                base_url=base_url,
             )
 
             print(f"Completed loading {model_path}")

@@ -5,6 +5,7 @@ from abc import ABC
 from datetime import datetime
 from typing import Any, List, Optional, Tuple
 
+import torch
 from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
@@ -38,8 +39,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
         window_size: int = 20,
+        stride: int = 10,
         use_alpha: bool = False,
+        batch_size: int = 32,
     ) -> None:
         super().__init__(
             model=model,
@@ -50,7 +54,10 @@ class ListwiseRankLLM(RankLLM, ABC):
             few_shot_file=few_shot_file,
         )
         self._window_size = window_size
+        self._device = device
         self._use_alpha = use_alpha
+        self._batch_size = batch_size
+        self._stride = stride
 
     def get_output_filename(
         self,
@@ -104,9 +111,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         prompts = []
         logger.info("Loading prompts.")
-        prompts = self.create_prompt_batched(
-            results, rank_start, rank_end, batch_size=32
-        )
+        prompts = self.create_prompt_batched(results, rank_start, rank_end)
         if logging:
             for prompt in prompts:
                 logger.debug(f"Prompt: {prompt[0]}\n")
@@ -183,7 +188,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return result
 
     def shuffle_and_rescore(
-        rerank_results: List[Result], rank_start: int, rank_end: int
+        self, rerank_results: List[Result], rank_start: int, rank_end: int
     ):
         """
         Shuffles candidates between rank_start and rank_end, and rescales scores based on new rank.
@@ -201,16 +206,14 @@ class ListwiseRankLLM(RankLLM, ABC):
             )
             # Rescore all candidates with 1/rank
             for i, cand in enumerate(rerank_result.candidates):
-                cand["score"] = 1.0 / (i + 1)
-                cand["rank"] = i + 1
+                cand.score = 1.0 / (i + 1)
 
     def sliding_windows_batched(
         self,
         requests: List[Request],
         rank_start: int,
         rank_end: int,
-        window_size: int,
-        stride: int,
+        top_k_retrieve: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_invocations_history: bool = False,
@@ -221,13 +224,14 @@ class ListwiseRankLLM(RankLLM, ABC):
             requests (List[Request]): The list of request objects to process.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
-            window_size (int): The size of each sliding window.
-            stride (int): The stride size for moving the window.
+            top_k_retrieve (int): The number of candidate documents retrieved from the first-stage retrieval system before reranking.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
         Returns:
             List[Result]: The list of result objects after applying the sliding window technique.
         """
+        stride = self._stride
+        window_size = min(self._window_size, top_k_retrieve)
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -263,8 +267,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         request: Request,
         rank_start: int,
         rank_end: int,
-        window_size: int,
-        stride: int,
+        top_k_retrieve: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_invocations_history: bool = True,
@@ -275,13 +278,14 @@ class ListwiseRankLLM(RankLLM, ABC):
             request (Request): The request object to process.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
-            window_size (int): The size of each sliding window.
-            stride (int): The stride size for moving the window.
+            top_k_retrieve (int): The number of candidate documents retrieved from the first-stage retrieval system before reranking.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
         Returns:
             Result: The result object after applying the sliding window technique.
         """
+        stride = self._stride
+        window_size = min(self._window_size, top_k_retrieve)
         rerank_result = Result(
             query=copy.deepcopy(request.query),
             candidates=copy.deepcopy(request.candidates),
@@ -307,7 +311,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return rerank_result
 
     def get_ranking_cost_upperbound(
-        self, num_q: int, rank_start: int, rank_end: int, window_size: int, stride: int
+        self, num_q: int, rank_start: int, rank_end: int
     ) -> Tuple[float, int]:
         """
         Calculates the upper bound of the ranking cost for a given set of parameters.
@@ -316,14 +320,12 @@ class ListwiseRankLLM(RankLLM, ABC):
             num_q (int): The number of queries.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
-            window_size (int): The size of each sliding window.
-            stride (int): The stride size for moving the window.
 
         Returns:
             Tuple[float, int]: A tuple object containing the cost and the total number of tokens used (input tokens + output tokens).
         """
         # For every prompt generated for every query assume the max context size is used.
-        num_promt = (rank_end - rank_start - window_size) / stride + 1
+        num_promt = (rank_end - rank_start - self._window_size) / self._stride + 1
         input_token_count = (
             num_q * num_promt * (self._context_size - self.num_output_tokens())
         )
@@ -339,8 +341,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         retrieved_results: List[Request],
         rank_start: int,
         rank_end: int,
-        window_size: int,
-        stride: int,
     ) -> Tuple[float, int]:
         """
         Calculates the ranking cost based on actual token counts from generated prompts.
@@ -349,14 +349,14 @@ class ListwiseRankLLM(RankLLM, ABC):
             retrieved_results (List[Request]): A list of retrieved results for processing.
             rank_start (int): The start index for ranking.
             rank_end (int): The end index for ranking.
-            window_size (int): The size of each sliding window.
-            stride (int): The stride size for moving the window.
 
         Returns:
             Tuple[float, int]: A tuple object containing the calculated cost and the total number of tokens used (input tokens + output tokens).
         """
         input_token_count = 0
         output_token_count = 0
+        window_size = self._window_size
+        stride = self._stride
         # Go through the retrieval result using the sliding window and count the number of tokens for generated prompts.
         # This is an estimated cost analysis since the actual prompts' length will depend on the ranking.
         for result in tqdm(retrieved_results):

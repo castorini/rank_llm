@@ -17,6 +17,7 @@ from . import PyseriniRetriever, RetrievalMethod
 class RetrievalMode(Enum):
     DATASET = "dataset"
     CUSTOM = "custom"
+    CACHED_FILE = "cached_file"
 
     def __str__(self):
         return self.value
@@ -188,9 +189,10 @@ class Retriever:
                     with open(max_k_file, "r") as f:
                         results = [
                             from_dict(data_class=Request, data=json.loads(line))
-                            for i, line in enumerate(f)
-                            if i < k
+                            for line in f
                         ]
+                        for result in results:
+                            result.candidates = result.candidates[:k]
                         print(
                             f"Successfully loaded {max_k_file} to get top {k} candidates"
                         )
@@ -204,9 +206,10 @@ class Retriever:
                 with open(cached_file, "r") as f:
                     results = [
                         from_dict(data_class=Request, data=json.loads(line))
-                        for i, line in enumerate(f)
-                        if i < k
+                        for line in enumerate(f)
                     ]
+                    for result in results:
+                        result.candidates = result.candidates[:k]
                     print(
                         f"Successfully downloaded cached results to {retrieve_results_dirname}/{cached_file}"
                     )

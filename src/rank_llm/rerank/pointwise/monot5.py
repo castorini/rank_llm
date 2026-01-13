@@ -1,5 +1,6 @@
 import logging
 import math
+from importlib.resources import files
 from typing import List, Optional, Tuple
 
 from transformers import T5ForConditionalGeneration, T5Tokenizer
@@ -11,13 +12,15 @@ from rank_llm.rerank.rankllm import PromptMode
 
 logger = logging.getLogger(__name__)
 
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
+
 
 class MonoT5(PointwiseRankLLM):
     def __init__(
         self,
         model: str,
         prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/monot5_template.yaml",
+        prompt_template_path: str = (TEMPLATES / "monot5_template.yaml"),
         context_size: int = 512,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,

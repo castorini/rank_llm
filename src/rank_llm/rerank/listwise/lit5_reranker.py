@@ -1,9 +1,14 @@
+from importlib.resources import files
 from typing import Any, List, Optional
+
+import torch
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.reranker import Reranker
+
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class LiT5DistillReranker:
@@ -12,10 +17,12 @@ class LiT5DistillReranker:
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
         prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_template.yaml",
+        prompt_template_path: str = (TEMPLATES / "rank_fid_template.yaml"),
         precision: str = "bfloat16",
         window_size: int = 20,
-        device: str = "cuda",
+        stride: int = 10,
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        batch_size: int = 32,
     ) -> None:
         model_coordinator = RankFiDDistill(
             model=model_path,
@@ -24,7 +31,9 @@ class LiT5DistillReranker:
             prompt_template_path=prompt_template_path,
             precision=precision,
             window_size=window_size,
+            stride=stride,
             device=device,
+            batch_size=batch_size,
         )
         self._reranker = Reranker(model_coordinator)
 
@@ -48,10 +57,7 @@ class LiT5DistillReranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
-                batch_size (int): The batch size used for processing multiple requests at once.
         Returns:
             List[Result]: A list containing the reranked results.
 
@@ -87,10 +93,7 @@ class LiT5DistillReranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
-                batch_size (int): The batch size used for processing multiple requests at once.
         Returns:
             Result: the rerank result which contains the reranked candidates.
 
@@ -113,9 +116,12 @@ class LiT5ScoreReranker:
         model_path: str = "castorini/LiT5-Score-base",
         context_size: int = 300,
         prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: str = "src/rank_llm/rerank/prompt_templates/rank_fid_score_template.yaml",
+        prompt_template_path: str = (TEMPLATES / "rank_fid_score_template.yaml"),
         window_size: int = 20,
+        stride: int = 10,
         runfile_path: str = "runs/run.${topics}_${firststage}_${model//\//}",
+        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        batch_size: int = 32,
     ) -> None:
         model_coordinator = RankFiDScore(
             model=model_path,
@@ -123,6 +129,9 @@ class LiT5ScoreReranker:
             prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
             window_size=window_size,
+            stride=stride,
+            device=device,
+            batch_size=batch_size,
         )
         self._reranker = Reranker(model_coordinator)
 
@@ -146,10 +155,7 @@ class LiT5ScoreReranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
-                batch_size (int): The batch size used for processing multiple requests at once.
         Returns:
             List[Result]: A list containing the reranked results.
 
@@ -185,10 +191,7 @@ class LiT5ScoreReranker:
             logging (bool, optional): Enables logging of the reranking process. Defaults to False.
             **kwargs: Additional keyword arguments including:
                 populate_invocations_history (bool): Whether to populate the history of inference invocations. Defaults to False.
-                window_size (int): The size of the sliding window for listwise reranking, defualts to 20.
-                stride (int): The size of the stride of the sliding window for listwise rernaking, defaults to 10.
                 top_k_retrieve (int): The number of retrieved candidates, when set it is used to cap rank_end and window size.
-                batch_size (int): The batch size used for processing multiple requests at once.
         Returns:
             Result: the rerank result which contains the reranked candidates.
 
