@@ -35,7 +35,7 @@ def register_rankllm_tools(mcp: FastMCP):
             output_jsonl_file: Only used with --requests_file; when present, the ranked results will be saved in this JSONL file.
             output_trec_file: Only used with --requests_file; when present, the ranked results will be saved in this txt file in trec format.
             invocations_history_file: Only used with --requests_file and --populate_invocations_history; when present, the LLM invocations history (prompts, completions, and input/output token counts) will be stored in this file.
-            retrieval_method: Required if --dataset is used; must be omitted with --requests_file
+            retrieval_method: Required if --dataset is used; must be omitted with --requests_file, should be one of {[method.value for method in RetrievalMethod]}.
             top_k_candidates: the number of top candidates to rerank
             top_k_rerank: the number of top candidates to return from reranking
             max_queries: the max number of queries to process from the dataset
@@ -90,7 +90,7 @@ def register_rankllm_tools(mcp: FastMCP):
         variable_passages: bool = False,
         num_passes: int = 1,
         window_size: int = 20,
-        stride: str = 10,
+        stride: int = 10,
         system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
         populate_invocations_history: bool = False,
         is_thinking: bool = False,
