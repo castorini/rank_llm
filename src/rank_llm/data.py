@@ -30,6 +30,8 @@ class InferenceInvocation:
     response: str
     input_token_count: int
     output_token_count: int
+    reasoning: Optional[str] = None
+    token_usage: Optional[Dict[str, Any]] = None
     output_validation_regex: Optional[str] = None
     output_extraction_regex: Optional[str] = None
 

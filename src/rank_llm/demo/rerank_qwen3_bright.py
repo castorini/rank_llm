@@ -24,6 +24,24 @@ from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 
+"""
+Note: You need to run the vllm server with the following command:
+```bash
+RANK_MODEL_ID="Qwen/Qwen3-8B"
+RANK_PORT=38003
+RANK_VLLM_LOG="vllm_server_48003.log"
+CUDA_VISIBLE_DEVICES=2 vllm serve "$RANK_MODEL_ID"  \
+ --port "$RANK_PORT" \
+ --dtype auto \
+ --gpu-memory-utilization 0.9 \
+ --max-model-len 32768 \
+ --enable-prompt-tokens-details \
+ --enable-prefix-caching \
+ --reasoning-parser qwen3 \
+ > "$RANK_VLLM_LOG" 2>&1 &
+```
+"""
+
 
 def main():
     for fusion in ["bge-splade", "bm25-bge", "bm25-splade"]:
@@ -52,6 +70,7 @@ def main():
                     use_alpha=True,
                     is_thinking=True,
                     reasoning_token_budget=4096 * 4,
+                    base_url="http://localhost:38003/v1",
                 )
             )
             kwargs = {"populate_invocations_history": True}
