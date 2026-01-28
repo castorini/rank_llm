@@ -119,28 +119,61 @@ class ListwiseRankLLM(RankLLM, ABC):
         batched_results = self.run_llm_batched(
             [prompt for prompt, _ in prompts], current_window_size=rank_end - rank_start
         )
-
-        for index, (result, (prompt, in_token_count)) in enumerate(
-            zip(results, prompts)
-        ):
-            permutation, out_token_count = batched_results[index]
-            if logging:
-                logger.debug(f"output: {permutation}")
-            if populate_invocations_history:
-                if result.invocations_history is None:
-                    result.invocations_history = []
-                inference_invocation = InferenceInvocation(
-                    prompt,
-                    permutation,
-                    in_token_count,
-                    out_token_count,
-                    self._inference_handler.template["output_validation_regex"],
-                    self._inference_handler.template["output_extraction_regex"],
+        ## Legacy format (text, out_token_count)
+        ## TODO: Remove this once all the listwise rerankers have switched to the new format.
+        if len(batched_results[0]) == 2:
+            for index, (result, (prompt, in_token_count)) in enumerate(
+                zip(results, prompts)
+            ):
+                permutation, out_token_count = batched_results[index]
+                if logging:
+                    logger.debug(f"output: {permutation}")
+                if populate_invocations_history:
+                    if result.invocations_history is None:
+                        result.invocations_history = []
+                    inference_invocation = InferenceInvocation(
+                        prompt,
+                        permutation,
+                        in_token_count,
+                        out_token_count,
+                        self._inference_handler.template["output_validation_regex"],
+                        self._inference_handler.template["output_extraction_regex"],
+                    )
+                    result.invocations_history.append(inference_invocation)
+        else:
+            ## New format (text, reasoning, usage)
+            assert len(batched_results[0]) == 3
+            for index, (result, (prompt, in_token_count)) in enumerate(
+                zip(results, prompts)
+            ):
+                permutation, reasoning, usage = batched_results[index]
+                in_token_count = usage.get("prompt_tokens") or usage.get("input_tokens")
+                out_token_count = usage.get("completion_tokens") or usage.get(
+                    "output_tokens"
                 )
-                result.invocations_history.append(inference_invocation)
-            result = self.receive_permutation(
-                result, permutation, rank_start, rank_end, logging
-            )
+                if logging:
+                    logger.debug(f"output: {permutation}")
+                if populate_invocations_history:
+                    if result.invocations_history is None:
+                        result.invocations_history = []
+                    inference_invocation = InferenceInvocation(
+                        prompt,
+                        permutation,
+                        in_token_count,
+                        out_token_count,
+                        reasoning=reasoning,
+                        token_usage=usage,
+                        output_validation_regex=self._inference_handler.template[
+                            "output_validation_regex"
+                        ],
+                        output_extraction_regex=self._inference_handler.template[
+                            "output_extraction_regex"
+                        ],
+                    )
+                    result.invocations_history.append(inference_invocation)
+        result = self.receive_permutation(
+            result, permutation, rank_start, rank_end, logging
+        )
 
         return results
 

@@ -258,7 +258,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self,
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, int]] | List[Tuple[str, str, Dict[str, Any]]]:
         if current_window_size is None:
             current_window_size = self._window_size
 
@@ -286,12 +286,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     else self.num_output_tokens(current_window_size)
                 )
                 if self._base_url:
-                    kwargs = {
-                        "max_tokens": max_tokens,
-                        "temperature": 0,
-                        # TODO: expose the reasoning effort as an init param if needed.
-                        "reasoning": {"effort": "medium", "summary": "detailed"},
-                    }
                     return self._vllm_handler.chat_completions(
                         prompts=prompts, max_tokens=max_tokens, temperature=0
                     )
@@ -345,7 +339,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, int] | Tuple[str, str, Dict[str, Any]]:
         # Now forward the run_llm into run_llm_batched
         if current_window_size is None:
             current_window_size = self._window_size
