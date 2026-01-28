@@ -1,7 +1,6 @@
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
-from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import openai
@@ -106,7 +105,6 @@ class SafeOpenai(ListwiseRankLLM):
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
-        self._key_lock = Lock()
         openai.proxy = proxy
         openai.api_key = self._keys[self._cur_key_id]
 
@@ -121,6 +119,8 @@ class SafeOpenai(ListwiseRankLLM):
             openai.api_type = api_type
             openai.api_base = api_base
             self.use_azure_ai = True
+        else:
+            openai.api_type = "openai"
 
     def rerank_batch(
         self,
@@ -195,8 +195,6 @@ class SafeOpenai(ListwiseRankLLM):
     ) -> Union[str, Dict[str, Any]]:
         while True:
             try:
-                with self._key_lock:
-                    openai.api_key = self._keys[self._cur_key_id]
                 completion = openai.chat.completions.create(*args, **kwargs, timeout=30)
                 break
             except Exception as e:
@@ -208,9 +206,8 @@ class SafeOpenai(ListwiseRankLLM):
                 if "The response was filtered" in str(e):
                     print("The response was filtered")
                     return "ERROR::The response was filtered"
-                with self._key_lock:
-                    self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
-                    openai.api_key = self._keys[self._cur_key_id]
+                self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
+                openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)
         if return_text:
             completion = completion.choices[0].message.content
