@@ -18,10 +18,11 @@ dataset_name = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 model_coordinator = SafeOpenai(
-    "google/gemini-2.0-flash-001",
+    "minimax/minimax-m2:free",
     4096,
     keys=get_openrouter_api_key(),
     base_url="https://openrouter.ai/api/v1/",
+    api_type="openai",
     prompt_template_path=(TEMPLATES / "rank_zephyr_template.yaml"),
 )
 reranker = Reranker(model_coordinator)

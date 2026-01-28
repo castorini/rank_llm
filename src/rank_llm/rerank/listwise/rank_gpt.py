@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -118,6 +119,8 @@ class SafeOpenai(ListwiseRankLLM):
             openai.api_type = api_type
             openai.api_base = api_base
             self.use_azure_ai = True
+        else:
+            openai.api_type = "openai"
 
     def rerank_batch(
         self,
@@ -133,19 +136,55 @@ class SafeOpenai(ListwiseRankLLM):
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
-        results = []
-        for request in tqdm(requests):
-            result = self.sliding_windows(
-                request,
-                rank_start=max(rank_start, 0),
-                rank_end=min(rank_end, len(request.candidates)),
-                top_k_retrieve=top_k_retrieve,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-                populate_invocations_history=populate_invocations_history,
-            )
-            results.append(result)
-        return results
+        if not requests:
+            return []
+
+        worker_cap = (
+            self._batch_size
+            if self._batch_size and self._batch_size > 0
+            else len(requests)
+        )
+        max_workers = min(len(requests), max(worker_cap, 1))
+        if max_workers <= 1:
+            results: List[Result] = []
+            for request in tqdm(requests):
+                result = self.sliding_windows(
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    top_k_retrieve=top_k_retrieve,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_invocations_history=populate_invocations_history,
+                )
+                results.append(result)
+            return results
+
+        results: Dict[int, Result] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    self.sliding_windows,
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    top_k_retrieve=top_k_retrieve,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_invocations_history=populate_invocations_history,
+                ): index
+                for index, request in enumerate(requests)
+            }
+            progress = tqdm(total=len(requests))
+            try:
+                for future in as_completed(futures):
+                    index = futures[future]
+                    results[index] = future.result()
+                    progress.update(1)
+            finally:
+                progress.close()
+
+        return [results[index] for index in range(len(requests))]
 
     def _call_completion(
         self,
@@ -182,7 +221,6 @@ class SafeOpenai(ListwiseRankLLM):
         model_key = "model"
         response = self._call_completion(
             messages=prompt,
-            temperature=0,
             return_text=True,
             **{model_key: self._model},
         )
