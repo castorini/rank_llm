@@ -200,9 +200,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
             logger.info(f"Prompt: {prompt}\n")
-        llm_result = self.run_llm(
-            prompt, current_window_size=rank_end - rank_start
-        )
+        llm_result = self.run_llm(prompt, current_window_size=rank_end - rank_start)
         ## Legacy format (text, out_token_count)
         if len(llm_result) == 2:
             permutation, out_token_count = llm_result
@@ -227,9 +225,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 or in_token_count
             )
             out_token_count = (
-                usage.get("completion_tokens")
-                or usage.get("output_tokens")
-                or 0
+                usage.get("completion_tokens") or usage.get("output_tokens") or 0
             )
             if logging:
                 print(f"Output: {permutation}")

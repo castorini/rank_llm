@@ -265,7 +265,7 @@ class SafeOpenai(ListwiseRankLLM):
         else:
             try:
                 encoder = tiktoken.get_encoding(self._model)
-            except:
+            except:  # noqa: E722
                 encoder = tiktoken.get_encoding("cl100k_base")
 
             _output_token_estimate = (
@@ -330,7 +330,7 @@ class SafeOpenai(ListwiseRankLLM):
 
         try:
             encoding = tiktoken.get_encoding(self._model)
-        except:
+        except:  # noqa: E722
             encoding = tiktoken.get_encoding("cl100k_base")
 
         num_tokens = 0
