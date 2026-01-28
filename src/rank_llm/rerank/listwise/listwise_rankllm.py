@@ -200,21 +200,53 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt, in_token_count = self.create_prompt(result, rank_start, rank_end)
         if logging:
             logger.info(f"Prompt: {prompt}\n")
-        permutation, out_token_count = self.run_llm(
-            prompt, current_window_size=rank_end - rank_start
-        )
-        if logging:
-            print(f"Output: {permutation}")
-        if populate_invocations_history:
-            inference_invocation = InferenceInvocation(
-                prompt,
-                permutation,
-                in_token_count,
-                out_token_count,
-                self._inference_handler.template["output_validation_regex"],
-                self._inference_handler.template["output_extraction_regex"],
+        llm_result = self.run_llm(prompt, current_window_size=rank_end - rank_start)
+        ## Legacy format (text, out_token_count)
+        if len(llm_result) == 2:
+            permutation, out_token_count = llm_result
+            if logging:
+                print(f"Output: {permutation}")
+            if populate_invocations_history:
+                inference_invocation = InferenceInvocation(
+                    prompt,
+                    permutation,
+                    in_token_count,
+                    out_token_count,
+                    self._inference_handler.template["output_validation_regex"],
+                    self._inference_handler.template["output_extraction_regex"],
+                )
+                result.invocations_history.append(inference_invocation)
+        else:
+            ## New format (text, reasoning, usage)
+            permutation, reasoning, usage = llm_result
+            in_token_count = (
+                usage.get("prompt_tokens")
+                or usage.get("input_tokens")
+                or in_token_count
             )
-            result.invocations_history.append(inference_invocation)
+            out_token_count = (
+                usage.get("completion_tokens") or usage.get("output_tokens") or 0
+            )
+            if logging:
+                print(f"Output: {permutation}")
+            if populate_invocations_history:
+                if result.invocations_history is None:
+                    result.invocations_history = []
+                inference_invocation = InferenceInvocation(
+                    prompt,
+                    permutation,
+                    in_token_count,
+                    out_token_count,
+                    reasoning=reasoning,
+                    token_usage=usage,
+                    output_validation_regex=self._inference_handler.template[
+                        "output_validation_regex"
+                    ],
+                    output_extraction_regex=self._inference_handler.template[
+                        "output_extraction_regex"
+                    ],
+                )
+                result.invocations_history.append(inference_invocation)
         result = self.receive_permutation(
             result, permutation, rank_start, rank_end, logging
         )

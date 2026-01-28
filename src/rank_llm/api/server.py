@@ -136,7 +136,7 @@ def create_app(model, port, use_azure_openai=False):
             default_model_coordinator = None
         try:
             # calls Anserini retriever API and reranks
-            (response, model_coordinator) = retrieve_and_rerank(
+            response, model_coordinator = retrieve_and_rerank(
                 dataset=dataset,
                 retrieval_mode=RetrievalMode.DATASET,
                 query=query,
