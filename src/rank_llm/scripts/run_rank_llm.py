@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 
 import torch
 
@@ -33,7 +34,7 @@ def main(args):
     output_jsonl_file = args.output_jsonl_file
     output_trec_file = args.output_trec_file
     invocations_history_file = args.invocations_history_file
-    prompt_template_path = args.prompt_template_path
+    prompt_template_path = Path(args.prompt_template_path) if args.prompt_template_path else None
     num_few_shot_examples = args.num_few_shot_examples
     few_shot_file = args.few_shot_file
     shuffle_candidates = args.shuffle_candidates
