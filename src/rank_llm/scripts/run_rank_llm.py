@@ -14,6 +14,9 @@ from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
+# Force spawn method to avoid "Cannot re-initialize CUDA in forked subprocess" error.
+os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
+
 
 def main(args):
     model_path = args.model_path

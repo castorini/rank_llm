@@ -1,3 +1,4 @@
+import multiprocessing
 from typing import Any, Dict, List, Optional
 
 import vllm
@@ -16,6 +17,14 @@ class VllmHandler:
         gpu_memory_utilization: float,
         **kwargs: Any,
     ):
+        # Set multiprocessing start method to 'spawn' for CUDA compatibility
+        # vllm 0.15+ requires spawn mode to avoid CUDA re-initialization errors
+        try:
+            multiprocessing.set_start_method("spawn", force=True)
+        except RuntimeError:
+            # Start method already set, which is fine
+            pass
+
         self._vllm = vllm.LLM(
             model=model,
             download_dir=download_dir,

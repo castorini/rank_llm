@@ -169,7 +169,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     enforce_eager=False,
                     max_logprobs=30,
                     tensor_parallel_size=num_gpus,
-                    gpu_memory_utilization=0.90,
+                    gpu_memory_utilization=0.60,
                     trust_remote_code=True,
                 )
             self._tokenizer = self._vllm_handler.get_tokenizer()
