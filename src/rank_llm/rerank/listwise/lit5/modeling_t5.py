@@ -53,8 +53,8 @@ except:
 from transformers.modeling_utils import PreTrainedModel
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.utils import logging
+from transformers.utils.model_parallel_utils import assert_device_map, get_device_map
 
-from rank_llm.rerank.listwise.lit5.utils import assert_device_map, get_device_map
 
 logger = logging.get_logger(__name__)
 
