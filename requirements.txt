@@ -1,7 +1,7 @@
 tqdm>=4.66.2
 openai>=1.23.6
 tiktoken>=0.6.0
-transformers>=4.40.1
+transformers>=4.40.1,<5
 python-dotenv>=1.0.1
 faiss-cpu>=1.8.0
 ftfy>=6.2.0
