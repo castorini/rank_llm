@@ -40,16 +40,6 @@ from transformers.modeling_outputs import (
     Seq2SeqModelOutput,
 )
 
-try:
-    from transformers.modeling_utils import (
-        find_pruneable_heads_and_indices,
-        prune_linear_layer,
-    )
-except:
-    from transformers.pytorch_utils import (
-        find_pruneable_heads_and_indices,
-        prune_linear_layer,
-    )
 from transformers.modeling_utils import PreTrainedModel
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.utils import logging
@@ -354,24 +344,7 @@ class T5Attention(nn.Module):
             self.relative_attention_bias = nn.Embedding(
                 self.relative_attention_num_buckets, self.n_heads
             )
-        self.pruned_heads = set()
         self.gradient_checkpointing = False
-
-    def prune_heads(self, heads):
-        if len(heads) == 0:
-            return
-        heads, index = find_pruneable_heads_and_indices(
-            heads, self.n_heads, self.key_value_proj_dim, self.pruned_heads
-        )
-        # Prune linear layers
-        self.q = prune_linear_layer(self.q, index)
-        self.k = prune_linear_layer(self.k, index)
-        self.v = prune_linear_layer(self.v, index)
-        self.o = prune_linear_layer(self.o, index, dim=1)
-        # Update hyper params
-        self.n_heads = self.n_heads - len(heads)
-        self.inner_dim = self.key_value_proj_dim * self.n_heads
-        self.pruned_heads = self.pruned_heads.union(heads)
 
     @staticmethod
     def _relative_position_bucket(
@@ -1491,14 +1464,6 @@ class T5Model(T5PreTrainedModel):
     def get_decoder(self):
         return self.decoder
 
-    def _prune_heads(self, heads_to_prune):
-        """
-        Prunes heads of the model. heads_to_prune: dict of {layer_num: list of heads to prune in this layer} See base
-        class PreTrainedModel
-        """
-        for layer, heads in heads_to_prune.items():
-            self.encoder.layer[layer].attention.prune_heads(heads)
-
     @add_start_docstrings_to_model_forward(T5_INPUTS_DOCSTRING)
     @replace_return_docstrings(
         output_type=Seq2SeqModelOutput, config_class=_CONFIG_FOR_DOC
@@ -1974,14 +1939,6 @@ class T5EncoderModel(T5PreTrainedModel):
 
     def get_encoder(self):
         return self.encoder
-
-    def _prune_heads(self, heads_to_prune):
-        """
-        Prunes heads of the model. heads_to_prune: dict of {layer_num: list of heads to prune in this layer} See base
-        class PreTrainedModel
-        """
-        for layer, heads in heads_to_prune.items():
-            self.encoder.layer[layer].attention.prune_heads(heads)
 
     @add_start_docstrings_to_model_forward(T5_ENCODER_INPUTS_DOCSTRING)
     @replace_return_docstrings(
