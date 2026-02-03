@@ -293,23 +293,35 @@ def generate_report(args):
         if version == "v1":
             row_data.update(
                 {
-                    "s1": f'{table[name]["dl19"]["MULT"]:.0f}'
-                    if table[name]["dl19"]["MULT"] != 0
-                    else "-",
-                    "s2": "SPLADE++ EnsembleDistil"
-                    if "SPLADE++_EnsembleDistil_ONNX" in commands[name]["dl19"]
-                    else "BM25",
-                    "s3": re.search(
-                        r"--top_k_candidates=(\d+)", commands[name]["dl19"]
-                    ).group(1)
-                    if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl19"])
-                    else "-",
-                    "s4": f'{table[name]["dl19"]["nDCG@10"]:.4f}'
-                    if table[name]["dl19"]["nDCG@10"] != 0
-                    else "-",
-                    "s5": f'{table[name]["dl20"]["nDCG@10"]:.4f}'
-                    if table[name]["dl20"]["nDCG@10"] != 0
-                    else "-",
+                    "s1": (
+                        f'{table[name]["dl19"]["MULT"]:.0f}'
+                        if table[name]["dl19"]["MULT"] != 0
+                        else "-"
+                    ),
+                    "s2": (
+                        "SPLADE++ EnsembleDistil"
+                        if "SPLADE++_EnsembleDistil_ONNX" in commands[name]["dl19"]
+                        else "BM25"
+                    ),
+                    "s3": (
+                        re.search(
+                            r"--top_k_candidates=(\d+)", commands[name]["dl19"]
+                        ).group(1)
+                        if re.search(
+                            r"--top_k_candidates=(\d+)", commands[name]["dl19"]
+                        )
+                        else "-"
+                    ),
+                    "s4": (
+                        f'{table[name]["dl19"]["nDCG@10"]:.4f}'
+                        if table[name]["dl19"]["nDCG@10"] != 0
+                        else "-"
+                    ),
+                    "s5": (
+                        f'{table[name]["dl20"]["nDCG@10"]:.4f}'
+                        if table[name]["dl20"]["nDCG@10"] != 0
+                        else "-"
+                    ),
                     "cmd1": format_command(commands[name]["dl19"]),
                     "cmd2": format_command(commands[name]["dl20"]),
                     "eval_cmd1": format_eval_command(eval_commands[name]["dl19"]),
@@ -319,26 +331,40 @@ def generate_report(args):
         else:
             row_data.update(
                 {
-                    "s1": f'{table[name]["dl21"]["MULT"]:.0f}'
-                    if table[name]["dl21"]["MULT"] != 0
-                    else "-",
-                    "s2": "SPLADE++ EnsembleDistil"
-                    if "SPLADE++_EnsembleDistil_ONNX" in commands[name]["dl21"]
-                    else "BM25",
-                    "s3": re.search(
-                        r"--top_k_candidates=(\d+)", commands[name]["dl21"]
-                    ).group(1)
-                    if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl21"])
-                    else "-",
-                    "s4": f'{table[name]["dl21"].get("nDCG@10", 0):.4f}'
-                    if "dl21" in table[name]
-                    else "-",
-                    "s5": f'{table[name]["dl22"].get("nDCG@10", 0):.4f}'
-                    if "dl22" in table[name]
-                    else "-",
-                    "s6": f'{table[name]["dl23"].get("nDCG@10", 0):.4f}'
-                    if "dl23" in table[name]
-                    else "-",
+                    "s1": (
+                        f'{table[name]["dl21"]["MULT"]:.0f}'
+                        if table[name]["dl21"]["MULT"] != 0
+                        else "-"
+                    ),
+                    "s2": (
+                        "SPLADE++ EnsembleDistil"
+                        if "SPLADE++_EnsembleDistil_ONNX" in commands[name]["dl21"]
+                        else "BM25"
+                    ),
+                    "s3": (
+                        re.search(
+                            r"--top_k_candidates=(\d+)", commands[name]["dl21"]
+                        ).group(1)
+                        if re.search(
+                            r"--top_k_candidates=(\d+)", commands[name]["dl21"]
+                        )
+                        else "-"
+                    ),
+                    "s4": (
+                        f'{table[name]["dl21"].get("nDCG@10", 0):.4f}'
+                        if "dl21" in table[name]
+                        else "-"
+                    ),
+                    "s5": (
+                        f'{table[name]["dl22"].get("nDCG@10", 0):.4f}'
+                        if "dl22" in table[name]
+                        else "-"
+                    ),
+                    "s6": (
+                        f'{table[name]["dl23"].get("nDCG@10", 0):.4f}'
+                        if "dl23" in table[name]
+                        else "-"
+                    ),
                     "cmd1": format_command(commands[name]["dl21"]),
                     "cmd2": format_command(commands[name]["dl22"]),
                     "cmd3": format_command(commands[name]["dl23"]),

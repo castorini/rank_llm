@@ -202,7 +202,7 @@ class Retriever:
             try:  # fallback #1: download from HF repo
                 query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{100 if k <= 100 else 1000}.jsonl"
                 cached_file = download_cached_hits(query_name)
-
+                print(f"Cached file: {cached_file}")
                 with open(cached_file, "r") as f:
                     results = [
                         from_dict(data_class=Request, data=json.loads(line))

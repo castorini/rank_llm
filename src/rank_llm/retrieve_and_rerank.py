@@ -1,6 +1,9 @@
 import copy
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
+from huggingface_hub import hf_hub_download
 
 from rank_llm.data import DataWriter, Query, Request, read_requests_from_file
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
@@ -265,6 +268,28 @@ def retrieve(
             ("requests_file", ""),
         ]
         [requests_file] = extract_kwargs(keys_and_defaults, **kwargs)
-        requests = read_requests_from_file(requests_file)
+        if not os.path.exists(requests_file):
+            print(
+                f"Requests file {requests_file} does not exist locally, proceeding to download from huggingface."
+            )
+
+            try:
+                local_file_path = hf_hub_download(
+                    repo_id="castorini/rank_llm_data",
+                    filename=requests_file,
+                    repo_type="dataset",
+                    local_dir=".",
+                )
+                print(f"Successfully downloaded requests file to {local_file_path}")
+                requests = read_requests_from_file(local_file_path)
+            except Exception as e:
+                dir_path = os.path.dirname(requests_file)
+                if os.path.exists(dir_path) and not os.listdir(dir_path):
+                    os.rmdir(dir_path)
+                raise ValueError(
+                    f"Error downloading requests file from huggingface: {e}"
+                )
+        else:
+            requests = read_requests_from_file(requests_file)
 
     return requests

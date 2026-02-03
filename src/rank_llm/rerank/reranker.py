@@ -13,6 +13,7 @@ from rank_llm.rerank import (
 from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pairwise.duot5 import DuoT5
+from rank_llm.rerank.pointwise.monoelectra import MonoELECTRA
 from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
@@ -208,6 +209,7 @@ class Reranker:
                 ("window_size", 20),
                 ("stride", 10),
                 ("batch_size", 32),
+                ("reasoning_effort", None),
             ]
             [
                 context_size,
@@ -217,6 +219,7 @@ class Reranker:
                 window_size,
                 stride,
                 batch_size,
+                reasoning_effort,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
             openrouter_keys = get_openrouter_api_key()
             model_coordinator = SafeOpenai(
@@ -230,6 +233,7 @@ class Reranker:
                 batch_size=batch_size,
                 keys=openrouter_keys,
                 base_url="https://openrouter.ai/api/v1/",
+                reasoning_effort=reasoning_effort,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
         elif "gpt" in model_path or use_azure_openai or base_url:
@@ -247,6 +251,7 @@ class Reranker:
                 ("stride", 10),
                 ("batch_size", 32),
                 ("base_url", None),
+                ("reasoning_effort", None),
             ]
             [
                 context_size,
@@ -257,6 +262,7 @@ class Reranker:
                 stride,
                 batch_size,
                 base_url,
+                reasoning_effort,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             openai_keys = get_openai_api_key()
@@ -271,6 +277,7 @@ class Reranker:
                 batch_size=batch_size,
                 keys=openai_keys,
                 base_url=base_url,
+                reasoning_effort=reasoning_effort,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
         elif "gemini" in model_path:
@@ -344,6 +351,39 @@ class Reranker:
                 context_size=context_size,
                 num_few_shot_examples=num_few_shot_examples,
                 few_shot_file=few_shot_file,
+                device=device,
+                batch_size=batch_size,
+            )
+        elif "monoelectra" in model_path.lower():
+            # using monoelectra
+            print(f"Loading {model_path} ...")
+
+            model_full_paths = {"monoelectra": "castorini/monoelectra-base"}
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    "src/rank_llm/rerank/prompt_templates/monoelectra_template.yaml",
+                ),
+                ("context_size", 512),
+                ("device", "cuda"),
+                ("batch_size", 32),
+            ]
+            [
+                prompt_template_path,
+                context_size,
+                device,
+                batch_size,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = MonoELECTRA(
+                model=(
+                    model_full_paths[model_path.lower()]
+                    if model_path.lower() in model_full_paths
+                    else model_path
+                ),
+                prompt_template_path=prompt_template_path,
+                context_size=context_size,
                 device=device,
                 batch_size=batch_size,
             )
