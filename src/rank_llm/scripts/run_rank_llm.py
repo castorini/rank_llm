@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from pathlib import Path
 
 import torch
 
@@ -12,6 +13,9 @@ sys.path.append(parent)
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
+
+# Force spawn method to avoid "Cannot re-initialize CUDA in forked subprocess" error.
+os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
 
 def main(args):
@@ -33,7 +37,9 @@ def main(args):
     output_jsonl_file = args.output_jsonl_file
     output_trec_file = args.output_trec_file
     invocations_history_file = args.invocations_history_file
-    prompt_template_path = args.prompt_template_path
+    prompt_template_path = (
+        Path(args.prompt_template_path) if args.prompt_template_path else None
+    )
     num_few_shot_examples = args.num_few_shot_examples
     few_shot_file = args.few_shot_file
     shuffle_candidates = args.shuffle_candidates
@@ -55,6 +61,7 @@ def main(args):
     use_alpha = args.use_alpha
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
+    reasoning_effort = args.reasoning_effort
 
     if args.requests_file:
         if args.retrieval_method:
@@ -101,6 +108,7 @@ def main(args):
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
         tensorrt_batched=tensorrt_batched,
+        reasoning_effort=reasoning_effort,
     )
 
 
@@ -282,6 +290,13 @@ if __name__ == "__main__":
         type=int,
         default=10000,
         help="number of output token budget for thinking traces on reasoning models",
+    )
+    parser.add_argument(
+        "--reasoning_effort",
+        type=str,
+        default=None,
+        choices=["low", "medium", "high"],
+        help="reasoning effort level for OpenAI reasoning models (e.g., o1, o3)",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
     parser.add_argument(

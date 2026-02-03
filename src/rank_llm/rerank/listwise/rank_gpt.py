@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -33,6 +34,7 @@ class SafeOpenai(ListwiseRankLLM):
         api_type: Optional[str] = None,
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
+        reasoning_effort: Optional[str] = None,
     ) -> None:
         """
         Creates instance of the SafeOpenai class, a specialized version of RankLLM designed for safely handling OpenAI API calls with
@@ -110,6 +112,8 @@ class SafeOpenai(ListwiseRankLLM):
         if base_url:
             openai.base_url = base_url
 
+        self._reasoning_effort = reasoning_effort
+
         self.use_azure_ai = False
 
         if all([api_type, api_base, api_version]):
@@ -118,6 +122,8 @@ class SafeOpenai(ListwiseRankLLM):
             openai.api_type = api_type
             openai.api_base = api_base
             self.use_azure_ai = True
+        else:
+            openai.api_type = "openai"
 
     def rerank_batch(
         self,
@@ -133,19 +139,55 @@ class SafeOpenai(ListwiseRankLLM):
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
-        results = []
-        for request in tqdm(requests):
-            result = self.sliding_windows(
-                request,
-                rank_start=max(rank_start, 0),
-                rank_end=min(rank_end, len(request.candidates)),
-                top_k_retrieve=top_k_retrieve,
-                shuffle_candidates=shuffle_candidates,
-                logging=logging,
-                populate_invocations_history=populate_invocations_history,
-            )
-            results.append(result)
-        return results
+        if not requests:
+            return []
+
+        worker_cap = (
+            self._batch_size
+            if self._batch_size and self._batch_size > 0
+            else len(requests)
+        )
+        max_workers = min(len(requests), max(worker_cap, 1))
+        if max_workers <= 1:
+            results: List[Result] = []
+            for request in tqdm(requests):
+                result = self.sliding_windows(
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    top_k_retrieve=top_k_retrieve,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_invocations_history=populate_invocations_history,
+                )
+                results.append(result)
+            return results
+
+        results: Dict[int, Result] = {}
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    self.sliding_windows,
+                    request,
+                    rank_start=max(rank_start, 0),
+                    rank_end=min(rank_end, len(request.candidates)),
+                    top_k_retrieve=top_k_retrieve,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=logging,
+                    populate_invocations_history=populate_invocations_history,
+                ): index
+                for index, request in enumerate(requests)
+            }
+            progress = tqdm(total=len(requests))
+            try:
+                for future in as_completed(futures):
+                    index = futures[future]
+                    results[index] = future.result()
+                    progress.update(1)
+            finally:
+                progress.close()
+
+        return [results[index] for index in range(len(requests))]
 
     def _call_completion(
         self,
@@ -154,9 +196,11 @@ class SafeOpenai(ListwiseRankLLM):
         reduce_length=False,
         **kwargs,
     ) -> Union[str, Dict[str, Any]]:
+        if self._reasoning_effort is not None:
+            kwargs["reasoning"] = {"effort": self._reasoning_effort, "summary": "auto"}
         while True:
             try:
-                completion = openai.chat.completions.create(*args, **kwargs, timeout=30)
+                completion = openai.responses.create(*args, **kwargs, timeout=300)
                 break
             except Exception as e:
                 print("Error in completion call")
@@ -171,26 +215,47 @@ class SafeOpenai(ListwiseRankLLM):
                 openai.api_key = self._keys[self._cur_key_id]
                 time.sleep(0.1)
         if return_text:
-            completion = completion.choices[0].message.content
+            completion = completion.output[-1].content[0].text
         return completion
 
     def run_llm(
         self,
         prompt: Union[str, List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, int] | Tuple[str, Optional[str], Dict[str, Any]]:
         model_key = "model"
-        response = self._call_completion(
-            messages=prompt,
-            temperature=0,
-            return_text=True,
+        completion = self._call_completion(
+            input=prompt,
             **{model_key: self._model},
         )
-        try:
-            encoding = tiktoken.get_encoding(self._model)
-        except:
-            encoding = tiktoken.get_encoding("cl100k_base")
-        return response, len(encoding.encode(response))
+
+        # Handle error strings from _call_completion
+        if isinstance(completion, str):
+            try:
+                encoding = tiktoken.get_encoding(self._model)
+            except Exception:
+                encoding = tiktoken.get_encoding("cl100k_base")
+            return completion, len(encoding.encode(completion))
+
+        # Extract text from response
+        text = completion.output[-1].content[0].text
+
+        # Extract reasoning summary if available
+        reasoning = None
+        for item in completion.output:
+            if getattr(item, "type", None) == "reasoning":
+                summaries = getattr(item, "summary", None)
+                if summaries:
+                    reasoning = "\n".join(
+                        s.text for s in summaries if hasattr(s, "text")
+                    )
+
+        # Extract usage details
+        usage = {}
+        if completion.usage is not None:
+            usage = completion.usage.model_dump(mode="json")
+
+        return text, reasoning, usage
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
@@ -200,7 +265,7 @@ class SafeOpenai(ListwiseRankLLM):
         else:
             try:
                 encoder = tiktoken.get_encoding(self._model)
-            except:
+            except:  # noqa: E722
                 encoder = tiktoken.get_encoding("cl100k_base")
 
             _output_token_estimate = (
@@ -265,7 +330,7 @@ class SafeOpenai(ListwiseRankLLM):
 
         try:
             encoding = tiktoken.get_encoding(self._model)
-        except:
+        except:  # noqa: E722
             encoding = tiktoken.get_encoding("cl100k_base")
 
         num_tokens = 0

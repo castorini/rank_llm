@@ -1,11 +1,8 @@
 import asyncio
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Any, Dict, List, Tuple
 
 from openai import AsyncOpenAI, OpenAI
 from transformers import AutoTokenizer, PreTrainedTokenizerBase
-
-Message = Dict[str, str]
-PromptLike = Union[str, Message, Sequence[Message]]
 
 
 class VllmHandlerWithOpenAISDK:
@@ -33,7 +30,7 @@ class VllmHandlerWithOpenAISDK:
 
     async def _one_inference(
         self, messages: list[dict[str, str]], **kwargs
-    ) -> Tuple[str, int]:
+    ) -> Tuple[str, str, Dict[str, Any]]:
         assert isinstance(messages, list)
         assert isinstance(messages[0], dict)
         response = None
@@ -44,20 +41,21 @@ class VllmHandlerWithOpenAISDK:
                 **kwargs,
             )
             text = response.choices[0].message.content
-            toks = len(self._tokenizer.encode(text))
-            return text, toks
+            reasoning = response.choices[0].message.reasoning
+            usage = response.usage.model_dump(mode="json")
+            return text, reasoning, usage
         except Exception as e:
             print(response)
             print(e)
-            return str(e), 0
+            return str(e), "Reasoning tokens redcated due to error", {}
 
     async def _all_inferences(
         self, prompts: list[list[dict[str, str]]], **kwargs
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, str, Dict[str, Any]]]:
         tasks = [asyncio.create_task(self._one_inference(p, **kwargs)) for p in prompts]
         return await asyncio.gather(*tasks)
 
     def chat_completions(
         self, prompts: list[list[dict[str, str]]], **kwargs
-    ) -> List[Tuple[str, int]]:
+    ) -> List[Tuple[str, str, Dict[str, Any]]]:
         return asyncio.run(self._all_inferences(prompts, **kwargs))
