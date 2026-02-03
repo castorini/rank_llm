@@ -1,5 +1,9 @@
 """
 Register tools for the MCP server.
+
+All parameters use explicit types and sentinel defaults (no Optional[X]) so that
+the generated JSON Schema has a single "type" per property. This avoids vLLM's
+trim_schema failing on anyOf entries that lack a "type" key.
 """
 
 import torch
@@ -35,10 +39,10 @@ def register_rankllm_tools(mcp: FastMCP):
             output_jsonl_file: Only used with --requests_file; when present, the ranked results will be saved in this JSONL file.
             output_trec_file: Only used with --requests_file; when present, the ranked results will be saved in this txt file in trec format.
             invocations_history_file: Only used with --requests_file and --populate_invocations_history; when present, the LLM invocations history (prompts, completions, and input/output token counts) will be stored in this file.
-            retrieval_method: Required if --dataset is used; must be omitted with --requests_file, should be one of {[method.value for method in RetrievalMethod]}.
+            retrieval_method: Required when dataset is provided; use "unspecified" when using requests_file. One of: {[m.value for m in RetrievalMethod]}.
             top_k_candidates: the number of top candidates to rerank
-            top_k_rerank: the number of top candidates to return from reranking
-            max_queries: the max number of queries to process from the dataset
+            top_k_rerank: the number of top candidates to return from reranking (-1 means same as top_k_candidates)
+            max_queries: max number of queries to process (-1 means no limit)
             context_size: context size used for model
             num_gpus: the number of GPUs to use
             prompt_template_path: yaml file path for the prompt template
@@ -67,26 +71,26 @@ def register_rankllm_tools(mcp: FastMCP):
         model_path: str,
         query: str = "",
         batch_size: int = 32,
-        dataset: str = None,
+        dataset: str = "",
         requests_file: str = "",
         qrels_file: str = "",
         output_jsonl_file: str = "",
         output_trec_file: str = "",
         invocations_history_file: str = "",
-        retrieval_method: RetrievalMethod = None,
+        retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
         top_k_candidates: int = 100,
         top_k_rerank: int = -1,
-        max_queries: int = None,
+        max_queries: int = -1,
         context_size: int = 4096,
         num_gpus: int = 1,
-        prompt_template_path: str = None,
+        prompt_template_path: str = "",
         num_few_shot_examples: int = 0,
-        few_shot_file: str = None,
+        few_shot_file: str = "",
         shuffle_candidates: bool = False,
         print_prompts_responses: bool = False,
         use_azure_openai: bool = False,
         use_openrouter: bool = False,
-        base_url: str = None,
+        base_url: str = "",
         variable_passages: bool = False,
         num_passes: int = 1,
         window_size: int = 20,
@@ -104,38 +108,52 @@ def register_rankllm_tools(mcp: FastMCP):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         retrieval_mode = RetrievalMode.DATASET if dataset else RetrievalMode.CACHED_FILE
 
+        # Convert sentinel defaults to None for the underlying API
+        dataset_or_none = dataset if dataset else None
+        retrieval_method_or_none = (
+            retrieval_method
+            if retrieval_method != RetrievalMethod.UNSPECIFIED
+            else None
+        )
+        max_queries_or_none = max_queries if max_queries >= 0 else None
+        prompt_template_path_or_none = (
+            prompt_template_path if prompt_template_path else None
+        )
+        few_shot_file_or_none = few_shot_file if few_shot_file else None
+        base_url_or_none = base_url if base_url else None
+
         if requests_file:
-            if retrieval_method:
+            if retrieval_method != RetrievalMethod.UNSPECIFIED:
                 raise ValueError("retrieval_method must not be used with requests_file")
-        if dataset and not retrieval_method:
+        if dataset_or_none and not retrieval_method_or_none:
             raise ValueError("retrieval_method is required when dataset is provided")
 
         return retrieve_and_rerank_function(
             model_path=model_path,
             query=query,
             batch_size=batch_size,
-            dataset=dataset,
+            dataset=dataset_or_none,
             retrieval_mode=retrieval_mode,
             requests_file=requests_file,
             qrels_file=qrels_file,
             output_jsonl_file=output_jsonl_file,
             output_trec_file=output_trec_file,
             invocations_history_file=invocations_history_file,
-            retrieval_method=retrieval_method,
+            retrieval_method=retrieval_method_or_none,
             top_k_retrieve=top_k_candidates,
             top_k_rerank=top_k_rerank,
-            max_queries=max_queries,
+            max_queries=max_queries_or_none,
             context_size=context_size,
             device=device,
             num_gpus=num_gpus,
-            prompt_template_path=prompt_template_path,
+            prompt_template_path=prompt_template_path_or_none,
             num_few_shot_examples=num_few_shot_examples,
-            few_shot_file=few_shot_file,
+            few_shot_file=few_shot_file_or_none,
             shuffle_candidates=shuffle_candidates,
             print_prompts_responses=print_prompts_responses,
             use_azure_openai=use_azure_openai,
             use_openrouter=use_openrouter,
-            base_url=base_url,
+            base_url=base_url_or_none,
             variable_passages=variable_passages,
             num_passes=num_passes,
             window_size=window_size,
