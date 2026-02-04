@@ -3,17 +3,6 @@ SweRank reranker for GitHub issue code localization.
 
 Usage:
     python rerank_swerank.py <input_file> [output_dir]
-
-Examples:
-    # SWE-Bench-Lite on GPU 2
-    python src/rank_llm/demo/rerank_swerank.py \
-      /store2/scratch/ura/aaryans/retrieval_data/retrieve_results_swerank_swe-bench-lite_s5_top100.jsonl \
-      swerank_results 2
-
-    # LocBench
-    python src/rank_llm/demo/rerank_swerank.py \
-      /store2/scratch/ura/aaryans/retrieval_data/retrieve_results_swerank_loc-bench_top100.jsonl \
-      results/locbench
 """
 
 import os
