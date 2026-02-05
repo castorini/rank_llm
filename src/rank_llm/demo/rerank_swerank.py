@@ -36,7 +36,7 @@ def main():
     TEMPLATES = files("rank_llm.rerank.prompt_templates")
     model_coordinator = RankListwiseOSLLM(
         model="Salesforce/SweRankLLM-Small",  # 8B params, or use SweRankLLM-Large (33B)
-        context_size=4096,
+        context_size=16_348,
         prompt_template_path=str(TEMPLATES / "swerank_github_issue_template.yaml"),
         window_size=20,
     )
