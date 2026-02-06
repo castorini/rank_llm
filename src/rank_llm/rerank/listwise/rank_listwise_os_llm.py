@@ -1,10 +1,12 @@
 import logging
 import os
 import random
+import re
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple
+from enum import Enum
 
 import torch
 import vllm
@@ -34,6 +36,11 @@ ALPH_START_IDX = ord("A") - 1
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
+class RerankType(Enum):
+    TEXT = "text"
+    CODE = "code"
+
+
 class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
@@ -58,6 +65,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         tensorrt_batched: bool = False,
         batch_size: int = 32,
         base_url: Optional[str] = None,
+        gpu_memory_utilization: float = 0.90,
+        rerank_type: RerankType = RerankType.TEXT,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -128,6 +137,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._use_logits = use_logits
         self._num_gpus = num_gpus
         self._base_url = base_url
+        self._gpu_memory_utilization = gpu_memory_utilization
+        self._rerank_type = rerank_type
 
         if self._device == "cuda":
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
@@ -169,7 +180,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     enforce_eager=False,
                     max_logprobs=30,
                     tensor_parallel_size=num_gpus,
-                    gpu_memory_utilization=0.90,
+                    gpu_memory_utilization=self._gpu_memory_utilization,
                     trust_remote_code=True,
                 )
             self._tokenizer = self._vllm_handler.get_tokenizer()
@@ -360,7 +371,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         else:
             token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
 
-        _output_token_estimate = len(self._tokenizer.encode(token_str)) - 1
+        _output_token_estimate = len(self._tokenizer.encode(token_str)) + 10
 
         if (
             self._output_token_estimate is None
@@ -371,6 +382,137 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         return _output_token_estimate
 
     def create_prompt(
+        self, result: Result, rank_start: int, rank_end: int
+    ) -> Tuple[str, int] | Tuple[List[Dict[str, str]], int]:
+        if self._rerank_type == RerankType.CODE:
+            return self._create_prompt_code(result, rank_start, rank_end)
+        else:
+            return self._create_prompt_text(result, rank_start, rank_end)
+
+    def _replace_number(self, s: str, use_alpha: bool) -> str:
+        """
+        Replace [identifier] with (identifier) in text to avoid confusion with ranking identifiers.
+        Matches SweRank behavior.
+        """
+        if use_alpha:
+            return re.sub(r'\[([A-z]+)\]', r'(\1)', s)
+        else:
+            return re.sub(r'\[(\d+)\]', r'(\1)', s)
+
+    def _create_prompt_code(
+        self, result: Result, rank_start: int, rank_end: int
+    ) -> Tuple[str, int] | Tuple[List[Dict[str, str]], int]:
+        """
+        Token-based prompt generation for code reranking - matches SweRank approach.
+        Uses tokenizer.tokenize() + convert_tokens_to_string() for truncation.
+        """
+        query = result.query.text
+        max_query_len = self.get_num_tokens(query)
+        num = rank_end - rank_start
+        max_doc_length = 1024
+        min_doc_length = 300
+
+        while True:
+            messages = []
+
+            # Add system message if supported
+            if self._system_message and self.template.get("system_message"):
+                messages.append({"role": "system", "content": self._system_message})
+
+            # Add few-shot examples
+            if self._num_few_shot_examples > 0 and self._examples:
+                fewshot_messages = self._inference_handler._generate_fewshot_prompt(
+                    num_examples=self._num_few_shot_examples,
+                    examples=self._examples,
+                )
+                messages.extend(fewshot_messages)
+
+            # Truncate query using tokenize/convert_tokens_to_string (SweRank approach)
+            query_tokens = self._tokenizer.tokenize(query)[:int(max_query_len)]
+            truncated_query = self._tokenizer.convert_tokens_to_string(query_tokens)
+
+            # Generate prefix using template
+            prefix, _ = self._inference_handler._generate_prefix_suffix(
+                num=num,
+                query=truncated_query,
+                rank_start=rank_start,
+                rank_end=rank_end,
+            )
+
+            # Build body
+            rank = 0
+            input_context = f"{prefix}\n"
+
+            for cand in result.candidates[rank_start:rank_end]:
+                rank += 1
+
+                # Extract content
+                doc = cand.doc
+                if isinstance(doc, dict):
+                    content = doc.get("content", "")
+                else:
+                    content = str(doc)
+
+                content = content.replace("Title: Content: ", "")
+
+                # Truncate content using tokenize/convert_tokens_to_string (SweRank approach)
+                tokenized_content = self._tokenizer.tokenize(content)
+                content_tokens = tokenized_content[:int(max_doc_length)]
+                truncated_content = self._tokenizer.convert_tokens_to_string(content_tokens)
+
+                identifier = chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
+                input_context += f"[{identifier}] {self._replace_number(truncated_content, self._use_alpha)}\n"
+
+            # Generate suffix using template
+            _, suffix = self._inference_handler._generate_prefix_suffix(
+                num=num,
+                query=truncated_query,
+                rank_start=rank_start,
+                rank_end=rank_end,
+            )
+            input_context += suffix
+
+            messages.append({"role": "user", "content": input_context})
+
+            # Handle system message for templates that don't support it
+            if self._system_message and not self.template.get("system_message"):
+                messages[0]["content"] = self._system_message + "\n " + messages[0]["content"]
+
+            # Calculate tokens
+            if self._base_url:
+                num_tokens = self.get_num_tokens(messages)
+            else:
+                prompt = self._tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True
+                )
+                prompt = fix_text(prompt)
+                num_tokens = self.get_num_tokens(prompt)
+
+            # Check if we fit within context
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(rank_end - rank_start):
+                break
+            else:
+                # SweRank truncation logic
+                prefix_len = len(self._tokenizer.encode(prefix))
+                if (len(query_tokens) + prefix_len) > (self.max_tokens() - min_doc_length * (rank_end - rank_start) - self.num_output_tokens(rank_end - rank_start)):
+                    # Query truncation to ensure min doc length for each candidate
+                    offset = num_tokens - (self.max_tokens() - self.num_output_tokens(rank_end - rank_start))
+                    max_query_len -= (offset // 2 + 1)
+                else:
+                    # Document truncation
+                    max_doc_length -= max(
+                        1,
+                        (num_tokens - self.max_tokens() + self.num_output_tokens(rank_end - rank_start))
+                        // ((rank_end - rank_start) * 4),
+                    )
+
+        if self._base_url:
+            return messages, self.get_num_tokens(messages)
+        return prompt, self.get_num_tokens(prompt)
+
+    def _create_prompt_text(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int] | Tuple[List[Dict[str, str]], int]:
         max_length = 300 * (20 / (rank_end - rank_start))
