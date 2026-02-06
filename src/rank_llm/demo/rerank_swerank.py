@@ -30,10 +30,11 @@ def get_local_id_map(datasets_dir: str, dataset_prefix: str):
     """Build mapping: Query Text -> Instance ID from local BEIR datasets."""
     id_map = {}
     pattern = os.path.join(
-        datasets_dir, f"{dataset_prefix}-function_*", "queries.jsonl")
+        datasets_dir, f"{dataset_prefix}-function_*", "queries.jsonl"
+    )
 
     for qfile in glob.glob(pattern):
-        with open(qfile, 'r') as f:
+        with open(qfile, "r") as f:
             for line in f:
                 data = json.loads(line)
                 text = "".join(data.get("text", "").split()).lower()
@@ -50,17 +51,24 @@ def write_swerank_format(results, output_file: Path, id_map):
             query_text = "".join(result.query.text.split()).lower()
             instance_id = id_map.get(query_text, str(result.query.qid))
             docs = [cand.docid for cand in result.candidates]
-            f.write(json.dumps(
-                {"instance_id": instance_id, "docs": docs}) + "\n")
+            f.write(json.dumps({"instance_id": instance_id, "docs": docs}) + "\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="loc-bench",
-                        choices=["loc-bench", "swe-bench-lite"])
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="loc-bench",
+        choices=["loc-bench", "swe-bench-lite"],
+    )
     parser.add_argument("--output_dir", type=str, default="swerank_results")
-    parser.add_argument("--gpu_memory", type=float, default=0.55,
-                        help="GPU memory utilization fraction (0.0 to 1.0)")
+    parser.add_argument(
+        "--gpu_memory",
+        type=float,
+        default=0.55,
+        help="GPU memory utilization fraction (0.0 to 1.0)",
+    )
     args = parser.parse_args()
 
     input_file = f"/store2/scratch/ura/aaryans/retrieval_data/retrieve_results_swerank_{args.dataset}_top100.jsonl"
@@ -68,7 +76,6 @@ if __name__ == "__main__":
     dataset_prefix = args.dataset
     gpu_memory = args.gpu_memory
 
-    # Select GPU that fits the REQUESTED utilization
     os.environ["CUDA_VISIBLE_DEVICES"] = find_best_gpu(gpu_memory)
 
     print(f"Dataset: {args.dataset}")
@@ -85,23 +92,22 @@ if __name__ == "__main__":
     model_coordinator = RankListwiseOSLLM(
         model=MODEL,
         context_size=CONTEXT_SIZE,
-        prompt_template_path=str(
-            templates / "swerank_github_issue_template.yaml"),
+        prompt_template_path=str(templates / "swerank_github_issue_template.yaml"),
         window_size=WINDOW_SIZE,
         stride=STRIDE,
         gpu_memory_utilization=gpu_memory,
         batch_size=1,  # loc-bench has varying candidate counts per query
     )
     reranker = Reranker(model_coordinator)
-    rerank_results = reranker.rerank_batch(
-        requests, populate_invocations_history=True)
+    rerank_results = reranker.rerank_batch(requests, populate_invocations_history=True)
 
     # Save results
     writer = DataWriter(rerank_results)
     writer.write_in_jsonl_format(output_path / "rerank_results.jsonl")
     writer.write_in_trec_eval_format(output_path / "rerank_results.txt")
     writer.write_inference_invocations_history(
-        output_path / "inference_invocations_history.json")
+        output_path / "inference_invocations_history.json"
+    )
 
     # Write SweRank format
     id_map = get_local_id_map(DATASETS_DIR, dataset_prefix)
