@@ -90,7 +90,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
     ) -> str:
         query = self._replace_number(result.query.text)
         doc_raw = self._convert_doc_to_prompt_content(
-            result.candidates[index].doc, max_length=max_doc_tokens
+            result.candidates[index], max_length=max_doc_tokens
         )
         doc_tokens = tokenizer.encode(
             doc_raw, truncation=True, max_length=max_doc_tokens

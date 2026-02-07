@@ -17,6 +17,14 @@ class Candidate:
     score: float
     doc: Dict[str, Any]
 
+    def get_content(self) -> str:
+        if isinstance(self.doc, dict):
+            for key in ("text", "segment", "contents", "content", "body", "passage"):
+                if key in self.doc:
+                    return self.doc[key]
+            return ""
+        return str(self.doc)
+
 
 @dataclass
 class Request:
