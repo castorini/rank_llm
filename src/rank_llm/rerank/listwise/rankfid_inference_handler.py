@@ -82,7 +82,7 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
         rank = 0
         for cand in result.candidates[rank_start:rank_end]:
             rank += 1
-            passage = self._convert_doc_to_prompt_content(cand.doc, max_tokens)
+            passage = self._convert_doc_to_prompt_content(cand, max_tokens)
 
             fmt_values = {"query": query, "passage": passage, "index": rank}
             single_text = self._format_template(

@@ -102,7 +102,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         for cand in result.candidates[rank_start:rank_end]:
             rank += 1
 
-            content = self._convert_doc_to_prompt_content(cand.doc, max_length)
+            content = self._convert_doc_to_prompt_content(cand, max_length)
             identifier = chr(self.ALPH_START_IDX + rank) if use_alpha else str(rank)
             score = f"{cand.score:.3f}"
 

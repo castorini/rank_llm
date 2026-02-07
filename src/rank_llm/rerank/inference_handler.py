@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from ftfy import fix_text
 
-from rank_llm.data import Result, TemplateSectionConfig
+from rank_llm.data import Candidate, Result, TemplateSectionConfig
 
 
 class BaseInferenceHandler(ABC):
@@ -95,22 +95,11 @@ class BaseInferenceHandler(ABC):
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
     def _convert_doc_to_prompt_content(
-        self, doc: Dict[str, Any], max_length: int
+        self, candidate: Candidate, max_length: int
     ) -> str:
-        if "text" in doc:
-            content = doc["text"]
-        elif "segment" in doc:
-            content = doc["segment"]
-        elif "contents" in doc:
-            content = doc["contents"]
-        elif "content" in doc:
-            content = doc["content"]
-        elif "body" in doc:
-            content = doc["body"]
-        else:
-            content = doc["passage"]
-        if "title" in doc and doc["title"]:
-            content = "Title: " + doc["title"] + " " + "Content: " + content
+        content = candidate.get_content()
+        if "title" in candidate.doc and candidate.doc["title"]:
+            content = "Title: " + candidate.doc["title"] + " " + "Content: " + content
         content = content.strip()
         content = fix_text(content)
         # For Japanese should cut by character: content = content[:int(max_length)]
