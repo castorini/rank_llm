@@ -11,10 +11,16 @@ import os
 import glob
 from pathlib import Path
 import argparse
+from enum import Enum
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RerankType
 from rank_llm.utils import find_best_gpu
 
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
+
+
+class Dataset(str, Enum):
+    LOC_BENCH = "loc-bench"
+    SWE_BENCH_LITE = "swe-bench-lite"
 
 
 DATASETS_DIR = "/home/aaryans/SweRank/datasets_local/datasets"
@@ -59,9 +65,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
-        type=str,
-        default="loc-bench",
-        choices=["loc-bench", "swe-bench-lite"],
+        type=Dataset,
+        default=Dataset.LOC_BENCH,
+        choices=list(Dataset),
     )
     parser.add_argument("--output_dir", type=str, default="swerank_results")
     parser.add_argument(
@@ -90,6 +96,9 @@ if __name__ == "__main__":
 
     # Rerank
     templates = files("rank_llm.rerank.prompt_templates")
+    extra_kwargs = {}
+    if args.dataset == Dataset.LOC_BENCH:
+        extra_kwargs["batch_size"] = 1
     model_coordinator = RankListwiseOSLLM(
         model=MODEL,
         context_size=CONTEXT_SIZE,
@@ -98,7 +107,7 @@ if __name__ == "__main__":
         stride=STRIDE,
         gpu_memory_utilization=gpu_memory,
         rerank_type=RerankType.CODE,
-        # batch_size=1,  # loc-bench has varying candidate counts per query
+        **extra_kwargs
     )
     reranker = Reranker(model_coordinator)
     rerank_results = reranker.rerank_batch(requests, populate_invocations_history=True)
