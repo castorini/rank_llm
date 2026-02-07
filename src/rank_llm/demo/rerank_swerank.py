@@ -11,6 +11,7 @@ import os
 import glob
 from pathlib import Path
 import argparse
+from rank_llm.rerank.listwise.rank_listwise_os_llm import RerankType
 from rank_llm.utils import find_best_gpu
 
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
@@ -96,7 +97,8 @@ if __name__ == "__main__":
         window_size=WINDOW_SIZE,
         stride=STRIDE,
         gpu_memory_utilization=gpu_memory,
-        batch_size=1,  # loc-bench has varying candidate counts per query
+        rerank_type=RerankType.CODE,
+        # batch_size=1,  # loc-bench has varying candidate counts per query
     )
     reranker = Reranker(model_coordinator)
     rerank_results = reranker.rerank_batch(requests, populate_invocations_history=True)
