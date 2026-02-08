@@ -84,7 +84,7 @@ def register_rankllm_tools(mcp: FastMCP):
             print_prompts_responses: whether to print prompts and responses.
             use_azure_openai: If True, use Azure OpenAI. Requires env var to be set: `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`.
             use_openrouter: If True, use OpenRouter. Requires env var to be set: `OPENROUTER_API_KEY`
-            base_url: If using a non-OpenAI model, pass your base URL and provide API key. Requires env var to be set: `OPENAI_API_KEY`
+            base_url: If not using OpenAI's endpoint, pass your base URL and provide API key. Requires env var to be set: `OPENAI_API_KEY`
             variable_passages: whether the model can account for variable number of passages in input.
             num_passes: number of passes to run the model
             window_size: window size for the sliding window approach.
