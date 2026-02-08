@@ -189,22 +189,22 @@ if __name__ == "__main__":
     parser.add_argument(
         "--qrels_file",
         type=str,
-        help="Only used with --requests_file; when present the Trec eval will be executed using this qrels file",
+        help="Optional. With --dataset: override default qrels. With --requests_file: qrels file for Trec eval.",
     )
     parser.add_argument(
         "--output_jsonl_file",
         type=str,
-        help="Only used with --requests_file; when present, the ranked results will be saved in this JSONL file.",
+        help="Optional. With --dataset: override computed JSONL output path. With --requests_file: path where ranked results are saved.",
     )
     parser.add_argument(
         "--output_trec_file",
         type=str,
-        help="Only used with --requests_file; when present, the ranked results will be saved in this txt file in trec format.",
+        help="Optional. With --dataset: override computed TREC output path. With --requests_file: path where ranked results are saved (trec format).",
     )
     parser.add_argument(
         "--invocations_history_file",
         type=str,
-        help="Only used with --requests_file and --populate_invocations_history; when present, the LLM invocations history (prompts, completions, and input/output token counts) will be stored in this file.",
+        help="Optional. With --dataset: override computed invocations history path. With --requests_file and --populate_invocations_history: required path for LLM invocations history.",
     )
     parser.add_argument(
         "--num_gpus", type=int, default=1, help="the number of GPUs to use"
