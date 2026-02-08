@@ -104,6 +104,9 @@ class Reranker:
         inference_invocations_history_dirname: str = "inference_invocations_history",
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
+        output_trec_file: Optional[str] = None,
+        output_jsonl_file: Optional[str] = None,
+        invocations_history_file: Optional[str] = None,
         **kwargs,
     ) -> str:
         """
@@ -121,13 +124,16 @@ class Reranker:
             window_size (int, optional): The window size used in reranking. Defaults to None.
             dataset_name (str, optional): The name of the dataset used. Defaults to None.
             sglang_batched (bool, optional): Indicates if SGLang inference backend used. Defaults to False.
+            output_trec_file (str, optional): If provided, write TREC output to this path; else use computed name.
+            output_jsonl_file (str, optional): If provided, write JSONL output to this path; else use computed name.
+            invocations_history_file (str, optional): If provided, write invocations history to this path; else use computed name.
 
         Returns:
             str: The file name of the saved reranked results in TREC Eval format.
 
         Note:
-            The function creates directories and files as needed. The file names are constructed based on the
-            provided parameters and the current timestamp to ensure uniqueness so there are no collisions.
+            The function creates directories and files as needed. When output paths are not passed,
+            file names are constructed from parameters and timestamp to ensure uniqueness.
         """
         pass_ct: Optional[int] = kwargs.get("pass_ct", None)
         window_size: Optional[int] = kwargs.get("window_size", None)
@@ -150,25 +156,44 @@ class Reranker:
             # VLLM is the fallback right now
             name += "_vllm"
 
-        # write rerank results
         writer = DataWriter(results)
-        Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
-            parents=True, exist_ok=True
-        )
-        result_file_name = (
-            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
-        )
+        # Ensure default dirs exist when using any computed path
+        if not output_trec_file or not output_jsonl_file:
+            Path(f"{rerank_results_dirname}/{retrieval_method_name}/").mkdir(
+                parents=True, exist_ok=True
+            )
+        if not invocations_history_file:
+            Path(
+                f"{inference_invocations_history_dirname}/{retrieval_method_name}/"
+            ).mkdir(parents=True, exist_ok=True)
+
+        # TREC output: use provided path or computed default
+        if output_trec_file:
+            Path(output_trec_file).parent.mkdir(parents=True, exist_ok=True)
+            result_file_name = output_trec_file
+        else:
+            result_file_name = (
+                f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
+            )
         writer.write_in_trec_eval_format(result_file_name)
-        writer.write_in_jsonl_format(
-            f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
-        )
-        # Write the history of inference invocations
-        Path(f"{inference_invocations_history_dirname}/{retrieval_method_name}/").mkdir(
-            parents=True, exist_ok=True
-        )
-        writer.write_inference_invocations_history(
-            f"{inference_invocations_history_dirname}/{retrieval_method_name}/{name}.json"
-        )
+
+        # JSONL output: use provided path or computed default
+        if output_jsonl_file:
+            Path(output_jsonl_file).parent.mkdir(parents=True, exist_ok=True)
+            writer.write_in_jsonl_format(output_jsonl_file)
+        else:
+            writer.write_in_jsonl_format(
+                f"{rerank_results_dirname}/{retrieval_method_name}/{name}.jsonl"
+            )
+
+        # Invocations history: use provided path or computed default
+        if invocations_history_file:
+            Path(invocations_history_file).parent.mkdir(parents=True, exist_ok=True)
+            writer.write_inference_invocations_history(invocations_history_file)
+        else:
+            writer.write_inference_invocations_history(
+                f"{inference_invocations_history_dirname}/{retrieval_method_name}/{name}.json"
+            )
         return result_file_name
 
     def get_model_coordinator(self) -> RankLLM:
