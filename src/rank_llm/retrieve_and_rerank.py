@@ -114,20 +114,28 @@ def retrieve_and_rerank(
             dataset_name=dataset,
             sglang_batched=kwargs.get("sglang_batched", False),
             tensorrt_batched=kwargs.get("tensorrt_batched", False),
+            output_trec_file=kwargs.get("output_trec_file") or None,
+            output_jsonl_file=kwargs.get("output_jsonl_file") or None,
+            invocations_history_file=kwargs.get("invocations_history_file") or None,
+        )
+        qrels_for_eval = (kwargs.get("qrels_file") or "").strip() or (
+            TOPICS[dataset] if dataset in TOPICS else None
         )
         if (
-            dataset in TOPICS
+            qrels_for_eval
             and dataset not in ["news"]
-            and TOPICS[dataset] not in ["news"]
+            and (dataset not in TOPICS or TOPICS[dataset] not in ["news"])
         ):
             from rank_llm.evaluation.trec_eval import EvalFunction
 
             print("Evaluating:")
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", TOPICS[dataset], file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", qrels_for_eval, file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", qrels_for_eval, file_name])
+            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", qrels_for_eval, file_name])
         else:
-            print(f"Skipping evaluation as {dataset} is not in TOPICS.")
+            print(
+                f"Skipping evaluation as {dataset} is not in TOPICS and no qrels file was provided."
+            )
     elif (
         retrieval_mode == RetrievalMode.CACHED_FILE
         and reranker.get_model_coordinator() is not None
