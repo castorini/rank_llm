@@ -194,17 +194,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_jsonl_file",
         type=str,
-        help="Optional. With --dataset: override computed JSONL output path. With --requests_file: path where ranked results are saved.",
+        help="Optional. With --dataset: override computed JSONL output path. With --requests_file: required path where ranked results are saved.",
     )
     parser.add_argument(
         "--output_trec_file",
         type=str,
-        help="Optional. With --dataset: override computed TREC output path. With --requests_file: path where ranked results are saved (trec format).",
+        help="Optional. With --dataset: override computed TREC output path. With --requests_file: required path where ranked results are saved (trec format).",
     )
     parser.add_argument(
         "--invocations_history_file",
         type=str,
-        help="Optional. With --dataset: override computed invocations history path. With --requests_file and --populate_invocations_history: required path for LLM invocations history.",
+        help="Optional. With --dataset: override computed invocations history path. With --requests_file and --populate_invocations_history: required path for LLM invocations history (prompts, completions, and input/output token counts).",
     )
     parser.add_argument(
         "--num_gpus", type=int, default=1, help="the number of GPUs to use"
