@@ -8,8 +8,6 @@ trim_schema failing on anyOf entries that lack a "type" key.
 
 import torch
 from fastmcp import FastMCP
-from pyserini.server.mcp.tools import register_tools
-from pyserini.server.search_controller import get_controller
 
 from rank_llm.data import Result
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
@@ -19,54 +17,9 @@ from rank_llm.retrieve_and_rerank import (
 
 
 def register_rankllm_tools(mcp: FastMCP):
-    """Register all tools with the MCP server."""
+    """Register RankLLM tools with the MCP server."""
 
-    register_tools(mcp, get_controller())
-
-    @mcp.tool(
-        name="retrieve_and_rerank",
-        description=f"""
-        Rerank retrieval results using the specified model and parameters.
-
-        Args:
-            model_path: Path to the model. If `use_azure_ai`, pass your deployment name.
-            query: Query text to get search results for.
-            batch_size: Size of each batch for batched inference.
-            dataset: Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits; must be used when --requests_file is not specified
-            retrieval_mode: Mode of retrieval, either {RetrievalMode.DATASET} or {RetrievalMode.CACHED_FILE}.
-            requests_file: Path to a JSONL file containing requests; must be used when --dataset is not specified.
-            qrels_file: Only used with --requests_file; when present the Trec eval will be executed using this qrels file
-            output_jsonl_file: Only used with --requests_file; when present, the ranked results will be saved in this JSONL file.
-            output_trec_file: Only used with --requests_file; when present, the ranked results will be saved in this txt file in trec format.
-            invocations_history_file: Only used with --requests_file and --populate_invocations_history; when present, the LLM invocations history (prompts, completions, and input/output token counts) will be stored in this file.
-            retrieval_method: Required when dataset is provided; use "unspecified" when using requests_file. One of: {[m.value for m in RetrievalMethod]}.
-            top_k_candidates: the number of top candidates to rerank
-            top_k_rerank: the number of top candidates to return from reranking (-1 means same as top_k_candidates)
-            max_queries: max number of queries to process (-1 means no limit)
-            context_size: context size used for model
-            num_gpus: the number of GPUs to use
-            prompt_template_path: yaml file path for the prompt template
-            num_few_shot_examples: number of in context examples to provide
-            few_shot_file: path to JSONL file containing few-shot examples.
-            shuffle_candidates: whether to shuffle the candidates before reranking.
-            print_prompts_responses: whether to print prompts and responses.
-            use_azure_openai: If True, use Azure OpenAI. Requires env var to be set: `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`.
-            use_openrouter: If True, use OpenRouter. Requires env var to be set: `OPENROUTER_API_KEY`
-            base_url: If using a non-OpenAI model, pass your base URL and provide API key. Requires env var to be set: `OPENAI_API_KEY`
-            variable_passages: whether the model can account for variable number of passages in input.
-            num_passes: number of passes to run the model
-            window_size: window size for the sliding window approach.
-            stride: stride for the sliding window approach.
-            system_message: the system message used in prompts.
-            populate_invocations_history: write a file with the prompts and raw responses from LLM.
-            is_thinking: enables thinking mode which increases output token budget to account for the full thinking trace + response.
-            reasoning_token_budget: number of output token budget for thinking traces on reasoning models.
-            use_logits: whether to rerank using the logits of the first identifier only.
-            use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
-            sglang_batched: whether to run the model in batches using sglang backend.
-            tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
-        """,
-    )
+    @mcp.tool()
     def retrieve_and_rerank(
         model_path: str,
         query: str = "",
@@ -104,6 +57,47 @@ def register_rankllm_tools(mcp: FastMCP):
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
     ) -> list[Result]:
+        f"""
+        Rerank retrieval results using the specified model and parameters.
+
+        Args:
+            model_path: Path to the model. If `use_azure_ai`, pass your deployment name.
+            query: Query text to get search results for.
+            batch_size: Size of each batch for batched inference.
+            dataset: Should be one of 1- dataset name, must be in {TOPICS.keys()},  2- a list of inline documents  3- a list of inline hits; must be used when --requests_file is not specified
+            retrieval_mode: Mode of retrieval, either {RetrievalMode.DATASET} or {RetrievalMode.CACHED_FILE}.
+            requests_file: Path to a JSONL file containing requests; must be used when --dataset is not specified.
+            qrels_file: Optional. With --dataset: override default qrels. With --requests_file: qrels file for Trec eval
+            output_jsonl_file: Optional. With --dataset: override computed JSONL output path. With --requests_file: required path where ranked results are saved
+            output_trec_file:Optional. With --dataset: override computed TREC output path. With --requests_file: required path where ranked results are saved (trec format)
+            invocations_history_file: Optional. With --dataset: override computed invocations history path. With --requests_file and --populate_invocations_history: required path for LLM invocations history (prompts, completions, and input/output token counts)
+            retrieval_method: Required when dataset is provided; use "unspecified" when using requests_file. One of: {[m.value for m in RetrievalMethod]}.
+            top_k_candidates: the number of top candidates to rerank
+            top_k_rerank: the number of top candidates to return from reranking (-1 means same as top_k_candidates)
+            max_queries: max number of queries to process (-1 means no limit)
+            context_size: context size used for model
+            num_gpus: the number of GPUs to use
+            prompt_template_path: yaml file path for the prompt template
+            num_few_shot_examples: number of in context examples to provide
+            few_shot_file: path to JSONL file containing few-shot examples.
+            shuffle_candidates: whether to shuffle the candidates before reranking.
+            print_prompts_responses: whether to print prompts and responses.
+            use_azure_openai: If True, use Azure OpenAI. Requires env var to be set: `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`.
+            use_openrouter: If True, use OpenRouter. Requires env var to be set: `OPENROUTER_API_KEY`
+            base_url: If using a non-OpenAI model, pass your base URL and provide API key. Requires env var to be set: `OPENAI_API_KEY`
+            variable_passages: whether the model can account for variable number of passages in input.
+            num_passes: number of passes to run the model
+            window_size: window size for the sliding window approach.
+            stride: stride for the sliding window approach.
+            system_message: the system message used in prompts.
+            populate_invocations_history: write a file with the prompts and raw responses from LLM.
+            is_thinking: enables thinking mode which increases output token budget to account for the full thinking trace + response.
+            reasoning_token_budget: number of output token budget for thinking traces on reasoning models.
+            use_logits: whether to rerank using the logits of the first identifier only.
+            use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
+            sglang_batched: whether to run the model in batches using sglang backend.
+            tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
+        """
         top_k_rerank = top_k_candidates if top_k_rerank == -1 else top_k_rerank
         device = "cuda" if torch.cuda.is_available() else "cpu"
         retrieval_mode = RetrievalMode.DATASET if dataset else RetrievalMode.CACHED_FILE
