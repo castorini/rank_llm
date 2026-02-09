@@ -23,38 +23,8 @@ from rank_llm.retrieve_and_rerank import (
 def register_rankllm_tools(mcp: FastMCP):
     """Register RankLLM tools with the MCP server."""
 
-    @mcp.tool()
-    def rerank(
-        model_path: str,
-        query_text: str,
-        candidates: list[dict[str, Any]],
-        query_id: str | int = "",
-        batch_size: int = 32,
-        top_k_rerank: int = -1,
-        context_size: int = 4096,
-        num_gpus: int = 1,
-        prompt_template_path: str = "",
-        num_few_shot_examples: int = 0,
-        few_shot_file: str = "",
-        shuffle_candidates: bool = False,
-        print_prompts_responses: bool = False,
-        use_azure_openai: bool = False,
-        use_openrouter: bool = False,
-        base_url: str = "",
-        variable_passages: bool = False,
-        num_passes: int = 1,
-        window_size: int = 20,
-        stride: int = 10,
-        system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-        populate_invocations_history: bool = False,
-        is_thinking: bool = False,
-        reasoning_token_budget: int = 10000,
-        use_logits: bool = False,
-        use_alpha: bool = False,
-        sglang_batched: bool = False,
-        tensorrt_batched: bool = False,
-    ) -> list[Result]:
-        f"""
+    @mcp.tool(
+        description=f"""
         Rerank retrieval results using the specified model and parameters.
         Use this only when you need to rerank a small number of given candidates.
 
@@ -88,6 +58,37 @@ def register_rankllm_tools(mcp: FastMCP):
             sglang_batched: whether to run the model in batches using sglang backend.
             tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
         """
+    )
+    def rerank(
+        model_path: str,
+        query_text: str,
+        candidates: list[dict[str, Any]],
+        query_id: str | int = "",
+        batch_size: int = 32,
+        top_k_rerank: int = -1,
+        context_size: int = 4096,
+        num_gpus: int = 1,
+        prompt_template_path: str = "",
+        num_few_shot_examples: int = 0,
+        few_shot_file: str = "",
+        shuffle_candidates: bool = False,
+        print_prompts_responses: bool = False,
+        use_azure_openai: bool = False,
+        use_openrouter: bool = False,
+        base_url: str = "",
+        variable_passages: bool = False,
+        num_passes: int = 1,
+        window_size: int = 20,
+        stride: int = 10,
+        system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        populate_invocations_history: bool = False,
+        is_thinking: bool = False,
+        reasoning_token_budget: int = 10000,
+        use_logits: bool = False,
+        use_alpha: bool = False,
+        sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
+    ) -> list[Result]:
         kwargs = locals().copy()
         del kwargs["model_path"]
 
@@ -163,45 +164,8 @@ def register_rankllm_tools(mcp: FastMCP):
 
         return rerank_results
 
-    @mcp.tool()
-    def retrieve_and_rerank(
-        model_path: str,
-        query: str = "",
-        batch_size: int = 32,
-        dataset: str = "",
-        requests_file: str = "",
-        qrels_file: str = "",
-        output_jsonl_file: str = "",
-        output_trec_file: str = "",
-        invocations_history_file: str = "",
-        retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
-        top_k_candidates: int = 100,
-        top_k_rerank: int = -1,
-        max_queries: int = -1,
-        context_size: int = 4096,
-        num_gpus: int = 1,
-        prompt_template_path: str = "",
-        num_few_shot_examples: int = 0,
-        few_shot_file: str = "",
-        shuffle_candidates: bool = False,
-        print_prompts_responses: bool = False,
-        use_azure_openai: bool = False,
-        use_openrouter: bool = False,
-        base_url: str = "",
-        variable_passages: bool = False,
-        num_passes: int = 1,
-        window_size: int = 20,
-        stride: int = 10,
-        system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-        populate_invocations_history: bool = False,
-        is_thinking: bool = False,
-        reasoning_token_budget: int = 10000,
-        use_logits: bool = False,
-        use_alpha: bool = False,
-        sglang_batched: bool = False,
-        tensorrt_batched: bool = False,
-    ) -> list[Result]:
-        f"""
+    @mcp.tool(
+        description=f"""
         Rerank retrieval results using the specified model and parameters.
         Use this most of the time to conserve context window.
 
@@ -243,6 +207,44 @@ def register_rankllm_tools(mcp: FastMCP):
             sglang_batched: whether to run the model in batches using sglang backend.
             tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
         """
+    )
+    def retrieve_and_rerank(
+        model_path: str,
+        query: str = "",
+        batch_size: int = 32,
+        dataset: str = "",
+        requests_file: str = "",
+        qrels_file: str = "",
+        output_jsonl_file: str = "",
+        output_trec_file: str = "",
+        invocations_history_file: str = "",
+        retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
+        top_k_candidates: int = 100,
+        top_k_rerank: int = -1,
+        max_queries: int = -1,
+        context_size: int = 4096,
+        num_gpus: int = 1,
+        prompt_template_path: str = "",
+        num_few_shot_examples: int = 0,
+        few_shot_file: str = "",
+        shuffle_candidates: bool = False,
+        print_prompts_responses: bool = False,
+        use_azure_openai: bool = False,
+        use_openrouter: bool = False,
+        base_url: str = "",
+        variable_passages: bool = False,
+        num_passes: int = 1,
+        window_size: int = 20,
+        stride: int = 10,
+        system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        populate_invocations_history: bool = False,
+        is_thinking: bool = False,
+        reasoning_token_budget: int = 10000,
+        use_logits: bool = False,
+        use_alpha: bool = False,
+        sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
+    ) -> list[Result]:
         top_k_rerank = top_k_candidates if top_k_rerank == -1 else top_k_rerank
         device = "cuda" if torch.cuda.is_available() else "cpu"
         retrieval_mode = RetrievalMode.DATASET if dataset else RetrievalMode.CACHED_FILE
