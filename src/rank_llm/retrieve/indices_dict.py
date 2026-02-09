@@ -1,3 +1,5 @@
+from pyserini.prebuilt_index_info import IMPACT_INDEX_INFO, TF_INDEX_INFO
+
 INDICES = {
     "bm25": {
         "dl19": "msmarco-v1-passage",
@@ -123,3 +125,11 @@ INDICES = {
         "signal": "",
     },
 }
+
+# Extend bm25 with any prebuilt index from pyserini (module runs once on import, so INDICES is always this version)
+for index_name in TF_INDEX_INFO:
+    INDICES["bm25"][index_name] = index_name
+
+for index_name in IMPACT_INDEX_INFO:
+    if "splade-pp-ed" in index_name:
+        INDICES["SPLADE++_EnsembleDistil_ONNX"][index_name] = index_name

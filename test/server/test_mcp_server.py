@@ -26,6 +26,11 @@ class TestMCPServer(unittest.TestCase):
     def setUp(self):
         self.rank_results_file = f"ranked_results_mcp_test.jsonl"
         self.rank_results_trec_file = f"ranked_results_mcp_test.trec"
+        # Use vLLM legacy (V0) engine to avoid V1's 1024-sequence warmup OOM. Omit or set
+        # VLLM_USE_V1=1 to use V1 when you have enough GPU memory.
+        os.environ.setdefault("VLLM_USE_V1", "0")
+        # Cap Java heap so Pyserini/Anserini do not use all system RAM.
+        os.environ.setdefault("JAVA_OPTS", "-Xmx2g")
         self._devnull = open(os.devnull, "w")
         self._saved_stdout = sys.stdout
         self._saved_stderr = sys.stderr
@@ -51,16 +56,14 @@ class TestMCPServer(unittest.TestCase):
                 return await client.call_tool(name, arguments)
 
     def test_01_retrieve_and_rerank_tool(self):
-        # Cap Java heap so Pyserini/Anserini do not use all system RAM (GPU is fine).
-        os.environ.setdefault("JAVA_OPTS", "-Xmx2g")
-        os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
+        os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")
         response = self._run_async(
             self._call_tool(
                 "retrieve_and_rerank",
                 {
                     "model_path": "Qwen/Qwen3-0.6B",
                     "query": "cats",
-                    "dataset": "nfc",
+                    "dataset": "beir-v1.0.0-nfcorpus.flat",
                     "output_jsonl_file": self.rank_results_file,
                     "output_trec_file": self.rank_results_trec_file,
                     "retrieval_method": RetrievalMethod.BM25,
@@ -111,4 +114,4 @@ class TestMCPServer(unittest.TestCase):
         )
         self.assertFalse(response.is_error, msg=getattr(response, "content", response))
         self.assertIsNotNone(response.content)
-        os.remove(self.rank_results_trec_file)
+        os.remove(self.rank_results_file)
