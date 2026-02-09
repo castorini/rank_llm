@@ -10,6 +10,7 @@ from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
     TOPICS,
+    PyseriniRetriever,
     RetrievalMethod,
     RetrievalMode,
     Retriever,
@@ -121,8 +122,10 @@ def retrieve_and_rerank(
         qrels_for_eval = (kwargs.get("qrels_file") or "").strip() or (
             TOPICS[dataset] if dataset in TOPICS else None
         )
+        # Skip evaluation for single supplied query: qrels are for dataset topics, not ad-hoc queries
         if (
             qrels_for_eval
+            and not query
             and dataset not in ["news"]
             and (dataset not in TOPICS or TOPICS[dataset] not in ["news"])
         ):
@@ -132,10 +135,12 @@ def retrieve_and_rerank(
             EvalFunction.eval(["-c", "-m", "ndcg_cut.1", qrels_for_eval, file_name])
             EvalFunction.eval(["-c", "-m", "ndcg_cut.5", qrels_for_eval, file_name])
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", qrels_for_eval, file_name])
-        else:
+        elif not query:
             print(
                 f"Skipping evaluation as {dataset} is not in TOPICS and no qrels file was provided."
             )
+        else:
+            print("Skipping evaluation for single ad-hoc query (no qrels).")
     elif (
         retrieval_mode == RetrievalMode.CACHED_FILE
         and reranker.get_model_coordinator() is not None
@@ -253,6 +258,16 @@ def retrieve(
                         host=host,
                     )
                 )
+        elif query:
+            # Single supplied query: run retrieval for this query against the dataset index
+            if not isinstance(dataset, str):
+                raise ValueError(
+                    "When providing a query, dataset must be a single dataset name."
+                )
+            pyserini = PyseriniRetriever(dataset, retrieval_method)
+            requests = pyserini.retrieve_for_query_text(
+                query, k=top_k_retrieve, qid=qid
+            )
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,

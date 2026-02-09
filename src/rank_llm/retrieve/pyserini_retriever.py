@@ -329,6 +329,26 @@ class PyseriniRetriever:
                 Candidate(docid=hit.docid, score=hit.score, doc=content)
             )
 
+    def retrieve_for_query_text(
+        self, query_text: str, k: int = 100, qid=1
+    ) -> List[Request]:
+        """
+        Retrieves documents for a single query string against the configured index.
+        Use this when the query is supplied directly (e.g. ad-hoc search) rather than
+        from the dataset topics.
+
+        Args:
+            query_text: The query string to search for.
+            k: The number of documents to retrieve. Defaults to 100.
+            qid: Query ID for the returned request. Defaults to 1.
+
+        Returns:
+            List of one Request with the query and retrieved candidates.
+        """
+        ranks: List[Request] = []
+        self._retrieve_query(query_text, ranks, k, qid)
+        return ranks
+
     def retrieve(self, k=100, qid=None) -> List[Request]:
         """
         Retrieves documents for each query, specified by query id `qid`, in the configured topics.
