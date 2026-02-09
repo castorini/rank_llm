@@ -6,10 +6,14 @@ the generated JSON Schema has a single "type" per property. This avoids vLLM's
 trim_schema failing on anyOf entries that lack a "type" key.
 """
 
+import copy
+from typing import Any
+
 import torch
 from fastmcp import FastMCP
 
-from rank_llm.data import Result
+from rank_llm.data import Candidate, Query, Request, Result
+from rank_llm.rerank import IdentityReranker, Reranker
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import (
     retrieve_and_rerank as retrieve_and_rerank_function,
@@ -18,6 +22,146 @@ from rank_llm.retrieve_and_rerank import (
 
 def register_rankllm_tools(mcp: FastMCP):
     """Register RankLLM tools with the MCP server."""
+
+    @mcp.tool()
+    def rerank(
+        model_path: str,
+        query_text: str,
+        candidates: list[dict[str, Any]],
+        query_id: str | int = "",
+        batch_size: int = 32,
+        top_k_rerank: int = -1,
+        context_size: int = 4096,
+        num_gpus: int = 1,
+        prompt_template_path: str = "",
+        num_few_shot_examples: int = 0,
+        few_shot_file: str = "",
+        shuffle_candidates: bool = False,
+        print_prompts_responses: bool = False,
+        use_azure_openai: bool = False,
+        use_openrouter: bool = False,
+        base_url: str = "",
+        variable_passages: bool = False,
+        num_passes: int = 1,
+        window_size: int = 20,
+        stride: int = 10,
+        system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
+        populate_invocations_history: bool = False,
+        is_thinking: bool = False,
+        reasoning_token_budget: int = 10000,
+        use_logits: bool = False,
+        use_alpha: bool = False,
+        sglang_batched: bool = False,
+        tensorrt_batched: bool = False,
+    ) -> list[Result]:
+        f"""
+        Rerank retrieval results using the specified model and parameters.
+        Use this only when you need to rerank a small number of given candidates.
+
+        Args:
+            model_path: Path to the model. If `use_azure_ai`, pass your deployment name.
+            batch_size: Size of each batch for batched inference.
+            query_text: Query text to get search results for.
+            candidates: List of candidates to rerank.
+            query_id: Query ID.
+            top_k_rerank: the number of top candidates to return from reranking (-1 means same as top_k_candidates)
+            context_size: context size used for model
+            num_gpus: the number of GPUs to use
+            prompt_template_path: yaml file path for the prompt template
+            num_few_shot_examples: number of in context examples to provide
+            few_shot_file: path to JSONL file containing few-shot examples.
+            shuffle_candidates: whether to shuffle the candidates before reranking.
+            print_prompts_responses: whether to print prompts and responses.
+            use_azure_openai: If True, use Azure OpenAI. Requires env var to be set: `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_API_BASE`.
+            use_openrouter: If True, use OpenRouter. Requires env var to be set: `OPENROUTER_API_KEY`
+            base_url: If not using OpenAI's endpoint, pass your base URL and provide API key. Requires env var to be set: `OPENAI_API_KEY`
+            variable_passages: whether the model can account for variable number of passages in input.
+            num_passes: number of passes to run the model
+            window_size: window size for the sliding window approach.
+            stride: stride for the sliding window approach.
+            system_message: the system message used in prompts.
+            populate_invocations_history: write a file with the prompts and raw responses from LLM.
+            is_thinking: enables thinking mode which increases output token budget to account for the full thinking trace + response.
+            reasoning_token_budget: number of output token budget for thinking traces on reasoning models.
+            use_logits: whether to rerank using the logits of the first identifier only.
+            use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
+            sglang_batched: whether to run the model in batches using sglang backend.
+            tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
+        """
+        kwargs = locals().copy()
+        del kwargs["model_path"]
+
+        # Convert sentinel defaults to None for Reranker.create_model_coordinator (reranker.py: extract_kwargs with None defaults)
+        prompt_template_path_or_none = (
+            prompt_template_path if prompt_template_path else None
+        )
+        few_shot_file_or_none = few_shot_file if few_shot_file else None
+        base_url_or_none = base_url if base_url else None
+        kwargs["prompt_template_path"] = prompt_template_path_or_none
+        kwargs["few_shot_file"] = few_shot_file_or_none
+        kwargs["base_url"] = base_url_or_none
+
+        reranker = Reranker(
+            Reranker.create_model_coordinator(
+                model_path,
+                None,
+                False,
+                **kwargs,
+            )
+        )
+
+        top_k_retrieve = len(candidates)
+        # -1 means same as input size (reranker.rerank_batch / final slice)
+        top_k_rerank_effective = top_k_retrieve if top_k_rerank == -1 else top_k_rerank
+        del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
+        requests = [
+            Request(
+                query=Query(text=query_text, qid=query_id),
+                candidates=[
+                    Candidate(
+                        docid=c["docid"],
+                        score=c["score"],
+                        doc={"contents": c["doc"]}
+                        if type(c["doc"]) is str
+                        else c["doc"],
+                    )
+                    for c in candidates
+                ],
+            )
+        ]
+        if reranker.get_model_coordinator() is None:
+            # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
+            shuffle_candidates = True if model_path == "rank_random" else False
+            rerank_results = IdentityReranker().rerank_batch(
+                requests,
+                rank_end=top_k_retrieve,
+                shuffle_candidates=shuffle_candidates,
+            )
+        else:
+            # Reranker is of type RankLLM
+            for pass_ct in range(num_passes):
+                print(f"Pass {pass_ct + 1} of {num_passes}:")
+
+                rerank_results = reranker.rerank_batch(
+                    requests,
+                    rank_end=top_k_retrieve,
+                    rank_start=0,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=print_prompts_responses,
+                    top_k_retrieve=top_k_retrieve,
+                    **kwargs,
+                )
+
+                if num_passes > 1:
+                    requests = [
+                        Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                        for r in rerank_results
+                    ]
+
+        for rr in rerank_results:
+            rr.candidates = rr.candidates[:top_k_rerank_effective]
+
+        return rerank_results
 
     @mcp.tool()
     def retrieve_and_rerank(
@@ -59,6 +203,7 @@ def register_rankllm_tools(mcp: FastMCP):
     ) -> list[Result]:
         f"""
         Rerank retrieval results using the specified model and parameters.
+        Use this most of the time to conserve context window.
 
         Args:
             model_path: Path to the model. If `use_azure_ai`, pass your deployment name.
