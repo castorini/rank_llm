@@ -30,7 +30,7 @@ MODEL = "Salesforce/SweRankLLM-Small"
 # From https://arxiv.org/pdf/2505.07849
 WINDOW_SIZE = 10
 STRIDE = 5
-CONTEXT_SIZE = 16348
+CONTEXT_SIZE = 32768
 
 
 def get_local_id_map(datasets_dir: str, dataset_prefix: str):
@@ -78,14 +78,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    input_file = f"/store2/scratch/ura/aaryans/retrieval_data/retrieve_results_swerank_{args.dataset}_top100.jsonl"
+    input_file = f"/store2/scratch/ura/aaryans/retrieval_data/retrieve_results_swerank_{args.dataset.value}_top100.jsonl"
     output_dir = args.output_dir
-    dataset_prefix = args.dataset
+    dataset_prefix = args.dataset.value
     gpu_memory = args.gpu_memory
 
     os.environ["CUDA_VISIBLE_DEVICES"] = find_best_gpu(gpu_memory)
 
-    print(f"Dataset: {args.dataset}")
+    print(f"Dataset: {args.dataset.value}")
     print(f"Input file: {input_file}")
     print(f"GPU Memory: {gpu_memory}")
 
