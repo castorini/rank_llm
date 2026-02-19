@@ -1,8 +1,7 @@
 from typing import Any, Dict, List, Tuple
 
 from rank_llm.data import Result, TemplateSectionConfig
-from rank_llm.rerank.listwise.listwise_inference_handler import \
-    ListwiseInferenceHandler
+from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 
 class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):

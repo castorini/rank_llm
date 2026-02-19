@@ -10,8 +10,13 @@ def find_best_gpu(utilization_fraction: float) -> str:
     """
     try:
         output = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=index,memory.total,memory.free",
-             "--format=csv,noheader,nounits"], text=True)
+            [
+                "nvidia-smi",
+                "--query-gpu=index,memory.total,memory.free",
+                "--format=csv,noheader,nounits",
+            ],
+            text=True,
+        )
     except subprocess.CalledProcessError:
         print("Warning: nvidia-smi failed. Defaulting to GPU 0.")
         return "0"
@@ -25,5 +30,4 @@ def find_best_gpu(utilization_fraction: float) -> str:
         except ValueError:
             continue
 
-    raise RuntimeError(
-        f"No GPU found fitting utilization {utilization_fraction}.")
+    raise RuntimeError(f"No GPU found fitting utilization {utilization_fraction}.")

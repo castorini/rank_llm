@@ -16,8 +16,7 @@ from tqdm import tqdm
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler import VllmHandler
-from rank_llm.rerank.vllm_handler_with_openai_sdk import \
-    VllmHandlerWithOpenAISDK
+from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
 
 from .listwise_rankllm import ListwiseRankLLM
 
