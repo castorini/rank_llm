@@ -4,9 +4,9 @@ import random
 import re
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
+from enum import Enum
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple
-from enum import Enum
 
 import torch
 import vllm
@@ -16,7 +16,8 @@ from tqdm import tqdm
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler import VllmHandler
-from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
+from rank_llm.rerank.vllm_handler_with_openai_sdk import \
+    VllmHandlerWithOpenAISDK
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -395,9 +396,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         Matches SweRank behavior.
         """
         if use_alpha:
-            return re.sub(r'\[([A-z]+)\]', r'(\1)', s)
+            return re.sub(r"\[([A-z]+)\]", r"(\1)", s)
         else:
-            return re.sub(r'\[(\d+)\]', r'(\1)', s)
+            return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
     def _create_prompt_code(
         self, result: Result, rank_start: int, rank_end: int
@@ -428,7 +429,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 messages.extend(fewshot_messages)
 
             # Truncate query using tokenize/convert_tokens_to_string (SweRank approach)
-            query_tokens = self._tokenizer.tokenize(query)[:int(max_query_len)]
+            query_tokens = self._tokenizer.tokenize(query)[: int(max_query_len)]
             truncated_query = self._tokenizer.convert_tokens_to_string(query_tokens)
 
             # Generate prefix using template
@@ -452,10 +453,14 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
                 # Truncate content using tokenize/convert_tokens_to_string (SweRank approach)
                 tokenized_content = self._tokenizer.tokenize(content)
-                content_tokens = tokenized_content[:int(max_doc_length)]
-                truncated_content = self._tokenizer.convert_tokens_to_string(content_tokens)
+                content_tokens = tokenized_content[: int(max_doc_length)]
+                truncated_content = self._tokenizer.convert_tokens_to_string(
+                    content_tokens
+                )
 
-                identifier = chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
+                identifier = (
+                    chr(ALPH_START_IDX + rank) if self._use_alpha else str(rank)
+                )
                 input_context += f"[{identifier}] {self._replace_number(truncated_content, self._use_alpha)}\n"
 
             # Generate suffix using template
@@ -471,35 +476,48 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
             # Handle system message for templates that don't support it
             if self._system_message and not self.template.get("system_message"):
-                messages[0]["content"] = self._system_message + "\n " + messages[0]["content"]
+                messages[0]["content"] = (
+                    self._system_message + "\n " + messages[0]["content"]
+                )
 
             # Calculate tokens
             if self._base_url:
                 num_tokens = self.get_num_tokens(messages)
             else:
                 prompt = self._tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True
+                    messages, tokenize=False, add_generation_prompt=True
                 )
                 prompt = fix_text(prompt)
                 num_tokens = self.get_num_tokens(prompt)
 
             # Check if we fit within context
-            if num_tokens <= self.max_tokens() - self.num_output_tokens(rank_end - rank_start):
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(
+                rank_end - rank_start
+            ):
                 break
             else:
                 # SweRank truncation logic
                 prefix_len = len(self._tokenizer.encode(prefix))
-                if (len(query_tokens) + prefix_len) > (self.max_tokens() - min_doc_length * (rank_end - rank_start) - self.num_output_tokens(rank_end - rank_start)):
+                if (len(query_tokens) + prefix_len) > (
+                    self.max_tokens()
+                    - min_doc_length * (rank_end - rank_start)
+                    - self.num_output_tokens(rank_end - rank_start)
+                ):
                     # Query truncation to ensure min doc length for each candidate
-                    offset = num_tokens - (self.max_tokens() - self.num_output_tokens(rank_end - rank_start))
-                    max_query_len -= (offset // 2 + 1)
+                    offset = num_tokens - (
+                        self.max_tokens()
+                        - self.num_output_tokens(rank_end - rank_start)
+                    )
+                    max_query_len -= offset // 2 + 1
                 else:
                     # Document truncation
                     max_doc_length -= max(
                         1,
-                        (num_tokens - self.max_tokens() + self.num_output_tokens(rank_end - rank_start))
+                        (
+                            num_tokens
+                            - self.max_tokens()
+                            + self.num_output_tokens(rank_end - rank_start)
+                        )
                         // ((rank_end - rank_start) * 4),
                     )
 

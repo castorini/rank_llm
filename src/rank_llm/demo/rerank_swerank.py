@@ -2,16 +2,17 @@
 SweRank benchmark reranker for SWE-bench and Loc-Bench datasets.
 """
 
-from rank_llm.rerank.listwise import RankListwiseOSLLM
-from rank_llm.rerank import Reranker
-from rank_llm.data import DataWriter, read_requests_from_file
-from importlib.resources import files
+import argparse
+import glob
 import json
 import os
-import glob
-from pathlib import Path
-import argparse
 from enum import Enum
+from importlib.resources import files
+from pathlib import Path
+
+from rank_llm.data import DataWriter, read_requests_from_file
+from rank_llm.rerank import Reranker
+from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RerankType
 from rank_llm.utils import find_best_gpu
 
@@ -107,7 +108,7 @@ if __name__ == "__main__":
         stride=STRIDE,
         gpu_memory_utilization=gpu_memory,
         rerank_type=RerankType.CODE,
-        **extra_kwargs
+        **extra_kwargs,
     )
     reranker = Reranker(model_coordinator)
     rerank_results = reranker.rerank_batch(requests, populate_invocations_history=True)
