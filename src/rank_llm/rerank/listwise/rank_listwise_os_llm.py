@@ -371,7 +371,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         else:
             token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
 
-        _output_token_estimate = len(self._tokenizer.encode(token_str)) + 10
+        _output_token_estimate = len(self._tokenizer.encode(token_str)) + 2
 
         if (
             self._output_token_estimate is None
