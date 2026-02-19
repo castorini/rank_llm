@@ -447,7 +447,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             for cand in result.candidates[rank_start:rank_end]:
                 rank += 1
 
-                content = cand.get_content()
+                content = cand.doc.get("content", "")
 
                 content = content.replace("Title: Content: ", "")
 

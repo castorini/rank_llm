@@ -1,7 +1,8 @@
 from typing import Any, Dict, List, Tuple
 
 from rank_llm.data import Result, TemplateSectionConfig
-from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
+from rank_llm.rerank.listwise.listwise_inference_handler import \
+    ListwiseInferenceHandler
 
 
 class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
@@ -128,7 +129,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         rank = 0
         for cand in result.candidates[rank_start:rank_end]:
             rank += 1
-            content = self._convert_doc_to_prompt_content(cand, max_length)
+            content = self._convert_doc_to_prompt_content(cand.doc, max_length)
             content = self._replace_number(content)
             identifier = chr(self.ALPH_START_IDX + rank) if use_alpha else str(rank)
             body_fmt_values = {"rank": identifier, "candidate": content}

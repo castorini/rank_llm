@@ -99,10 +99,10 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
         tokenizer: T5Tokenizer,
     ) -> str:
         doc1_raw = self._convert_doc_to_prompt_content(
-            result.candidates[index1], max_length=single_doc_max_token
+            result.candidates[index1].doc, max_length=single_doc_max_token
         )
         doc2_raw = self._convert_doc_to_prompt_content(
-            result.candidates[index2], max_length=single_doc_max_token
+            result.candidates[index2].doc, max_length=single_doc_max_token
         )
 
         doc1_tokens = tokenizer.encode(
