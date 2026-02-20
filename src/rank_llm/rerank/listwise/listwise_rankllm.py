@@ -140,6 +140,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                         self._inference_handler.template["output_extraction_regex"],
                     )
                     result.invocations_history.append(inference_invocation)
+                result = self.receive_permutation(
+                    result, permutation, rank_start, rank_end, logging
+                )
         else:
             ## New format (text, reasoning, usage)
             assert len(batched_results[0]) == 3
@@ -171,9 +174,9 @@ class ListwiseRankLLM(RankLLM, ABC):
                         ],
                     )
                     result.invocations_history.append(inference_invocation)
-        result = self.receive_permutation(
-            result, permutation, rank_start, rank_end, logging
-        )
+                result = self.receive_permutation(
+                    result, permutation, rank_start, rank_end, logging
+                )
 
         return results
 
