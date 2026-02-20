@@ -108,7 +108,7 @@ class BaseInferenceHandler(ABC):
         elif "body" in doc:
             content = doc["body"]
         else:
-            content = doc["passage"]
+            content = doc.get("passage", "")
         if "title" in doc and doc["title"]:
             content = "Title: " + doc["title"] + " " + "Content: " + content
         content = content.strip()
