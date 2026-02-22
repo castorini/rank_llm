@@ -23,8 +23,7 @@ from rank_llm.retrieve_and_rerank import (
 def register_rankllm_tools(mcp: FastMCP):
     """Register RankLLM tools with the MCP server."""
 
-    @mcp.tool(
-        description=f"""
+    @mcp.tool(description=f"""
         Rerank retrieval results using the specified model and parameters.
         Use this only when you need to rerank a small number of given candidates.
 
@@ -57,8 +56,7 @@ def register_rankllm_tools(mcp: FastMCP):
             use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
             sglang_batched: whether to run the model in batches using sglang backend.
             tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
-        """
-    )
+        """)
     def rerank(
         model_path: str,
         query_text: str,
@@ -122,9 +120,11 @@ def register_rankllm_tools(mcp: FastMCP):
                     Candidate(
                         docid=c["docid"],
                         score=c["score"],
-                        doc={"contents": c["doc"]}
-                        if type(c["doc"]) is str
-                        else c["doc"],
+                        doc=(
+                            {"contents": c["doc"]}
+                            if type(c["doc"]) is str
+                            else c["doc"]
+                        ),
                     )
                     for c in candidates
                 ],
@@ -164,8 +164,7 @@ def register_rankllm_tools(mcp: FastMCP):
 
         return rerank_results
 
-    @mcp.tool(
-        description=f"""
+    @mcp.tool(description=f"""
         Rerank retrieval results using the specified model and parameters.
         Use this most of the time to conserve context window.
 
@@ -206,8 +205,7 @@ def register_rankllm_tools(mcp: FastMCP):
             use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
             sglang_batched: whether to run the model in batches using sglang backend.
             tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
-        """
-    )
+        """)
     def retrieve_and_rerank(
         model_path: str,
         query: str = "",

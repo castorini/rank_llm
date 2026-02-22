@@ -294,7 +294,9 @@ class SafeOpenai(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        max_length = self._max_passage_words * (self._window_size // (rank_end - rank_start))
+        max_length = self._max_passage_words * (
+            self._window_size // (rank_end - rank_start)
+        )
 
         while True:
             prompt = self._inference_handler.generate_prompt(
