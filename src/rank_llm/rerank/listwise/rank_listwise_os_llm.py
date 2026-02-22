@@ -58,6 +58,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         tensorrt_batched: bool = False,
         batch_size: int = 32,
         base_url: Optional[str] = None,
+        max_passage_words: int = 300,
     ) -> None:
         """
          Creates instance of the RankListwiseOSLLM class, an extension of RankLLM designed for performing listwise ranking of passages using a specified language model. Advanced configurations are supported such as GPU acceleration, variable passage handling, and custom system messages for generating prompts.
@@ -116,6 +117,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             use_alpha=use_alpha,
             device=device,
             batch_size=batch_size,
+            max_passage_words=max_passage_words,
         )
         self._sglang_batched = sglang_batched
         self._tensorrt_batched = tensorrt_batched
@@ -373,7 +375,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int] | Tuple[List[Dict[str, str]], int]:
-        max_length = 300 * (20 / (rank_end - rank_start))
+        max_length = self._max_passage_words * (20 / (rank_end - rank_start))
 
         while True:
             messages = self._inference_handler.generate_prompt(

@@ -35,6 +35,7 @@ class SafeOpenai(ListwiseRankLLM):
         api_base: Optional[str] = None,
         api_version: Optional[str] = None,
         reasoning_effort: Optional[str] = None,
+        max_passage_words: int = 300,
     ) -> None:
         """
         Creates instance of the SafeOpenai class, a specialized version of RankLLM designed for safely handling OpenAI API calls with
@@ -100,6 +101,7 @@ class SafeOpenai(ListwiseRankLLM):
             window_size=window_size,
             stride=stride,
             batch_size=batch_size,
+            max_passage_words=max_passage_words,
         )
 
         self._output_token_estimate = None
@@ -292,7 +294,7 @@ class SafeOpenai(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[List[Dict[str, str]], int]:
-        max_length = 300 * (self._window_size // (rank_end - rank_start))
+        max_length = self._max_passage_words * (self._window_size // (rank_end - rank_start))
 
         while True:
             prompt = self._inference_handler.generate_prompt(

@@ -44,6 +44,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         stride: int = 10,
         use_alpha: bool = False,
         batch_size: int = 32,
+        max_passage_words: int = 300,
     ) -> None:
         super().__init__(
             model=model,
@@ -58,6 +59,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._use_alpha = use_alpha
         self._batch_size = batch_size
         self._stride = stride
+        self._max_passage_words = max_passage_words
 
     def get_output_filename(
         self,

@@ -51,6 +51,7 @@ class SafeGenai(ListwiseRankLLM):
         batch_size: int = 32,
         keys=None,
         key_start_id=None,
+        max_passage_words: int = 300,
         **kwargs,
     ):
         if not prompt_template_path:
@@ -72,6 +73,7 @@ class SafeGenai(ListwiseRankLLM):
             window_size=window_size,
             stride=stride,
             batch_size=batch_size,
+            max_passage_words=max_passage_words,
         )
         if not genai:
             raise ImportError(
@@ -183,7 +185,7 @@ class SafeGenai(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> Tuple[str, int]:
-        max_length = 300 * (self._window_size / (rank_end - rank_start))
+        max_length = self._max_passage_words * (self._window_size / (rank_end - rank_start))
         while True:
             message = self._inference_handler.generate_prompt(
                 result=result,

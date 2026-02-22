@@ -235,6 +235,7 @@ class Reranker:
                 ("stride", 10),
                 ("batch_size", 32),
                 ("reasoning_effort", None),
+                ("max_passage_words", 300),
             ]
             [
                 context_size,
@@ -245,6 +246,7 @@ class Reranker:
                 stride,
                 batch_size,
                 reasoning_effort,
+                max_passage_words,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
             openrouter_keys = get_openrouter_api_key()
             model_coordinator = SafeOpenai(
@@ -259,6 +261,7 @@ class Reranker:
                 keys=openrouter_keys,
                 base_url="https://openrouter.ai/api/v1/",
                 reasoning_effort=reasoning_effort,
+                max_passage_words=max_passage_words,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
         elif "gpt" in model_path or use_azure_openai or base_url:
@@ -277,6 +280,7 @@ class Reranker:
                 ("batch_size", 32),
                 ("base_url", None),
                 ("reasoning_effort", None),
+                ("max_passage_words", 300),
             ]
             [
                 context_size,
@@ -288,6 +292,7 @@ class Reranker:
                 batch_size,
                 base_url,
                 reasoning_effort,
+                max_passage_words,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             openai_keys = get_openai_api_key()
@@ -303,6 +308,7 @@ class Reranker:
                 keys=openai_keys,
                 base_url=base_url,
                 reasoning_effort=reasoning_effort,
+                max_passage_words=max_passage_words,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
         elif "gemini" in model_path:
@@ -317,6 +323,7 @@ class Reranker:
                 ("window_size", 20),
                 ("stride", 10),
                 ("batch_size", 32),
+                ("max_passage_words", 300),
             ]
             [
                 context_size,
@@ -326,6 +333,7 @@ class Reranker:
                 window_size,
                 stride,
                 batch_size,
+                max_passage_words,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             genai_keys = get_genai_api_key()
@@ -339,6 +347,7 @@ class Reranker:
                 stride=stride,
                 batch_size=batch_size,
                 keys=genai_keys,
+                max_passage_words=max_passage_words,
             )
         elif "monot5" in model_path:
             # using monot5
@@ -543,6 +552,7 @@ class Reranker:
                 ("use_alpha", False),
                 ("batch_size", 32),
                 ("base_url", None),
+                ("max_passage_words", 300),
             ]
             [
                 context_size,
@@ -561,6 +571,7 @@ class Reranker:
                 use_alpha,
                 batch_size,
                 base_url,
+                max_passage_words,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = RankListwiseOSLLM(
@@ -586,6 +597,7 @@ class Reranker:
                 use_alpha=use_alpha,
                 batch_size=batch_size,
                 base_url=base_url,
+                max_passage_words=max_passage_words,
             )
 
             print(f"Completed loading {model_path}")
