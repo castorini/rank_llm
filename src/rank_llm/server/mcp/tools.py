@@ -122,9 +122,11 @@ def register_rankllm_tools(mcp: FastMCP):
                     Candidate(
                         docid=c["docid"],
                         score=c["score"],
-                        doc={"contents": c["doc"]}
-                        if type(c["doc"]) is str
-                        else c["doc"],
+                        doc=(
+                            {"contents": c["doc"]}
+                            if type(c["doc"]) is str
+                            else c["doc"]
+                        ),
                     )
                     for c in candidates
                 ],

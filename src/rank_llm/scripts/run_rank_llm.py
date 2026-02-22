@@ -62,6 +62,7 @@ def main(args):
     sglang_batched = args.sglang_batched
     tensorrt_batched = args.tensorrt_batched
     reasoning_effort = args.reasoning_effort
+    max_passage_words = args.max_passage_words
 
     if args.requests_file:
         if args.retrieval_method:
@@ -109,6 +110,7 @@ def main(args):
         sglang_batched=sglang_batched,
         tensorrt_batched=tensorrt_batched,
         reasoning_effort=reasoning_effort,
+        max_passage_words=max_passage_words,
     )
 
 
@@ -297,6 +299,12 @@ if __name__ == "__main__":
         default=None,
         choices=["low", "medium", "high"],
         help="reasoning effort level for OpenAI reasoning models (e.g., o1, o3)",
+    )
+    parser.add_argument(
+        "--max_passage_words",
+        type=int,
+        default=300,
+        help="maximum number of words per passage in the prompt (default: 300)",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
     parser.add_argument(
