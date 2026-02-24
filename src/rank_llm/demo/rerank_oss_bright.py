@@ -20,7 +20,7 @@ Note: You need to run the vllm server with the following command:
 RANK_MODEL_ID="openai/gpt-oss-20b"
 RANK_PORT=48003
 RANK_VLLM_LOG="vllm_server_48003.log"
-CUDA_VISIBLE_DEVICES=2 vllm serve "$RANK_MODEL_ID"  \
+CUDA_VISIBLE_DEVICES=0 vllm serve "$RANK_MODEL_ID"  \
  --port "$RANK_PORT" \
  --dtype auto \
  --gpu-memory-utilization 0.9 \

@@ -2,14 +2,12 @@ import logging
 import os
 import random
 import unicodedata
-from concurrent.futures import ThreadPoolExecutor
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 import vllm
 from ftfy import fix_text
-from tqdm import tqdm
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
@@ -256,97 +254,151 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         logits = output.outputs[0].logprobs[effective_location]
         return self._evaluate_logits(logits, total)
 
-    def run_llm_batched(
+    async def run_llm_async(
         self,
-        prompts: List[str | List[Dict[str, str]]],
+        prompt: str | List[Dict[str, str]],
         current_window_size: Optional[int] = None,
-    ) -> List[Tuple[str, int]] | List[Tuple[str, str, Dict[str, Any]]]:
+    ) -> Tuple[str, str, Dict[str, Any]]:
+        """
+        Submit a single prompt and return its result as soon as it finishes.
+
+        For the vLLM generate path uses AsyncLLMEngine; for the OpenAI-compatible
+        path uses AsyncOpenAI. Both allow all concurrently submitted coroutines
+        to be in-flight simultaneously.
+        SGLang and TensorRT fall back to running synchronously in an executor.
+        """
         if current_window_size is None:
             current_window_size = self._window_size
 
-        if hasattr(self, "_vllm_handler"):
-            logger.info("VLLM Generating!")
+        min_tok = self.num_output_tokens(current_window_size)
+        max_tok = (
+            self._reasoning_token_budget + min_tok if self._is_thinking else min_tok
+        )
 
-            if self._use_logits:
-                prepared_prompts = [
-                    p + "[" if isinstance(p, str) else p for p in prompts
-                ]
-                outputs = self._vllm_handler.generate_output(
-                    prompts=prepared_prompts,
-                    min_tokens=1,
-                    max_tokens=1,
-                    temperature=0.0,
-                    logprobs=30,
+        if hasattr(self, "_vllm_handler"):
+            if self._base_url:
+                logger.info("Async OpenAI SDK Generating!")
+                return await self._vllm_handler.chat_completion_async(
+                    messages=prompt,
+                    max_tokens=max_tok,
+                    temperature=0,
                 )
-                arr = [self._get_logits_single_digit(output) for output in outputs]
-                return [(s, len(s)) for s, __ in arr]
             else:
-                max_tokens = (
-                    self._reasoning_token_budget
-                    + self.num_output_tokens(current_window_size)
-                    if self._is_thinking
-                    else self.num_output_tokens(current_window_size)
-                )
-                if self._base_url:
-                    return self._vllm_handler.chat_completions(
-                        prompts=prompts, max_tokens=max_tokens, temperature=0
-                    )
-                outputs = self._vllm_handler.generate_output(
-                    prompts=prompts,
-                    min_tokens=self.num_output_tokens(current_window_size),
-                    max_tokens=max_tokens,
+                logger.info("Async VLLM Generating!")
+                (
+                    text,
+                    prompt_tokens,
+                    completion_tokens,
+                ) = await self._vllm_handler.generate_output_async(
+                    prompt=prompt,
+                    min_tokens=min_tok,
+                    max_tokens=max_tok,
                     temperature=0.0,
                 )
-                return [
-                    (output.outputs[0].text, len(output.outputs[0].token_ids))
-                    for output in outputs
-                ]
-        elif (
+                return (
+                    text,
+                    "",
+                    {
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                        "total_tokens": prompt_tokens + completion_tokens,
+                    },
+                )
+        else:
+            # SGLang / TensorRT: no async API, offload to thread executor.
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(
+                None, lambda: self._run_llm_sync(prompt, current_window_size)
+            )
+
+    def _run_llm_sync(
+        self,
+        prompt: str | List[Dict[str, str]],
+        current_window_size: Optional[int] = None,
+    ) -> Tuple[str, str, Dict[str, Any]]:
+        """Synchronous fallback for SGLang and TensorRT backends."""
+        if current_window_size is None:
+            current_window_size = self._window_size
+        n_out = self.num_output_tokens(current_window_size)
+
+        if (
             sglang is not None
             and SGLangEngineType is not None
             and isinstance(self._llm, SGLangEngineType)
         ):
-            logger.info(f"SGLang Generating!")
-            sampling_params = {
-                "temperature": 0.0,
-                "max_new_tokens": self.num_output_tokens(current_window_size),
-                "min_new_tokens": self.num_output_tokens(current_window_size),
-            }
-            outputs = self._llm.generate(prompts, sampling_params)
-            return [
-                # completion_tokens counts stop token
-                (output["text"], output["meta_info"]["completion_tokens"] - 1)
-                for output in outputs
-            ]
+            logger.info("SGLang Generating!")
+            output = self._llm.generate(
+                [prompt],
+                {"temperature": 0.0, "max_new_tokens": n_out, "min_new_tokens": n_out},
+            )[0]
+            return (
+                output["text"],
+                "",
+                {
+                    "prompt_tokens": output["meta_info"]["prompt_tokens"],
+                    "completion_tokens": output["meta_info"]["completion_tokens"] - 1,
+                    "total_tokens": output["meta_info"]["prompt_tokens"]
+                    + output["meta_info"]["completion_tokens"]
+                    - 1,
+                },
+            )
         elif self._tensorrt_batched:
             import tensorrt_llm.hlapi.llm
             from tensorrt_llm import SamplingParams as TRTSamplingParams
 
             if isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM):
-                logger.info(f"TensorRT LLM Generating!")
-                sampling_params = TRTSamplingParams(
-                    temperature=0.0,
-                    max_tokens=self.num_output_tokens(current_window_size),
-                    min_tokens=self.num_output_tokens(current_window_size),
+                logger.info("TensorRT LLM Generating!")
+                output = self._llm.generate(
+                    [prompt],
+                    TRTSamplingParams(
+                        temperature=0.0, max_tokens=n_out, min_tokens=n_out
+                    ),
+                )[0]
+                return (
+                    output.outputs[0].text,
+                    "",
+                    {
+                        "prompt_tokens": len(output.prompt_token_ids),
+                        "completion_tokens": len(output.outputs[0].token_ids),
+                        "total_tokens": len(output.prompt_token_ids)
+                        + len(output.outputs[0].token_ids),
+                    },
                 )
-                outputs = self._llm.generate(prompts, sampling_params)
-                return [
-                    (output.outputs[0].text, len(output.outputs[0].token_ids))
-                    for output in outputs
-                ]
-        else:
-            raise ValueError(
-                "Only support SGLang and VLLM inference backend for inferencing."
+        raise ValueError(
+            "Only support SGLang and VLLM inference backend for inferencing."
+        )
+
+    def run_llm_batched(
+        self,
+        prompts: List[str | List[Dict[str, str]]],
+        current_window_size: Optional[int] = None,
+    ) -> List[Tuple[str, str, Dict[str, Any]]]:
+        import asyncio
+
+        async def _run_all():
+            return await asyncio.gather(
+                *[self.run_llm_async(p, current_window_size) for p in prompts]
             )
 
-    def run_llm(
-        self, prompt: str, current_window_size: Optional[int] = None
-    ) -> Tuple[str, int] | Tuple[str, str, Dict[str, Any]]:
-        # Now forward the run_llm into run_llm_batched
-        if current_window_size is None:
-            current_window_size = self._window_size
+        return asyncio.run(_run_all())
 
+    def run_llm(
+        self,
+        prompt: str | List[Dict[str, str]],
+        current_window_size: Optional[int] = None,
+    ) -> Tuple[str, str, Dict[str, Any]]:
         return self.run_llm_batched([prompt], current_window_size)[0]
+
+    def create_prompt_batched(
+        self,
+        results: List[Result],
+        rank_start: int,
+        rank_end: int,
+    ) -> List[Tuple[str, int] | Tuple[List[Dict[str, str]], int]]:
+        # TODO: implement batched prompt creation
+        pass
 
     def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
         if current_window_size is None:
@@ -362,7 +414,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         else:
             token_str = " > ".join([f"[{i+1}]" for i in range(current_window_size)])
 
-        _output_token_estimate = len(self._tokenizer.encode(token_str)) - 1
+        _output_token_estimate = len(
+            self._tokenizer.encode(token_str, add_special_tokens=False)
+        )
 
         if (
             self._output_token_estimate is None
@@ -416,32 +470,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         if self._base_url:
             return messages, self.get_num_tokens(messages)
         return prompt, self.get_num_tokens(prompt)
-
-    def create_prompt_batched(
-        self,
-        results: List[Result],
-        rank_start: int,
-        rank_end: int,
-    ) -> List[Tuple[str, int] | Tuple[List[Dict[str, str]], int]]:
-        def chunks(lst, n):
-            """Yield successive n-sized chunks from lst."""
-            for i in range(0, len(lst), n):
-                yield lst[i : i + n]
-
-        all_completed_prompts = []
-
-        with ThreadPoolExecutor() as executor:
-            for batch in tqdm(
-                chunks(results, self._batch_size), desc="Processing batches"
-            ):
-                completed_prompts = list(
-                    executor.map(
-                        lambda result: self.create_prompt(result, rank_start, rank_end),
-                        batch,
-                    )
-                )
-                all_completed_prompts.extend(completed_prompts)
-        return all_completed_prompts
 
     def get_num_tokens(self, prompt: str | List[Dict[str, str]]) -> int:
         text = prompt

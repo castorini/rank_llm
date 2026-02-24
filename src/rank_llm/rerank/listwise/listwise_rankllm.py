@@ -1,9 +1,11 @@
+import asyncio
 import copy
 import logging
 import random
 from abc import ABC
+from collections import deque
 from datetime import datetime
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 from tqdm import tqdm
@@ -91,49 +93,47 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         return self._context_size
 
-    def permutation_pipeline_batched(
+    async def run_llm_async(
         self,
-        results: List[Result],
+        prompt: Union[str, List[Dict[str, str]]],
+        current_window_size: Optional[int] = None,
+    ) -> Tuple:
+        """
+        Async wrapper around run_llm. Subclasses with native async backends
+        (AsyncLLMEngine, AsyncOpenAI) should override this for true concurrency.
+        The default implementation runs run_llm in a thread-pool executor so
+        that synchronous backends (SGLang, TensorRT) don't block the event loop.
+        """
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            None, lambda: self.run_llm(prompt, current_window_size)
+        )
+
+    def _apply_llm_output_to_result(
+        self,
+        result: Result,
+        llm_out: Tuple,
+        prompt: Union[str, List[Dict[str, str]]],
+        in_token_count: int,
         rank_start: int,
         rank_end: int,
         logging: bool = False,
         populate_invocations_history: bool = False,
-    ) -> List[Result]:
+    ) -> Result:
         """
-        Runs the permutation pipeline on a batch of result objects within the passed in rank range.
-
-        Args:
-            results (List[Result]): The list of result objects to process.
-            rank_start (int): The start index for ranking.
-            rank_end (int): The end index for ranking.
-            logging (bool, optional): Flag to enable logging of operations. Defaults to False.
-
-        Returns:
-            List[Result]: The list of processed result objects after applying permutation.
+        Applies a single LLM output to a result object: records invocation history
+        (if requested) and applies the permutation.
         """
-        prompts = []
-        logger.info("Loading prompts.")
-        prompts = self.create_prompt_batched(results, rank_start, rank_end)
-        if logging:
-            for prompt in prompts:
-                logger.debug(f"Prompt: {prompt[0]}\n")
-        logger.info("Prompts loaded.")
-        batched_results = self.run_llm_batched(
-            [prompt for prompt, _ in prompts], current_window_size=rank_end - rank_start
-        )
-        ## Legacy format (text, out_token_count)
-        ## TODO: Remove this once all the listwise rerankers have switched to the new format.
-        if len(batched_results[0]) == 2:
-            for index, (result, (prompt, in_token_count)) in enumerate(
-                zip(results, prompts)
-            ):
-                permutation, out_token_count = batched_results[index]
-                if logging:
-                    logger.debug(f"output: {permutation}")
-                if populate_invocations_history:
-                    if result.invocations_history is None:
-                        result.invocations_history = []
-                    inference_invocation = InferenceInvocation(
+        if len(llm_out) == 2:
+            # Legacy format (text, out_token_count)
+            permutation, out_token_count = llm_out
+            if logging:
+                logger.debug(f"output: {permutation}")
+            if populate_invocations_history:
+                if result.invocations_history is None:
+                    result.invocations_history = []
+                result.invocations_history.append(
+                    InferenceInvocation(
                         prompt,
                         permutation,
                         in_token_count,
@@ -141,27 +141,26 @@ class ListwiseRankLLM(RankLLM, ABC):
                         self._inference_handler.template["output_validation_regex"],
                         self._inference_handler.template["output_extraction_regex"],
                     )
-                    result.invocations_history.append(inference_invocation)
-                result = self.receive_permutation(
-                    result, permutation, rank_start, rank_end, logging
                 )
         else:
-            ## New format (text, reasoning, usage)
-            assert len(batched_results[0]) == 3
-            for index, (result, (prompt, in_token_count)) in enumerate(
-                zip(results, prompts)
-            ):
-                permutation, reasoning, usage = batched_results[index]
-                in_token_count = usage.get("prompt_tokens") or usage.get("input_tokens")
-                out_token_count = usage.get("completion_tokens") or usage.get(
-                    "output_tokens"
-                )
-                if logging:
-                    logger.debug(f"output: {permutation}")
-                if populate_invocations_history:
-                    if result.invocations_history is None:
-                        result.invocations_history = []
-                    inference_invocation = InferenceInvocation(
+            # New format (text, reasoning, usage)
+            assert len(llm_out) == 3
+            permutation, reasoning, usage = llm_out
+            in_token_count = (
+                usage.get("prompt_tokens")
+                or usage.get("input_tokens")
+                or in_token_count
+            )
+            out_token_count = (
+                usage.get("completion_tokens") or usage.get("output_tokens") or 0
+            )
+            if logging:
+                logger.debug(f"output: {permutation}")
+            if populate_invocations_history:
+                if result.invocations_history is None:
+                    result.invocations_history = []
+                result.invocations_history.append(
+                    InferenceInvocation(
                         prompt,
                         permutation,
                         in_token_count,
@@ -175,12 +174,10 @@ class ListwiseRankLLM(RankLLM, ABC):
                             "output_extraction_regex"
                         ],
                     )
-                    result.invocations_history.append(inference_invocation)
-                result = self.receive_permutation(
-                    result, permutation, rank_start, rank_end, logging
                 )
-
-        return results
+        return self.receive_permutation(
+            result, permutation, rank_start, rank_end, logging
+        )
 
     def permutation_pipeline(
         self,
@@ -290,6 +287,12 @@ class ListwiseRankLLM(RankLLM, ABC):
     ) -> List[Result]:
         """
         Applies the sliding window algorithm to the reranking process for a batch of result objects.
+
+        Uses a streaming work-queue approach: prompts are created lazily in mini-batches of
+        self._batch_size, so at most batch_size prompts live in RAM at any time. Requests are
+        processed independently — as soon as one request finishes a window its next window is
+        immediately enqueued, keeping the LLM fully utilised without waiting for a lagging peer.
+
         Args:
             requests (List[Request]): The list of request objects to process.
             rank_start (int): The start index for ranking.
@@ -297,11 +300,13 @@ class ListwiseRankLLM(RankLLM, ABC):
             top_k_retrieve (int): The number of candidate documents retrieved from the first-stage retrieval system before reranking.
             shuffle_candidates (bool, optional): Flag to shuffle candidates before processing. Defaults to False.
             logging (bool, optional): Flag to enable logging of operations. Defaults to False.
+            populate_invocations_history (bool, optional): Whether to record invocation history.
         Returns:
             List[Result]: The list of result objects after applying the sliding window technique.
         """
         stride = self._stride
         window_size = min(self._window_size, top_k_retrieve)
+
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -312,24 +317,86 @@ class ListwiseRankLLM(RankLLM, ABC):
         ]
         if shuffle_candidates:
             self.shuffle_and_rescore(rerank_results, rank_start, rank_end)
-        end_pos = rank_end
-        start_pos = rank_end - window_size
 
-        # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
-        # start_pos + stride != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
-        while end_pos > rank_start and start_pos + stride != rank_start:
-            if logging:
-                logger.info(f"start_pos: {start_pos}, end_pos: {end_pos}")
-            start_pos = max(start_pos, rank_start)
-            rerank_results = self.permutation_pipeline_batched(
-                rerank_results,
-                start_pos,
-                end_pos,
-                logging,
-                populate_invocations_history,
-            )
-            end_pos = end_pos - stride
-            start_pos = start_pos - stride
+        # Each work item is (result_idx, start_pos, end_pos).
+        # Initialise with the first (rightmost) window for every request.
+        work_queue: deque = deque()
+        for idx in range(len(rerank_results)):
+            end_pos = min(rank_end, len(rerank_results[idx].candidates))
+            start_pos = max(end_pos - window_size, rank_start)
+            # Mirror the original loop condition before clamping start_pos.
+            if end_pos > start_pos:
+                work_queue.append((idx, start_pos, end_pos))
+
+        # Exact total inference calls: sum the window count for each request
+        # individually, accounting for its actual number of candidates.
+        def _count_windows(num_candidates: int) -> int:
+            end_pos = min(rank_end, num_candidates)
+            start_pos = max(end_pos - window_size, rank_start)
+            count = 0
+            prev_start_pos = None
+            # prev_start_pos != rank_start is to prevent redundant windows (e.g. 0-20, followed by 0-10)
+            while end_pos > start_pos and prev_start_pos != rank_start:
+                count += 1
+                prev_start_pos = start_pos
+                end_pos -= stride
+                start_pos -= stride
+            return count
+
+        total_work = sum(_count_windows(len(r.candidates)) for r in rerank_results)
+        progress = tqdm(total=total_work, desc="Sliding windows")
+
+        # Semaphore caps the number of concurrently in-flight LLM requests.
+        # Each coroutine handles one (request, window) pair end-to-end:
+        # create prompt → await LLM → apply permutation → enqueue next window.
+        # Because all coroutines are gathered concurrently, the async LLM
+        # backend (AsyncLLMEngine / AsyncOpenAI) sees all requests at once and
+        # schedules them with continuous batching — no waiting for stragglers.
+        semaphore = asyncio.Semaphore(self._batch_size)
+        pending_tasks: set = set()
+
+        async def _process_one(idx: int, s: int, e: int) -> None:
+            async with semaphore:
+                prompt, in_tok = self.create_prompt(rerank_results[idx], s, e)
+                if logging:
+                    logger.debug(f"[req {idx}] window [{s}, {e}] prompt: {prompt}\n")
+                llm_out = await self.run_llm_async(prompt, e - s)
+                rerank_results[idx] = self._apply_llm_output_to_result(
+                    rerank_results[idx],
+                    llm_out,
+                    prompt,
+                    in_tok,
+                    s,
+                    e,
+                    logging,
+                    populate_invocations_history,
+                )
+                progress.update(1)
+
+                # Immediately spawn the next window for this request so it
+                # can run concurrently with all other in-flight windows.
+                next_end = e - stride
+                next_start = s - stride
+                next_start = max(next_start, rank_start)
+                if next_end > next_start and s != rank_start:
+                    task = asyncio.ensure_future(
+                        _process_one(idx, next_start, next_end)
+                    )
+                    pending_tasks.add(task)
+                    task.add_done_callback(pending_tasks.discard)
+
+        async def _run_all() -> None:
+            # Seed: one task per request for its first window.
+            for idx, s, e in work_queue:
+                task = asyncio.ensure_future(_process_one(idx, s, e))
+                pending_tasks.add(task)
+                task.add_done_callback(pending_tasks.discard)
+            # Wait until every task (including dynamically spawned ones) is done.
+            while pending_tasks:
+                await asyncio.wait(list(pending_tasks))
+
+        asyncio.run(_run_all())
+        progress.close()
         return rerank_results
 
     def sliding_windows(

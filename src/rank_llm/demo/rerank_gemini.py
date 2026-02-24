@@ -18,7 +18,7 @@ dataset_name = "dl19"
 requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 model_coordinator = SafeGenai(
-    "gemini-2.0-flash-001",
+    "gemini-3-flash-preview",
     4096,
     keys=get_genai_api_key(),
     prompt_template_path=(TEMPLATES / "rank_zephyr_template.yaml"),
@@ -31,8 +31,8 @@ print(rerank_results)
 # write rerank results
 writer = DataWriter(rerank_results)
 Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
-writer.write_in_jsonl_format(f"demo_outputs/rerank_results.jsonl")
-writer.write_in_trec_eval_format(f"demo_outputs/rerank_results.txt")
+writer.write_in_jsonl_format(f"demo_outputs/rerank_results_gemini.jsonl")
+writer.write_in_trec_eval_format(f"demo_outputs/rerank_results_gemini.txt")
 writer.write_inference_invocations_history(
-    f"demo_outputs/inference_invocations_history.json"
+    f"demo_outputs/inference_invocations_history_gemini.json"
 )
