@@ -34,17 +34,17 @@ TEMPLATES = files("rank_llm.rerank.prompt_templates")
 for fusion in ["bm25-splade", "bge-splade", "bm25-bge"]:
     for task in [
         "aops",
-        # "biology",
-        # "earth-science",
-        # "economics",
-        # "leetcode",
-        # "pony",
-        # "psychology",
-        # "robotics",
-        # "stackoverflow",
-        # "sustainable-living",
-        # "theoremqa-questions",
-        # "theoremqa-theorems",
+        "biology",
+        "earth-science",
+        "economics",
+        "leetcode",
+        "pony",
+        "psychology",
+        "robotics",
+        "stackoverflow",
+        "sustainable-living",
+        "theoremqa-questions",
+        "theoremqa-theorems",
     ]:
         file_name = f"../bright_fusion/retrieve_results/retrieve_results_bright-{task}-rrf-{fusion}_top100.jsonl"
         retrieve_results = read_requests_from_file(file_name)
@@ -65,7 +65,7 @@ for fusion in ["bm25-splade", "bge-splade", "bm25-bge"]:
         rerank_results = reranker.rerank_batch(requests=retrieve_results, **kwargs)
         rerank_ndcg_10 = EvalFunction.from_results(rerank_results, qrels)
         writer = DataWriter(rerank_results)
-        path = Path(f"../bright_fusion/rerank_results/gpt-oss-20b-temp")
+        path = Path(f"../bright_fusion/rerank_results/gpt-oss-20b")
         path.mkdir(parents=True, exist_ok=True)
         writer.write_in_jsonl_format(
             os.path.join(path, f"{task}-rrf-{fusion}_top100.jsonl")
