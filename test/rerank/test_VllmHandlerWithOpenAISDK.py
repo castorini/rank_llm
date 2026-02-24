@@ -1,37 +1,35 @@
+import asyncio
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
 
 
 class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
+    @patch("rank_llm.rerank.vllm_handler_with_openai_sdk.AsyncOpenAI")
     @patch("rank_llm.rerank.vllm_handler_with_openai_sdk.OpenAI")
     @patch("rank_llm.rerank.vllm_handler_with_openai_sdk.AutoTokenizer")
-    @patch("rank_llm.rerank.vllm_handler_with_openai_sdk.ThreadPoolExecutor")
-    def setUp(self, mock_executor_class, mock_tokenizer_class, mock_openai_class):
-        self.mock_client = mock_openai_class.return_value
+    def setUp(self, mock_tokenizer_class, mock_openai_class, mock_async_openai_class):
+        self.mock_sync_client = mock_openai_class.return_value
+        self.mock_async_client = mock_async_openai_class.return_value
         self.mock_tokenizer = mock_tokenizer_class.from_pretrained.return_value
-        self.mock_executor = mock_executor_class.return_value
-        self.mock_executor_class = mock_executor_class
 
-        # Mock models.list() for init when model is None
         mock_model_data = MagicMock()
         mock_model_data.id = "default-model"
-        self.mock_client.models.list.return_value.data = [mock_model_data]
+        self.mock_sync_client.models.list.return_value.data = [mock_model_data]
 
         self.handler = VllmHandlerWithOpenAISDK(
-            base_url="http://localhost:8000/v1", model="test-model", batch_size=16
+            base_url="http://localhost:8000/v1", model="test-model"
         )
 
     def test_init(self):
         self.assertEqual(self.handler._model, "test-model")
         self.assertEqual(self.handler._tokenizer, self.mock_tokenizer)
-        self.mock_executor_class.assert_called_once_with(max_workers=16)
 
     def test_get_tokenizer(self):
         self.assertEqual(self.handler.get_tokenizer(), self.mock_tokenizer)
 
-    def test_one_inference_success(self):
+    def test_chat_completion_async_success(self):
         mock_response = MagicMock()
         mock_choice = MagicMock()
         mock_choice.message.content = "test content"
@@ -39,87 +37,76 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
         mock_response.choices = [mock_choice]
         mock_response.usage.model_dump.return_value = {"prompt_tokens": 10}
 
-        self.mock_client.chat.completions.create.return_value = mock_response
+        self.mock_async_client.chat.completions.create = AsyncMock(
+            return_value=mock_response
+        )
 
         messages = [{"role": "user", "content": "hello"}]
-        text, reasoning, usage = self.handler._one_inference(messages, temperature=0)
+        text, reasoning, usage = asyncio.run(
+            self.handler.chat_completion_async(messages, temperature=0)
+        )
 
-        self.mock_client.chat.completions.create.assert_called_once_with(
+        self.mock_async_client.chat.completions.create.assert_called_once_with(
             model="test-model", messages=messages, temperature=0
         )
         self.assertEqual(text, "test content")
         self.assertEqual(reasoning, "test reasoning")
         self.assertEqual(usage, {"prompt_tokens": 10})
 
-    def test_one_inference_failure(self):
-        self.mock_client.chat.completions.create.side_effect = Exception("API Error")
+    def test_chat_completion_async_failure(self):
+        self.mock_async_client.chat.completions.create = AsyncMock(
+            side_effect=Exception("API Error")
+        )
 
         messages = [{"role": "user", "content": "hello"}]
-        text, reasoning, usage = self.handler._one_inference(messages)
+        text, reasoning, usage = asyncio.run(
+            self.handler.chat_completion_async(messages)
+        )
 
         self.assertEqual(text, "API Error")
         self.assertEqual(reasoning, "")
         self.assertEqual(usage, {})
 
-    def test_chat_completions_uses_persistent_executor(self):
-        self.mock_executor.map.return_value = iter([("t1", "r1", {}), ("t2", "r2", {})])
+    def test_concurrent_requests_all_succeed(self):
+        """All concurrent coroutines complete independently."""
+        call_count = 0
 
-        prompts = [
-            [{"role": "user", "content": "p1"}],
-            [{"role": "user", "content": "p2"}],
-        ]
-        results = self.handler.chat_completions(prompts)
-
-        self.mock_executor.map.assert_called_once()
-        self.assertEqual(len(results), 2)
-
-    def test_concurrency_execution_order(self):
-        # Real ThreadPoolExecutor test to ensure results are returned in order
-        import time
-        from concurrent.futures import ThreadPoolExecutor as RealThreadPoolExecutor
-
-        # Use a real executor for this specific test to verify ordering
-        self.handler._executor = RealThreadPoolExecutor(max_workers=2)
-
-        def mock_create(model, messages, **kwargs):
-            # Simulate variable latency
-            if "p1" in messages[0]["content"]:
-                time.sleep(0.1)
-                content = "r1"
-            else:
-                content = "r2"
-
+        async def mock_create(model, messages, **kwargs):
+            nonlocal call_count
+            call_count += 1
             mock_resp = MagicMock()
             mock_resp.choices = [MagicMock()]
-            mock_resp.choices[0].message.content = content
+            mock_resp.choices[0].message.content = messages[0]["content"]
             mock_resp.choices[0].message.reasoning = ""
             mock_resp.usage.model_dump.return_value = {}
             return mock_resp
 
-        self.mock_client.chat.completions.create.side_effect = mock_create
+        self.mock_async_client.chat.completions.create = mock_create
 
         prompts = [
             [{"role": "user", "content": "p1"}],
             [{"role": "user", "content": "p2"}],
+            [{"role": "user", "content": "p3"}],
         ]
 
-        # Even though p1 takes longer, results should be in order [r1, r2]
-        results = self.handler.chat_completions(prompts)
+        async def run():
+            return await asyncio.gather(
+                *[self.handler.chat_completion_async(p) for p in prompts]
+            )
 
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0][0], "r1")
-        self.assertEqual(results[1][0], "r2")
+        results = asyncio.run(run())
+
+        self.assertEqual(call_count, 3)
+        self.assertEqual(results[0][0], "p1")
+        self.assertEqual(results[1][0], "p2")
+        self.assertEqual(results[2][0], "p3")
 
     def test_partial_failures_in_batch(self):
-        # Test that one failing request doesn't stop the whole batch
-        from concurrent.futures import ThreadPoolExecutor as RealThreadPoolExecutor
+        """A failing request returns the error string; others still succeed."""
 
-        self.handler._executor = RealThreadPoolExecutor(max_workers=3)
-
-        def mock_create(model, messages, **kwargs):
+        async def mock_create(model, messages, **kwargs):
             if "fail" in messages[0]["content"]:
                 raise Exception("Specific Error")
-
             mock_resp = MagicMock()
             mock_resp.choices = [MagicMock()]
             mock_resp.choices[0].message.content = "success"
@@ -127,7 +114,7 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
             mock_resp.usage.model_dump.return_value = {}
             return mock_resp
 
-        self.mock_client.chat.completions.create.side_effect = mock_create
+        self.mock_async_client.chat.completions.create = mock_create
 
         prompts = [
             [{"role": "user", "content": "success"}],
@@ -135,7 +122,12 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
             [{"role": "user", "content": "success"}],
         ]
 
-        results = self.handler.chat_completions(prompts)
+        async def run():
+            return await asyncio.gather(
+                *[self.handler.chat_completion_async(p) for p in prompts]
+            )
+
+        results = asyncio.run(run())
 
         self.assertEqual(len(results), 3)
         self.assertEqual(results[0][0], "success")
