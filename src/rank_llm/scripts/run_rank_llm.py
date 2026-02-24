@@ -304,7 +304,7 @@ if __name__ == "__main__":
         "--max_passage_words",
         type=int,
         default=300,
-        help="maximum number of words per passage in the prompt (default: 300)",
+        help="maximum number of words per passage in the prompt (default: 300); in additon to truncating passages to this length, depending on the context size, window size, query length, etc further truncation may be needed.",
     )
     infer_backend_group = parser.add_mutually_exclusive_group()
     parser.add_argument(

@@ -25,6 +25,7 @@ class ZephyrReranker:
         window_size: int = 20,
         stride: int = 10,
         batch_size: int = 32,
+        max_passage_words: int = 300,
     ) -> None:
         self._reranker = RankListwiseOSLLM(
             model=model_path,
@@ -39,6 +40,7 @@ class ZephyrReranker:
             window_size=window_size,
             stride=stride,
             batch_size=batch_size,
+            max_passage_words=max_passage_words,
         )
 
     def rerank_batch(
