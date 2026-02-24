@@ -162,7 +162,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         else:
             if self._base_url:
                 self._vllm_handler = VllmHandlerWithOpenAISDK(
-                    model=model, base_url=base_url
+                    model=model, base_url=base_url, batch_size=batch_size
                 )
             else:
                 self._vllm_handler = VllmHandler(
@@ -260,7 +260,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self,
         prompts: List[str | List[Dict[str, str]]],
         current_window_size: Optional[int] = None,
-    ) -> List[Tuple[str, int]] | List[Tuple[str, str, Dict[str, Any]]]:
+    ) -> List[Tuple[str, str, Dict[str, Any]]]:
         if current_window_size is None:
             current_window_size = self._window_size
 
@@ -279,7 +279,18 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     logprobs=30,
                 )
                 arr = [self._get_logits_single_digit(output) for output in outputs]
-                return [(s, len(s)) for s, __ in arr]
+                return [
+                    (
+                        s,
+                        "",
+                        {
+                            "prompt_tokens": len(outputs[i].prompt_token_ids),
+                            "completion_tokens": 1,
+                            "total_tokens": len(outputs[i].prompt_token_ids) + 1,
+                        },
+                    )
+                    for i, (s, __) in enumerate(arr)
+                ]
             else:
                 max_tokens = (
                     self._reasoning_token_budget
@@ -298,7 +309,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     temperature=0.0,
                 )
                 return [
-                    (output.outputs[0].text, len(output.outputs[0].token_ids))
+                    (
+                        output.outputs[0].text,
+                        "",
+                        {
+                            "prompt_tokens": len(output.prompt_token_ids),
+                            "completion_tokens": len(output.outputs[0].token_ids),
+                            "total_tokens": len(output.prompt_token_ids)
+                            + len(output.outputs[0].token_ids),
+                        },
+                    )
                     for output in outputs
                 ]
         elif (
@@ -315,7 +335,18 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             outputs = self._llm.generate(prompts, sampling_params)
             return [
                 # completion_tokens counts stop token
-                (output["text"], output["meta_info"]["completion_tokens"] - 1)
+                (
+                    output["text"],
+                    "",
+                    {
+                        "prompt_tokens": output["meta_info"]["prompt_tokens"],
+                        "completion_tokens": output["meta_info"]["completion_tokens"]
+                        - 1,
+                        "total_tokens": output["meta_info"]["prompt_tokens"]
+                        + output["meta_info"]["completion_tokens"]
+                        - 1,
+                    },
+                )
                 for output in outputs
             ]
         elif self._tensorrt_batched:
@@ -331,7 +362,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 outputs = self._llm.generate(prompts, sampling_params)
                 return [
-                    (output.outputs[0].text, len(output.outputs[0].token_ids))
+                    (
+                        output.outputs[0].text,
+                        "",
+                        {
+                            "prompt_tokens": len(output.prompt_token_ids),
+                            "completion_tokens": len(output.outputs[0].token_ids),
+                            "total_tokens": len(output.prompt_token_ids)
+                            + len(output.outputs[0].token_ids),
+                        },
+                    )
                     for output in outputs
                 ]
         else:
@@ -341,7 +381,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def run_llm(
         self, prompt: str, current_window_size: Optional[int] = None
-    ) -> Tuple[str, int] | Tuple[str, str, Dict[str, Any]]:
+    ) -> Tuple[str, str, Dict[str, Any]]:
         # Now forward the run_llm into run_llm_batched
         if current_window_size is None:
             current_window_size = self._window_size

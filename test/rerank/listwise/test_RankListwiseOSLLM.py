@@ -220,24 +220,55 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.patcher_cuda = patch("torch.cuda.is_available", return_value=True)
         self.mock_cuda = self.patcher_cuda.start()
 
-        # Mock Tokenizer with apply_chat_template method
+        # Mock Tokenizer
         self.mock_tokenizer = MagicMock()
         self.mock_tokenizer.apply_chat_template.side_effect = (
             lambda messages, **kwargs: str(messages)
         )
+        self.mock_tokenizer.encode.side_effect = lambda x: [0] * (len(x) // 4 + 1)
 
-        # Mock vllm.LLM
-        self.patcher_vllm = patch("vllm.LLM", autospec=True)
-        self.mock_vllm_class = self.patcher_vllm.start()
-        self.mock_vllm_instance = self.mock_vllm_class.return_value
-        self.mock_vllm_instance.get_tokenizer.return_value = self.mock_tokenizer
+        # Patch the handlers used by RankListwiseOSLLM
+        self.patcher_vllm_handler = patch(
+            "rank_llm.rerank.listwise.rank_listwise_os_llm.VllmHandler"
+        )
+        self.patcher_openai_handler = patch(
+            "rank_llm.rerank.listwise.rank_listwise_os_llm.VllmHandlerWithOpenAISDK"
+        )
 
-        # Mock generate method
-        self.mock_vllm_instance.generate.return_value = ["Mock response"]
+        self.mock_vllm_handler_class = self.patcher_vllm_handler.start()
+        self.mock_openai_handler_class = self.patcher_openai_handler.start()
+
+        self.mock_vllm_handler_instance = self.mock_vllm_handler_class.return_value
+        self.mock_vllm_handler_instance.get_tokenizer.return_value = self.mock_tokenizer
+
+        self.mock_openai_handler_instance = self.mock_openai_handler_class.return_value
+        self.mock_openai_handler_instance.get_tokenizer.return_value = (
+            self.mock_tokenizer
+        )
 
     def tearDown(self):
         self.patcher_cuda.stop()
-        self.patcher_vllm.stop()
+        self.patcher_vllm_handler.stop()
+        self.patcher_openai_handler.stop()
+
+    def test_init_with_vllm_generate(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/rank_zephyr_7b_v1_full",
+            context_size=4096,
+            window_size=10,
+        )
+        self.assertTrue(hasattr(model_coordinator, "_vllm_handler"))
+        self.assertIsNone(model_coordinator._base_url)
+
+    def test_init_with_openai_sdk(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/rank_zephyr_7b_v1_full",
+            context_size=4096,
+            window_size=10,
+            base_url="http://localhost:8000/v1",
+        )
+        self.assertTrue(hasattr(model_coordinator, "_vllm_handler"))
+        self.assertEqual(model_coordinator._base_url, "http://localhost:8000/v1")
 
     def test_valid_inputs(self):
         for (
@@ -292,7 +323,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens"
     )
     def test_num_output_tokens(self, mock_num_output_tokens):
-        # Creating PyseriniRetriever instance
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
@@ -308,7 +338,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         output = model_coordinator.num_output_tokens()
         self.assertEqual(output, 40)
 
-        # print(output)
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
             name="rank_zephyr",
@@ -339,13 +368,22 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             system_message="",
         )
 
-        mock_run_llm_batched.return_value = ("> [1] > [2] > [3] > [4] > [5", 19)
-        output, size = model_coordinator.run_llm_batched(
-            "How are you doing ? What is your name? What is your age? What is your favorite color?"
-        )
+        mock_run_llm_batched.return_value = [
+            (
+                "> [1] > [2] > [3] > [4] > [5",
+                "one is more relevant than the others",
+                {"prompt_tokens": 10, "completion_tokens": 19},
+            )
+        ]
+        output, reasoning, usage = model_coordinator.run_llm_batched(
+            [
+                "How are you doing ? What is your name? What is your age? What is your favorite color?"
+            ]
+        )[0]
         expected_output = "> [1] > [2] > [3] > [4] > [5"
         self.assertEqual(output, expected_output)
-        self.assertEqual(size, len([char for char in output if char != " "]))
+        self.assertEqual(reasoning, "one is more relevant than the others")
+        self.assertEqual(usage["completion_tokens"], 19)
 
     def test_create_prompt(self):
         model_coordinator = RankListwiseOSLLM(
@@ -363,6 +401,8 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         import re
 
         def get_first_int(s):
+            if isinstance(s, list):
+                s = next((m["content"] for m in s if m["role"] == "user"), "")
             match = re.search(r"\d+", s)
             return int(match.group()) if match else None
 
