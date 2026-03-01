@@ -1,0 +1,11 @@
+method: "singleturn_listwise"
+system_message: "You are CodeRanker, an intelligent code reviewer that can analyze GitHub issues and rank code functions based on their relevance to contain the faults causing the GitHub issue."
+prefix: |
+  I will provide you with {num} code functions, each indicated by a numerical identifier []. Rank the code functions based on their relevance to contain the faults causing the GitHub issue: {query}.
+body: |
+  [{rank}] {candidate}
+suffix: |-
+  GitHub Issue: {query}.
+  Rank the {num} code functions above based on their relevance to contain the faults causing the GitHub issue. All the code functions should be included and listed using identifiers, in descending order of relevance. The output format should be [] > [], e.g., [2] > [1]. Only respond with the ranking results, do not say any word or explain.
+output_validation_regex: r"^\[\d+\]( > \[\d+\])*$"
+output_extraction_regex: r"\[(\d+)\]"
