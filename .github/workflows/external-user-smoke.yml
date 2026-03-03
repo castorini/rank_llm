@@ -26,7 +26,7 @@ jobs:
           temp_dir="$(mktemp -d)"
           cp docs/installation/examples/minimal_hf_rerank.py "$temp_dir/"
           pushd "$temp_dir"
-          uv venv
+          uv venv --python 3.11
           source .venv/bin/activate
           uv pip install "$GITHUB_WORKSPACE"
           python minimal_hf_rerank.py
@@ -56,7 +56,7 @@ jobs:
           set -euo pipefail
           temp_dir="$(mktemp -d)"
           pushd "$temp_dir"
-          uv venv
+          uv venv --python 3.11
           source .venv/bin/activate
           uv pip install "$GITHUB_WORKSPACE[${{ matrix.extra }}]"
           if [ "${{ matrix.extra }}" = "openai" ]; then
@@ -86,7 +86,7 @@ jobs:
           set -euo pipefail
           temp_dir="$(mktemp -d)"
           pushd "$temp_dir"
-          uv venv
+          uv venv --python 3.11
           source .venv/bin/activate
           uv pip install "$GITHUB_WORKSPACE[vllm]"
           python -c "import vllm; print(vllm.__version__)"
