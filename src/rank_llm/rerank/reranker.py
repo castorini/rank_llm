@@ -3,14 +3,12 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
-from rank_llm.rerank import (
-    RankLLM,
+from rank_llm.rerank.api_keys import (
     get_azure_openai_args,
     get_genai_api_key,
     get_openai_api_key,
     get_openrouter_api_key,
 )
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
 from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
 from rank_llm.rerank.pairwise.duot5 import DuoT5
 from rank_llm.rerank.pointwise.monoelectra import MonoELECTRA
@@ -18,6 +16,39 @@ from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
+
+
+def _load_safe_openai():
+    try:
+        from rank_llm.rerank.listwise.rank_gpt import SafeOpenai
+    except ImportError as e:
+        raise ImportError(
+            "SafeOpenai requires optional dependencies. Install with "
+            "`pip install \"rank-llm[openai]\"`."
+        ) from e
+    return SafeOpenai
+
+
+def _load_safe_genai():
+    try:
+        from rank_llm.rerank.listwise.rank_gemini import SafeGenai
+    except ImportError as e:
+        raise ImportError(
+            "SafeGenai requires optional dependencies. Install with "
+            "`pip install \"rank-llm[genai]\"`."
+        ) from e
+    return SafeGenai
+
+
+def _load_rank_listwise_os_llm():
+    try:
+        from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
+    except ImportError as e:
+        raise ImportError(
+            "RankListwiseOSLLM requires optional dependencies. Install with "
+            "`pip install \"rank-llm[vllm]\"`."
+        ) from e
+    return RankListwiseOSLLM
 
 
 class Reranker:
@@ -223,6 +254,7 @@ class Reranker:
             # Default rerank model_coordinator
             model_coordinator = default_model_coordinator
         elif use_openrouter:
+            SafeOpenai = _load_safe_openai()
             keys_and_defaults = [
                 ("context_size", 4096),
                 (
@@ -266,6 +298,7 @@ class Reranker:
             )
         elif "gpt" in model_path or use_azure_openai or base_url:
             # GPT based reranking models
+            SafeOpenai = _load_safe_openai()
 
             keys_and_defaults = [
                 ("context_size", 4096),
@@ -312,6 +345,7 @@ class Reranker:
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
         elif "gemini" in model_path:
+            SafeGenai = _load_safe_genai()
             keys_and_defaults = [
                 ("context_size", 4096),
                 (
@@ -527,6 +561,7 @@ class Reranker:
             model_coordinator = None
         else:
             # supports loading models from huggingface
+            RankListwiseOSLLM = _load_rank_listwise_os_llm()
             print(f"Loading {model_path} ...")
             model_full_paths = {
                 "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",

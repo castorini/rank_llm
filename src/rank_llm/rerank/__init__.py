@@ -1,4 +1,5 @@
 import logging
+from importlib import import_module
 
 from .api_keys import (
     get_azure_openai_args,
@@ -8,7 +9,6 @@ from .api_keys import (
 )
 from .identity_reranker import IdentityReranker
 from .rankllm import RankLLM
-from .reranker import Reranker
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -23,3 +23,11 @@ __all__ = [
     "get_openrouter_api_key",
     "Reranker",
 ]
+
+
+def __getattr__(name):
+    if name != "Reranker":
+        raise AttributeError(f"module {__name__} has no attribute {name}")
+    value = getattr(import_module(".reranker", __name__), name)
+    globals()[name] = value
+    return value
