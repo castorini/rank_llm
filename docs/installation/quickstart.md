@@ -10,8 +10,10 @@ if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
-uv venv
+uv python install 3.11
+uv venv --python 3.11
 source .venv/bin/activate
+python --version
 ```
 
 ## 2) Install RankLLM base package
