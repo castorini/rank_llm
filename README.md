@@ -34,6 +34,56 @@ current_version = "0.25.7"
 <a id="installation"></a>
 # 📟 Installation
 
+## Start Here (minimal default)
+
+For third-party usage, start with the minimal Hugging Face pointwise path:
+
+```bash
+if ! command -v uv >/dev/null 2>&1; then
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+
+uv venv
+source .venv/bin/activate
+uv pip install rank-llm
+python - <<'PY'
+from rank_llm.data import Candidate, Query, Request
+from rank_llm.rerank import Reranker
+from rank_llm.rerank.pointwise.monot5 import MonoT5
+
+model = MonoT5(model="castorini/monot5-base-msmarco", device="cpu", batch_size=4)
+reranker = Reranker(model)
+request = Request(
+    query=Query(text="what is bm25", qid="q1"),
+    candidates=[
+        Candidate(docid="d1", score=0.0, doc={"text": "BM25 is a bag-of-words ranking function used in search."}),
+        Candidate(docid="d2", score=0.0, doc={"text": "Neural reranking uses cross-encoders to score query-document relevance."}),
+        Candidate(docid="d3", score=0.0, doc={"text": "How to bake sourdough bread at home."}),
+    ],
+)
+result = reranker.rerank(request, rank_start=0, rank_end=3)
+for i, candidate in enumerate(result.candidates, start=1):
+    print(f"{i}. {candidate.docid} score={candidate.score:.6f}")
+PY
+```
+
+Use optional extras only if needed:
+
+| Need | Install |
+| --- | --- |
+| OpenAI/OpenRouter rerankers | `pip install "rank-llm[openai]"` |
+| OSS listwise rerankers with vLLM | `pip install "rank-llm[vllm]"` |
+| Gemini reranking | `pip install "rank-llm[genai]"` |
+| Retriever integration | `pip install "rank-llm[pyserini]"` |
+| Everything (power users) | `pip install "rank-llm[all]"` |
+
+Note: base installation is intentionally minimal and does not include OpenAI/vLLM dependencies.
+
+Additional docs:
+- [Quickstart](docs/installation/quickstart.md)
+- [Extras](docs/installation/extras.md)
+- [Troubleshooting](docs/installation/troubleshooting.md)
+
 > **⚠️ RankLLM is not compatible with macOS**, regardless of whether you are using an Intel-based Mac or Apple Silicon (M-series). We recommend using Linux or Windows instead.
 
 ## ❗ JDK 21 Warning
@@ -63,7 +113,7 @@ conda install -c conda-forge openjdk=21 maven -y
 pip install "rank-llm[pyserini]"
 ```
 
-## Install [all] Dependencies
+## Install [all] Dependencies (optional)
 ```bash
 pip install -e .[all]      # local installation for development
 pip install rank-llm[all]  # or pip installation
