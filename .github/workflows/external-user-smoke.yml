@@ -1,0 +1,93 @@
+name: external-user-smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  base-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Base install and minimal run from temp dir
+        run: |
+          set -euo pipefail
+          temp_dir="$(mktemp -d)"
+          cp docs/installation/examples/minimal_hf_rerank.py "$temp_dir/"
+          pushd "$temp_dir"
+          uv venv
+          source .venv/bin/activate
+          uv pip install "$GITHUB_WORKSPACE"
+          python minimal_hf_rerank.py
+          popd
+
+  extras-import-smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        extra:
+          - openai
+          - pyserini
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install package with extra and import smoke
+        run: |
+          set -euo pipefail
+          temp_dir="$(mktemp -d)"
+          pushd "$temp_dir"
+          uv venv
+          source .venv/bin/activate
+          uv pip install "$GITHUB_WORKSPACE[${{ matrix.extra }}]"
+          if [ "${{ matrix.extra }}" = "openai" ]; then
+            python -c "from rank_llm.rerank.listwise import SafeOpenai; print(SafeOpenai.__name__)"
+          elif [ "${{ matrix.extra }}" = "pyserini" ]; then
+            python -c "import pyserini; print(pyserini.__name__)"
+          fi
+          popd
+
+  vllm-import-smoke:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install package with vllm extra and import smoke
+        run: |
+          set -euo pipefail
+          temp_dir="$(mktemp -d)"
+          pushd "$temp_dir"
+          uv venv
+          source .venv/bin/activate
+          uv pip install "$GITHUB_WORKSPACE[vllm]"
+          python -c "import vllm; print(vllm.__version__)"
+          popd
