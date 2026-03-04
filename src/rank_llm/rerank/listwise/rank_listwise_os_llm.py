@@ -188,20 +188,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
-
-        # reranking using vllm or sglang
-        if (
-            self._batch_size > 1
-            and len(set([len(req.candidates) for req in requests])) != 1
-        ):
-            raise ValueError("Batched requests must have the same number of candidates")
-
         return self.sliding_windows_batched(
             requests,
             rank_start=max(rank_start, 0),
-            rank_end=min(
-                rank_end, len(requests[0].candidates)
-            ),  # TODO: Fails arbitrary hit sizes
+            rank_end=rank_end,
             top_k_retrieve=top_k_retrieve,
             shuffle_candidates=shuffle_candidates,
             logging=logging,

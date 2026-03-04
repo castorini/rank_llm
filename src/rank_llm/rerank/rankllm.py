@@ -233,21 +233,21 @@ class RankLLM(ABC):
             PointwiseInferenceHandler,
         )
 
-        try:
-            if template["method"] == "singleturn_listwise":
-                return SingleTurnListwiseInferenceHandler(template)
-            elif template["method"] == "multiturn_listwise":
-                return MultiTurnListwiseInferenceHandler(template)
-            elif template["method"] == "rankfid":
-                return RankFIDInferenceHandler(template)
-            elif template["method"] == "pointwise":
-                return PointwiseInferenceHandler(template)
-            elif template["method"] == "pairwise":
-                return PairwiseInferenceHandler(template)
-            else:
-                raise ValueError("Invalid template method")
-        except:
+        if "method" not in template:
             raise ValueError("Please provide a method section in the template")
+
+        if template["method"] == "singleturn_listwise":
+            return SingleTurnListwiseInferenceHandler(template)
+        elif template["method"] == "multiturn_listwise":
+            return MultiTurnListwiseInferenceHandler(template)
+        elif template["method"] == "rankfid":
+            return RankFIDInferenceHandler(template)
+        elif template["method"] == "pointwise":
+            return PointwiseInferenceHandler(template)
+        elif template["method"] == "pairwise":
+            return PairwiseInferenceHandler(template)
+        else:
+            raise ValueError(f"Invalid template method: {template['method']}")
 
     def _load_few_shot_examples(self, file_path: str):
         try:
