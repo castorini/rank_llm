@@ -275,6 +275,27 @@ class ListwiseRankLLM(RankLLM, ABC):
             for i, cand in enumerate(rerank_result.candidates):
                 cand.score = 1.0 / (i + 1)
 
+    @staticmethod
+    def _count_windows(
+        num_candidates: int,
+        rank_start: int,
+        rank_end: int,
+        window_size: int,
+        stride: int,
+    ) -> int:
+        """Return the number of sliding-window passes for a single request."""
+        end_pos = min(rank_end, num_candidates)
+        start_pos = max(end_pos - window_size, rank_start)
+        count = 0
+        prev_start_pos = None
+        while end_pos > start_pos and prev_start_pos != rank_start:
+            count += 1
+            prev_start_pos = start_pos
+            end_pos -= stride
+            start_pos -= stride
+            start_pos = max(start_pos, rank_start)
+        return count
+
     def sliding_windows_batched(
         self,
         requests: List[Request],
@@ -328,22 +349,12 @@ class ListwiseRankLLM(RankLLM, ABC):
             if end_pos > start_pos:
                 work_queue.append((idx, start_pos, end_pos))
 
-        # Exact total inference calls: sum the window count for each request
-        # individually, accounting for its actual number of candidates.
-        def _count_windows(num_candidates: int) -> int:
-            end_pos = min(rank_end, num_candidates)
-            start_pos = max(end_pos - window_size, rank_start)
-            count = 0
-            prev_start_pos = None
-            # prev_start_pos != rank_start is to prevent redundant windows (e.g. 0-20, followed by 0-10)
-            while end_pos > start_pos and prev_start_pos != rank_start:
-                count += 1
-                prev_start_pos = start_pos
-                end_pos -= stride
-                start_pos -= stride
-            return count
-
-        total_work = sum(_count_windows(len(r.candidates)) for r in rerank_results)
+        total_work = sum(
+            self._count_windows(
+                len(r.candidates), rank_start, rank_end, window_size, stride
+            )
+            for r in rerank_results
+        )
         progress = tqdm(total=total_work, desc="Sliding windows")
 
         # Semaphore caps the number of concurrently in-flight LLM requests.
