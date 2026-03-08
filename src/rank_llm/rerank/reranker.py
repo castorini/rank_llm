@@ -140,7 +140,7 @@ class Reranker:
 
         name = self._model_coordinator.get_output_filename(
             top_k_candidates, dataset_name, shuffle_candidates, **kwargs
-        )
+        ).replace(':', ';')
 
         if window_size is not None:
             name += f"_window_{window_size}"
