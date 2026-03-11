@@ -48,8 +48,7 @@ class VllmHandler:
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
         if self._tokenizer is None:
-            # self._tokenizer = asyncio.run(self._engine.get_tokenizer())
-            self._tokenizer = self._engine.get_tokenizer()
+            self._tokenizer = asyncio.run(self._engine.get_tokenizer())
             if "rank_vicuna" in self._model:
                 setattr(
                     self._tokenizer,
