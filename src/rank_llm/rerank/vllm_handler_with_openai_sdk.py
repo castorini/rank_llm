@@ -46,6 +46,16 @@ class VllmHandlerWithOpenAISDK:
             text = response.choices[0].message.content
             reasoning = response.choices[0].message.reasoning
             usage = response.usage.model_dump(mode="json")
+            # Unlike Responses API, the chat completion API does not return the reasoning tokens in the usage object, yet.
+            # This is a temporary fix to ensure the reasoning tokens stats are returned in the usage object.
+            if usage.get("completion_tokens_details") is None:
+                reasoning_tokens = 0
+                if reasoning:
+                    reasoning_tokens = len(self._tokenizer.encode(reasoning))
+                usage["completion_tokens_details"] = {
+                    "reasoning_tokens": reasoning_tokens,
+                }
+
             return text, reasoning, usage
         except Exception as e:
             print(f"Error during async inference: {e}")
