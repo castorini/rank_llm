@@ -1,0 +1,14 @@
+method: "singleturn_listwise"
+system_message: "You are RankLLM, an intelligent assistant that ranks passages based on a defined criterion."
+prefix: |
+  I will provide you with {num} passages, each identified by an alphabetical label []. Given a Robotics post as a query, rank the passages by how helpful they are for answering the query: {query}.
+body: |
+  - Passage [{rank}]: {candidate}
+suffix: |-
+
+  Search Query: {query}
+  Rank the {num} passages above by their usefulness in answering the query. Include all passages and list them using their identifiers in descending order of usefulness.
+  Output format: [] > [] (e.g., [B] > [A]).
+  Respond only with the ranking and do not include any explanation or extra words.
+output_validation_regex: r"^\[[A-Z]\]( > \[[A-Z]\])*$"
+output_extraction_regex: r"\[([A-Z])\]"
