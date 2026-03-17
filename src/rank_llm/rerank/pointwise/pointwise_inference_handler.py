@@ -21,6 +21,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders=set(),
             ),
+            "system_message": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
             "body": TemplateSectionConfig(
                 required=True,
                 required_placeholders={"query", "doc_content"},
