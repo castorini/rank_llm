@@ -32,9 +32,7 @@ class VllmHandlerWithOpenAISDK:
         model: str | None = None,
     ):
         if OpenAI is None or AsyncOpenAI is None or AutoTokenizer is None:
-            raise ImportError(
-                "OpenAI-compatible vLLM support requires rank-llm[vllm]."
-            )
+            raise ImportError("OpenAI-compatible vLLM support requires rank-llm[vllm].")
         sync_client = OpenAI(api_key="EMPTY", base_url=base_url)
         self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=base_url)
 

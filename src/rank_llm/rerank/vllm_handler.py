@@ -34,9 +34,7 @@ class VllmHandler:
         **kwargs: Any,
     ):
         if vllm is None:
-            raise ImportError(
-                "vLLM support requires rank-llm[vllm]."
-            )
+            raise ImportError("vLLM support requires rank-llm[vllm].")
         engine_args = vllm.AsyncEngineArgs(
             model=model,
             download_dir=download_dir,

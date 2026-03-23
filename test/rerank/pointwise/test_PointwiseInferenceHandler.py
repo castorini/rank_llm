@@ -64,6 +64,8 @@ INVALID_POINTWISE_TEMPLATES = [
         "unknown_key": "value",
     },  # Unknown key
 ]
+
+
 class FakeTokenizer:
     def encode(self, text, truncation=True, max_length=None):
         return text.split()

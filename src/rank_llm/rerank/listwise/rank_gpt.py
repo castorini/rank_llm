@@ -1,5 +1,5 @@
-import time
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
 from types import SimpleNamespace
@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 try:
     import openai
 except ImportError:
+
     class _MissingResponses:
         @staticmethod
         def create(*args, **kwargs):
@@ -26,6 +27,7 @@ except ImportError:
 try:
     import tiktoken
 except ImportError:
+
     class _FallbackEncoding:
         def encode(self, text):
             return re.findall(r"\d+|[A-Za-z]+|[^\sA-Za-z\d_]", text)

@@ -148,9 +148,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if self._device == "cuda":
             if torch is None:
-                raise ImportError(
-                    "Local reranking requires rank-llm[local]."
-                )
+                raise ImportError("Local reranking requires rank-llm[local].")
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
         if prompt_mode and prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(

@@ -4,8 +4,10 @@ from typing import Dict
 try:
     from dotenv import load_dotenv
 except ImportError:
+
     def load_dotenv(*args, **kwargs):
         return False
+
 
 # Common OpenAI API key paths
 paths = [
