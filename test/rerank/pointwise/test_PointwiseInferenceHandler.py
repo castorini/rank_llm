@@ -1,7 +1,6 @@
 import unittest
 
 from dacite import from_dict
-from transformers import T5Tokenizer
 
 from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_inference_handler import (
@@ -65,7 +64,15 @@ INVALID_POINTWISE_TEMPLATES = [
         "unknown_key": "value",
     },  # Unknown key
 ]
-tokenizer = T5Tokenizer.from_pretrained("castorini/monot5-3b-msmarco-10k")
+class FakeTokenizer:
+    def encode(self, text, truncation=True, max_length=None):
+        return text.split()
+
+    def decode(self, tokens, skip_special_tokens=True):
+        return " ".join(tokens)
+
+
+tokenizer = FakeTokenizer()
 
 
 class TestPointwiseInferenceHandler(unittest.TestCase):

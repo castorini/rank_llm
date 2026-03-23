@@ -1,10 +1,17 @@
 import asyncio
 import atexit
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
-import vllm
-from transformers import PreTrainedTokenizerBase
+try:
+    import vllm
+except ImportError:
+    vllm = None
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
+else:
+    PreTrainedTokenizerBase = Any
 
 
 class VllmHandler:
@@ -26,6 +33,10 @@ class VllmHandler:
         gpu_memory_utilization: float,
         **kwargs: Any,
     ):
+        if vllm is None:
+            raise ImportError(
+                "vLLM support requires rank-llm[vllm]."
+            )
         engine_args = vllm.AsyncEngineArgs(
             model=model,
             download_dir=download_dir,

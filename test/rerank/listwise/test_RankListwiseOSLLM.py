@@ -217,8 +217,17 @@ r = from_dict(
 class TestRankListwiseOSLLM(unittest.TestCase):
     def setUp(self):
         # Patch cuda availability check
-        self.patcher_cuda = patch("torch.cuda.is_available", return_value=True)
+        self.patcher_cuda = patch(
+            "rank_llm.rerank.listwise.rank_listwise_os_llm._cuda_is_available",
+            return_value=True,
+        )
         self.mock_cuda = self.patcher_cuda.start()
+        self.patcher_torch = patch(
+            "rank_llm.rerank.listwise.rank_listwise_os_llm.torch", new=MagicMock()
+        )
+        self.mock_torch = self.patcher_torch.start()
+        self.mock_torch.cuda.is_available.return_value = True
+        self.mock_torch.cuda.device_count.return_value = 1
 
         # Mock Tokenizer
         self.mock_tokenizer = MagicMock()
@@ -250,6 +259,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
 
     def tearDown(self):
         self.patcher_cuda.stop()
+        self.patcher_torch.stop()
         self.patcher_vllm_handler.stop()
         self.patcher_openai_handler.stop()
 

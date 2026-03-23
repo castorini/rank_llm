@@ -49,6 +49,7 @@ local = [
 ]
 vllm = [
     "openai>=1.23.6",
+    "tiktoken>=0.6.0",
     "rank-llm[local]",
     "vllm>=0.4.0",
 ]

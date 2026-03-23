@@ -5,8 +5,6 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-import pandas as pd
-
 try:
     from pyserini.search import get_qrels_file
     from pyserini.util import download_evaluation_script
@@ -15,6 +13,16 @@ except ImportError:
     download_evaluation_script = None
 
 from rank_llm.data import Result
+
+
+def _require_pandas():
+    try:
+        import pandas as pd
+    except ImportError as exc:
+        raise ImportError(
+            "Evaluation requires pandas. Install rank-llm[pyserini]."
+        ) from exc
+    return pd
 
 
 class EvalFunction:
@@ -99,6 +107,7 @@ class EvalFunction:
                 )
             qrels = get_qrels_file(qrels)
 
+        pd = _require_pandas()
         run = pd.read_csv(run, sep="\s+", header=None)
         qrels = pd.read_csv(qrels, sep="\s+", header=None)
         run[0] = run[0].astype(str)
@@ -147,6 +156,7 @@ class EvalFunction:
         temp_file = ""
 
         if len(args) > 1:
+            pd = _require_pandas()
             if trunc:
                 args[-2] = EvalFunction.trunc(args[-2], args[-1])
                 print("Trunc", args[-2])

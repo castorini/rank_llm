@@ -1,7 +1,20 @@
-from typing import Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Tuple
 
-from openai import AsyncOpenAI, OpenAI
-from transformers import AutoTokenizer, PreTrainedTokenizerBase
+try:
+    from openai import AsyncOpenAI, OpenAI
+except ImportError:
+    AsyncOpenAI = None
+    OpenAI = None
+
+try:
+    from transformers import AutoTokenizer
+except ImportError:
+    AutoTokenizer = None
+
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizerBase
+else:
+    PreTrainedTokenizerBase = Any
 
 
 class VllmHandlerWithOpenAISDK:
@@ -18,6 +31,10 @@ class VllmHandlerWithOpenAISDK:
         base_url: str,
         model: str | None = None,
     ):
+        if OpenAI is None or AsyncOpenAI is None or AutoTokenizer is None:
+            raise ImportError(
+                "OpenAI-compatible vLLM support requires rank-llm[vllm]."
+            )
         sync_client = OpenAI(api_key="EMPTY", base_url=base_url)
         self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=base_url)
 

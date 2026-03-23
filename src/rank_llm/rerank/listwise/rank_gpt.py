@@ -1,10 +1,41 @@
 import time
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import openai
-import tiktoken
+try:
+    import openai
+except ImportError:
+    class _MissingResponses:
+        @staticmethod
+        def create(*args, **kwargs):
+            raise ImportError("OpenAI support requires rank-llm[openai].")
+
+    openai = SimpleNamespace(
+        proxy=None,
+        api_key=None,
+        base_url=None,
+        api_version=None,
+        api_type=None,
+        api_base=None,
+        responses=_MissingResponses(),
+    )
+
+try:
+    import tiktoken
+except ImportError:
+    class _FallbackEncoding:
+        def encode(self, text):
+            return re.findall(r"\d+|[A-Za-z]+|[^\sA-Za-z\d_]", text)
+
+    class _FallbackTikToken:
+        @staticmethod
+        def get_encoding(_name):
+            return _FallbackEncoding()
+
+    tiktoken = _FallbackTikToken()
 from tqdm import tqdm
 
 from rank_llm.data import Request, Result
