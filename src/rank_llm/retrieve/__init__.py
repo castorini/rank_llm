@@ -1,11 +1,5 @@
 from importlib import import_module
 
-from .retrieval_method import RetrievalMethod
-from .retriever import RetrievalMode, Retriever
-from .service_retriever import ServiceRetriever
-from .topics_dict import TOPICS
-from .utils import download_cached_hits
-
 __all__ = [
     "INDICES",
     "TOPICS",
@@ -17,15 +11,23 @@ __all__ = [
     "download_cached_hits",
 ]
 
+_MODULE_BY_SYMBOL = {
+    "INDICES": "rank_llm.retrieve.indices_dict",
+    "TOPICS": "rank_llm.retrieve.topics_dict",
+    "RetrievalMethod": "rank_llm.retrieve.retrieval_method",
+    "RetrievalMode": "rank_llm.retrieve.retriever",
+    "Retriever": "rank_llm.retrieve.retriever",
+    "PyseriniRetriever": "rank_llm.retrieve.pyserini_retriever",
+    "ServiceRetriever": "rank_llm.retrieve.service_retriever",
+    "download_cached_hits": "rank_llm.retrieve.utils",
+}
+
 
 def __getattr__(name: str):
-    if name == "INDICES":
-        module = import_module("rank_llm.retrieve.indices_dict")
-    elif name == "PyseriniRetriever":
-        module = import_module("rank_llm.retrieve.pyserini_retriever")
-    else:
+    if name not in _MODULE_BY_SYMBOL:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
+    module = import_module(_MODULE_BY_SYMBOL[name])
     value = getattr(module, name)
     globals()[name] = value
     return value
