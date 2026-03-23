@@ -4,7 +4,6 @@ from typing import Any, List, Optional
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.utils import default_device
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
@@ -34,7 +33,7 @@ class VicunaReranker:
             prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
-            device=device or default_device(),
+            device=device,
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,

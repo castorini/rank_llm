@@ -216,12 +216,11 @@ r = from_dict(
 
 class TestRankListwiseOSLLM(unittest.TestCase):
     def setUp(self):
-        # Patch cuda availability check
-        self.patcher_cuda = patch(
-            "rank_llm.rerank.listwise.rank_listwise_os_llm._cuda_is_available",
-            return_value=True,
+        # Patch device detection and torch so tests run without a GPU
+        self.patcher_device = patch(
+            "rank_llm.utils.default_device", return_value="cuda"
         )
-        self.mock_cuda = self.patcher_cuda.start()
+        self.mock_device = self.patcher_device.start()
         self.patcher_torch = patch(
             "rank_llm.rerank.listwise.rank_listwise_os_llm.torch", new=MagicMock()
         )
@@ -258,7 +257,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
     def tearDown(self):
-        self.patcher_cuda.stop()
+        self.patcher_device.stop()
         self.patcher_torch.stop()
         self.patcher_vllm_handler.stop()
         self.patcher_openai_handler.stop()

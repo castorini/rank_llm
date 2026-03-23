@@ -39,14 +39,6 @@ ALPH_START_IDX = ord("A") - 1
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
-def _cuda_is_available() -> bool:
-    return torch is not None and torch.cuda.is_available()
-
-
-def _default_device() -> str:
-    return "cuda" if _cuda_is_available() else "cpu"
-
-
 class RankListwiseOSLLM(ListwiseRankLLM):
     def __init__(
         self,
@@ -112,8 +104,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         - GPU acceleration is supported and recommended for faster computations.
         TODO: Make repetition_penalty configurable
         """
-        if device is None:
-            device = _default_device()
         if prompt_template_path is None:
             prompt_template_path = (
                 TEMPLATES / "rank_zephyr_alpha_template.yaml"

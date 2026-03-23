@@ -1,4 +1,5 @@
 import unittest
+from test.rerank.conftest import FakeTokenizer
 
 from dacite import from_dict
 
@@ -62,14 +63,6 @@ INVALID_PAIRWISE_TEMPLATES = [
         "unknown_key": "value",
     },  # Unknown key
 ]
-
-
-class FakeTokenizer:
-    def encode(self, text, truncation=True, max_length=None):
-        return text.split()
-
-    def decode(self, tokens, skip_special_tokens=True):
-        return " ".join(tokens)
 
 
 tokenizer = FakeTokenizer()
