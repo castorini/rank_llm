@@ -3,8 +3,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import openai
-import tiktoken
+try:
+    import openai
+except ImportError:
+    openai = None
+
+try:
+    import tiktoken
+except ImportError:
+    tiktoken = None
 from tqdm import tqdm
 
 from rank_llm.data import Request, Result
@@ -66,6 +73,8 @@ class SafeOpenai(ListwiseRankLLM):
         - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
+        if openai is None or tiktoken is None:
+            raise ImportError("OpenAI support requires rank-llm[openai].")
         if isinstance(keys, str):
             keys = [keys]
         if not keys:

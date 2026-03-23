@@ -1,7 +1,10 @@
 import re
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
-from transformers import T5Tokenizer
+if TYPE_CHECKING:
+    from transformers import T5Tokenizer
+else:
+    T5Tokenizer = Any
 
 from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.inference_handler import BaseInferenceHandler

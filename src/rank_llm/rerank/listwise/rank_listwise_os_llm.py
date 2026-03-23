@@ -5,8 +5,15 @@ import unicodedata
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple
 
-import torch
-import vllm
+try:
+    import torch
+except ImportError:
+    torch = None
+
+try:
+    import vllm
+except ImportError:
+    vllm = None
 from ftfy import fix_text
 
 from rank_llm.data import Request, Result
@@ -42,7 +49,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
-        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        device: Optional[str] = None,
         num_gpus: int = 1,
         variable_passages: bool = False,
         window_size: int = 20,
@@ -94,7 +101,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          Note:
          - This class is operates given scenarios where listwise ranking is required, with support for dynamic
          passage handling and customization of prompts through system messages and few-shot examples.
-         - GPU acceleration is supported and recommended for faster computations.
+        - GPU acceleration is supported and recommended for faster computations.
         TODO: Make repetition_penalty configurable
         """
         if prompt_template_path is None:
@@ -130,6 +137,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._base_url = base_url
 
         if self._device == "cuda":
+            if torch is None:
+                raise ImportError("Local reranking requires rank-llm[local].")
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
         if prompt_mode and prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
@@ -237,7 +246,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
     def _get_logits_single_digit(
         self,
-        output: vllm.RequestOutput,
+        output: "vllm.RequestOutput",
         effective_location: int = 0,
         total: Tuple[int, int] = (1, 9),
     ):

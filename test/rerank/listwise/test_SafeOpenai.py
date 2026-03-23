@@ -1,7 +1,10 @@
+import re
 import unittest
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 from rank_llm.rerank.listwise import SafeOpenai
+from rank_llm.rerank.listwise import rank_gpt as _rank_gpt_module
 from rank_llm.rerank.rankllm import PromptMode
 
 # model, context_size, prompt_template_path, num_few_shot_examples, keys, key_start_id
@@ -63,6 +66,34 @@ failure_inputs = [
 
 
 class TestSafeOpenai(unittest.TestCase):
+    def setUp(self):
+        # Provide lightweight stubs so SafeOpenai can be constructed without
+        # the real openai/tiktoken packages installed.
+        self._orig_openai = _rank_gpt_module.openai
+        self._orig_tiktoken = _rank_gpt_module.tiktoken
+        if _rank_gpt_module.openai is None:
+            _rank_gpt_module.openai = SimpleNamespace(
+                proxy=None,
+                api_key=None,
+                base_url=None,
+                api_version=None,
+                api_type=None,
+                api_base=None,
+                responses=MagicMock(),
+            )
+        if _rank_gpt_module.tiktoken is None:
+            mock_enc = MagicMock()
+            mock_enc.encode.side_effect = lambda t: re.findall(
+                r"\d+|[A-Za-z]+|[^\sA-Za-z\d_]", t
+            )
+            mock_tiktoken = MagicMock()
+            mock_tiktoken.get_encoding.return_value = mock_enc
+            _rank_gpt_module.tiktoken = mock_tiktoken
+
+    def tearDown(self):
+        _rank_gpt_module.openai = self._orig_openai
+        _rank_gpt_module.tiktoken = self._orig_tiktoken
+
     def test_valid_inputs(self):
         for (
             model,

@@ -2,17 +2,18 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from rank_llm.rerank import vllm_handler as vllm_handler_module
+
 
 class TestVllmHandler(unittest.TestCase):
     def setUp(self):
-        self.patcher_async_engine_args = patch("vllm.AsyncEngineArgs")
-        self.patcher_async_llm_engine = patch("vllm.AsyncLLMEngine")
-        self.patcher_sampling = patch("vllm.SamplingParams")
+        self.patcher_vllm = patch.object(vllm_handler_module, "vllm", MagicMock())
         self.patcher_atexit = patch("atexit.register")
 
-        self.mock_engine_args_class = self.patcher_async_engine_args.start()
-        self.mock_engine_class = self.patcher_async_llm_engine.start()
-        self.mock_sampling_params_class = self.patcher_sampling.start()
+        self.mock_vllm = self.patcher_vllm.start()
+        self.mock_engine_args_class = self.mock_vllm.AsyncEngineArgs
+        self.mock_engine_class = self.mock_vllm.AsyncLLMEngine
+        self.mock_sampling_params_class = self.mock_vllm.SamplingParams
         self.patcher_atexit.start()
 
         self.mock_engine_instance = self.mock_engine_class.from_engine_args.return_value
@@ -34,9 +35,7 @@ class TestVllmHandler(unittest.TestCase):
         )
 
     def tearDown(self):
-        self.patcher_async_engine_args.stop()
-        self.patcher_async_llm_engine.stop()
-        self.patcher_sampling.stop()
+        self.patcher_vllm.stop()
         self.patcher_atexit.stop()
 
     def test_init(self):

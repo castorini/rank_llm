@@ -36,71 +36,115 @@ current_version = "0.25.7"
 
 > **⚠️ RankLLM is not compatible with macOS**, regardless of whether you are using an Intel-based Mac or Apple Silicon (M-series). We recommend using Linux or Windows instead.
 
-## ❗ JDK 21 Warning
+`uv` is the canonical contributor workflow for this repository. The existing
+`conda` and `pip` paths remain available as fallbacks.
 
-As rank_llm relies on [Anserini](https://github.com/castorini/anserini), it is required that you have JDK 21 installed.
-Please note that using JDK 11 is not supported and may lead to errors.
+## Install `uv`
 
-## Create Conda Environment
+Install `uv` with Astral's official installer:
 
 ```bash
-conda create -n rankllm python=3.11 -c conda-forge
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+## Prerequisites
+
+- Install Java 21 only if you plan to use retrieval or evaluation workflows via
+  `rank-llm[pyserini]`. JDK 11 is not supported.
+- Install CUDA-specific PyTorch wheels separately if you want GPU-optimized
+  builds beyond the default Python package resolution.
+
+## Development Installation
+
+For development or the latest features, create a repo-local virtual environment:
+
+```bash
+git clone https://github.com/castorini/rank_llm.git
+cd rank_llm
+uv python install 3.11
+uv venv --python 3.11
+source .venv/bin/activate
+uv sync --group dev
+```
+
+If you prefer not to activate the virtual environment, run commands through
+`uv run`, for example `uv run python -m unittest discover test`.
+
+## Optional Extras
+
+Install only the stacks you need:
+
+```bash
+uv sync --group dev --extra openai
+uv sync --group dev --extra genai
+uv sync --group dev --extra cloud
+uv sync --group dev --extra local
+uv sync --group dev --extra pyserini
+uv sync --group dev --extra vllm
+uv sync --group dev --extra sglang
+uv sync --group dev --extra tensorrt-llm
+uv sync --group dev --extra server
+uv sync --group dev --extra training
+uv sync --group dev --extra all
+```
+
+`genai` is the canonical Google Gemini extra. `gemini` remains available as a
+compatibility alias. `cloud` installs both the OpenAI-compatible and Gemini
+hosted-provider stacks.
+
+### Feature Matrix
+
+| Workflow | Extra | Notes |
+| --- | --- | --- |
+| Hosted OpenAI or OpenRouter rerankers | `openai` | Includes `python-dotenv` and `tiktoken` |
+| Hosted Gemini rerankers | `genai` | `gemini` is an alias |
+| All hosted-provider rerankers | `cloud` | Installs `openai` and `genai` |
+| Local Hugging Face and PyTorch rerankers | `local` | Installs `torch` and `transformers` for MonoT5, DuoT5, MonoELECTRA, and related local paths |
+| Pyserini retrieval and evaluation | `pyserini` | Requires Java 21 |
+| Listwise reranking with open-source models via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
+| Batched SGLang inference | `sglang` | Install `flashinfer` separately when needed |
+| Batched TensorRT-LLM inference | `tensorrt-llm` | Install `flash-attn` separately when needed |
+| Flask and MCP server surfaces | `server` | Pulls the server-only dependency set |
+| Finetuning and training scripts | `training` | Keeps training-only deps out of base installs |
+| Everything | `all` | Aggregate of all extras |
+
+### PyPI Installation
+
+Create an isolated virtual environment and install the published package:
+
+```bash
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install rank-llm
+```
+
+### Fallback `conda` / `pip` Workflow
+
+If you want to keep using conda:
+
+```bash
+conda create -n rankllm python=3.11 -c conda-forge -y
 conda activate rankllm
+pip install -e .
 ```
 
-## Install Pytorch with CUDA (Windows/Linux)
-```bash
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-```
-
-## Install OpenJDK with Maven if you want to use the retriever
-```bash
-conda install -c conda-forge openjdk=21 maven -y
-```
-
-### Install retriever dependencies if you want to use the retriever
-```bash
-pip install "rank-llm[pyserini]"
-```
-
-## Install [all] Dependencies
-```bash
-pip install -e .[all]      # local installation for development
-pip install rank-llm[all]  # or pip installation
-```
-
-## Install SGLang, or TensorRT-LLM (Optional)
-
-### Install SGLang (Optional)
+Then install the optional stack you need, for example:
 
 ```bash
-pip install -e .[sglang]      # local installation for development
-pip install rank-llm[sglang]  # or pip installation
+pip install -e ".[openai]"
+pip install -e ".[genai]"
+pip install -e ".[cloud]"
+pip install -e ".[local]"
+pip install -e ".[pyserini]"
+pip install -e ".[vllm]"
 ```
 
-Remember to install flashinfer to use `SGLang` backend.
+Remember to install `flashinfer` for the `sglang` backend and `flash-attn` for
+optimized TensorRT-LLM or training workflows when those stacks require them.
 
 ```bash
 pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
-```
-
-### TensorRT-LLM
-
-```bash
-pip install -e .[tensorrt-llm]      # local installation for development
-pip install rank-llm[tensorrt-llm]  # or pip installation
-```
-
-## Install Training (Optional)
-
-```bash
-pip install -e .[training]      # local installation for development
-pip install rank-llm[training]  # or pip installation
-```
-
-Remember to also install flash-attn to use as optimized implementation of attention mechanism used in Transformer models.
-
-```bash
 pip install flash-attn --no-build-isolation
 ```
 
@@ -293,11 +337,11 @@ Omit `--use_logits` if you wish to perform traditional listwise reranking.
 
 ## Gemini Flash 2.0
 
-First install genai:
+First install the Gemini provider extra:
 
 ```bash
-pip install -e .[genai]      # local installation for development
-pip install rank-llm[genai]  # or pip installation
+uv sync --group dev --extra genai
+# or: pip install -e ".[genai]"
 ```
 
 Then run the following command:

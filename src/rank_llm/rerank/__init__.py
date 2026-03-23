@@ -8,7 +8,11 @@ from .api_keys import (
 )
 from .identity_reranker import IdentityReranker
 from .rankllm import RankLLM
-from .reranker import Reranker
+
+try:
+    from .reranker import Reranker
+except ImportError:
+    Reranker = None
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

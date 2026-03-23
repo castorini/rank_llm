@@ -27,17 +27,50 @@ requires-python = ">= 3.11"
 dependencies = {file = ["requirements.txt"]}
 
 [project.optional-dependencies]
+openai = [
+    "openai>=1.23.6",
+    "python-dotenv>=1.0.1",
+    "tiktoken>=0.6.0",
+]
+genai = [
+    "google-generativeai>=0.8.2",
+    "python-dotenv>=1.0.1",
+]
+cloud = [
+    "rank-llm[openai]",
+    "rank-llm[genai]",
+]
+gemini = [
+    "rank-llm[genai]",
+]
+local = [
+    "torch>=2.4.0",
+    "transformers>=4.40.1,<5",
+]
+vllm = [
+    "openai>=1.23.6",
+    "tiktoken>=0.6.0",
+    "rank-llm[local]",
+    "vllm>=0.4.0",
+]
 sglang = [
     "sglang[all]~=0.4.0"
 ]
 tensorrt-llm = [
     "tensorrt-llm[all]>=0.14.0"
 ]
-genai = [
-    "google-generativeai>=0.8.2"
-]
 pyserini = [
+    "faiss-cpu>=1.8.0",
+    "pandas>=1.4.0",
     "pyserini==1.2.0"
+]
+server = [
+    "fastmcp>=2.0,<3",
+    "flask>=3.0.0",
+    "rank-llm[local]",
+    "rank-llm[openai]",
+    "rank-llm[pyserini]",
+    "rank-llm[vllm]",
 ]
 training = [
     "accelerate>=0.34.2",
@@ -49,8 +82,22 @@ training = [
     "numpy>=1.26.4"
 ]
 all = [
-  "rank-llm[genai]",
-  "rank-llm[pyserini]"
+    "rank-llm[cloud]",
+    "rank-llm[local]",
+    "rank-llm[pyserini]",
+    "rank-llm[server]",
+    "rank-llm[sglang]",
+    "rank-llm[tensorrt-llm]",
+    "rank-llm[training]",
+    "rank-llm[vllm]",
+]
+
+[dependency-groups]
+dev = [
+    "black>=24.0.0",
+    "isort>=5.13.2",
+    "pre-commit>=3.8.0",
+    "pytest>=8.4.2",
 ]
 
 [project.urls]

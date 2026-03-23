@@ -1,11 +1,6 @@
-tqdm>=4.66.2
-openai>=1.23.6
-tiktoken>=0.6.0
-transformers>=4.40.1,<5
-python-dotenv>=1.0.1
-faiss-cpu>=1.8.0
-ftfy>=6.2.0
 dacite>=1.8.1
-vllm>=0.4.0
-pandas>=1.4.0
-fastmcp>=2.0,<3
+ftfy>=6.2.0
+huggingface-hub>=0.23.0
+pyyaml>=6.0.1
+requests>=2.32.0
+tqdm>=4.66.2

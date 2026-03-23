@@ -1,7 +1,7 @@
 import unittest
+from test.rerank.conftest import FakeTokenizer
 
 from dacite import from_dict
-from transformers import T5Tokenizer
 
 from rank_llm.data import Result
 from rank_llm.rerank.pairwise.pairwise_inference_handler import PairwiseInferenceHandler
@@ -63,7 +63,9 @@ INVALID_PAIRWISE_TEMPLATES = [
         "unknown_key": "value",
     },  # Unknown key
 ]
-tokenizer = T5Tokenizer.from_pretrained("castorini/duot5-3b-msmarco-10k")
+
+
+tokenizer = FakeTokenizer()
 
 
 class TestPairwiseInferenceHandler(unittest.TestCase):
