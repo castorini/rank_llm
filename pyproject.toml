@@ -43,8 +43,13 @@ cloud = [
 gemini = [
     "rank-llm[genai]",
 ]
+local = [
+    "torch>=2.4.0",
+    "transformers>=4.40.1,<5",
+]
 vllm = [
     "openai>=1.23.6",
+    "rank-llm[local]",
     "vllm>=0.4.0",
 ]
 sglang = [
@@ -61,6 +66,7 @@ pyserini = [
 server = [
     "fastmcp>=2.0,<3",
     "flask>=3.0.0",
+    "rank-llm[local]",
     "rank-llm[openai]",
     "rank-llm[pyserini]",
     "rank-llm[vllm]",
@@ -76,6 +82,7 @@ training = [
 ]
 all = [
     "rank-llm[cloud]",
+    "rank-llm[local]",
     "rank-llm[pyserini]",
     "rank-llm[server]",
     "rank-llm[sglang]",

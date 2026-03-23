@@ -7,7 +7,6 @@ from collections import deque
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import torch
 from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
@@ -16,6 +15,15 @@ from rank_llm.rerank.rankllm import PromptMode, RankLLM
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
+
+
+def default_device() -> str:
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class ListwiseRankLLM(RankLLM, ABC):
@@ -41,7 +49,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         prompt_template_path: Optional[str] = None,
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
-        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        device: Optional[str] = None,
         window_size: int = 20,
         stride: int = 10,
         use_alpha: bool = False,
@@ -57,7 +65,7 @@ class ListwiseRankLLM(RankLLM, ABC):
             few_shot_file=few_shot_file,
         )
         self._window_size = window_size
-        self._device = device
+        self._device = device or default_device()
         self._use_alpha = use_alpha
         self._batch_size = batch_size
         self._stride = stride

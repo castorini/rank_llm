@@ -79,6 +79,7 @@ Install only the stacks you need:
 uv sync --group dev --extra openai
 uv sync --group dev --extra genai
 uv sync --group dev --extra cloud
+uv sync --group dev --extra local
 uv sync --group dev --extra pyserini
 uv sync --group dev --extra vllm
 uv sync --group dev --extra sglang
@@ -99,8 +100,9 @@ hosted-provider stacks.
 | Hosted OpenAI or OpenRouter rerankers | `openai` | Includes `python-dotenv` and `tiktoken` |
 | Hosted Gemini rerankers | `genai` | `gemini` is an alias |
 | All hosted-provider rerankers | `cloud` | Installs `openai` and `genai` |
+| Local Hugging Face and PyTorch rerankers | `local` | Installs `torch` and `transformers` for MonoT5, DuoT5, MonoELECTRA, and related local paths |
 | Pyserini retrieval and evaluation | `pyserini` | Requires Java 21 |
-| Open-source listwise reranking via vLLM | `vllm` | Required for Zephyr and Vicuna style vLLM paths |
+| Open-source listwise reranking via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
 | Batched SGLang inference | `sglang` | Install `flashinfer` separately when needed |
 | Batched TensorRT-LLM inference | `tensorrt-llm` | Install `flash-attn` separately when needed |
 | Flask and MCP server surfaces | `server` | Pulls the server-only dependency set |
@@ -133,6 +135,7 @@ Then install the optional stack you need, for example:
 pip install -e ".[openai]"
 pip install -e ".[genai]"
 pip install -e ".[cloud]"
+pip install -e ".[local]"
 pip install -e ".[pyserini]"
 pip install -e ".[vllm]"
 ```

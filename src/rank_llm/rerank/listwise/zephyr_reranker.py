@@ -1,10 +1,9 @@
 from importlib.resources import files
 from typing import Any, List, Optional
 
-import torch
-
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise import RankListwiseOSLLM
+from rank_llm.rerank.listwise.listwise_rankllm import default_device
 from rank_llm.rerank.rankllm import PromptMode
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
@@ -19,7 +18,7 @@ class ZephyrReranker:
         prompt_template_path: str = (TEMPLATES / "rank_zephyr_template.yaml"),
         num_few_shot_examples: int = 0,
         few_shot_file: Optional[str] = None,
-        device: str = "cuda" if torch.cuda.is_available() else "cpu",
+        device: Optional[str] = None,
         num_gpus: int = 1,
         variable_passages: bool = True,
         window_size: int = 20,
@@ -34,7 +33,7 @@ class ZephyrReranker:
             prompt_template_path=prompt_template_path,
             num_few_shot_examples=num_few_shot_examples,
             few_shot_file=few_shot_file,
-            device=device,
+            device=device or default_device(),
             num_gpus=num_gpus,
             variable_passages=variable_passages,
             window_size=window_size,
