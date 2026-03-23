@@ -9,7 +9,6 @@ trim_schema failing on anyOf entries that lack a "type" key.
 import copy
 from typing import Any
 
-import torch
 from fastmcp import FastMCP
 
 from rank_llm.data import Candidate, Query, Request, Result
