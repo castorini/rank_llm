@@ -1,3 +1,4 @@
+import re
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
@@ -82,7 +83,9 @@ class TestSafeOpenai(unittest.TestCase):
             )
         if _rank_gpt_module.tiktoken is None:
             mock_enc = MagicMock()
-            mock_enc.encode.side_effect = lambda t: t.split()
+            mock_enc.encode.side_effect = lambda t: re.findall(
+                r"\d+|[A-Za-z]+|[^\sA-Za-z\d_]", t
+            )
             mock_tiktoken = MagicMock()
             mock_tiktoken.get_encoding.return_value = mock_enc
             _rank_gpt_module.tiktoken = mock_tiktoken
