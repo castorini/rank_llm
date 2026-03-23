@@ -15,7 +15,7 @@ from rank_llm._optional import missing_extra_error
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 
-from .listwise_rankllm import ListwiseRankLLM
+from .listwise_rankllm import ListwiseRankLLM, default_device
 
 try:
     import vllm
@@ -103,6 +103,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         - GPU acceleration is supported and recommended for faster computations.
         TODO: Make repetition_penalty configurable
         """
+        if device is None:
+            device = default_device()
         if prompt_template_path is None:
             prompt_template_path = (
                 TEMPLATES / "rank_zephyr_alpha_template.yaml"

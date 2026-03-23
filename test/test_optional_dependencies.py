@@ -1,4 +1,5 @@
 import unittest
+import sys
 from importlib import import_module
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -57,6 +58,27 @@ class TestOptionalDependencies(unittest.TestCase):
                 )
 
         self.assertIn(install_hint("genai"), str(exc.exception))
+
+    def test_rank_listwise_os_llm_reports_vllm_extra(self):
+        fake_torch = SimpleNamespace(
+            cuda=SimpleNamespace(is_available=lambda: False, device_count=lambda: 0)
+        )
+        sys.modules.pop("rank_llm.rerank.listwise.rank_listwise_os_llm", None)
+        with patch.dict("sys.modules", {"torch": fake_torch}):
+            module = import_module("rank_llm.rerank.listwise.rank_listwise_os_llm")
+
+        def fake_init(self, *args, **kwargs):
+            self._device = kwargs.get("device") or "cpu"
+
+        with patch.object(module.ListwiseRankLLM, "__init__", fake_init), patch.object(
+            module, "vllm", None
+        ):
+            with self.assertRaises(ImportError) as exc:
+                module.RankListwiseOSLLM(
+                    model="castorini/rank_zephyr_7b_v1_full", context_size=4096
+                )
+
+        self.assertIn(install_hint("vllm"), str(exc.exception))
 
 
 if __name__ == "__main__":
