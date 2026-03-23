@@ -9,10 +9,24 @@ RankLLM Contribution flow
 3. If PR makes modifications that warrant testing, provide tests
 4. If change may impact efficiency, run benchmarks before change and after change for validation.
 5. Every PR should be formatted. Below are the instructions to do so:
-    - Run the following command in the project root to set up pre-commit hooks (all commits through git UI will automatically be formatted): ```pre-commit install```
-    - To manually make sure your code is correctly formatted, the following can be run: ```pre-commit run --all-files```
-6. Run from the root directory the unit tests with `python -m unittest discover test`
+    - Bootstrap the repo-local development environment with `uv python install 3.11`, `uv venv --python 3.11`, `source .venv/bin/activate`, and `uv sync --group dev`
+    - Run the following command in the project root to set up pre-commit hooks (all commits through git UI will automatically be formatted): `uv run pre-commit install`
+    - To manually make sure your code is correctly formatted, run `uv run pre-commit run --all-files`
+6. Run from the root directory the unit tests with `uv run python -m unittest discover test`
 7. Update the `pyproject.toml` if applicable
+
+## Suggested PR Description
+
+Use the following shape for PR descriptions so reviews stay consistent:
+
+- `ref:` issue number or `N/A`
+- `Summary`
+- `Why`
+- `Validation`
+- `Follow-ups`
+
+For packaging or CI changes, include a compact before/after note that shows the
+install or workflow change clearly.
 
 ## Issues
 
