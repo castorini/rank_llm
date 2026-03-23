@@ -77,9 +77,7 @@ class PyseriniRetriever:
     ):
         if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             if LuceneSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             self._searcher = LuceneSearcher.from_prebuilt_index(self._get_index())
             if not self._searcher:
@@ -91,9 +89,7 @@ class PyseriniRetriever:
                 self._searcher.set_rm3()
         elif retrieval_method == RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL:
             if LuceneImpactSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             self._searcher = LuceneImpactSearcher.from_prebuilt_index(
                 self._get_index(),
@@ -120,18 +116,14 @@ class PyseriniRetriever:
             }
 
             if QueryEncoder is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             query_encoder = QueryEncoder.load_encoded_queries(
                 query_encoders_map[(retrieval_method, dataset)]
             )
 
             if FaissSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             self._searcher = FaissSearcher.from_prebuilt_index(
                 self._get_index(), query_encoder
@@ -150,15 +142,11 @@ class PyseriniRetriever:
     ):
         if index_type == "lucene":
             if LuceneSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
             self._searcher = LuceneSearcher(index_path)
         elif index_type == "impact":
             if LuceneImpactSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             if onnx:
                 self._searcher = LuceneImpactSearcher(
@@ -189,16 +177,12 @@ class PyseriniRetriever:
         self._dataset = index_path
         if index_path in TF_INDEX_INFO:
             if LuceneSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
         elif index_path in IMPACT_INDEX_INFO:
             if LuceneImpactSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             if onnx:
                 self._searcher = LuceneImpactSearcher.from_prebuilt_index(
@@ -214,16 +198,12 @@ class PyseriniRetriever:
                 raise ValueError("encoded_queries must be specified for dense indices")
 
             if QueryEncoder is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             query_encoder = QueryEncoder.load_encoded_queries(encoded_queries)
 
             if FaissSearcher is None:
-                raise ImportError(
-                    PYSERINI_INSTALL_HINT
-                )
+                raise ImportError(PYSERINI_INSTALL_HINT)
 
             self._searcher = FaissSearcher.from_prebuilt_index(
                 index_path, query_encoder

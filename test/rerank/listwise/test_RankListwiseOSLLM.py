@@ -243,9 +243,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
 
         # Patch the handlers used by RankListwiseOSLLM (lazy-imported inside __init__)
-        self.patcher_vllm_handler = patch(
-            "rank_llm.rerank.vllm_handler.VllmHandler"
-        )
+        self.patcher_vllm_handler = patch("rank_llm.rerank.vllm_handler.VllmHandler")
         self.patcher_openai_handler = patch(
             "rank_llm.rerank.vllm_handler_with_openai_sdk.VllmHandlerWithOpenAISDK"
         )

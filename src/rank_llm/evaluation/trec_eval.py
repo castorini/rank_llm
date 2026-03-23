@@ -7,7 +7,6 @@ from typing import List
 
 from rank_llm._optional import missing_extra_error
 
-
 try:
     from pyserini.search import get_qrels_file
     from pyserini.util import download_evaluation_script
@@ -22,9 +21,7 @@ def _require_pandas():
     try:
         import pandas as pd
     except ImportError:
-        raise missing_extra_error(
-            "pyserini", "Evaluation requires pandas."
-        )
+        raise missing_extra_error("pyserini", "Evaluation requires pandas.")
     return pd
 
 

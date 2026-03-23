@@ -9,6 +9,7 @@ def main():
         from fastmcp import FastMCP
         from pyserini.server.mcp.tools import register_tools
         from pyserini.server.search_controller import get_controller
+
         from rank_llm.server.mcp.tools import register_rankllm_tools
     except ImportError as exc:
         raise missing_extra_error(
