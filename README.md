@@ -102,7 +102,7 @@ hosted-provider stacks.
 | All hosted-provider rerankers | `cloud` | Installs `openai` and `genai` |
 | Local Hugging Face and PyTorch rerankers | `local` | Installs `torch` and `transformers` for MonoT5, DuoT5, MonoELECTRA, and related local paths |
 | Pyserini retrieval and evaluation | `pyserini` | Requires Java 21 |
-| Listwise reranking with open-source models via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
+| Open-source listwise reranking via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
 | Batched SGLang inference | `sglang` | Install `flashinfer` separately when needed |
 | Batched TensorRT-LLM inference | `tensorrt-llm` | Install `flash-attn` separately when needed |
 | Flask and MCP server surfaces | `server` | Pulls the server-only dependency set |
