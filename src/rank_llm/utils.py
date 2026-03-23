@@ -1,6 +1,15 @@
 import subprocess
 
 
+def default_device() -> str:
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
 def find_best_gpus(utilization_fraction: float) -> list[str]:
     """
     Find GPUs with enough free memory for the requested utilization,

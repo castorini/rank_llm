@@ -11,19 +11,11 @@ from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
+from rank_llm.utils import default_device
 
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
-
-
-def default_device() -> str:
-    try:
-        import torch
-    except ImportError:
-        return "cpu"
-
-    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class ListwiseRankLLM(RankLLM, ABC):

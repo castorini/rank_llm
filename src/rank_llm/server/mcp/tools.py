@@ -18,6 +18,7 @@ from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import (
     retrieve_and_rerank as retrieve_and_rerank_function,
 )
+from rank_llm.utils import default_device
 
 
 def register_rankllm_tools(mcp: FastMCP):
@@ -248,7 +249,7 @@ def register_rankllm_tools(mcp: FastMCP):
         tensorrt_batched: bool = False,
     ) -> list[Result]:
         top_k_rerank = top_k_candidates if top_k_rerank == -1 else top_k_rerank
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = default_device()
         retrieval_mode = RetrievalMode.DATASET if dataset else RetrievalMode.CACHED_FILE
 
         # Convert sentinel defaults to None for the underlying API

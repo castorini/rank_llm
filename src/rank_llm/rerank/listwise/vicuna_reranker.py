@@ -3,8 +3,8 @@ from typing import Any, List, Optional
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise import RankListwiseOSLLM
-from rank_llm.rerank.listwise.listwise_rankllm import default_device
 from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.utils import default_device
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
