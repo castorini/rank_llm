@@ -1,8 +1,9 @@
 import json
 import os
-from enum import Enum
 from pathlib import Path
 from typing import List
+
+from rank_llm._optional import install_hint
 
 try:
     from pyserini.index.lucene import LuceneIndexReader
@@ -33,21 +34,10 @@ from tqdm import tqdm
 
 from rank_llm.data import Candidate, DataWriter, Query, Request
 from rank_llm.retrieve.indices_dict import INDICES
+from rank_llm.retrieve.retrieval_method import RetrievalMethod
 from rank_llm.retrieve.topics_dict import TOPICS
 
-
-class RetrievalMethod(Enum):
-    UNSPECIFIED = "unspecified"
-    BM25 = "bm25"
-    BM25_RM3 = "bm25_rm3"
-    SPLADE_P_P_ENSEMBLE_DISTIL = "SPLADE++_EnsembleDistil_ONNX"
-    D_BERT_KD_TASB = "distilbert_tas_b"
-    OPEN_AI_ADA2 = "openai-ada2"
-    REP_LLAMA = "rep-llama"
-    CUSTOM_INDEX = "custom_index"
-
-    def __str__(self):
-        return self.value
+PYSERINI_INSTALL_HINT = install_hint("pyserini")
 
 
 class PyseriniRetriever:
@@ -88,7 +78,7 @@ class PyseriniRetriever:
         if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             if LuceneSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             self._searcher = LuceneSearcher.from_prebuilt_index(self._get_index())
@@ -102,7 +92,7 @@ class PyseriniRetriever:
         elif retrieval_method == RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL:
             if LuceneImpactSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             self._searcher = LuceneImpactSearcher.from_prebuilt_index(
@@ -131,7 +121,7 @@ class PyseriniRetriever:
 
             if QueryEncoder is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             query_encoder = QueryEncoder.load_encoded_queries(
@@ -140,7 +130,7 @@ class PyseriniRetriever:
 
             if FaissSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             self._searcher = FaissSearcher.from_prebuilt_index(
@@ -161,13 +151,13 @@ class PyseriniRetriever:
         if index_type == "lucene":
             if LuceneSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
             self._searcher = LuceneSearcher(index_path)
         elif index_type == "impact":
             if LuceneImpactSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             if onnx:
@@ -194,20 +184,20 @@ class PyseriniRetriever:
             or IMPACT_INDEX_INFO is None
             or FAISS_INDEX_INFO is None
         ):
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise ImportError(PYSERINI_INSTALL_HINT)
 
         self._dataset = index_path
         if index_path in TF_INDEX_INFO:
             if LuceneSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             self._searcher = LuceneSearcher.from_prebuilt_index(index_path)
         elif index_path in IMPACT_INDEX_INFO:
             if LuceneImpactSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             if onnx:
@@ -225,14 +215,14 @@ class PyseriniRetriever:
 
             if QueryEncoder is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             query_encoder = QueryEncoder.load_encoded_queries(encoded_queries)
 
             if FaissSearcher is None:
                 raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                    PYSERINI_INSTALL_HINT
                 )
 
             self._searcher = FaissSearcher.from_prebuilt_index(
@@ -248,7 +238,7 @@ class PyseriniRetriever:
             or IMPACT_INDEX_INFO is None
             or FAISS_INDEX_INFO is None
         ):
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise ImportError(PYSERINI_INSTALL_HINT)
 
         if os.path.exists(index_path):
             self._index_reader = LuceneIndexReader(index_path)
@@ -264,7 +254,7 @@ class PyseriniRetriever:
 
     def _init_custom_topics(self, topics_path: str, index_path: str):
         if DefaultQueryIterator is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise ImportError(PYSERINI_INSTALL_HINT)
 
         self._topics = DefaultQueryIterator.from_topics(topics_path).topics
         self._qrels = None
@@ -272,7 +262,7 @@ class PyseriniRetriever:
 
     def _init_prebuilt_topics(self, topics_path: str, index_path: str):
         if get_qrels is None or get_topics is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise ImportError(PYSERINI_INSTALL_HINT)
 
         self._topics = get_topics(topics_path)
         if topics_path in ["dl20", "dl21", "dl22"]:
@@ -287,7 +277,7 @@ class PyseriniRetriever:
 
     def _init_topics_from_dict(self, dataset: str):
         if get_qrels is None or get_topics is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise ImportError(PYSERINI_INSTALL_HINT)
         if dataset not in TOPICS:
             if (
                 dataset.startswith("beir-v1.0.0-")
@@ -312,7 +302,7 @@ class PyseriniRetriever:
             self._qrels = get_qrels(TOPICS[dataset])
 
         if LuceneIndexReader is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise ImportError(PYSERINI_INSTALL_HINT)
 
         self._index_reader = LuceneIndexReader.from_prebuilt_index(
             self._get_index("bm25")

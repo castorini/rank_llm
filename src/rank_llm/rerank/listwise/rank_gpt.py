@@ -3,6 +3,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from tqdm import tqdm
+
+from rank_llm._optional import missing_extra_error
+from rank_llm.data import Request, Result
+from rank_llm.rerank.rankllm import PromptMode
+
+from .listwise_rankllm import ListwiseRankLLM
+
 try:
     import openai
 except ImportError:
@@ -12,12 +20,6 @@ try:
     import tiktoken
 except ImportError:
     tiktoken = None
-from tqdm import tqdm
-
-from rank_llm.data import Request, Result
-from rank_llm.rerank.rankllm import PromptMode
-
-from .listwise_rankllm import ListwiseRankLLM
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
@@ -74,7 +76,10 @@ class SafeOpenai(ListwiseRankLLM):
         - Azure AI integration is depends on the presence of `api_type`, `api_base`, and `api_version`.
         """
         if openai is None or tiktoken is None:
-            raise ImportError("OpenAI support requires rank-llm[openai].")
+            raise missing_extra_error(
+                "openai",
+                "The OpenAI and OpenRouter rerankers require the OpenAI SDK and tiktoken.",
+            )
         if isinstance(keys, str):
             keys = [keys]
         if not keys:
@@ -242,6 +247,11 @@ class SafeOpenai(ListwiseRankLLM):
 
         # Handle error strings from _call_completion
         if isinstance(completion, str):
+            if tiktoken is None:
+                raise missing_extra_error(
+                    "openai",
+                    "Token counting for OpenAI-compatible models requires tiktoken.",
+                )
             try:
                 encoding = tiktoken.get_encoding(self._model)
             except Exception:

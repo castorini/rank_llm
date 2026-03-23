@@ -1,14 +1,21 @@
 import argparse
 
-from fastmcp import FastMCP
-from pyserini.server.mcp.tools import register_tools
-from pyserini.server.search_controller import get_controller
-
-from rank_llm.server.mcp.tools import register_rankllm_tools
+from rank_llm._optional import missing_extra_error
 
 
 def main():
     """Main entry point for the server."""
+    try:
+        from fastmcp import FastMCP
+        from pyserini.server.mcp.tools import register_tools
+        from pyserini.server.search_controller import get_controller
+        from rank_llm.server.mcp.tools import register_rankllm_tools
+    except ImportError as exc:
+        raise missing_extra_error(
+            "server",
+            "The MCP server requires FastMCP and Pyserini.",
+        ) from exc
+
     parser = argparse.ArgumentParser(description="MCPyserini Server")
     parser.add_argument(
         "--transport",

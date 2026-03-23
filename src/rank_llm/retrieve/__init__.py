@@ -1,5 +1,6 @@
-from .indices_dict import INDICES
-from .pyserini_retriever import PyseriniRetriever, RetrievalMethod
+from importlib import import_module
+
+from .retrieval_method import RetrievalMethod
 from .retriever import RetrievalMode, Retriever
 from .service_retriever import ServiceRetriever
 from .topics_dict import TOPICS
@@ -15,3 +16,16 @@ __all__ = [
     "RetrievalMode",
     "download_cached_hits",
 ]
+
+
+def __getattr__(name: str):
+    if name == "INDICES":
+        module = import_module("rank_llm.retrieve.indices_dict")
+    elif name == "PyseriniRetriever":
+        module = import_module("rank_llm.retrieve.pyserini_retriever")
+    else:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
