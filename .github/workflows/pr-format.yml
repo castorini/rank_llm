@@ -35,9 +35,9 @@ jobs:
   unit_tests:
     needs: lint
     runs-on: ubuntu-latest
-      strategy:
-        matrix:
-          include:
+    strategy:
+      matrix:
+        include:
           - test-suite: analysis
             install-target: .
           - test-suite: evaluation
