@@ -23,25 +23,28 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Sync dev dependencies
-        run: uv sync --group dev
+      - name: Create lint environment
+        run: uv venv --python 3.11
+
+      - name: Install lint dependencies
+        run: uv pip install --python .venv/bin/python pre-commit black isort
 
       - name: Run lint
-        run: uv run pre-commit run --all-files
+        run: .venv/bin/pre-commit run --all-files
 
   unit_tests:
     needs: lint
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
+      strategy:
+        matrix:
+          include:
           - test-suite: analysis
-            extras: ""
+            install-target: .
           - test-suite: evaluation
-            extras: "--extra pyserini"
+            install-target: ".[pyserini]"
             needs-java: true
           - test-suite: rerank
-            extras: "--extra cloud --extra vllm"
+            install-target: ".[cloud,vllm]"
     env:
       TMPDIR: /mnt/tmp
     steps:
@@ -64,8 +67,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Sync test environment
-        run: uv sync --group dev ${{ matrix.extras }}
+      - name: Create test environment
+        run: uv venv --python 3.11
+
+      - name: Install test environment
+        run: uv pip install --python .venv/bin/python -e "${{ matrix.install-target }}"
 
       - name: Run tests
-        run: uv run python -m unittest discover -s "test/${{ matrix.test-suite }}"
+        run: .venv/bin/python -m unittest discover -s "test/${{ matrix.test-suite }}"
