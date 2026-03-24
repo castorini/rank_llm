@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from tqdm import tqdm
 
+from rank_llm._optional import missing_extra_error
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
 
@@ -76,8 +77,9 @@ class SafeGenai(ListwiseRankLLM):
             max_passage_words=max_passage_words,
         )
         if not genai:
-            raise ImportError(
-                'Please install genai with `pip install -U -q "google-generativeai>=0.8.2"` to use gemini.'
+            raise missing_extra_error(
+                "genai",
+                "The Gemini reranker requires google-generativeai.",
             )
         if isinstance(keys, str):
             keys = [keys]

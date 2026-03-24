@@ -3,18 +3,12 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from rank_llm.data import DataWriter, Request, Result
-from rank_llm.rerank import (
-    RankLLM,
+from rank_llm.rerank.api_keys import (
     get_azure_openai_args,
     get_genai_api_key,
     get_openai_api_key,
     get_openrouter_api_key,
 )
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeGenai, SafeOpenai
-from rank_llm.rerank.listwise.rank_fid import RankFiDDistill, RankFiDScore
-from rank_llm.rerank.pairwise.duot5 import DuoT5
-from rank_llm.rerank.pointwise.monoelectra import MonoELECTRA
-from rank_llm.rerank.pointwise.monot5 import MonoT5
 from rank_llm.rerank.rankllm import RankLLM
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
@@ -223,6 +217,8 @@ class Reranker:
             # Default rerank model_coordinator
             model_coordinator = default_model_coordinator
         elif use_openrouter:
+            from rank_llm.rerank.listwise import SafeOpenai
+
             keys_and_defaults = [
                 ("context_size", 4096),
                 (
@@ -266,6 +262,7 @@ class Reranker:
             )
         elif "gpt" in model_path or use_azure_openai or base_url:
             # GPT based reranking models
+            from rank_llm.rerank.listwise import SafeOpenai
 
             keys_and_defaults = [
                 ("context_size", 4096),
@@ -312,6 +309,8 @@ class Reranker:
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
         elif "gemini" in model_path:
+            from rank_llm.rerank.listwise import SafeGenai
+
             keys_and_defaults = [
                 ("context_size", 4096),
                 (
@@ -351,6 +350,8 @@ class Reranker:
             )
         elif "monot5" in model_path:
             # using monot5
+            from rank_llm.rerank.pointwise.monot5 import MonoT5
+
             print(f"Loading {model_path} ...")
 
             model_full_paths = {"monot5": "castorini/monot5-3b-msmarco-10k"}
@@ -390,6 +391,8 @@ class Reranker:
             )
         elif "monoelectra" in model_path.lower():
             # using monoelectra
+            from rank_llm.rerank.pointwise.monoelectra import MonoELECTRA
+
             print(f"Loading {model_path} ...")
 
             model_full_paths = {"monoelectra": "castorini/monoelectra-base"}
@@ -423,6 +426,8 @@ class Reranker:
             )
         elif "duot5" in model_path:
             # using duot5
+            from rank_llm.rerank.pairwise.duot5 import DuoT5
+
             print(f"Loading {model_path} ...")
 
             model_full_paths = {"duot5": "castorini/duot5-3b-msmarco-10k"}
@@ -455,6 +460,8 @@ class Reranker:
                 batch_size=batch_size,
             )
         elif "lit5-distill" in model_path.lower():
+            from rank_llm.rerank.listwise.rank_fid import RankFiDDistill
+
             keys_and_defaults = [
                 ("context_size", 150),
                 (
@@ -489,6 +496,8 @@ class Reranker:
             )
             print(f"Completed loading {model_path}")
         elif "lit5-score" in model_path.lower():
+            from rank_llm.rerank.listwise.rank_fid import RankFiDScore
+
             keys_and_defaults = [
                 ("context_size", 150),
                 (
@@ -527,6 +536,8 @@ class Reranker:
             model_coordinator = None
         else:
             # supports loading models from huggingface
+            from rank_llm.rerank.listwise import RankListwiseOSLLM
+
             print(f"Loading {model_path} ...")
             model_full_paths = {
                 "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",

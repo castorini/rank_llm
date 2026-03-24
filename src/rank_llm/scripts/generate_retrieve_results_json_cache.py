@@ -52,6 +52,8 @@ import os
 import sys
 from collections import defaultdict
 
+from rank_llm._optional import missing_extra_error
+
 try:
     from pyserini.search import LuceneSearcher, get_qrels, get_topics
 except ImportError:
@@ -96,7 +98,7 @@ def load_pyserini_indexer(collection_file, trec_data, topk):
     examples = {}
 
     if LuceneSearcher is None:
-        raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+        raise missing_extra_error("pyserini")
 
     index_reader = LuceneSearcher.from_prebuilt_index(collection_file)
     for qid, hits in tqdm(trec_data.items()):
@@ -127,7 +129,7 @@ def generate_retrieve_results(
 ):
     if query_file in TOPICS:
         if get_topics is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise missing_extra_error("pyserini")
 
         if TOPICS[query_file] == "dl22-passage":
             query_data = get_topics("dl22")
@@ -139,7 +141,7 @@ def generate_retrieve_results(
             query_data[qid] = query["title"]
 
         if get_qrels is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise missing_extra_error("pyserini")
 
         qrels = get_qrels(TOPICS[query_file])
         print(f"Loaded {len(query_data)} queries from {query_file}")

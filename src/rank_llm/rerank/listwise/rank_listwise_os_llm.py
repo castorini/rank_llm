@@ -9,19 +9,18 @@ try:
     import torch
 except ImportError:
     torch = None
+from ftfy import fix_text
+
+from rank_llm._optional import missing_extra_error
+from rank_llm.data import Request, Result
+from rank_llm.rerank.rankllm import PromptMode
+
+from .listwise_rankllm import ListwiseRankLLM
 
 try:
     import vllm
 except ImportError:
     vllm = None
-from ftfy import fix_text
-
-from rank_llm.data import Request, Result
-from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.rerank.vllm_handler import VllmHandler
-from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
-
-from .listwise_rankllm import ListwiseRankLLM
 
 try:
     import sglang
@@ -138,7 +137,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if self._device == "cuda":
             if torch is None:
-                raise ImportError("Local reranking requires rank-llm[local].")
+                raise missing_extra_error(
+                    "local",
+                    "Open-source listwise reranking with local backends requires PyTorch.",
+                )
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
         if prompt_mode and prompt_mode != PromptMode.RANK_GPT:
             raise ValueError(
@@ -147,8 +149,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if sglang_batched:
             if Engine is None:
-                raise ImportError(
-                    "Please install rank-llm with `pip install rank-llm[sglang]` to use sglang batch inference."
+                raise missing_extra_error(
+                    "sglang",
+                    "SGLang batch inference requires sglang.",
                 )
             # Add assert here to ensure
             assert Engine is not None
@@ -160,14 +163,26 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 from tensorrt_llm import LLM as TRTLLM
                 from tensorrt_llm import BuildConfig
             except Exception:
-                raise ImportError(
-                    "Please install rank-llm with `pip install -e .[tensorrt-llm]` to use tensorrt batch inference."
+                raise missing_extra_error(
+                    "tensorrt-llm",
+                    "TensorRT-LLM batch inference requires tensorrt-llm.",
                 )
             build_config = BuildConfig(max_seq_len=4096)
             self._llm = TRTLLM(model=model, build_config=build_config)
             self._tokenizer = self._llm.tokenizer
         else:
+            if vllm is None:
+                raise missing_extra_error(
+                    "vllm",
+                    "Open-source listwise reranking requires vLLM.",
+                )
+            from rank_llm.rerank.vllm_handler import VllmHandler
+
             if self._base_url:
+                from rank_llm.rerank.vllm_handler_with_openai_sdk import (
+                    VllmHandlerWithOpenAISDK,
+                )
+
                 self._vllm_handler = VllmHandlerWithOpenAISDK(
                     model=model, base_url=base_url
                 )

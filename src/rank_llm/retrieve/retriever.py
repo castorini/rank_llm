@@ -11,7 +11,7 @@ from dacite import from_dict
 from rank_llm.data import Request
 from rank_llm.retrieve.utils import download_cached_hits, get_cache_home
 
-from . import PyseriniRetriever, RetrievalMethod
+from .retrieval_method import RetrievalMethod
 
 
 class RetrievalMode(Enum):
@@ -218,6 +218,8 @@ class Retriever:
                 print(f"HF download failed, using Pyserini: {hf_error}")
             try:  # fallback #2: retrieve on the spot with pyserini
                 print(f"Using Pyserini to retrieve with dataset {self._dataset}")
+                from .pyserini_retriever import PyseriniRetriever
+
                 pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
                 return pyserini.retrieve_and_store(k=k)
             except Exception as pyserini_error:
@@ -228,6 +230,8 @@ class Retriever:
             )
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
+                from .pyserini_retriever import PyseriniRetriever
+
                 pyserini = PyseriniRetriever(
                     dataset=self._dataset,
                     retrieval_method=self._retrieval_method,

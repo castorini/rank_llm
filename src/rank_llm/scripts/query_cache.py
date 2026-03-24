@@ -3,6 +3,8 @@ import os
 import urllib.request
 from urllib.parse import urlparse
 
+from rank_llm._optional import missing_extra_error
+
 try:
     from pyserini.util import compute_md5, download_url
 except ImportError:
@@ -16,7 +18,7 @@ def no_bool_convert(pairs):
 
 def parse_file_info(file_name, file_url, save_dir):
     if download_url is None or compute_md5 is None:
-        raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+        raise missing_extra_error("pyserini")
 
     # download file
     local_file_path = download_url(

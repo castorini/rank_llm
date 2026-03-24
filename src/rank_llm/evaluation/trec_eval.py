@@ -5,6 +5,8 @@ import tempfile
 from pathlib import Path
 from typing import List
 
+from rank_llm._optional import missing_extra_error
+
 try:
     from pyserini.search import get_qrels_file
     from pyserini.util import download_evaluation_script
@@ -18,10 +20,8 @@ from rank_llm.data import Result
 def _require_pandas():
     try:
         import pandas as pd
-    except ImportError as exc:
-        raise ImportError(
-            "Evaluation requires pandas. Install rank-llm[pyserini]."
-        ) from exc
+    except ImportError:
+        raise missing_extra_error("pyserini", "Evaluation requires pandas.")
     return pd
 
 
@@ -102,8 +102,9 @@ class EvalFunction:
         """
         if not Path(qrels).exists():
             if get_qrels_file is None:
-                raise ImportError(
-                    "Please install rank-llm with `pip install .[pyserini]`."
+                raise missing_extra_error(
+                    "pyserini",
+                    "Evaluation requires Pyserini and pandas-backed qrels loading.",
                 )
             qrels = get_qrels_file(qrels)
 
@@ -131,7 +132,10 @@ class EvalFunction:
             str: Evaluation results as a string.
         """
         if download_evaluation_script is None:
-            raise ImportError("Please install rank-llm with `pip install .[pyserini]`.")
+            raise missing_extra_error(
+                "pyserini",
+                "Evaluation requires the Pyserini trec_eval helper.",
+            )
 
         script_path = download_evaluation_script("trec_eval")
         cmd_prefix = ["java", "-jar", script_path]
@@ -163,8 +167,9 @@ class EvalFunction:
 
             if not os.path.exists(args[-2]):
                 if get_qrels_file is None:
-                    raise ImportError(
-                        "Please install rank-llm with `pip install .[pyserini]`."
+                    raise missing_extra_error(
+                        "pyserini",
+                        "Evaluation requires the Pyserini qrels helpers.",
                     )
 
                 args[-2] = get_qrels_file(args[-2])

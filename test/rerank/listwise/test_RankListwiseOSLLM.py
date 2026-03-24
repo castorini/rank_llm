@@ -227,6 +227,11 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.mock_torch = self.patcher_torch.start()
         self.mock_torch.cuda.is_available.return_value = True
         self.mock_torch.cuda.device_count.return_value = 1
+        # Ensure the vllm guard does not fire
+        self.patcher_vllm_mod = patch(
+            "rank_llm.rerank.listwise.rank_listwise_os_llm.vllm", new=MagicMock()
+        )
+        self.patcher_vllm_mod.start()
 
         # Mock Tokenizer
         self.mock_tokenizer = MagicMock()
@@ -237,12 +242,10 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             len(x) // 4 + 1
         )
 
-        # Patch the handlers used by RankListwiseOSLLM
-        self.patcher_vllm_handler = patch(
-            "rank_llm.rerank.listwise.rank_listwise_os_llm.VllmHandler"
-        )
+        # Patch the handlers used by RankListwiseOSLLM (lazy-imported inside __init__)
+        self.patcher_vllm_handler = patch("rank_llm.rerank.vllm_handler.VllmHandler")
         self.patcher_openai_handler = patch(
-            "rank_llm.rerank.listwise.rank_listwise_os_llm.VllmHandlerWithOpenAISDK"
+            "rank_llm.rerank.vllm_handler_with_openai_sdk.VllmHandlerWithOpenAISDK"
         )
 
         self.mock_vllm_handler_class = self.patcher_vllm_handler.start()
@@ -259,6 +262,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
     def tearDown(self):
         self.patcher_device.stop()
         self.patcher_torch.stop()
+        self.patcher_vllm_mod.stop()
         self.patcher_vllm_handler.stop()
         self.patcher_openai_handler.stop()
 
