@@ -3,8 +3,6 @@ import os
 import sys
 from pathlib import Path
 
-import torch
-
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
@@ -13,6 +11,7 @@ sys.path.append(parent)
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
+from rank_llm.utils import default_device
 
 # Force spawn method to avoid "Cannot re-initialize CUDA in forked subprocess" error.
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
@@ -45,7 +44,7 @@ def main(args):
     shuffle_candidates = args.shuffle_candidates
     print_prompts_responses = args.print_prompts_responses
     num_few_shot_examples = args.num_few_shot_examples
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = default_device()
     variable_passages = args.variable_passages
     retrieval_mode = (
         RetrievalMode.DATASET if args.dataset else RetrievalMode.CACHED_FILE
