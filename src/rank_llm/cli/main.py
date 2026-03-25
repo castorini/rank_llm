@@ -14,6 +14,14 @@ from rank_llm.cli.introspection import (
     validate_rerank_payload,
 )
 from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
+from rank_llm.cli.prompt_view import (
+    build_prompt_template_view,
+    build_rendered_prompt_view,
+    list_prompt_templates,
+    render_prompt_catalog_text,
+    render_prompt_template_text,
+    render_rendered_prompt_text,
+)
 from rank_llm.cli.responses import CommandResponse
 from rank_llm.cli.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
@@ -207,10 +215,31 @@ def build_parser() -> argparse.ArgumentParser:
     validate_rerank_parser.add_argument("--stdin", action="store_true")
     validate_rerank_parser.add_argument("--requests-file", dest="requests_file")
 
+    prompt_parser = subparsers.add_parser("prompt", help=argparse.SUPPRESS)
+    prompt_subparsers = prompt_parser.add_subparsers(
+        dest="prompt_command",
+        required=True,
+    )
+    prompt_subparsers.add_parser("list", help="List bundled prompt templates.")
+    prompt_show_parser = prompt_subparsers.add_parser(
+        "show",
+        help="Show a bundled or custom prompt template.",
+    )
+    prompt_show_parser.add_argument("name")
+    prompt_render_parser = prompt_subparsers.add_parser(
+        "render",
+        help="Render a prompt template with direct input payload.",
+    )
+    prompt_render_parser.add_argument("name")
+    prompt_render_parser.add_argument("--input-json", dest="input_json")
+    prompt_render_parser.add_argument("--stdin", action="store_true")
+
     for command in KNOWN_COMMANDS:
         if command == "rerank":
             continue
         if command == "validate":
+            continue
+        if command == "prompt":
             continue
         subparsers.add_parser(command, help=argparse.SUPPRESS)
     return parser
@@ -518,11 +547,45 @@ def _run_validate_command(args: argparse.Namespace) -> CommandResponse:
     )
 
 
+def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
+    if args.prompt_command == "list":
+        catalog = list_prompt_templates()
+        return CommandResponse(
+            command="prompt",
+            inputs={"subcommand": "list"},
+            artifacts=[make_data_artifact("prompt-catalog", catalog)],
+        )
+    if args.prompt_command == "show":
+        view = build_prompt_template_view(args.name)
+        return CommandResponse(
+            command="prompt",
+            inputs={"subcommand": "show", "name": args.name},
+            artifacts=[make_data_artifact("prompt-template", view)],
+        )
+    if args.prompt_command == "render":
+        payload = _read_direct_payload(args)
+        validation = validate_rerank_payload(payload)
+        if not validation["valid"]:
+            return _validation_error_response("prompt", validation)
+        view = build_rendered_prompt_view(args.name, payload)
+        return CommandResponse(
+            command="prompt",
+            inputs={"subcommand": "render", "name": args.name},
+            validation=validation,
+            artifacts=[make_data_artifact("rendered-prompt", view)],
+        )
+    return CommandResponse(
+        command="prompt", warnings=["prompt command not implemented yet."]
+    )
+
+
 def _run_command(args: argparse.Namespace) -> CommandResponse:
     if args.command == "rerank":
         return _run_rerank_command(args)
     if args.command == "validate":
         return _run_validate_command(args)
+    if args.command == "prompt":
+        return _run_prompt_command(args)
     return CommandResponse(
         command=args.command,
         status="success",
@@ -548,7 +611,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.output == "json":
         _emit_json(response.to_envelope())
     else:
-        if response.warnings:
+        if args.command == "prompt" and response.artifacts:
+            artifact = response.artifacts[0]["value"]
+            if args.prompt_command == "list":
+                sys.stdout.write(render_prompt_catalog_text(artifact) + "\n")
+            elif args.prompt_command == "show":
+                sys.stdout.write(render_prompt_template_text(artifact) + "\n")
+            elif args.prompt_command == "render":
+                sys.stdout.write(render_rendered_prompt_text(artifact) + "\n")
+        elif response.warnings:
             sys.stdout.write("\n".join(response.warnings) + "\n")
     return response.exit_code
 
