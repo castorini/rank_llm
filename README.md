@@ -105,7 +105,7 @@ hosted-provider stacks.
 | Listwise reranking with open-source models via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
 | Batched SGLang inference | `sglang` | Install `flashinfer` separately when needed |
 | Batched TensorRT-LLM inference | `tensorrt-llm` | Install `flash-attn` separately when needed |
-| Flask and MCP server surfaces | `server` | Pulls the server-only dependency set |
+| HTTP and MCP server surfaces | `server` | Pulls the packaged `serve http` and `serve mcp` dependency set |
 | Finetuning and training scripts | `training` | Keeps training-only deps out of base installs |
 | Everything | `all` | Aggregate of all extras |
 
@@ -150,6 +150,21 @@ pip install flash-attn --no-build-isolation
 
 <a id="quick-start"></a>
 # ⏳ Quick Start
+The packaged `rank-llm` command is the canonical CLI surface for this repository.
+The legacy scripts under `src/rank_llm/scripts/` still work, but they now act as
+compatibility wrappers over the same CLI.
+
+```bash
+rank-llm rerank --model-path castorini/rank_zephyr_7b_v1_full --dataset dl20 \
+  --retrieval-method bm25 --top-k-candidates 100
+
+rank-llm prompt list
+rank-llm view demo_outputs/rerank_results.jsonl
+rank-llm evaluate --model-name castorini/rank_zephyr_7b_v1_full
+rank-llm serve http --model-path castorini/rank_zephyr_7b_v1_full --port 8082
+rank-llm serve mcp --transport stdio
+```
+
 The following code snippet is a minimal walk through of retrieval, reranking, evalaution, and invocations analysis of top 100 retrieved documents for queries from `DL19`. In this example `BM25` is used as the retriever and `RankZephyr` as the reranker. Additional sample snippets are available to run under the `src/rank_llm/demo` directory.
 ```python
 from pathlib import Path
@@ -234,15 +249,15 @@ writer.write_inference_invocations_history(
 ```
 
 # End-to-end Run and 2CR
-If you are interested in running retrieval and reranking end-to-end or reproducing the results from the [reference papers](#✨-references), `run_rank_llm.py` is a convinent wrapper script that combines these two steps.
+If you are interested in running retrieval and reranking end-to-end or reproducing the results from the [reference papers](#✨-references), `rank-llm rerank` is the canonical command. `run_rank_llm.py` remains available as a compatibility wrapper for older automation.
 
 The comperehensive list of our two-click reproduction commands are available on [MS MARCO V1](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v1-passage.html) and [MS MARCO V2](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v2-passage.html) webpages for DL19 and DL20 and DL21-23 datasets, respectively. Moving forward, we plan to cover more datasets and retrievers in our 2CR pages. The rest of this session provides some sample e2e runs. 
 ## RankZephyr
 
 We can run the RankZephyr model with the following command:
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/rank_zephyr_7b_v1_full --top_k_candidates=100 --dataset=dl20 \
---retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages
+rank-llm rerank --model-path castorini/rank_zephyr_7b_v1_full --top-k-candidates 100 --dataset dl20 \
+--retrieval-method SPLADE++_EnsembleDistil_ONNX --prompt-template-path src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context-size 4096 --variable-passages
 ```
 
 Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
@@ -255,8 +270,8 @@ If you want to run multiple passes of the model, you can use the `--num_passes` 
 
 We can run the RankGPT4-o model with the following command:
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=gpt-4o --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml  --context_size=4096 --use_azure_openai
+rank-llm rerank --model-path gpt-4o --top-k-candidates 100 --dataset dl20 \
+  --retrieval-method bm25 --prompt-template-path src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml --context-size 4096 --use-azure-openai
 ```
 Note that the `--prompt_template_path` is set to `rank_gpt_apeer` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
 This can be changed to `rank_GPT` to use the original prompt.
