@@ -1,15 +1,15 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 
 class RankFIDInferenceHandler(BaseInferenceHandler):
-    def __init__(self, template: Dict[str, str]):
+    def __init__(self, template: dict[str, str]):
         super().__init__(template)
 
-    def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+    def _validate_template(self, template: dict[str, str], strict: bool = False):
+        TEMPLATE_SECTIONS: dict[str, TemplateSectionConfig] = {
             "method": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
@@ -62,18 +62,18 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
     def _generate_fewshot_prompt(
         self,
         num_examples: int = 0,
-        examples: List[Dict[str, List[Dict[str, str]]]] = [],
+        examples: list[dict[str, list[dict[str, str]]]] | None = None,
         **kwargs: Any,
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         raise NotImplementedError("Fewshot examples are not supported for RankFiD!")
 
-    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> list[dict[str, str]]:
         try:
             rank_start = kwargs["rank_start"]
             rank_end = kwargs["rank_end"]
             max_tokens = kwargs["max_tokens"]
-        except KeyError as e:
-            raise ValueError(f"Missing required parameter: {e}")
+        except KeyError as err:
+            raise ValueError(f"Missing required parameter: {err}") from err
 
         prompts = []
         query = result.query.text

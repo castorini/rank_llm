@@ -24,7 +24,7 @@ def register_rankllm_tools(mcp: FastMCP):
     """Register RankLLM tools with the MCP server."""
 
     @mcp.tool(
-        description=f"""
+        description="""
         Rerank retrieval results using the specified model and parameters.
         Use this only when you need to rerank a small number of given candidates.
 

@@ -17,7 +17,7 @@ def convert_json_to_jsonl(input_file, output_file):
     output_dir = os.path.dirname(output_file)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    with open(input_file, "r") as infile:
+    with open(input_file) as infile:
         data = json.load(infile)
     with open(output_file, "w") as outfile:
         for item in data:

@@ -69,7 +69,7 @@ sys.path.append(os.getcwd())
 
 def load_trec_file(file_path, topk=100, qrels=None):
     data = defaultdict(list)
-    with open(file_path, "r") as file:
+    with open(file_path) as file:
         for line in file:
             qid, _, docid, rank, score, _ = line.strip().split()
             if type(list(qrels.items())[0][0]) is int:
@@ -87,7 +87,7 @@ def load_trec_file(file_path, topk=100, qrels=None):
 
 def load_tsv_file(file_path):
     examples = {}
-    with open(file_path, "r") as file:
+    with open(file_path) as file:
         for line in file:
             exid, text = line.strip().split("\t")
             examples[exid] = text
@@ -101,7 +101,7 @@ def load_pyserini_indexer(collection_file, trec_data, topk):
         raise missing_extra_error("pyserini")
 
     index_reader = LuceneSearcher.from_prebuilt_index(collection_file)
-    for qid, hits in tqdm(trec_data.items()):
+    for _qid, hits in tqdm(trec_data.items()):
         rank = 0
         for hit in hits:
             rank += 1

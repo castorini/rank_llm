@@ -42,7 +42,7 @@ def generate_hits_info(base_path):
         "msmarco-v2.1-doc-segmented.bm25.rag24.raggy-dev": "TREC24-Raggy Dev",
         "msmarco-v2.1-doc-segmented.bm25.rag24.researchy-dev": "TREC24-Researchy Dev",
     }
-    for root, dirs, files in os.walk(base_path):
+    for root, _dirs, files in os.walk(base_path):
         for file in files:
             if file.endswith(".jsonl"):
                 file_path = os.path.join(root, file)

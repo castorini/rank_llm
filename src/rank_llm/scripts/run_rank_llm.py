@@ -185,7 +185,7 @@ if __name__ == "__main__":
     retrieval_input_group.add_argument(
         "--requests_file",
         type=str,
-        help=f"Path to a JSONL file containing requests; must be used when --dataset is not specified.",
+        help="Path to a JSONL file containing requests; must be used when --dataset is not specified.",
     )
     parser.add_argument(
         "--qrels_file",

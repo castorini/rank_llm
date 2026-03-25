@@ -77,7 +77,7 @@ def main():
             rerank_results = reranker.rerank_batch(requests=retrieve_results, **kwargs)
             rerank_ndcg_10 = EvalFunction.from_results(rerank_results, qrels)
             writer = DataWriter(rerank_results)
-            path = Path(f"../bright_fusion/rerank_results/Qwen3-8B")
+            path = Path("../bright_fusion/rerank_results/Qwen3-8B")
             path.mkdir(parents=True, exist_ok=True)
             writer.write_in_jsonl_format(
                 os.path.join(path, f"{task}-rrf-{fusion}_top100.jsonl")

@@ -160,7 +160,7 @@ def train_epoch(
     else:
         active_dataloader = train_dataloader
 
-    for step, batch in enumerate(active_dataloader):
+    for _step, batch in enumerate(active_dataloader):
         with accelerator.autocast():
             with accelerator.accumulate(model):
                 loss, generate_loss, rank_loss = process_batch(

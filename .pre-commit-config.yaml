@@ -1,22 +1,27 @@
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
--   repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 23.12.1
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.0
     hooks:
-    -   id: black
-        language_version: "3.11"
-
--   repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+      - id: ruff-check
+        types_or: [python, pyi]
+        args: [--fix]
+        stages: [pre-commit]
+      - id: ruff-format
+        types_or: [python, pyi]
+        stages: [pre-commit]
+  - repo: local
     hooks:
-    -   id: isort
-        args:
-            - --profile=black
-        language_version: "3.11"
-
--   repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
-    hooks:
-    -   id: flake8
-        args: [--ignore=E501, --select=F401]
-        additional_dependencies: [flake8-import-order]
-        language_version: "3.11"
+      - id: ruff-check-push
+        name: ruff-check (push)
+        entry: uv run ruff check .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: ruff-format-check-push
+        name: ruff-format (push)
+        entry: uv run ruff format --check .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

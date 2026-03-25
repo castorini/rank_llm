@@ -1,6 +1,5 @@
 import logging
 from importlib.resources import files
-from typing import List, Tuple
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -44,8 +43,8 @@ class MonoELECTRA(PointwiseRankLLM):
 
     def run_llm_batched(
         self,
-        prompts: List[str],
-    ) -> Tuple[List[str], List[int], List[float]]:
+        prompts: list[str],
+    ) -> tuple[list[str], list[int], list[float]]:
         """
         Run batched inference on ELECTRA model.
 
@@ -95,12 +94,12 @@ class MonoELECTRA(PointwiseRankLLM):
 
         return all_outputs, all_output_token_counts, all_scores
 
-    def run_llm(self, prompt: str) -> Tuple[str, int, float]:
+    def run_llm(self, prompt: str) -> tuple[str, int, float]:
         """Run single inference."""
         ret = self.run_llm_batched([prompt])
         return ret[0][0], ret[1][0], ret[2][0]
 
-    def create_prompt(self, result: Result, index: int) -> Tuple[str, int]:
+    def create_prompt(self, result: Result, index: int) -> tuple[str, int]:
         """
         Create a prompt for ELECTRA.
 
@@ -145,7 +144,7 @@ class MonoELECTRA(PointwiseRankLLM):
 
         return prompt, final_token_count
 
-    def _parse_prompt(self, prompt: str) -> Tuple[str, str]:
+    def _parse_prompt(self, prompt: str) -> tuple[str, str]:
         """Parse query and document from prompt string."""
         parts = prompt.split(" DOCUMENT: ", 1)
         if len(parts) == 2:

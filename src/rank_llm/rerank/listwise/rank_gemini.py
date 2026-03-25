@@ -1,6 +1,6 @@
 import time
 from importlib.resources import files
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from tqdm import tqdm
 
@@ -16,11 +16,11 @@ pip install -U -q "google-generativeai>=0.8.2"
 """
 try:
     import google.generativeai as genai
-except:
+except ImportError:
     genai = None
 
 
-def populate_generation_config(**kwargs) -> Dict[str, Any]:
+def populate_generation_config(**kwargs) -> dict[str, Any]:
     # TODO: complete this for the rest of the optional generation params.
     generation_config = {"response_mime_type": "text/plain"}
     if "temperature" in kwargs:
@@ -43,10 +43,10 @@ class SafeGenai(ListwiseRankLLM):
         self,
         model: str,
         context_size: int,
-        prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: Optional[str] = None,
+        prompt_mode: PromptMode | None = None,
+        prompt_template_path: str | None = None,
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
+        few_shot_file: str | None = None,
         window_size: int = 20,
         stride: int = 10,
         batch_size: int = 32,
@@ -117,13 +117,13 @@ class SafeGenai(ListwiseRankLLM):
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
         populate_invocations_history: bool = kwargs.get(
@@ -146,9 +146,7 @@ class SafeGenai(ListwiseRankLLM):
     def run_llm_batched(self):
         pass
 
-    def _call_inference(
-        self, messages, return_text=False
-    ) -> Union[str, Dict[str, Any]]:
+    def _call_inference(self, messages, return_text=False) -> str | dict[str, Any]:
         while True:
             try:
                 if isinstance(messages, list):
@@ -174,9 +172,9 @@ class SafeGenai(ListwiseRankLLM):
 
     def run_llm(
         self,
-        prompt: Union[str, List[Dict[str, str]]],
-        current_window_size: Optional[int] = None,
-    ) -> Tuple[str, int]:
+        prompt: str | list[dict[str, str]],
+        current_window_size: int | None = None,
+    ) -> tuple[str, int]:
         response = self._call_inference(
             messages=prompt,
             return_text=True,
@@ -186,7 +184,7 @@ class SafeGenai(ListwiseRankLLM):
     # TODO (issue #256): Need to modify gemini implementation to use OpenAI's API and then add fewshot examples
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[str, int]:
+    ) -> tuple[str, int]:
         max_length = self._max_passage_words
         while True:
             message = self._inference_handler.generate_prompt(
@@ -206,7 +204,7 @@ class SafeGenai(ListwiseRankLLM):
                 )
         return message, self.get_num_tokens(message)
 
-    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+    def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
         if self._output_token_estimate and self._window_size == current_window_size:
@@ -214,7 +212,7 @@ class SafeGenai(ListwiseRankLLM):
         else:
             _output_token_estimate = (
                 self.model.count_tokens(
-                    " > ".join([f"[{i+1}]" for i in range(current_window_size)])
+                    " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
                 ).total_tokens
                 - 1
             )
@@ -226,16 +224,16 @@ class SafeGenai(ListwiseRankLLM):
             return _output_token_estimate
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int
-    ) -> List[Tuple[List[Dict[str, str]], int]]:
+        self, results: list[Result], rank_start: int, rank_end: int
+    ) -> list[tuple[list[dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""
         num_tokens = 0
         if isinstance(prompt, list):
             for message in prompt:
-                for key, value in message.items():
+                for _key, value in message.items():
                     response = self.model.count_tokens(value).total_tokens
                     num_tokens += response
         else:

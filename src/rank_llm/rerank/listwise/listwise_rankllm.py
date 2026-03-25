@@ -5,7 +5,7 @@ import random
 from abc import ABC
 from collections import deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from tqdm import tqdm
 
@@ -37,11 +37,11 @@ class ListwiseRankLLM(RankLLM, ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: Optional[str] = None,
+        prompt_mode: PromptMode | None = None,
+        prompt_template_path: str | None = None,
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
-        device: Optional[str] = None,
+        few_shot_file: str | None = None,
+        device: str | None = None,
         window_size: int = 20,
         stride: int = 10,
         use_alpha: bool = False,
@@ -95,9 +95,9 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     async def run_llm_async(
         self,
-        prompt: Union[str, List[Dict[str, str]]],
-        current_window_size: Optional[int] = None,
-    ) -> Tuple:
+        prompt: str | list[dict[str, str]],
+        current_window_size: int | None = None,
+    ) -> tuple:
         """
         Async wrapper around run_llm. Subclasses with native async backends
         (AsyncLLMEngine, AsyncOpenAI) should override this for true concurrency.
@@ -112,8 +112,8 @@ class ListwiseRankLLM(RankLLM, ABC):
     def _apply_llm_output_to_result(
         self,
         result: Result,
-        llm_out: Tuple,
-        prompt: Union[str, List[Dict[str, str]]],
+        llm_out: tuple,
+        prompt: str | list[dict[str, str]],
         in_token_count: int,
         rank_start: int,
         rank_end: int,
@@ -255,7 +255,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         return result
 
     def shuffle_and_rescore(
-        self, rerank_results: List[Result], rank_start: int, rank_end: int
+        self, rerank_results: list[Result], rank_start: int, rank_end: int
     ):
         """
         Shuffles candidates between rank_start and rank_end, and rescales scores based on new rank.
@@ -298,14 +298,14 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def sliding_windows_batched(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int,
         rank_end: int,
         top_k_retrieve: int,
         shuffle_candidates: bool = False,
         logging: bool = False,
         populate_invocations_history: bool = False,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Applies the sliding window algorithm to the reranking process for a batch of result objects.
 
@@ -460,7 +460,7 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def get_ranking_cost_upperbound(
         self, num_q: int, rank_start: int, rank_end: int
-    ) -> Tuple[float, int]:
+    ) -> tuple[float, int]:
         """
         Calculates the upper bound of the ranking cost for a given set of parameters.
 
@@ -486,10 +486,10 @@ class ListwiseRankLLM(RankLLM, ABC):
 
     def get_ranking_cost(
         self,
-        retrieved_results: List[Request],
+        retrieved_results: list[Request],
         rank_start: int,
         rank_end: int,
-    ) -> Tuple[float, int]:
+    ) -> tuple[float, int]:
         """
         Calculates the ranking cost based on actual token counts from generated prompts.
 
@@ -523,7 +523,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         ) / 1000.0
         return (cost, input_token_count + output_token_count)
 
-    def _remove_duplicate(self, response: List[int]) -> List[int]:
+    def _remove_duplicate(self, response: list[int]) -> list[int]:
         new_response = []
         for c in response:
             if c not in new_response:

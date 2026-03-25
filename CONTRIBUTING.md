@@ -10,8 +10,9 @@ RankLLM Contribution flow
 4. If change may impact efficiency, run benchmarks before change and after change for validation.
 5. Every PR should be formatted. Below are the instructions to do so:
     - Bootstrap the repo-local development environment with `uv python install 3.11`, `uv venv --python 3.11`, `source .venv/bin/activate`, and `uv sync --group dev`
-    - Run the following command in the project root to set up pre-commit hooks (all commits through git UI will automatically be formatted): `uv run pre-commit install`
-    - To manually make sure your code is correctly formatted, run `uv run pre-commit run --all-files`
+    - Run the following command in the project root to set up pre-commit and pre-push hooks (all commits through git UI will automatically be formatted): `uv run pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push`
+    - To manually make sure your code is correctly formatted and lint-clean, run `uv run pre-commit run --all-files`
+    - To run Ruff directly, use `uv run ruff check .` and `uv run ruff format .`
 6. Run from the root directory the unit tests with `uv run python -m unittest discover test`
 7. Update the `pyproject.toml` if applicable
 

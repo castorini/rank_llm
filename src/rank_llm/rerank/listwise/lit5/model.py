@@ -140,7 +140,7 @@ class FiD(T5ForConditionalGeneration):
 
     @torch.no_grad()
     def get_crossattention_scores(
-        self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=[]
+        self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=None
     ):
         """
         Cross-attention scores are aggregated to obtain a single scalar per
@@ -152,6 +152,8 @@ class FiD(T5ForConditionalGeneration):
         More details in Distilling Knowledge from Reader to Retriever:
         https://arxiv.org/abs/2012.04584.
         """
+        if output_sequence_lengths is None:
+            output_sequence_lengths = []
         norms = []
         for mod in self.decoder.block:
             norms.append(mod.layer[1].EncDecAttention.normalized_score_storage)
@@ -177,10 +179,14 @@ class FiD(T5ForConditionalGeneration):
         n_passages,
         ids,
         mask_query=None,
-        output={},
+        output=None,
         prefix="",
-        output_sequence_lengths=[],
+        output_sequence_lengths=None,
     ):
+        if output is None:
+            output = {}
+        if output_sequence_lengths is None:
+            output_sequence_lengths = []
         n_layers, bsz, n_tokens, total_tokens = scores.size()
 
         ids = ids.view(bsz, n_passages, -1)
@@ -190,9 +196,8 @@ class FiD(T5ForConditionalGeneration):
 
         scores = scores.sum(dim=[0])
 
-        scores_woquery = None
         # Compute scores based on scores without query
-        if not mask_query is None:
+        if mask_query is not None:
             output[f"{prefix}woquery"] = self.get_woquery_score(
                 scores,
                 mask_query,
@@ -360,7 +365,7 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
 
     @torch.no_grad()
     def get_crossattention_scores(
-        self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=[]
+        self, n_passages, mask, ids, mask_query=None, output_sequence_lengths=None
     ):
         """
         Cross-attention scores are aggregated to obtain a single scalar per
@@ -372,6 +377,8 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
         More details in Distilling Knowledge from Reader to Retriever:
         https://arxiv.org/abs/2012.04584.
         """
+        if output_sequence_lengths is None:
+            output_sequence_lengths = []
         norms = []
         for mod in self.decoder.block:
             norms.append(mod.layer[1].EncDecAttention.normalized_score_storage)
@@ -397,10 +404,14 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
         n_passages,
         ids,
         mask_query=None,
-        output={},
+        output=None,
         prefix="",
-        output_sequence_lengths=[],
+        output_sequence_lengths=None,
     ):
+        if output is None:
+            output = {}
+        if output_sequence_lengths is None:
+            output_sequence_lengths = []
         n_layers, bsz, n_tokens, total_tokens = scores.size()
 
         ids = ids.view(bsz, n_passages, -1)
@@ -410,9 +421,8 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
 
         scores = scores.sum(dim=[0])
 
-        scores_woquery = None
         # Compute scores based on scores without query
-        if not mask_query is None:
+        if mask_query is not None:
             output[f"{prefix}woquery"] = self.get_woquery_score(
                 scores,
                 mask_query,
@@ -484,9 +494,9 @@ def cross_attention_forward(
     real_seq_length = seq_length
 
     if past_key_value is not None:
-        assert (
-            len(past_key_value) == 2
-        ), f"past_key_value should have 2 past states: keys and values. Got {len(past_key_value)} past states"
+        assert len(past_key_value) == 2, (
+            f"past_key_value should have 2 past states: keys and values. Got {len(past_key_value)} past states"
+        )
         real_seq_length += (
             past_key_value[0].shape[2] if query_length is None else query_length
         )

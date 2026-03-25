@@ -3,7 +3,7 @@ import logging
 from abc import ABC
 from datetime import datetime
 from functools import cmp_to_key
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from tqdm import tqdm
 
@@ -22,10 +22,10 @@ class PairwiseRankLLM(RankLLM, ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: Optional[str] = None,
+        prompt_mode: PromptMode | None = None,
+        prompt_template_path: str | None = None,
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
+        few_shot_file: str | None = None,
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,
@@ -46,13 +46,13 @@ class PairwiseRankLLM(RankLLM, ABC):
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Re-rank candidates in a pairwise fashion:
          1. Build a list of all pairwise comparisons.
@@ -96,7 +96,7 @@ class PairwiseRankLLM(RankLLM, ABC):
                     outputs, output_tokens, scores = self.run_llm_batched(prompts)
 
                     for (i, j), score in zip(
-                        pair_list[index : index + len(scores)], scores
+                        pair_list[index : index + len(scores)], scores, strict=False
                     ):
                         rerank_results[query_idx].candidates[i].score += score
                         rerank_results[query_idx].candidates[j].score += 1 - score
@@ -110,8 +110,8 @@ class PairwiseRankLLM(RankLLM, ABC):
         return rerank_results
 
     def create_prompt_batched(
-        self, results: List[Result], query_idx: int, index: int
-    ) -> Tuple[List[str], List[int]]:
+        self, results: list[Result], query_idx: int, index: int
+    ) -> tuple[list[str], list[int]]:
         """
         Create a batch of prompts for the given query_idx, taking pairs of candidates
         from self._enumerated_indices[query_idx] in the range [index : index + batch_size].

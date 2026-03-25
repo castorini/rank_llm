@@ -53,11 +53,11 @@ def main():
 
     # Write rerank results
     writer = DataWriter(rerank_results)
-    Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
-    writer.write_in_jsonl_format(f"demo_outputs/rerank_results_qwen-r1-distill.jsonl")
-    writer.write_in_trec_eval_format(f"demo_outputs/rerank_results_qwen-r1-distill.txt")
+    Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
+    writer.write_in_jsonl_format("demo_outputs/rerank_results_qwen-r1-distill.jsonl")
+    writer.write_in_trec_eval_format("demo_outputs/rerank_results_qwen-r1-distill.txt")
     writer.write_inference_invocations_history(
-        f"demo_outputs/inference_invocations_history_qwen-r1-distill.json"
+        "demo_outputs/inference_invocations_history_qwen-r1-distill.json"
     )
 
 

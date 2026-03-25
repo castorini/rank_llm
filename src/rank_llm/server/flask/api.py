@@ -32,7 +32,7 @@ def create_app(model, port, use_azure_openai=False):
     if model == "first_mistral":
         print(f"Loading {model} model...")
         default_model_coordinator = RankListwiseOSLLM(
-            model=f"castorini/first_mistral",
+            model="castorini/first_mistral",
             name=model,
             context_size=8192,
             prompt_template_path=(TEMPLATES / "rank_zephyr_alpha_template.yaml"),
@@ -122,7 +122,7 @@ def create_app(model, port, use_azure_openai=False):
         if "bm25" in retrieval_method.lower():
             _retrieval_method = RetrievalMethod.BM25
         else:
-            return jsonify({"error": str("Retrieval method must be BM25")}), 500
+            return jsonify({"error": "Retrieval method must be BM25"}), 500
 
         # If the request model is not the default model
         global default_model_coordinator
@@ -131,7 +131,9 @@ def create_app(model, port, use_azure_openai=False):
             and model_path != default_model_coordinator.get_name()
         ):
             # Delete the old model_coordinator to clear up the CUDA cache
-            del default_model_coordinator  # this line is required for clearing the cache
+            del (
+                default_model_coordinator
+            )  # this line is required for clearing the cache
             torch.cuda.empty_cache()
             default_model_coordinator = None
         try:

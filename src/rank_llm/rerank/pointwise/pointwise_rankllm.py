@@ -3,7 +3,7 @@ import logging
 from abc import ABC
 from datetime import datetime
 from functools import cmp_to_key
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from tqdm import tqdm
 
@@ -31,10 +31,10 @@ class PointwiseRankLLM(RankLLM, ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: Optional[str] = None,
+        prompt_mode: PromptMode | None = None,
+        prompt_template_path: str | None = None,
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
+        few_shot_file: str | None = None,
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,
@@ -53,13 +53,13 @@ class PointwiseRankLLM(RankLLM, ABC):
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         populate_invocations_history: bool = kwargs.get(
             "populate_invocations_history", False
         )
@@ -116,8 +116,8 @@ class PointwiseRankLLM(RankLLM, ABC):
         return rerank_results
 
     def get_query_and_candidate_index(
-        self, results: List[Result], global_index: int
-    ) -> Tuple[int, int]:
+        self, results: list[Result], global_index: int
+    ) -> tuple[int, int]:
         cumulative_count = 0
         for query_index, result in enumerate(results):
             if global_index < cumulative_count + len(result.candidates):
@@ -126,8 +126,8 @@ class PointwiseRankLLM(RankLLM, ABC):
         raise IndexError("Index out of range in get_query_and_candidate_index")
 
     def create_prompt_batched(
-        self, results: List[Result], index: int
-    ) -> Tuple[List[str], List[int]]:
+        self, results: list[Result], index: int
+    ) -> tuple[list[str], list[int]]:
         prompts = []
         token_counts = []
 

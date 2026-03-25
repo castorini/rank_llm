@@ -1,7 +1,7 @@
 import copy
 import random
 from datetime import datetime
-from typing import Any, List
+from typing import Any
 
 from rank_llm.data import Request, Result
 
@@ -9,13 +9,13 @@ from rank_llm.data import Request, Result
 class IdentityReranker:
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         A trivial reranker that returns a subsection of the retrieved candidates list as-is or shuffled.
 

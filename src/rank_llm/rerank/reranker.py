@@ -1,6 +1,6 @@
 from importlib.resources import files
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from rank_llm.data import DataWriter, Request, Result
 from rank_llm.rerank.api_keys import (
@@ -15,18 +15,18 @@ TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class Reranker:
-    def __init__(self, model_coordinator: Optional[RankLLM]) -> None:
+    def __init__(self, model_coordinator: RankLLM | None) -> None:
         self._model_coordinator = model_coordinator
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Reranks a list of requests using the RankLLM model_coordinator.
 
@@ -90,7 +90,7 @@ class Reranker:
     def write_rerank_results(
         self,
         retrieval_method_name: str,
-        results: List[Result],
+        results: list[Result],
         shuffle_candidates: bool = False,
         top_k_candidates: int = 100,
         dataset_name: str = None,
@@ -98,9 +98,9 @@ class Reranker:
         inference_invocations_history_dirname: str = "inference_invocations_history",
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
-        output_trec_file: Optional[str] = None,
-        output_jsonl_file: Optional[str] = None,
-        invocations_history_file: Optional[str] = None,
+        output_trec_file: str | None = None,
+        output_jsonl_file: str | None = None,
+        invocations_history_file: str | None = None,
         **kwargs,
     ) -> str:
         """
@@ -129,8 +129,8 @@ class Reranker:
             The function creates directories and files as needed. When output paths are not passed,
             file names are constructed from parameters and timestamp to ensure uniqueness.
         """
-        pass_ct: Optional[int] = kwargs.get("pass_ct", None)
-        window_size: Optional[int] = kwargs.get("window_size", None)
+        pass_ct: int | None = kwargs.get("pass_ct", None)
+        window_size: int | None = kwargs.get("window_size", None)
 
         name = self._model_coordinator.get_output_filename(
             top_k_candidates, dataset_name, shuffle_candidates, **kwargs
@@ -211,7 +211,7 @@ class Reranker:
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
         use_openrouter: bool = kwargs.get("use_openrouter", False)
-        base_url: Optional[str] = kwargs.get("base_url")
+        base_url: str | None = kwargs.get("base_url")
 
         if interactive and default_model_coordinator is not None:
             # Default rerank model_coordinator
@@ -623,9 +623,9 @@ class Reranker:
 
 
 def extract_kwargs(
-    keys_and_defaults: List[Tuple[str, Any]],
+    keys_and_defaults: list[tuple[str, Any]],
     **kwargs,
-) -> List[Any]:
+) -> list[Any]:
     """Extract specified kwargs from **kwargs
 
     Keyword arguments:

@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any
 
 from dacite import from_dict
 
@@ -8,20 +8,20 @@ from dacite import from_dict
 @dataclass
 class Query:
     text: str
-    qid: Union[str | int]
+    qid: str | int
 
 
 @dataclass
 class Candidate:
-    docid: Union[str | int]
+    docid: str | int
     score: float
-    doc: Dict[str, Any]
+    doc: dict[str, Any]
 
 
 @dataclass
 class Request:
     query: Query
-    candidates: List[Candidate] = field(default_factory=list)
+    candidates: list[Candidate] = field(default_factory=list)
 
 
 @dataclass
@@ -30,10 +30,10 @@ class InferenceInvocation:
     response: str
     input_token_count: int
     output_token_count: int
-    reasoning: Optional[str] = None
-    token_usage: Optional[Dict[str, Any]] = None
-    output_validation_regex: Optional[str] = None
-    output_extraction_regex: Optional[str] = None
+    reasoning: str | None = None
+    token_usage: dict[str, Any] | None = None
+    output_validation_regex: str | None = None
+    output_extraction_regex: str | None = None
 
 
 @dataclass
@@ -46,22 +46,22 @@ class Result:
 @dataclass
 class TemplateSectionConfig:
     required: bool
-    required_placeholders: Set[str]
-    allowed_placeholders: Set[str]
+    required_placeholders: set[str]
+    allowed_placeholders: set[str]
 
 
-def read_requests_from_file(file_path: str) -> List[Request]:
+def read_requests_from_file(file_path: str) -> list[Request]:
     extension = file_path.split(".")[-1]
     if extension == "jsonl":
         requests = []
-        with open(file_path, "r") as f:
-            for l in f:
-                if not l.strip():
+        with open(file_path) as f:
+            for line in f:
+                if not line.strip():
                     continue
-                requests.append(from_dict(data_class=Request, data=json.loads(l)))
+                requests.append(from_dict(data_class=Request, data=json.loads(line)))
         return requests
     elif extension == "json":
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             request_dicts = json.load(f)
         return [
             from_dict(data_class=Request, data=request_dict)
@@ -74,7 +74,7 @@ def read_requests_from_file(file_path: str) -> List[Request]:
 class DataWriter:
     def __init__(
         self,
-        data: Union[Request | Result | List[Result] | List[Request]],
+        data: Request | Result | list[Result] | list[Request],
         append: bool = False,
     ):
         if isinstance(data, list):

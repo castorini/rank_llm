@@ -4,7 +4,6 @@ import json
 import os
 import re
 import sys
-from typing import Dict, List, Tuple, Union
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
@@ -17,7 +16,7 @@ from rank_llm.data import Result
 class ResponseAnalyzer:
     def __init__(
         self,
-        data: Union[List[str], List[Result]],
+        data: list[str] | list[Result],
         use_alpha: bool = False,
     ) -> None:
         self._data = data
@@ -25,7 +24,7 @@ class ResponseAnalyzer:
 
     @staticmethod
     def from_inline_results(
-        results: List[Result],
+        results: list[Result],
         use_alpha: bool = False,
     ) -> "ResponseAnalyzer":
         """
@@ -42,7 +41,7 @@ class ResponseAnalyzer:
 
     @staticmethod
     def from_stored_files(
-        filenames: List[str],
+        filenames: list[str],
         use_alpha: bool = False,
     ) -> "ResponseAnalyzer":
         """
@@ -57,7 +56,7 @@ class ResponseAnalyzer:
         """
         return ResponseAnalyzer(data=filenames, use_alpha=use_alpha)
 
-    def read_results_responses(self) -> Tuple[List[str], List[int], str, str]:
+    def read_results_responses(self) -> tuple[list[str], list[int], str, str]:
         """
         Reads responses from the specified list of Result objects and produces the total number of passages.
 
@@ -81,7 +80,7 @@ class ResponseAnalyzer:
                 num_passages.append(int(num_passage))
         return responses, num_passages, output_validation_regex, output_extraction_regex
 
-    def read_saved_responses(self) -> Tuple[List[str], List[int], str, str]:
+    def read_saved_responses(self) -> tuple[list[str], list[int], str, str]:
         """
         Reads responses from the specified list of files and produces the total number of passages.
 
@@ -110,7 +109,7 @@ class ResponseAnalyzer:
                     num_passages.append(int(num_passage))
         return responses, num_passages, output_validation_regex, output_extraction_regex
 
-    def read_responses(self) -> Tuple[List[str], List[int], str, str]:
+    def read_responses(self) -> tuple[list[str], list[int], str, str]:
         """
         Selects what read response class method to call depending on the input type.
 
@@ -131,7 +130,7 @@ class ResponseAnalyzer:
         return bool(re.fullmatch(output_validation_regex, response.strip()))
 
     def _get_num_passages(
-        self, prompt: Union[str, List[Union[str, Dict[str, str]]]], rank_id_pattern: str
+        self, prompt: str | list[str | dict[str, str]], rank_id_pattern: str
     ) -> int:
         """
         Count unique passage identifiers in prompt.
@@ -187,7 +186,7 @@ class ResponseAnalyzer:
         response: str,
         num_passage: int,
         verbose: bool,
-        stats_dict: Dict[str, int],
+        stats_dict: dict[str, int],
         output_validation_regex: str,
         output_extraction_regex: str,
         is_alphabetical: bool = False,
@@ -228,7 +227,7 @@ class ResponseAnalyzer:
 
     def count_errors(
         self, verbose: bool = False, normalize: bool = False
-    ) -> Dict[str, Union[int, float]]:
+    ) -> dict[str, int | float]:
         """
         Counts an array of different types of errors in the given responses.
 
@@ -252,7 +251,7 @@ class ResponseAnalyzer:
             "repetition": 0,
             "missing_documents": 0,
         }
-        for resp, num_passage in zip(responses, num_passages):
+        for resp, num_passage in zip(responses, num_passages, strict=True):
             self._process_response(
                 response=resp,
                 num_passage=num_passage,

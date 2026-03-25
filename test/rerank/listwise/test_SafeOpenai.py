@@ -127,8 +127,8 @@ class TestSafeOpenai(unittest.TestCase):
             num_few_shot_examples,
             keys,
         ) in failure_inputs:
-            with self.assertRaises(BaseException):
-                obj = SafeOpenai(
+            with self.assertRaises(ValueError):
+                SafeOpenai(
                     model=model,
                     context_size=context_size,
                     prompt_mode=prompt_mode,

@@ -1,15 +1,15 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 
 class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
-    def __init__(self, template: Dict[str, str]):
+    def __init__(self, template: dict[str, str]):
         super().__init__(template)
 
-    def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+    def _validate_template(self, template: dict[str, str], strict: bool = False):
+        TEMPLATE_SECTIONS: dict[str, TemplateSectionConfig] = {
             "method": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
@@ -90,7 +90,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
 
     def _generate_prefix_suffix(
         self, num: int, query: str, **kwargs: Any
-    ) -> Tuple[str | List[Dict[str, str]], str]:
+    ) -> tuple[str | list[dict[str, str]], str]:
         prefix_fmt_values = suffix_fmt_values = {"num": num, "query": query}
 
         prefix_text = self._format_template(
@@ -119,7 +119,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
         max_length: int,
         use_alpha: bool = False,
         is_conversational: bool = False,
-    ) -> str | List[Dict[str, str]]:
+    ) -> str | list[dict[str, str]]:
         if is_conversational:
             body_prompt = []
         else:
@@ -153,7 +153,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
 
         return body_prompt
 
-    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> list[dict[str, str]]:
         try:
             rank_start = kwargs["rank_start"]
             rank_end = kwargs["rank_end"]
@@ -161,8 +161,8 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             use_alpha = kwargs.get("use_alpha", False)
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
-        except KeyError as e:
-            raise ValueError(f"Missing required parameter: {e}")
+        except KeyError as err:
+            raise ValueError(f"Missing required parameter: {err}") from err
 
         query = result.query.text
         query = self._replace_number(query)

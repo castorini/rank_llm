@@ -1,4 +1,3 @@
-# coding=utf-8
 # Copyright 2018 Mesh TensorFlow authors, T5 Authors and HuggingFace Inc. team.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,7 +44,7 @@ try:
         find_pruneable_heads_and_indices,
         prune_linear_layer,
     )
-except:
+except ImportError:
     from transformers.pytorch_utils import (
         find_pruneable_heads_and_indices,
         prune_linear_layer,
@@ -135,31 +134,31 @@ def load_tf_weights_in_t5(model, config, tf_checkpoint_path):
             else:
                 scope_names = [m_name]
             if scope_names[0] in ["kernel", "scale", "embedding"]:
-                pointer = getattr(pointer, "weight")
+                pointer = pointer.weight
             elif scope_names[0] == "self_attention":
-                pointer = getattr(pointer, "layer")
+                pointer = pointer.layer
                 pointer = pointer[0]
             elif scope_names[0] == "enc_dec_attention":
-                pointer = getattr(pointer, "layer")
+                pointer = pointer.layer
                 pointer = pointer[1]
             elif scope_names[0] == "dense_relu_dense":
-                pointer = getattr(pointer, "layer")
+                pointer = pointer.layer
                 pointer = pointer[2]
             elif scope_names[0] == "rms_norm":
                 if hasattr(pointer, "layer_norm"):
-                    pointer = getattr(pointer, "layer_norm")
+                    pointer = pointer.layer_norm
                 elif hasattr(pointer, "final_layer_norm"):
-                    pointer = getattr(pointer, "final_layer_norm")
+                    pointer = pointer.final_layer_norm
             elif scope_names[0] == "scale":
-                pointer = getattr(pointer, "weight")
+                pointer = pointer.weight
             elif scope_names[0] == "output_bias" or scope_names[0] == "beta":
-                pointer = getattr(pointer, "bias")
+                pointer = pointer.bias
             elif scope_names[0] == "squad":
-                pointer = getattr(pointer, "classifier")
+                pointer = pointer.classifier
             elif scope_names[0] == "decoder" and name[1] == "logits":
                 continue
             elif scope_names[0] == "logits":
-                pointer = getattr(pointer, "lm_head")
+                pointer = pointer.lm_head
             elif (
                 scope_names[0] == "wi"
                 and len(scope_names) > 1
@@ -177,14 +176,14 @@ def load_tf_weights_in_t5(model, config, tf_checkpoint_path):
                 num = int(scope_names[1])
                 pointer = pointer[num]
         if scope_names[0] not in ["kernel", "scale", "embedding"]:
-            pointer = getattr(pointer, "weight")
+            pointer = pointer.weight
         if scope_names[0] != "embedding":
             logger.info(f"Transposing numpy weight of shape {array.shape} for {name}")
             array = np.transpose(array)
         try:
-            assert (
-                pointer.shape == array.shape
-            ), f"Pointer shape {pointer.shape} and array shape {array.shape} mismatched"
+            assert pointer.shape == array.shape, (
+                f"Pointer shape {pointer.shape} and array shape {array.shape} mismatched"
+            )
         except AssertionError as e:
             e.args += (pointer.shape, array.shape)
             raise
@@ -479,9 +478,9 @@ class T5Attention(nn.Module):
         real_seq_length = seq_length
 
         if past_key_value is not None:
-            assert (
-                len(past_key_value) == 2
-            ), f"past_key_value should have 2 past states: keys and values. Got { len(past_key_value)} past states"
+            assert len(past_key_value) == 2, (
+                f"past_key_value should have 2 past states: keys and values. Got {len(past_key_value)} past states"
+            )
             real_seq_length += (
                 past_key_value[0].shape[2] if query_length is None else query_length
             )
@@ -831,7 +830,7 @@ class T5PreTrainedModel(PreTrainedModel):
         )  # Used for testing weights initialization
         if isinstance(module, T5LayerNorm):
             module.weight.data.fill_(factor * 1.0)
-        elif isinstance(module, (T5Model, T5ForConditionalGeneration, T5EncoderModel)):
+        elif isinstance(module, T5Model | T5ForConditionalGeneration | T5EncoderModel):
             # Mesh TensorFlow embeddings initialization
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/layers.py#L1624
             module.shared.weight.data.normal_(mean=0.0, std=factor * 1.0)
@@ -885,16 +884,16 @@ class T5PreTrainedModel(PreTrainedModel):
                 )
 
     def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, (T5Attention, T5Stack)):
+        if isinstance(module, T5Attention | T5Stack):
             module.gradient_checkpointing = value
 
     def _shift_right(self, input_ids):
         decoder_start_token_id = self.config.decoder_start_token_id
         pad_token_id = self.config.pad_token_id
 
-        assert (
-            decoder_start_token_id is not None
-        ), "self.model.config.decoder_start_token_id has to be defined. In T5 it is usually set to the pad_token_id. See T5 docs for more information"
+        assert decoder_start_token_id is not None, (
+            "self.model.config.decoder_start_token_id has to be defined. In T5 it is usually set to the pad_token_id. See T5 docs for more information"
+        )
 
         # shift inputs to the right
         if is_torch_fx_proxy(input_ids):
@@ -910,15 +909,15 @@ class T5PreTrainedModel(PreTrainedModel):
             shifted_input_ids[..., 1:] = input_ids[..., :-1].clone()
             shifted_input_ids[..., 0] = decoder_start_token_id
 
-        assert (
-            pad_token_id is not None
-        ), "self.model.config.pad_token_id has to be defined."
+        assert pad_token_id is not None, (
+            "self.model.config.pad_token_id has to be defined."
+        )
         # replace possible -100 values in labels by `pad_token_id`
         shifted_input_ids.masked_fill_(shifted_input_ids == -100, pad_token_id)
 
-        assert torch.all(
-            shifted_input_ids >= 0
-        ).item(), "Verify that `shifted_input_ids` has only positive values"
+        assert torch.all(shifted_input_ids >= 0).item(), (
+            "Verify that `shifted_input_ids` has only positive values"
+        )
 
         return shifted_input_ids
 
@@ -1044,9 +1043,9 @@ class T5Stack(T5PreTrainedModel):
             )
 
         if inputs_embeds is None:
-            assert (
-                self.embed_tokens is not None
-            ), "You have to initialize the model with valid token embeddings"
+            assert self.embed_tokens is not None, (
+                "You have to initialize the model with valid token embeddings"
+            )
             inputs_embeds = self.embed_tokens(input_ids)
 
         batch_size, seq_length = input_shape
@@ -1059,9 +1058,9 @@ class T5Stack(T5PreTrainedModel):
         )
 
         if use_cache is True:
-            assert (
-                self.is_decoder
-            ), f":obj:`use_cache` can only be set to `True` if {self} is used as a decoder"
+            assert self.is_decoder, (
+                f":obj:`use_cache` can only be set to `True` if {self} is used as a decoder"
+            )
 
         if attention_mask is None:
             attention_mask = torch.ones(batch_size, mask_seq_length).to(
@@ -1124,7 +1123,7 @@ class T5Stack(T5PreTrainedModel):
         hidden_states = self.dropout(inputs_embeds)
 
         for i, (layer_module, past_key_value) in enumerate(
-            zip(self.block, past_key_values)
+            zip(self.block, past_key_values, strict=False)
         ):
             layer_head_mask = head_mask[i]
             cross_attn_layer_head_mask = cross_attn_head_mask[i]
@@ -1164,7 +1163,9 @@ class T5Stack(T5PreTrainedModel):
                     )
                     use_cache = False
 
-                def create_custom_forward(module):
+                def create_custom_forward(
+                    module, use_cache=use_cache, output_attentions=output_attentions
+                ):
                     def custom_forward(*inputs):
                         return tuple(module(*inputs, use_cache, output_attentions))
 
@@ -1547,7 +1548,7 @@ class T5Model(T5PreTrainedModel):
         # FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
         if head_mask is not None and decoder_head_mask is None:
             if self.config.num_layers == self.config.num_decoder_layers:
-                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
+                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning, stacklevel=2)
                 decoder_head_mask = head_mask
 
         # Encode if needed (training, first prediction pass)
@@ -1759,7 +1760,7 @@ class T5ForConditionalGeneration(T5PreTrainedModel, GenerationMixin):
         # FutureWarning: head_mask was separated into two input args - head_mask, decoder_head_mask
         if head_mask is not None and decoder_head_mask is None:
             if self.config.num_layers == self.config.num_decoder_layers:
-                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning)
+                warnings.warn(__HEAD_MASK_WARNING_MSG, FutureWarning, stacklevel=2)
                 decoder_head_mask = head_mask
 
         # Encode if needed (training, first prediction pass)
