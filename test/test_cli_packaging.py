@@ -4,6 +4,10 @@ import unittest
 from pathlib import Path
 from shutil import which
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 04358dc (Add packaged rank-llm entrypoint baseline)
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
