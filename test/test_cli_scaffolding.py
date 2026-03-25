@@ -18,6 +18,16 @@ class TestCLIResponses(unittest.TestCase):
 
 
 class TestCLIParserAndOutput(unittest.TestCase):
+    def test_top_level_help_does_not_expose_suppress_sentinels(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as raised:
+                main(["--help"])
+        self.assertEqual(raised.exception.code, 0)
+        self.assertEqual("", stderr.getvalue())
+        self.assertNotIn("==SUPPRESS==", stdout.getvalue())
+
     def test_missing_command_text_error(self):
         stdout = io.StringIO()
         stderr = io.StringIO()

@@ -213,7 +213,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=300,
     )
-    validate_parser = subparsers.add_parser("validate", help=argparse.SUPPRESS)
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate inputs without executing a model.",
+    )
     validate_subparsers = validate_parser.add_subparsers(
         dest="validate_target",
         required=True,
@@ -226,7 +229,10 @@ def build_parser() -> argparse.ArgumentParser:
     validate_rerank_parser.add_argument("--stdin", action="store_true")
     validate_rerank_parser.add_argument("--requests-file", dest="requests_file")
 
-    prompt_parser = subparsers.add_parser("prompt", help=argparse.SUPPRESS)
+    prompt_parser = subparsers.add_parser(
+        "prompt",
+        help="Inspect bundled prompt templates.",
+    )
     prompt_subparsers = prompt_parser.add_subparsers(
         dest="prompt_command",
         required=True,
@@ -245,19 +251,34 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_render_parser.add_argument("--input-json", dest="input_json")
     prompt_render_parser.add_argument("--stdin", action="store_true")
 
-    view_parser = subparsers.add_parser("view", help=argparse.SUPPRESS)
+    view_parser = subparsers.add_parser(
+        "view",
+        help="Inspect RankLLM artifacts and outputs.",
+    )
     view_parser.add_argument("path")
     view_parser.add_argument("--records", type=int, default=1)
 
-    describe_parser = subparsers.add_parser("describe", help=argparse.SUPPRESS)
+    describe_parser = subparsers.add_parser(
+        "describe",
+        help="Show structured metadata for a CLI command.",
+    )
     describe_parser.add_argument("name", choices=sorted(COMMAND_DESCRIPTIONS))
 
-    schema_parser = subparsers.add_parser("schema", help=argparse.SUPPRESS)
+    schema_parser = subparsers.add_parser(
+        "schema",
+        help="Show JSON schemas for supported contracts.",
+    )
     schema_parser.add_argument("name", choices=sorted(SCHEMAS))
 
-    subparsers.add_parser("doctor", help=argparse.SUPPRESS)
+    subparsers.add_parser(
+        "doctor",
+        help="Report environment and dependency readiness.",
+    )
 
-    serve_parser = subparsers.add_parser("serve", help=argparse.SUPPRESS)
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Start RankLLM transport servers.",
+    )
     serve_subparsers = serve_parser.add_subparsers(
         dest="serve_target",
         required=True,
@@ -383,7 +404,10 @@ def build_parser() -> argparse.ArgumentParser:
         default="stdio",
     )
     serve_mcp_parser.add_argument("--port", type=int, default=8000)
-    evaluate_parser = subparsers.add_parser("evaluate", help=argparse.SUPPRESS)
+    evaluate_parser = subparsers.add_parser(
+        "evaluate",
+        help="Aggregate trec_eval metrics across rerank outputs.",
+    )
     evaluate_parser.add_argument("--model-name", required=True, dest="model_name")
     evaluate_parser.add_argument("--context-size", type=int, default=4096)
     evaluate_parser.add_argument(
@@ -392,13 +416,16 @@ def build_parser() -> argparse.ArgumentParser:
         default="rerank_results",
     )
 
-    analyze_parser = subparsers.add_parser("analyze", help=argparse.SUPPRESS)
+    analyze_parser = subparsers.add_parser(
+        "analyze",
+        help="Analyze stored RankLLM responses.",
+    )
     analyze_parser.add_argument("--files", nargs="+", required=True)
     analyze_parser.add_argument("--verbose", action="store_true")
 
     retrieve_cache_parser = subparsers.add_parser(
         "retrieve-cache",
-        help=argparse.SUPPRESS,
+        help="Generate cached retrieval JSON from run files.",
     )
     retrieve_cache_parser.add_argument("--trec-file", required=True, dest="trec_file")
     retrieve_cache_parser.add_argument(
