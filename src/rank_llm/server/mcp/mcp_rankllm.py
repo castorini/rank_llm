@@ -3,8 +3,7 @@ import argparse
 from rank_llm._optional import missing_extra_error
 
 
-def main():
-    """Main entry point for the server."""
+def build_mcp_server():
     try:
         from fastmcp import FastMCP
         from pyserini.server.mcp.tools import register_tools
@@ -16,6 +15,20 @@ def main():
             "server",
             "The MCP server requires FastMCP and Pyserini.",
         ) from exc
+
+    mcp = FastMCP("rankllm")
+    register_tools(mcp, get_controller())
+    register_rankllm_tools(mcp)
+    return mcp
+
+
+def run_mcp_server(*, transport: str = "stdio", port: int = 8000):
+    mcp = build_mcp_server()
+    mcp.run(transport=transport, port=port)
+
+
+def main():
+    """Main entry point for the server."""
 
     parser = argparse.ArgumentParser(description="MCPyserini Server")
     parser.add_argument(
@@ -35,14 +48,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        mcp = FastMCP("rankllm")
-
-        # Pyserini tools
-        register_tools(mcp, get_controller())
-        # RankLLM tools
-        register_rankllm_tools(mcp)
-
-        mcp.run(transport=args.transport, port=args.port)
+        run_mcp_server(transport=args.transport, port=args.port)
 
     except Exception as e:
         print("Error", e)

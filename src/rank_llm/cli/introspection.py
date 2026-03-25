@@ -29,7 +29,7 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
     },
     "serve": {
         "summary": "Start RankLLM long-running transport servers.",
-        "subcommands": ["http"],
+        "subcommands": ["http", "mcp"],
         "inspection_safe": False,
     },
     "validate": {
@@ -171,14 +171,23 @@ def doctor_report() -> dict[str, Any]:
         "uvicorn": find_spec("uvicorn") is not None,
         "pyserini": find_spec("pyserini") is not None,
     }
+    serve_http_ready = (
+        optional_dependencies["fastapi"] and optional_dependencies["uvicorn"]
+    )
+    serve_mcp_ready = (
+        optional_dependencies["fastmcp"] and optional_dependencies["pyserini"]
+    )
     command_readiness = {
         "rerank": {"ready": True},
         "evaluate": {"ready": True},
         "analyze": {"ready": True},
         "retrieve-cache": {"ready": True},
         "serve": {
-            "ready": optional_dependencies["fastapi"]
-            and optional_dependencies["uvicorn"]
+            "ready": serve_http_ready or serve_mcp_ready,
+            "targets": {
+                "http": {"ready": serve_http_ready},
+                "mcp": {"ready": serve_mcp_ready},
+            },
         },
         "prompt": {"ready": optional_dependencies["yaml"]},
         "view": {"ready": True},

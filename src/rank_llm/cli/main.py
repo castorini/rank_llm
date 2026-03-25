@@ -372,6 +372,17 @@ def build_parser() -> argparse.ArgumentParser:
         dest="tensorrt_batched",
         action="store_true",
     )
+    serve_mcp_parser = serve_subparsers.add_parser(
+        "mcp",
+        help="Start the RankLLM MCP server.",
+        description="Start the RankLLM MCP server.",
+    )
+    serve_mcp_parser.add_argument(
+        "--transport",
+        choices=("stdio", "http"),
+        default="stdio",
+    )
+    serve_mcp_parser.add_argument("--port", type=int, default=8000)
     evaluate_parser = subparsers.add_parser("evaluate", help=argparse.SUPPRESS)
     evaluate_parser.add_argument("--model-name", required=True, dest="model_name")
     evaluate_parser.add_argument("--context-size", type=int, default=4096)
@@ -872,11 +883,26 @@ def _run_retrieve_cache_command(args: argparse.Namespace) -> CommandResponse:
 
 
 def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
-    if args.serve_target != "http":
+    if args.serve_target == "mcp":
+        try:
+            from rank_llm.server.mcp.mcp_rankllm import run_mcp_server
+
+            run_mcp_server(transport=args.transport, port=args.port)
+        except ImportError as error:
+            raise CLIError(
+                "serve mcp requires MCP dependencies; install the `server` extra",
+                exit_code=EXIT_CODES["missing_resource"],
+                status="validation_error",
+                error_code="missing_mcp_dependencies",
+                command="serve",
+                details={"missing_dependencies": ["fastmcp", "pyserini"]},
+            ) from error
+
         return CommandResponse(
             command="serve",
-            warnings=[f"serve target `{args.serve_target}` is not implemented yet."],
+            resolved={"target": "mcp", "transport": args.transport, "port": args.port},
         )
+
     try:
         import uvicorn
 

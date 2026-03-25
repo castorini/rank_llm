@@ -6,7 +6,7 @@ from fastmcp import FastMCP
 
 from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
 from rank_llm.data import Result
-from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
+from rank_llm.retrieve import RetrievalMethod
 
 
 def register_rankllm_tools(mcp: FastMCP):
@@ -81,7 +81,7 @@ def register_rankllm_tools(mcp: FastMCP):
         return run_mcp_rerank(**locals())
 
     @mcp.tool(
-        description=f"""
+        description="""
         Rerank retrieval results using the specified model and parameters.
         Use this most of the time to conserve context window.
 
