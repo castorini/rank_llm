@@ -281,3 +281,82 @@ def run_mcp_retrieve_and_rerank(
         reasoning_effort=reasoning_effort,
         max_passage_words=max_passage_words,
     )
+
+
+def run_evaluate_aggregate(
+    *,
+    model_name: str,
+    context_size: int = 4096,
+    rerank_results_dirname: str = "rerank_results",
+    runner: Callable[[Any], Any] | None = None,
+) -> dict[str, Any]:
+    if runner is None:
+        from argparse import Namespace
+
+        from rank_llm.scripts.run_trec_eval import main as runner
+
+        args = Namespace(
+            model_name=model_name,
+            context_size=context_size,
+            rerank_results_dirname=rerank_results_dirname,
+        )
+        runner(args)
+    else:
+        runner(model_name, context_size, rerank_results_dirname)
+    return {
+        "model_name": model_name,
+        "context_size": context_size,
+        "rerank_results_dirname": rerank_results_dirname,
+        "output_file": f"trec_eval_aggregated_results_{model_name}.jsonl",
+    }
+
+
+def run_response_analysis_files(
+    *,
+    files: list[str],
+    verbose: bool = False,
+    runner: Callable[..., Any] | None = None,
+) -> dict[str, Any]:
+    if runner is None:
+        from rank_llm.analysis.response_analysis import ResponseAnalyzer
+
+        runner = ResponseAnalyzer.from_stored_files
+        analyzer = runner(files)
+        return {
+            "files": files,
+            "verbose": verbose,
+            "metrics": analyzer.count_errors(verbose),
+        }
+    return runner(files, verbose)
+
+
+def run_retrieve_cache_generation(
+    *,
+    trec_file: str,
+    collection_file: str,
+    query_file: str,
+    output_file: str,
+    output_trec_file: str | None = None,
+    topk: int = 20,
+    generator: Callable[..., Any] | None = None,
+    writer: Callable[[str, Any], None] | None = None,
+) -> dict[str, Any]:
+    if generator is None or writer is None:
+        from rank_llm.scripts.generate_retrieve_results_json_cache import (
+            generate_retrieve_results,
+            write_output_file,
+        )
+
+        generator = generate_retrieve_results
+        writer = write_output_file
+    results = generator(trec_file, collection_file, query_file, topk, output_trec_file)
+    writer(output_file, results)
+    return {
+        "trec_file": trec_file,
+        "collection_file": collection_file,
+        "query_file": query_file,
+        "output_file": output_file,
+        "output_trec_file": output_trec_file,
+        "topk": topk,
+        "record_count": len(results),
+    }

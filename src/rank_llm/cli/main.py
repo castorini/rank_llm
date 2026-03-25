@@ -16,7 +16,13 @@ from rank_llm.cli.introspection import (
     validate_rerank_batch_file,
     validate_rerank_payload,
 )
-from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
+from rank_llm.cli.operations import (
+    run_evaluate_aggregate,
+    run_mcp_rerank,
+    run_mcp_retrieve_and_rerank,
+    run_response_analysis_files,
+    run_retrieve_cache_generation,
+)
 from rank_llm.cli.prompt_view import (
     PromptTemplateError,
     build_prompt_template_view,
@@ -250,6 +256,41 @@ def build_parser() -> argparse.ArgumentParser:
     schema_parser.add_argument("name", choices=sorted(SCHEMAS))
 
     subparsers.add_parser("doctor", help=argparse.SUPPRESS)
+    evaluate_parser = subparsers.add_parser("evaluate", help=argparse.SUPPRESS)
+    evaluate_parser.add_argument("--model-name", required=True, dest="model_name")
+    evaluate_parser.add_argument("--context-size", type=int, default=4096)
+    evaluate_parser.add_argument(
+        "--rerank-results-dirname",
+        dest="rerank_results_dirname",
+        default="rerank_results",
+    )
+
+    analyze_parser = subparsers.add_parser("analyze", help=argparse.SUPPRESS)
+    analyze_parser.add_argument("--files", nargs="+", required=True)
+    analyze_parser.add_argument("--verbose", action="store_true")
+
+    retrieve_cache_parser = subparsers.add_parser(
+        "retrieve-cache",
+        help=argparse.SUPPRESS,
+    )
+    retrieve_cache_parser.add_argument("--trec-file", required=True, dest="trec_file")
+    retrieve_cache_parser.add_argument(
+        "--collection-file",
+        required=True,
+        dest="collection_file",
+    )
+    retrieve_cache_parser.add_argument("--query-file", required=True, dest="query_file")
+    retrieve_cache_parser.add_argument(
+        "--output-file",
+        required=True,
+        dest="output_file",
+    )
+    retrieve_cache_parser.add_argument(
+        "--output-trec-file",
+        dest="output_trec_file",
+        default=None,
+    )
+    retrieve_cache_parser.add_argument("--topk", type=int, default=20)
 
     for command in KNOWN_COMMANDS:
         if command == "rerank":
@@ -265,6 +306,12 @@ def build_parser() -> argparse.ArgumentParser:
         if command == "schema":
             continue
         if command == "doctor":
+            continue
+        if command == "evaluate":
+            continue
+        if command == "analyze":
+            continue
+        if command == "retrieve-cache":
             continue
         subparsers.add_parser(command, help=argparse.SUPPRESS)
     return parser
@@ -670,6 +717,55 @@ def _run_doctor_command() -> CommandResponse:
     )
 
 
+def _run_evaluate_command(args: argparse.Namespace) -> CommandResponse:
+    summary = run_evaluate_aggregate(
+        model_name=args.model_name,
+        context_size=args.context_size,
+        rerank_results_dirname=args.rerank_results_dirname,
+    )
+    return CommandResponse(
+        command="evaluate",
+        inputs={
+            "model_name": args.model_name,
+            "context_size": args.context_size,
+            "rerank_results_dirname": args.rerank_results_dirname,
+        },
+        artifacts=[make_data_artifact("evaluation-summary", summary)],
+    )
+
+
+def _run_analyze_command(args: argparse.Namespace) -> CommandResponse:
+    summary = run_response_analysis_files(files=args.files, verbose=args.verbose)
+    return CommandResponse(
+        command="analyze",
+        inputs={"files": args.files, "verbose": args.verbose},
+        artifacts=[make_data_artifact("analysis-summary", summary)],
+    )
+
+
+def _run_retrieve_cache_command(args: argparse.Namespace) -> CommandResponse:
+    summary = run_retrieve_cache_generation(
+        trec_file=args.trec_file,
+        collection_file=args.collection_file,
+        query_file=args.query_file,
+        output_file=args.output_file,
+        output_trec_file=args.output_trec_file,
+        topk=args.topk,
+    )
+    return CommandResponse(
+        command="retrieve-cache",
+        inputs={
+            "trec_file": args.trec_file,
+            "collection_file": args.collection_file,
+            "query_file": args.query_file,
+            "output_file": args.output_file,
+            "output_trec_file": args.output_trec_file,
+            "topk": args.topk,
+        },
+        artifacts=[make_data_artifact("retrieve-cache-summary", summary)],
+    )
+
+
 def _run_command(args: argparse.Namespace) -> CommandResponse:
     if args.command == "rerank":
         return _run_rerank_command(args)
@@ -685,6 +781,12 @@ def _run_command(args: argparse.Namespace) -> CommandResponse:
         return _run_schema_command(args)
     if args.command == "doctor":
         return _run_doctor_command()
+    if args.command == "evaluate":
+        return _run_evaluate_command(args)
+    if args.command == "analyze":
+        return _run_analyze_command(args)
+    if args.command == "retrieve-cache":
+        return _run_retrieve_cache_command(args)
     return CommandResponse(
         command=args.command,
         status="success",
@@ -720,7 +822,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 sys.stdout.write(render_rendered_prompt_text(artifact) + "\n")
         elif args.command == "view" and response.artifacts:
             sys.stdout.write(render_view_summary(response.artifacts[0]["value"]) + "\n")
-        elif args.command in {"describe", "schema", "doctor"} and response.artifacts:
+        elif (
+            args.command
+            in {
+                "describe",
+                "schema",
+                "doctor",
+                "evaluate",
+                "analyze",
+                "retrieve-cache",
+            }
+            and response.artifacts
+        ):
             sys.stdout.write(
                 json.dumps(response.artifacts[0]["value"], indent=2) + "\n"
             )
