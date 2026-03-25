@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import json
 import sys
 from collections.abc import Sequence
 from typing import Any, NoReturn
 
-from rank_llm.cli.adapters import make_data_artifact
+from rank_llm.cli.adapters import make_data_artifact, serialize_data
 from rank_llm.cli.config import load_config
 from rank_llm.cli.introspection import (
     COMMAND_DESCRIPTIONS,
@@ -17,6 +16,7 @@ from rank_llm.cli.introspection import (
     validate_rerank_payload,
 )
 from rank_llm.cli.operations import (
+    normalize_direct_rerank_input,
     run_evaluate_aggregate,
     run_mcp_rerank,
     run_mcp_retrieve_and_rerank,
@@ -256,6 +256,122 @@ def build_parser() -> argparse.ArgumentParser:
     schema_parser.add_argument("name", choices=sorted(SCHEMAS))
 
     subparsers.add_parser("doctor", help=argparse.SUPPRESS)
+
+    serve_parser = subparsers.add_parser("serve", help=argparse.SUPPRESS)
+    serve_subparsers = serve_parser.add_subparsers(
+        dest="serve_target",
+        required=True,
+    )
+    serve_http_parser = serve_subparsers.add_parser(
+        "http",
+        help="Start the RankLLM HTTP server.",
+        description="Start the RankLLM HTTP server.",
+    )
+    serve_http_parser.add_argument("--host", default="0.0.0.0")
+    serve_http_parser.add_argument("--port", type=int, default=8082)
+    serve_http_parser.add_argument("--model-path", required=True, dest="model_path")
+    serve_http_parser.add_argument(
+        "--batch-size", dest="batch_size", type=int, default=32
+    )
+    serve_http_parser.add_argument(
+        "--top-k-rerank",
+        dest="top_k_rerank",
+        type=int,
+        default=-1,
+    )
+    serve_http_parser.add_argument(
+        "--context-size",
+        dest="context_size",
+        type=int,
+        default=4096,
+    )
+    serve_http_parser.add_argument("--num-gpus", dest="num_gpus", type=int, default=1)
+    serve_http_parser.add_argument(
+        "--prompt-template-path",
+        dest="prompt_template_path",
+        default="",
+    )
+    serve_http_parser.add_argument(
+        "--num-few-shot-examples",
+        dest="num_few_shot_examples",
+        type=int,
+        default=0,
+    )
+    serve_http_parser.add_argument("--few-shot-file", dest="few_shot_file", default="")
+    serve_http_parser.add_argument(
+        "--shuffle-candidates",
+        dest="shuffle_candidates",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--print-prompts-responses",
+        dest="print_prompts_responses",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--use-azure-openai",
+        dest="use_azure_openai",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--use-openrouter",
+        dest="use_openrouter",
+        action="store_true",
+    )
+    serve_http_parser.add_argument("--base-url", dest="base_url", default="")
+    serve_http_parser.add_argument(
+        "--variable-passages",
+        dest="variable_passages",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--num-passes", dest="num_passes", type=int, default=1
+    )
+    serve_http_parser.add_argument(
+        "--window-size", dest="window_size", type=int, default=20
+    )
+    serve_http_parser.add_argument("--stride", dest="stride", type=int, default=10)
+    serve_http_parser.add_argument(
+        "--system-message",
+        dest="system_message",
+        default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
+    )
+    serve_http_parser.add_argument(
+        "--populate-invocations-history",
+        dest="populate_invocations_history",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--is-thinking",
+        dest="is_thinking",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--reasoning-token-budget",
+        dest="reasoning_token_budget",
+        type=int,
+        default=10000,
+    )
+    serve_http_parser.add_argument(
+        "--use-logits",
+        dest="use_logits",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--use-alpha",
+        dest="use_alpha",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--sglang-batched",
+        dest="sglang_batched",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--tensorrt-batched",
+        dest="tensorrt_batched",
+        action="store_true",
+    )
     evaluate_parser = subparsers.add_parser("evaluate", help=argparse.SUPPRESS)
     evaluate_parser.add_argument("--model-name", required=True, dest="model_name")
     evaluate_parser.add_argument("--context-size", type=int, default=4096)
@@ -307,11 +423,7 @@ def build_parser() -> argparse.ArgumentParser:
             continue
         if command == "doctor":
             continue
-        if command == "evaluate":
-            continue
-        if command == "analyze":
-            continue
-        if command == "retrieve-cache":
+        if command in {"evaluate", "analyze", "retrieve-cache", "serve"}:
             continue
         subparsers.add_parser(command, help=argparse.SUPPRESS)
     return parser
@@ -447,8 +559,6 @@ def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
-
-
 def _validation_error_response(
     command: str,
     validation: dict[str, Any],
@@ -469,19 +579,6 @@ def _validation_error_response(
     )
 
 
-def _serialize_data(value: Any) -> Any:
-    if dataclasses.is_dataclass(value):
-        return {
-            key: _serialize_data(item)
-            for key, item in dataclasses.asdict(value).items()
-        }
-    if isinstance(value, list):
-        return [_serialize_data(item) for item in value]
-    if isinstance(value, dict):
-        return {key: _serialize_data(item) for key, item in value.items()}
-    return value
-
-
 def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
     _validate_rerank_sources(args)
     direct_mode = args.input_json is not None or args.stdin
@@ -498,7 +595,7 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
                 inputs={"mode": "direct"},
                 resolved={"model_path": args.model_path, "input_mode": "direct"},
             )
-        normalized = _normalize_direct_rerank_input(payload)
+        normalized = normalize_direct_rerank_input(payload)
         results = run_mcp_rerank(
             model_path=args.model_path,
             query_text=normalized["query_text"],
@@ -594,7 +691,7 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
         validation={"valid": True, "record_count": 1 if direct_mode else 0},
         inputs={"mode": input_mode},
         resolved={"model_path": args.model_path, "input_mode": input_mode},
-        artifacts=[make_data_artifact("rerank-results", _serialize_data(results))],
+        artifacts=[make_data_artifact("rerank-results", serialize_data(results))],
     )
 
 
@@ -772,6 +869,65 @@ def _run_retrieve_cache_command(args: argparse.Namespace) -> CommandResponse:
     )
 
 
+def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
+    if args.serve_target != "http":
+        return CommandResponse(
+            command="serve",
+            warnings=[f"serve target `{args.serve_target}` is not implemented yet."],
+        )
+    try:
+        import uvicorn
+
+        from rank_llm.api.app import create_app
+        from rank_llm.api.runtime import ServerConfig
+    except ModuleNotFoundError as error:
+        raise CLIError(
+            "serve http requires FastAPI dependencies; install the `server` extra",
+            exit_code=EXIT_CODES["missing_resource"],
+            status="validation_error",
+            error_code="missing_api_dependencies",
+            command="serve",
+            details={"missing_dependencies": ["fastapi", "uvicorn"]},
+        ) from error
+
+    app = create_app(
+        ServerConfig(
+            host=args.host,
+            port=args.port,
+            model_path=args.model_path,
+            batch_size=args.batch_size,
+            top_k_rerank=args.top_k_rerank,
+            context_size=args.context_size,
+            num_gpus=args.num_gpus,
+            prompt_template_path=args.prompt_template_path,
+            num_few_shot_examples=args.num_few_shot_examples,
+            few_shot_file=args.few_shot_file,
+            shuffle_candidates=args.shuffle_candidates,
+            print_prompts_responses=args.print_prompts_responses,
+            use_azure_openai=args.use_azure_openai,
+            use_openrouter=args.use_openrouter,
+            base_url=args.base_url,
+            variable_passages=args.variable_passages,
+            num_passes=args.num_passes,
+            window_size=args.window_size,
+            stride=args.stride,
+            system_message=args.system_message,
+            populate_invocations_history=args.populate_invocations_history,
+            is_thinking=args.is_thinking,
+            reasoning_token_budget=args.reasoning_token_budget,
+            use_logits=args.use_logits,
+            use_alpha=args.use_alpha,
+            sglang_batched=args.sglang_batched,
+            tensorrt_batched=args.tensorrt_batched,
+        )
+    )
+    uvicorn.run(app, host=args.host, port=args.port)
+    return CommandResponse(
+        command="serve",
+        resolved={"target": "http", "host": args.host, "port": args.port},
+    )
+
+
 def _run_command(args: argparse.Namespace) -> CommandResponse:
     if args.command == "rerank":
         return _run_rerank_command(args)
@@ -793,6 +949,8 @@ def _run_command(args: argparse.Namespace) -> CommandResponse:
         return _run_analyze_command(args)
     if args.command == "retrieve-cache":
         return _run_retrieve_cache_command(args)
+    if args.command == "serve":
+        return _run_serve_command(args)
     return CommandResponse(
         command=args.command,
         status="success",

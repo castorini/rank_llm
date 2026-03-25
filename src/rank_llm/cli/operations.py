@@ -21,6 +21,34 @@ class ScriptRerankResult:
     results: list[Result] | Any
 
 
+def normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
+    query = payload["query"]
+    query_text = query["text"] if isinstance(query, dict) else query
+    query_id = query.get("qid", "") if isinstance(query, dict) else ""
+    candidates = []
+    for index, candidate in enumerate(payload["candidates"], start=1):
+        if isinstance(candidate, str):
+            candidates.append({"docid": str(index), "score": 0.0, "doc": candidate})
+            continue
+        if "text" in candidate:
+            candidates.append(
+                {
+                    "docid": candidate.get("docid", str(index)),
+                    "score": candidate.get("score", 0.0),
+                    "doc": candidate["text"],
+                }
+            )
+            continue
+        candidates.append(
+            {
+                "docid": candidate.get("docid", str(index)),
+                "score": candidate.get("score", 0.0),
+                "doc": candidate["doc"],
+            }
+        )
+    return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
+
+
 def _default_retrieve_and_rerank(*args: Any, **kwargs: Any) -> Any:
     from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
@@ -136,21 +164,25 @@ def run_mcp_rerank(
     tensorrt_batched: bool = False,
     reasoning_effort: str | None = None,
     max_passage_words: int = 300,
+    reranker: Reranker | None = None,
 ) -> list[Result]:
     kwargs = locals().copy()
     del kwargs["model_path"]
+    del kwargs["reranker"]
     kwargs["prompt_template_path"] = prompt_template_path or None
     kwargs["few_shot_file"] = few_shot_file or None
     kwargs["base_url"] = base_url or None
 
-    reranker = Reranker(
-        Reranker.create_model_coordinator(
-            model_path,
-            None,
-            False,
-            **kwargs,
+    if reranker is None:
+        reranker = Reranker(
+            Reranker.create_model_coordinator(
+                model_path,
+                None,
+                False,
+                **kwargs,
+            )
         )
-    )
+    
 
     top_k_retrieve = len(candidates)
     top_k_rerank_effective = top_k_retrieve if top_k_rerank == -1 else top_k_rerank

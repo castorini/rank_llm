@@ -67,11 +67,13 @@ pyserini = [
 ]
 server = [
     "fastmcp>=2.0,<3",
+    "fastapi>=0.115.0",
     "flask>=3.0.0",
     "rank-llm[local]",
     "rank-llm[openai]",
     "rank-llm[pyserini]",
     "rank-llm[vllm]",
+    "uvicorn>=0.32.0",
 ]
 training = [
     "rank-llm[local]",
@@ -141,6 +143,7 @@ where = ["src"]
 include = [
     "rank_llm",
     "rank_llm.analysis",
+    "rank_llm.api",
     "rank_llm.cli",
     "rank_llm.evaluation",
     "rank_llm.rerank",
