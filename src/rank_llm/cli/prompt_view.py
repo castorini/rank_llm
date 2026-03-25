@@ -6,7 +6,6 @@ from typing import Any
 
 import yaml
 
-
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
