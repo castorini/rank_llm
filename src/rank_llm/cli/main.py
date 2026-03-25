@@ -25,6 +25,7 @@ from rank_llm.cli.prompt_view import (
 )
 from rank_llm.cli.responses import CommandResponse
 from rank_llm.cli.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
+from rank_llm.cli.view import ViewError, build_view_summary, render_view_summary
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 
 
@@ -235,12 +236,18 @@ def build_parser() -> argparse.ArgumentParser:
     prompt_render_parser.add_argument("--input-json", dest="input_json")
     prompt_render_parser.add_argument("--stdin", action="store_true")
 
+    view_parser = subparsers.add_parser("view", help=argparse.SUPPRESS)
+    view_parser.add_argument("path")
+    view_parser.add_argument("--records", type=int, default=1)
+
     for command in KNOWN_COMMANDS:
         if command == "rerank":
             continue
         if command == "validate":
             continue
         if command == "prompt":
+            continue
+        if command == "view":
             continue
         subparsers.add_parser(command, help=argparse.SUPPRESS)
     return parser
@@ -589,6 +596,22 @@ def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
     )
 
 
+def _run_view_command(args: argparse.Namespace) -> CommandResponse:
+    try:
+        summary = build_view_summary(args.path, records=args.records)
+    except ViewError as error:
+        return _validation_error_response(
+            "view",
+            {"valid": False, "record_count": 0, "errors": [str(error)]},
+        )
+    return CommandResponse(
+        command="view",
+        inputs={"path": args.path},
+        resolved={"path": args.path},
+        artifacts=[make_data_artifact("view-summary", summary)],
+    )
+
+
 def _run_command(args: argparse.Namespace) -> CommandResponse:
     if args.command == "rerank":
         return _run_rerank_command(args)
@@ -596,6 +619,8 @@ def _run_command(args: argparse.Namespace) -> CommandResponse:
         return _run_validate_command(args)
     if args.command == "prompt":
         return _run_prompt_command(args)
+    if args.command == "view":
+        return _run_view_command(args)
     return CommandResponse(
         command=args.command,
         status="success",
@@ -629,6 +654,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 sys.stdout.write(render_prompt_template_text(artifact) + "\n")
             elif args.prompt_command == "render":
                 sys.stdout.write(render_rendered_prompt_text(artifact) + "\n")
+        elif args.command == "view" and response.artifacts:
+            sys.stdout.write(render_view_summary(response.artifacts[0]["value"]) + "\n")
         elif response.warnings:
             sys.stdout.write("\n".join(response.warnings) + "\n")
     return response.exit_code
