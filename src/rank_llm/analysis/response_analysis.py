@@ -251,7 +251,7 @@ class ResponseAnalyzer:
             "repetition": 0,
             "missing_documents": 0,
         }
-        for resp, num_passage in zip(responses, num_passages, strict=False):
+        for resp, num_passage in zip(responses, num_passages, strict=True):
             self._process_response(
                 response=resp,
                 num_passage=num_passage,

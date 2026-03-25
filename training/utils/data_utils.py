@@ -46,14 +46,14 @@ def preprocess(
     tokenizer: transformers.PreTrainedTokenizer,
 ) -> dict:
     """Preprocess the data by tokenizing."""
-    examples = [s + t for s, t in zip(sources, targets, strict=False)]
+    examples = [s + t for s, t in zip(sources, targets, strict=True)]
     examples_tokenized, sources_tokenized = [
         _tokenize_fn(strings, tokenizer) for strings in (examples, sources)
     ]
     input_ids = examples_tokenized["input_ids"]
     labels = copy.deepcopy(input_ids)
     for label, source_len in zip(
-        labels, sources_tokenized["input_ids_lens"], strict=False
+        labels, sources_tokenized["input_ids_lens"], strict=True
     ):
         label[:source_len] = IGNORE_INDEX
     return input_ids, labels, sources_tokenized["input_ids_lens"]
@@ -169,7 +169,7 @@ class GenerationDataset(Dataset):
 
 def ranking_collate_fn(data, tokenizer):
     """Collate function for ranking datasets."""
-    prompts, labels = list(zip(*data, strict=False))
+    prompts, labels = list(zip(*data, strict=True))
     tokenized_inputs = tokenizer(
         prompts, padding="longest", truncation=False, return_tensors="pt"
     )
@@ -178,7 +178,7 @@ def ranking_collate_fn(data, tokenizer):
 
 def generation_collate_fn(data, tokenizer):
     """Collate function for generation datasets."""
-    prompts, labels = list(zip(*data, strict=False))
+    prompts, labels = list(zip(*data, strict=True))
     tokenized_inputs, labels, source_lens = preprocess(prompts, labels, tokenizer)
     tokenized_inputs = torch.nn.utils.rnn.pad_sequence(
         tokenized_inputs, batch_first=True, padding_value=tokenizer.pad_token_id
@@ -191,7 +191,7 @@ def generation_collate_fn(data, tokenizer):
 
 def combined_collate_fn(data, tokenizer):
     """Collate function for combined ranking and generation datasets."""
-    prompts, labels, rank_labels = list(zip(*data, strict=False))
+    prompts, labels, rank_labels = list(zip(*data, strict=True))
     tokenized_inputs, labels, source_lens = preprocess(prompts, labels, tokenizer)
     tokenized_inputs = torch.nn.utils.rnn.pad_sequence(
         tokenized_inputs, batch_first=True, padding_value=tokenizer.pad_token_id
