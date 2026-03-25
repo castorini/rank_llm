@@ -1,116 +1,28 @@
 import argparse
 import os
 import sys
-from pathlib import Path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
+from rank_llm.cli.operations import run_script_rerank
 from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
-from rank_llm.retrieve_and_rerank import retrieve_and_rerank
-from rank_llm.utils import default_device
+from rank_llm.retrieve import TOPICS, RetrievalMethod
 
 # Force spawn method to avoid "Cannot re-initialize CUDA in forked subprocess" error.
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
 
 def main(args):
-    model_path = args.model_path
-    query = ""
-    batch_size = args.batch_size
-    use_azure_openai = args.use_azure_openai
-    use_openrouter = args.use_openrouter
-    base_url = args.base_url
-    context_size = args.context_size
-    top_k_candidates = args.top_k_candidates
-    top_k_rerank = top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
-    max_queries = args.max_queries
-    dataset = args.dataset
-    num_gpus = args.num_gpus
-    retrieval_method = args.retrieval_method
-    requests_file = args.requests_file
-    qrels_file = args.qrels_file
-    output_jsonl_file = args.output_jsonl_file
-    output_trec_file = args.output_trec_file
-    invocations_history_file = args.invocations_history_file
-    prompt_template_path = (
-        Path(args.prompt_template_path) if args.prompt_template_path else None
-    )
-    num_few_shot_examples = args.num_few_shot_examples
-    few_shot_file = args.few_shot_file
-    shuffle_candidates = args.shuffle_candidates
-    print_prompts_responses = args.print_prompts_responses
-    num_few_shot_examples = args.num_few_shot_examples
-    device = default_device()
-    variable_passages = args.variable_passages
-    retrieval_mode = (
-        RetrievalMode.DATASET if args.dataset else RetrievalMode.CACHED_FILE
-    )
-    num_passes = args.num_passes
-    stride = args.stride
-    window_size = args.window_size
-    system_message = args.system_message
-    populate_invocations_history = args.populate_invocations_history
-    is_thinking = args.is_thinking
-    reasoning_token_budget = args.reasoning_token_budget
-    use_logits = args.use_logits
-    use_alpha = args.use_alpha
-    sglang_batched = args.sglang_batched
-    tensorrt_batched = args.tensorrt_batched
-    reasoning_effort = args.reasoning_effort
-    max_passage_words = args.max_passage_words
+    parser_error = globals().get("parser")
+    error_handler = parser_error.error if parser_error is not None else _raise_argument_error
+    return run_script_rerank(args, parser_error=error_handler)
 
-    if args.requests_file:
-        if args.retrieval_method:
-            parser.error("--retrieval_method must not be used with --requests_file")
 
-    if args.dataset and not args.retrieval_method:
-        parser.error("--retrieval_method is required when --dataset is provided")
-
-    _ = retrieve_and_rerank(
-        model_path=model_path,
-        query=query,
-        batch_size=batch_size,
-        dataset=dataset,
-        retrieval_mode=retrieval_mode,
-        requests_file=requests_file,
-        qrels_file=qrels_file,
-        output_jsonl_file=output_jsonl_file,
-        output_trec_file=output_trec_file,
-        invocations_history_file=invocations_history_file,
-        retrieval_method=retrieval_method,
-        top_k_retrieve=top_k_candidates,
-        top_k_rerank=top_k_rerank,
-        max_queries=max_queries,
-        context_size=context_size,
-        device=device,
-        num_gpus=num_gpus,
-        prompt_template_path=prompt_template_path,
-        num_few_shot_examples=num_few_shot_examples,
-        few_shot_file=few_shot_file,
-        shuffle_candidates=shuffle_candidates,
-        print_prompts_responses=print_prompts_responses,
-        use_azure_openai=use_azure_openai,
-        use_openrouter=use_openrouter,
-        base_url=base_url,
-        variable_passages=variable_passages,
-        num_passes=num_passes,
-        window_size=window_size,
-        stride=stride,
-        system_message=system_message,
-        populate_invocations_history=populate_invocations_history,
-        is_thinking=is_thinking,
-        reasoning_token_budget=reasoning_token_budget,
-        use_logits=use_logits,
-        use_alpha=use_alpha,
-        sglang_batched=sglang_batched,
-        tensorrt_batched=tensorrt_batched,
-        reasoning_effort=reasoning_effort,
-        max_passage_words=max_passage_words,
-    )
+def _raise_argument_error(message):
+    raise ValueError(message)
 
 
 """ sample run:

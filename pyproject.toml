@@ -146,6 +146,7 @@ include = [
     "rank_llm.rerank",
     "rank_llm.rerank.*",
     "rank_llm.retrieve",
+    "rank_llm.scripts",
     "rank_llm.server",
     "rank_llm.server.*",
 ]
