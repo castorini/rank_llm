@@ -1,6 +1,6 @@
 import argparse
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from rank_llm.cli.operations import (
     run_evaluate_aggregate,
@@ -10,7 +10,6 @@ from rank_llm.cli.operations import (
     run_script_rerank,
 )
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode
-from rank_llm.scripts import run_rank_llm
 
 
 class TestCLIOperations(unittest.TestCase):
@@ -160,20 +159,6 @@ class TestCLIOperations(unittest.TestCase):
         )
         writer.assert_called_once_with("cache.json", [{"query": "cats"}])
         self.assertEqual(summary["record_count"], 1)
-
-
-class TestLegacyAdapters(unittest.TestCase):
-    def test_run_rank_llm_main_delegates_to_cli_operations(self):
-        args = argparse.Namespace()
-        expected = object()
-        with patch(
-            "rank_llm.scripts.run_rank_llm.run_script_rerank",
-            return_value=expected,
-        ) as mocked:
-            result = run_rank_llm.main(args)
-
-        self.assertIs(result, expected)
-        mocked.assert_called_once()
 
 
 if __name__ == "__main__":

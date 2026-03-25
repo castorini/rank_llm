@@ -46,11 +46,11 @@ Example:
         --topk 20
 """
 
-import argparse
 import json
 import os
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 
 from rank_llm._optional import missing_extra_error
 
@@ -62,6 +62,8 @@ except ImportError:
     get_topics = None
 from tqdm import tqdm
 
+from rank_llm.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
+from rank_llm.cli.main import main as cli_main
 from rank_llm.retrieve import TOPICS
 
 sys.path.append(os.getcwd())
@@ -183,24 +185,16 @@ def write_output_file(output_file_path, data):
         json.dump(data, file)
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--trec_file", required=True)
-    parser.add_argument("--collection_file", required=True)
-    parser.add_argument("--query_file", required=True)
-    parser.add_argument("--output_file", required=True)
-    parser.add_argument("--output_trec_file", type=str, default=None)
-    parser.add_argument("--topk", type=int, default=20)
-    args = parser.parse_args()
+def main(args: Sequence[str] | object | None = None) -> int:
+    if hasattr(args, "__dict__"):
+        argv = namespace_to_legacy_argv(args)
+    elif args is None:
+        argv = sys.argv[1:]
+    else:
+        argv = list(args)
 
-    results = generate_retrieve_results(
-        args.trec_file,
-        args.collection_file,
-        args.query_file,
-        args.topk,
-        args.output_trec_file,
-    )
-    write_output_file(args.output_file, results)
+    translated = translate_legacy_argv(argv)
+    return cli_main(["retrieve-cache", *translated])
 
 
 if __name__ == "__main__":
