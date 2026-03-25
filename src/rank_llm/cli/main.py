@@ -10,6 +10,9 @@ from typing import Any, NoReturn
 from rank_llm.cli.adapters import make_data_artifact
 from rank_llm.cli.config import load_config
 from rank_llm.cli.introspection import (
+    COMMAND_DESCRIPTIONS,
+    SCHEMAS,
+    doctor_report,
     validate_rerank_batch_file,
     validate_rerank_payload,
 )
@@ -240,6 +243,14 @@ def build_parser() -> argparse.ArgumentParser:
     view_parser.add_argument("path")
     view_parser.add_argument("--records", type=int, default=1)
 
+    describe_parser = subparsers.add_parser("describe", help=argparse.SUPPRESS)
+    describe_parser.add_argument("name", choices=sorted(COMMAND_DESCRIPTIONS))
+
+    schema_parser = subparsers.add_parser("schema", help=argparse.SUPPRESS)
+    schema_parser.add_argument("name", choices=sorted(SCHEMAS))
+
+    subparsers.add_parser("doctor", help=argparse.SUPPRESS)
+
     for command in KNOWN_COMMANDS:
         if command == "rerank":
             continue
@@ -248,6 +259,12 @@ def build_parser() -> argparse.ArgumentParser:
         if command == "prompt":
             continue
         if command == "view":
+            continue
+        if command == "describe":
+            continue
+        if command == "schema":
+            continue
+        if command == "doctor":
             continue
         subparsers.add_parser(command, help=argparse.SUPPRESS)
     return parser
@@ -621,6 +638,38 @@ def _run_view_command(args: argparse.Namespace) -> CommandResponse:
     )
 
 
+def _run_describe_command(args: argparse.Namespace) -> CommandResponse:
+    return CommandResponse(
+        command="describe",
+        inputs={"name": args.name},
+        artifacts=[
+            make_data_artifact(
+                "command-description",
+                {"name": args.name, **COMMAND_DESCRIPTIONS[args.name]},
+            )
+        ],
+    )
+
+
+def _run_schema_command(args: argparse.Namespace) -> CommandResponse:
+    return CommandResponse(
+        command="schema",
+        inputs={"name": args.name},
+        artifacts=[
+            make_data_artifact(
+                "schema", {"name": args.name, "schema": SCHEMAS[args.name]}
+            )
+        ],
+    )
+
+
+def _run_doctor_command() -> CommandResponse:
+    return CommandResponse(
+        command="doctor",
+        artifacts=[make_data_artifact("doctor-output", doctor_report())],
+    )
+
+
 def _run_command(args: argparse.Namespace) -> CommandResponse:
     if args.command == "rerank":
         return _run_rerank_command(args)
@@ -630,6 +679,12 @@ def _run_command(args: argparse.Namespace) -> CommandResponse:
         return _run_prompt_command(args)
     if args.command == "view":
         return _run_view_command(args)
+    if args.command == "describe":
+        return _run_describe_command(args)
+    if args.command == "schema":
+        return _run_schema_command(args)
+    if args.command == "doctor":
+        return _run_doctor_command()
     return CommandResponse(
         command=args.command,
         status="success",
@@ -665,6 +720,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 sys.stdout.write(render_rendered_prompt_text(artifact) + "\n")
         elif args.command == "view" and response.artifacts:
             sys.stdout.write(render_view_summary(response.artifacts[0]["value"]) + "\n")
+        elif args.command in {"describe", "schema", "doctor"} and response.artifacts:
+            sys.stdout.write(
+                json.dumps(response.artifacts[0]["value"], indent=2) + "\n"
+            )
         elif response.warnings:
             sys.stdout.write("\n".join(response.warnings) + "\n")
     return response.exit_code
