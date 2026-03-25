@@ -1,7 +1,7 @@
 import re
 from abc import ABC, abstractmethod
 from string import Formatter
-from typing import Any, Dict, List
+from typing import Any
 
 from ftfy import fix_text
 
@@ -9,14 +9,14 @@ from rank_llm.data import Result, TemplateSectionConfig
 
 
 class BaseInferenceHandler(ABC):
-    def __init__(self, template: Dict[str, str]):
+    def __init__(self, template: dict[str, str]):
         self._formatter = Formatter()
         self._validate_template(template=template)
         self.template = template
         print("Template validated successfully!")
 
     @abstractmethod
-    def _validate_template(self, template: Dict[str, str]):
+    def _validate_template(self, template: dict[str, str]):
         """
         Validates the structure and content of the provided template dictionary.
 
@@ -37,8 +37,8 @@ class BaseInferenceHandler(ABC):
 
     def _general_validation(
         self,
-        template: Dict[str, str],
-        template_section: Dict[str, TemplateSectionConfig],
+        template: dict[str, str],
+        template_section: dict[str, TemplateSectionConfig],
         check_query: bool = False,
         strict: bool = False,
     ):
@@ -95,7 +95,7 @@ class BaseInferenceHandler(ABC):
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
     def _convert_doc_to_prompt_content(
-        self, doc: Dict[str, Any], max_length: int
+        self, doc: dict[str, Any], max_length: int
     ) -> str:
         if "text" in doc:
             content = doc["text"]
@@ -119,7 +119,7 @@ class BaseInferenceHandler(ABC):
         return self._replace_number(content)
 
     def _format_template(
-        self, template_key: str, fmt_values: Dict[str, str | int], verbose: bool = False
+        self, template_key: str, fmt_values: dict[str, str | int], verbose: bool = False
     ) -> str:
         """
         Replaces placeholder keywords in a template section with actual content.
@@ -152,8 +152,8 @@ class BaseInferenceHandler(ABC):
     def _generate_fewshot_prompt(
         self,
         num_examples: int = 0,
-        examples: List[Dict[str, List[Dict[str, str]]]] = [],
-    ) -> List[Dict[str, str]] | str:
+        examples: list[dict[str, list[dict[str, str]]]] | None = None,
+    ) -> list[dict[str, str]] | str:
         """
         Generates a few-shot prompt based on the provided examples.
         Args:
@@ -167,7 +167,7 @@ class BaseInferenceHandler(ABC):
     @abstractmethod
     def generate_prompt(
         self, result: Result, **kwargs: Any
-    ) -> List[Dict[str, str]] | str:
+    ) -> list[dict[str, str]] | str:
         """
         Generates complete prompt(s) for the ranking task.
 

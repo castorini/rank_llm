@@ -1,5 +1,5 @@
 from importlib.resources import files
-from typing import Any, List, Optional
+from typing import Any
 
 from rank_llm.data import Request, Result
 from rank_llm.rerank.listwise import RankListwiseOSLLM
@@ -13,11 +13,11 @@ class ZephyrReranker:
         self,
         model_path: str = "castorini/rank_zephyr_7b_v1_full",
         context_size: int = 4096,
-        prompt_mode: Optional[PromptMode] = None,
+        prompt_mode: PromptMode | None = None,
         prompt_template_path: str = (TEMPLATES / "rank_zephyr_template.yaml"),
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
-        device: Optional[str] = None,
+        few_shot_file: str | None = None,
+        device: str | None = None,
         num_gpus: int = 1,
         variable_passages: bool = True,
         window_size: int = 20,
@@ -43,13 +43,13 @@ class ZephyrReranker:
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Reranks a list of requests using the Zephyr model.
 

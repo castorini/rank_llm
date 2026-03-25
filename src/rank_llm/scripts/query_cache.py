@@ -76,7 +76,7 @@ info_json = json.dumps(info, indent=4)
 with open("repo_info.txt", "w") as f:
     f.write(f"HITS_INFO = {info_json}\n")
 
-with open("repo_info.txt", "r") as f:
+with open("repo_info.txt") as f:
     data = f.read()
     data = data.replace("false", "False")
 

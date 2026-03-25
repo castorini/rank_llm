@@ -1,7 +1,7 @@
 import asyncio
 import atexit
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 try:
     import vllm
@@ -46,7 +46,7 @@ class VllmHandler:
         )
         self._engine = vllm.AsyncLLMEngine.from_engine_args(engine_args)
         self._model = model
-        self._tokenizer: Optional[PreTrainedTokenizerBase] = None
+        self._tokenizer: PreTrainedTokenizerBase | None = None
         atexit.register(self._shutdown)
 
     def _shutdown(self) -> None:
@@ -59,22 +59,17 @@ class VllmHandler:
         if self._tokenizer is None:
             self._tokenizer = asyncio.run(self._engine.get_tokenizer())
             if "rank_vicuna" in self._model:
-                setattr(
-                    self._tokenizer,
-                    "chat_template",
-                    """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}
-                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}""",
-                )
+                self._tokenizer.chat_template = """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}\n                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}"""
         return self._tokenizer
 
     async def generate_output_async(
         self,
-        prompt: str | List[Dict[str, str]],
+        prompt: str | list[dict[str, str]],
         min_tokens: int,
         max_tokens: int,
         temperature: float,
-        logprobs: Optional[int] = None,
-    ) -> Tuple[str, int, int]:
+        logprobs: int | None = None,
+    ) -> tuple[str, int, int]:
         """
         Submit a single prompt and await its completion.
         Returns (output_text, prompt_token_count, completion_token_count).

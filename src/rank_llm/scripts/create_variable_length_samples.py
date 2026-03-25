@@ -12,7 +12,7 @@ def create_prompt(passage_list, selected_indexes, query):
     )
     passages = ""
     for i, v in enumerate(selected_indexes):
-        passages += f"[{i+1}] {passage_list[v - 1]}\n"
+        passages += f"[{i + 1}] {passage_list[v - 1]}\n"
     suffix = (
         f"Search Query: {query}\nRank the {num_selected_passages} passages above based on their relevance "
         "to the search query. All the passages should be included and listed using identifiers, "
@@ -23,7 +23,7 @@ def create_prompt(passage_list, selected_indexes, query):
 
 
 def read_data(data_path):
-    with open(data_path, "r", encoding="utf-8") as json_file:
+    with open(data_path, encoding="utf-8") as json_file:
         json_objects = json.load(json_file)
     return json_objects
 
@@ -65,7 +65,7 @@ def sample_data(json_objects, num_passages, num_samples, include_original):
         if include_original:
             obj["conversations"][prompt_index]["value"] = obj["conversations"][
                 prompt_index
-            ]["value"].replace(f"e.g., [4] > [2], ", f"e.g., [2] > [1], ")
+            ]["value"].replace("e.g., [4] > [2], ", "e.g., [2] > [1], ")
             new_objs.append(obj)
         for k in range(num_samples):
             n = (
@@ -73,8 +73,8 @@ def sample_data(json_objects, num_passages, num_samples, include_original):
                 if include_original
                 else random.randint(2, len(passages))
             )
-            l = [i + 1 for i in range(len(passages))]
-            selected_indexes = random.sample(l, k=n)
+            candidate_indexes = [i + 1 for i in range(len(passages))]
+            selected_indexes = random.sample(candidate_indexes, k=n)
             selected_indexes.sort()
             for index in selected_indexes:
                 rank_frequencies[index] += 1

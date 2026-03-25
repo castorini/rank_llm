@@ -48,15 +48,15 @@ def main():
 
     # Write rerank results
     writer = DataWriter(rerank_results)
-    Path(f"demo_outputs/").mkdir(parents=True, exist_ok=True)
+    Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
     writer.write_in_jsonl_format(
-        f"demo_outputs/rerank_results_qwen2.5-7b-instruct.jsonl"
+        "demo_outputs/rerank_results_qwen2.5-7b-instruct.jsonl"
     )
     writer.write_in_trec_eval_format(
-        f"demo_outputs/rerank_results_qwen2.5-7b-instruct.txt"
+        "demo_outputs/rerank_results_qwen2.5-7b-instruct.txt"
     )
     writer.write_inference_invocations_history(
-        f"demo_outputs/inference_invocations_history_qwen2.5-7b-instruct.json"
+        "demo_outputs/inference_invocations_history_qwen2.5-7b-instruct.json"
     )
 
 

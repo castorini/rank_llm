@@ -20,7 +20,7 @@ class TestServiceRetriever(unittest.TestCase):
         ]
 
         assert len(response[0].candidates) == 20
-        assert type(response[0].candidates[0]) == Candidate
+        assert isinstance(response[0].candidates[0], Candidate)
         assert response[0].query == Query(text="hello", qid="1234")
 
     def test_retrieve_and_rerank_interactive(self):

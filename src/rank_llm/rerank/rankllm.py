@@ -3,7 +3,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import yaml
 
@@ -32,10 +32,10 @@ class RankLLM(ABC):
         self,
         model: str,
         context_size: int,
-        prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: Optional[str] = None,
+        prompt_mode: PromptMode | None = None,
+        prompt_template_path: str | None = None,
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
+        few_shot_file: str | None = None,
     ) -> None:
         self._model = model
         self._context_size = context_size
@@ -49,18 +49,18 @@ class RankLLM(ABC):
             )
 
         try:
-            if not isinstance(prompt_template_path, (str, os.PathLike)):
+            if not isinstance(prompt_template_path, str | os.PathLike):
                 raise TypeError(
                     f"Expected str or PathLike, got {type(prompt_template_path)}"
                 )
 
-            with open(prompt_template_path, "r") as file:
+            with open(prompt_template_path) as file:
                 data = yaml.safe_load(file)
 
                 self._inference_handler = self._create_handler(data)
                 print(f"Successfully created {data['method']} inference handler!")
-        except FileNotFoundError:
-            raise ValueError("Prompt template file missing or not found")
+        except FileNotFoundError as err:
+            raise ValueError("Prompt template file missing or not found") from err
 
         if self._num_few_shot_examples > 0:
             if not few_shot_file:
@@ -73,8 +73,8 @@ class RankLLM(ABC):
 
     @abstractmethod
     def run_llm_batched(
-        self, prompts: List[Union[str, List[Dict[str, str]]]], **kwargs
-    ) -> List[Tuple[str, int]]:
+        self, prompts: list[str | list[dict[str, str]]], **kwargs
+    ) -> list[tuple[str, int]]:
         """
         Abstract method to run the target language model with a batch of prompts.
 
@@ -87,9 +87,7 @@ class RankLLM(ABC):
         pass
 
     @abstractmethod
-    def run_llm(
-        self, prompt: Union[str, List[Dict[str, str]]], **kwargs
-    ) -> Tuple[str, int]:
+    def run_llm(self, prompt: str | list[dict[str, str]], **kwargs) -> tuple[str, int]:
         """
         Abstract method to run the target language model with a passed in prompt.
 
@@ -103,8 +101,8 @@ class RankLLM(ABC):
 
     @abstractmethod
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int
-    ) -> List[Tuple[Union[str, List[Dict[str, str]]], int]]:
+        self, results: list[Result], rank_start: int, rank_end: int
+    ) -> list[tuple[str | list[dict[str, str]], int]]:
         """
         Abstract method to create a batch of prompts based on the results and given ranking range.
 
@@ -121,7 +119,7 @@ class RankLLM(ABC):
     @abstractmethod
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[Union[str, List[Dict[str, str]]], int]:
+    ) -> tuple[str | list[dict[str, str]], int]:
         """
         Abstract method to create a prompt based on the result and given ranking range.
 
@@ -136,7 +134,7 @@ class RankLLM(ABC):
         pass
 
     @abstractmethod
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """
         Abstract method to calculate the number of tokens contained in the given prompt.
 
@@ -174,13 +172,13 @@ class RankLLM(ABC):
     @abstractmethod
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Reranks a list of requests using the RankLLM model_coordinator.
 
@@ -215,7 +213,7 @@ class RankLLM(ABC):
         """
         pass
 
-    def _create_handler(self, template: Dict[str, str]) -> BaseInferenceHandler:
+    def _create_handler(self, template: dict[str, str]) -> BaseInferenceHandler:
         # TODO(issue #236 and #237): Need to modify function to select correct inference handler
         from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
             MultiTurnListwiseInferenceHandler,
@@ -251,11 +249,11 @@ class RankLLM(ABC):
 
     def _load_few_shot_examples(self, file_path: str):
         try:
-            with open(file_path, "r") as json_file:
+            with open(file_path) as json_file:
                 self._examples = json.load(json_file)
-        except FileNotFoundError:
-            raise ValueError(f"Few-shot examples file not found: {file_path}")
-        except json.JSONDecodeError:
+        except FileNotFoundError as err:
+            raise ValueError(f"Few-shot examples file not found: {file_path}") from err
+        except json.JSONDecodeError as err:
             raise ValueError(
                 f"Invalid JSON format in few-shot examples file: {file_path}"
-            )
+            ) from err

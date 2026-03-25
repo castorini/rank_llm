@@ -1,5 +1,4 @@
 import unittest
-from test.rerank.conftest import FakeTokenizer
 
 from dacite import from_dict
 
@@ -7,6 +6,7 @@ from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_inference_handler import (
     PointwiseInferenceHandler,
 )
+from test.rerank.conftest import FakeTokenizer
 
 r = from_dict(
     data_class=Result,

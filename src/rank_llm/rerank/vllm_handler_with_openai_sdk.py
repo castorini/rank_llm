@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any
 
 try:
     from openai import AsyncOpenAI, OpenAI
@@ -50,7 +50,7 @@ class VllmHandlerWithOpenAISDK:
 
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
-    ) -> Tuple[str, str, Dict[str, Any]]:
+    ) -> tuple[str, str, dict[str, Any]]:
         """Submit a single chat request and await its completion."""
         try:
             response = await self._async_client.chat.completions.create(

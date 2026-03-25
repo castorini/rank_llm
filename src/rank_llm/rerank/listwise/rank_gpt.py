@@ -1,7 +1,7 @@
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from tqdm import tqdm
 
@@ -29,21 +29,21 @@ class SafeOpenai(ListwiseRankLLM):
         self,
         model: str,
         context_size: int,
-        prompt_mode: Optional[PromptMode] = None,
-        prompt_template_path: Optional[str] = None,
+        prompt_mode: PromptMode | None = None,
+        prompt_template_path: str | None = None,
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
+        few_shot_file: str | None = None,
         window_size: int = 20,
         stride: int = 10,
         batch_size: int = 32,
         keys=None,
         key_start_id=None,
         proxy=None,
-        base_url: Optional[str] = None,
-        api_type: Optional[str] = None,
-        api_base: Optional[str] = None,
-        api_version: Optional[str] = None,
-        reasoning_effort: Optional[str] = None,
+        base_url: str | None = None,
+        api_type: str | None = None,
+        api_base: str | None = None,
+        api_version: str | None = None,
+        reasoning_effort: str | None = None,
         max_passage_words: int = 300,
     ) -> None:
         """
@@ -143,13 +143,13 @@ class SafeOpenai(ListwiseRankLLM):
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
         populate_invocations_history: bool = kwargs.get(
@@ -165,7 +165,7 @@ class SafeOpenai(ListwiseRankLLM):
         )
         max_workers = min(len(requests), max(worker_cap, 1))
         if max_workers <= 1:
-            results: List[Result] = []
+            results: list[Result] = []
             for request in tqdm(requests):
                 result = self.sliding_windows(
                     request,
@@ -179,7 +179,7 @@ class SafeOpenai(ListwiseRankLLM):
                 results.append(result)
             return results
 
-        results: Dict[int, Result] = {}
+        results: dict[int, Result] = {}
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
                 executor.submit(
@@ -211,7 +211,7 @@ class SafeOpenai(ListwiseRankLLM):
         return_text=False,
         reduce_length=False,
         **kwargs,
-    ) -> Union[str, Dict[str, Any]]:
+    ) -> str | dict[str, Any]:
         if self._reasoning_effort is not None:
             kwargs["reasoning"] = {"effort": self._reasoning_effort, "summary": "auto"}
         while True:
@@ -236,9 +236,9 @@ class SafeOpenai(ListwiseRankLLM):
 
     def run_llm(
         self,
-        prompt: Union[str, List[Dict[str, str]]],
-        current_window_size: Optional[int] = None,
-    ) -> Tuple[str, int] | Tuple[str, Optional[str], Dict[str, Any]]:
+        prompt: str | list[dict[str, str]],
+        current_window_size: int | None = None,
+    ) -> tuple[str, int] | tuple[str, str | None, dict[str, Any]]:
         model_key = "model"
         completion = self._call_completion(
             input=prompt,
@@ -278,7 +278,7 @@ class SafeOpenai(ListwiseRankLLM):
 
         return text, reasoning, usage
 
-    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+    def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
         if self._output_token_estimate and self._window_size == current_window_size:
@@ -292,7 +292,7 @@ class SafeOpenai(ListwiseRankLLM):
             _output_token_estimate = (
                 len(
                     encoder.encode(
-                        " > ".join([f"[{i+1}]" for i in range(current_window_size)])
+                        " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
                     )
                 )
                 - 1
@@ -312,7 +312,7 @@ class SafeOpenai(ListwiseRankLLM):
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
+    ) -> tuple[list[dict[str, str]], int]:
         max_length = self._max_passage_words
 
         while True:
@@ -336,7 +336,7 @@ class SafeOpenai(ListwiseRankLLM):
 
         return prompt, num_tokens
 
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""
         if self._model in ["gpt-3.5-turbo-0301", "gpt-3.5-turbo"]:
             tokens_per_message = (

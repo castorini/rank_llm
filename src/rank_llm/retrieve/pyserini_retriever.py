@@ -1,7 +1,6 @@
 import json
 import os
 from pathlib import Path
-from typing import List
 
 from rank_llm._optional import install_hint
 
@@ -134,7 +133,7 @@ class PyseriniRetriever:
                 )
         else:
             raise ValueError(
-                "Unsupported/Invalid retrieval method: %s" % retrieval_method
+                f"Unsupported/Invalid retrieval method: {retrieval_method}"
             )
 
     def _init_from_custom_index(
@@ -157,7 +156,7 @@ class PyseriniRetriever:
         else:
             # Cannot retrieve docstrings from a dense index
             raise ValueError(
-                f"index_type must be specified from [lucene, impact] when using custom index"
+                "index_type must be specified from [lucene, impact] when using custom index"
             )
 
     def _init_from_prebuilt_index(
@@ -268,10 +267,8 @@ class PyseriniRetriever:
             try:
                 self._topics = get_topics(dataset)
                 self._qrels = get_qrels(dataset)
-            except Exception as e:
-                raise ValueError(
-                    "Invalid collection name: %s" % dataset + " - " + str(e)
-                )
+            except Exception as err:
+                raise ValueError(f"Invalid collection name: {dataset} - {err}") from err
         else:
             if dataset in ["dl20", "dl21", "dl22", "dl23"]:
                 topics_key = dataset
@@ -295,11 +292,11 @@ class PyseriniRetriever:
             if key == "bm25_rm3":
                 key = "bm25"
         if self._dataset not in INDICES[key]:
-            raise ValueError("dataset %s not in INDICES[%s]" % (self._dataset, key))
+            raise ValueError(f"dataset {self._dataset} not in INDICES[{key}]")
         return INDICES[key][self._dataset]
 
     def _retrieve_query(
-        self, query: str, ranks: List[Request], k: int, qid=None
+        self, query: str, ranks: list[Request], k: int, qid=None
     ) -> None:
         hits = self._searcher.search(query, k=k)
         ranks.append(Request(query=Query(text=query, qid=str(qid)), candidates=[]))
@@ -313,7 +310,7 @@ class PyseriniRetriever:
 
     def retrieve_for_query_text(
         self, query_text: str, k: int = 100, qid=1
-    ) -> List[Request]:
+    ) -> list[Request]:
         """
         Retrieves documents for a single query string against the configured index.
         Use this when the query is supplied directly (e.g. ad-hoc search) rather than
@@ -327,11 +324,11 @@ class PyseriniRetriever:
         Returns:
             List of one Request with the query and retrieved candidates.
         """
-        ranks: List[Request] = []
+        ranks: list[Request] = []
         self._retrieve_query(query_text, ranks, k, qid)
         return ranks
 
-    def retrieve(self, k=100, qid=None) -> List[Request]:
+    def retrieve(self, k=100, qid=None) -> list[Request]:
         """
         Retrieves documents for each query, specified by query id `qid`, in the configured topics.
         Returns list of retrieved documents with specified ranking.
@@ -372,7 +369,7 @@ class PyseriniRetriever:
         store_trec: bool = True,
         store_qrels: bool = True,
         retrieve_results_dirname: str = "retrieve_results",
-    ) -> List[Request]:
+    ) -> list[Request]:
         """
         Retrieves documents and stores the results in the given formats.
 

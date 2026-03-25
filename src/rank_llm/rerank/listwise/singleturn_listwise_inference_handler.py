@@ -1,15 +1,15 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
 
 class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
-    def __init__(self, template: Dict[str, str]):
+    def __init__(self, template: dict[str, str]):
         super().__init__(template)
 
-    def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+    def _validate_template(self, template: dict[str, str], strict: bool = False):
+        TEMPLATE_SECTIONS: dict[str, TemplateSectionConfig] = {
             "method": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
@@ -62,7 +62,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
 
     def _generate_prefix_suffix(
         self, num: int, query: str, **kwargs: Any
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         suffix_placeholders = [
             name
             for _, name, _, _ in self._formatter.parse(self.template.get("suffix", ""))
@@ -76,7 +76,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             rank_end = kwargs["rank_end"]
             psg_ids = []
             for rank in range(rank_end - rank_start):
-                psg_ids.append(f"PASSAGE{rank+1}")
+                psg_ids.append(f"PASSAGE{rank + 1}")
             psg_ids_str = "[" + ", ".join(psg_ids) + "]"
             suffix_fmt_values["psg_ids"] = psg_ids_str
 
@@ -115,7 +115,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
 
         return body_text
 
-    def generate_prompt(self, result: Result, **kwargs: Any) -> List[Dict[str, str]]:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> list[dict[str, str]]:
         try:
             rank_start = kwargs["rank_start"]
             rank_end = kwargs["rank_end"]
@@ -123,8 +123,8 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             use_alpha = kwargs.get("use_alpha", False)
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
-        except KeyError as e:
-            raise ValueError(f"Missing required parameter: {e}")
+        except KeyError as err:
+            raise ValueError(f"Missing required parameter: {err}") from err
 
         query = result.query.text
         query = self._replace_number(query)

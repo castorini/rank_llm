@@ -44,7 +44,7 @@ def main():
         del reranker
         rerank_ndcg_10 = EvalFunction.from_results(rerank_results, qrels)
         writer = DataWriter(rerank_results)
-        path = Path(f"./rerank_results/reasonrank-32b")
+        path = Path("./rerank_results/reasonrank-32b")
         path.mkdir(parents=True, exist_ok=True)
         writer.write_in_jsonl_format(os.path.join(path, f"{dataset}_bm25_top100.jsonl"))
         writer.write_in_trec_eval_format(

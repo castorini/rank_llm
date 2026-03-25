@@ -1,5 +1,4 @@
 import os
-from typing import Dict
 
 try:
     from dotenv import load_dotenv
@@ -17,7 +16,7 @@ paths = [
 
 
 def get_openai_api_key() -> str:
-    load_dotenv(dotenv_path=f".env.local")
+    load_dotenv(dotenv_path=".env.local")
 
     for path in paths:
         if os.getenv(path) is not None:
@@ -25,8 +24,8 @@ def get_openai_api_key() -> str:
     return None
 
 
-def get_azure_openai_args() -> Dict[str, str]:
-    load_dotenv(dotenv_path=f".env.local")
+def get_azure_openai_args() -> dict[str, str]:
+    load_dotenv(dotenv_path=".env.local")
     azure_args = {
         "api_type": "azure",
         "api_version": os.getenv("AZURE_OPENAI_API_VERSION"),
@@ -34,9 +33,9 @@ def get_azure_openai_args() -> Dict[str, str]:
     }
 
     # Sanity check
-    assert all(
-        list(azure_args.values())
-    ), "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
+    assert all(list(azure_args.values())), (
+        "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
+    )
     return azure_args
 
 
@@ -44,7 +43,7 @@ genai_path = "GEN_AI_API_KEY"
 
 
 def get_genai_api_key(genai_path=genai_path) -> str:
-    load_dotenv(dotenv_path=f".env.local")
+    load_dotenv(dotenv_path=".env.local")
     if os.getenv(genai_path) is not None:
         print(os.getenv(genai_path))
         return os.getenv(genai_path)
@@ -52,7 +51,7 @@ def get_genai_api_key(genai_path=genai_path) -> str:
 
 
 def get_openrouter_api_key() -> str:
-    load_dotenv(dotenv_path=f".env.local")
+    load_dotenv(dotenv_path=".env.local")
     if os.getenv("OPENROUTER_API_KEY") is not None:
         return os.getenv("OPENROUTER_API_KEY")
     return None

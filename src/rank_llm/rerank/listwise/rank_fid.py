@@ -1,5 +1,5 @@
 from importlib.resources import files
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import torch
 from tqdm import tqdm
@@ -35,7 +35,7 @@ class RankFiDDistill(ListwiseRankLLM):
         self,
         model: str,
         context_size: int = 150,
-        prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
+        prompt_mode: PromptMode | None = None,  # Placeholder for actual mode
         prompt_template_path: str = (TEMPLATES / "rank_fid_template.yaml"),
         window_size: int = 20,
         stride: int = 10,
@@ -69,8 +69,8 @@ class RankFiDDistill(ListwiseRankLLM):
         self._post_init()
 
     def _run_llm_by_length_unified(
-        self, batch_prompts: List[List[str]]
-    ) -> List[Tuple[str, int]]:
+        self, batch_prompts: list[list[str]]
+    ) -> list[tuple[str, int]]:
         if len(batch_prompts) == 0:
             return []
 
@@ -111,13 +111,13 @@ class RankFiDDistill(ListwiseRankLLM):
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
         populate_invocations_history: bool = kwargs.get(
@@ -149,8 +149,8 @@ class RankFiDDistill(ListwiseRankLLM):
         return result
 
     def run_llm_batched(
-        self, prompts: List[List[Dict[str, str]]], **kwargs
-    ) -> List[Tuple[str, int]]:
+        self, prompts: list[list[dict[str, str]]], **kwargs
+    ) -> list[tuple[str, int]]:
         if len(prompts) == 0:
             return []
 
@@ -162,11 +162,11 @@ class RankFiDDistill(ListwiseRankLLM):
         return self._run_llm_by_length_unified(prompt_infos)
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int
-    ) -> List[Tuple[List[Dict[str, str]], int]]:
+        self, results: list[Result], rank_start: int, rank_end: int
+    ) -> list[tuple[list[dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 
-    def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
+    def run_llm(self, prompts: list[dict[str, str]], **kwargs) -> tuple[str, int]:
         """
         Run the target language model with a passed in prompt.
         """
@@ -177,7 +177,7 @@ class RankFiDDistill(ListwiseRankLLM):
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
+    ) -> tuple[list[dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
         """
@@ -190,7 +190,7 @@ class RankFiDDistill(ListwiseRankLLM):
 
         return prompts, sum(self.get_num_tokens(prompt["text"]) for prompt in prompts)
 
-    def get_num_tokens(self, prompt: Union[str, List[Dict[str, str]]]) -> int:
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """
         Abstract method to calculate the number of tokens contained in the given prompt.
         """
@@ -206,7 +206,7 @@ class RankFiDDistill(ListwiseRankLLM):
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
 
-    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+    def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
         if (
@@ -256,7 +256,7 @@ class RankFiDScore(ListwiseRankLLM):
         self,
         model: str,
         context_size: int = 150,
-        prompt_mode: Optional[PromptMode] = None,  # Placeholder for actual mode
+        prompt_mode: PromptMode | None = None,  # Placeholder for actual mode
         prompt_template_path: str = (TEMPLATES / "rank_fid_score_template.yaml"),
         window_size: int = 20,
         stride: int = 10,
@@ -282,8 +282,8 @@ class RankFiDScore(ListwiseRankLLM):
         self._post_init()
 
     def _run_llm_by_length_unified(
-        self, batch_prompts: List[List[Tuple[str, str]]]
-    ) -> List[Tuple[str, int]]:
+        self, batch_prompts: list[list[tuple[str, str]]]
+    ) -> list[tuple[str, int]]:
         if len(batch_prompts) == 0:
             return []
 
@@ -357,13 +357,13 @@ class RankFiDScore(ListwiseRankLLM):
 
     def rerank_batch(
         self,
-        requests: List[Request],
+        requests: list[Request],
         rank_start: int = 0,
         rank_end: int = 100,
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
         populate_invocations_history: bool = kwargs.get(
@@ -395,8 +395,8 @@ class RankFiDScore(ListwiseRankLLM):
         return result
 
     def run_llm_batched(
-        self, prompts: List[List[Dict[str, str]]], **kwargs
-    ) -> List[Tuple[str, int]]:
+        self, prompts: list[list[dict[str, str]]], **kwargs
+    ) -> list[tuple[str, int]]:
         if len(prompts) == 0:
             return []
 
@@ -410,11 +410,11 @@ class RankFiDScore(ListwiseRankLLM):
         return self._run_llm_by_length_unified(processed_prompts)
 
     def create_prompt_batched(
-        self, results: List[Result], rank_start: int, rank_end: int
-    ) -> List[Tuple[List[Dict[str, str]], int]]:
+        self, results: list[Result], rank_start: int, rank_end: int
+    ) -> list[tuple[list[dict[str, str]], int]]:
         return [self.create_prompt(result, rank_start, rank_end) for result in results]
 
-    def run_llm(self, prompts: List[Dict[str, str]], **kwargs) -> Tuple[str, int]:
+    def run_llm(self, prompts: list[dict[str, str]], **kwargs) -> tuple[str, int]:
         # get arbitrary query (they should be the same)
         return self._run_llm_by_length_unified(
             [[(x["query"], x["text"]) for x in prompts]]
@@ -422,7 +422,7 @@ class RankFiDScore(ListwiseRankLLM):
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
-    ) -> Tuple[List[Dict[str, str]], int]:
+    ) -> tuple[list[dict[str, str]], int]:
         """
         Create a prompt based on the result and given ranking range.
         """
@@ -441,7 +441,7 @@ class RankFiDScore(ListwiseRankLLM):
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0.0
 
-    def num_output_tokens(self, current_window_size: Optional[int] = None) -> int:
+    def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
         if (

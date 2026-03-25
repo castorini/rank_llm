@@ -3,7 +3,6 @@ import platform
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import List
 
 from rank_llm._optional import missing_extra_error
 
@@ -20,8 +19,8 @@ from rank_llm.data import Result
 def _require_pandas():
     try:
         import pandas as pd
-    except ImportError:
-        raise missing_extra_error("pyserini", "Evaluation requires pandas.")
+    except ImportError as err:
+        raise missing_extra_error("pyserini", "Evaluation requires pandas.") from err
     return pd
 
 
@@ -30,7 +29,7 @@ class EvalFunction:
     def from_trec_runfile(
         run_file: str,
         qrels: str,
-        eval_args: list[str] = ["-c", "-m", "ndcg_cut.10"],
+        eval_args: list[str] | None = None,
     ) -> str:
         """
         This method processes a trec run file and evaluates it returning the evaluation result as a string.
@@ -45,6 +44,8 @@ class EvalFunction:
 
         # make a deep copy of eval_args to preserve its default value for the next run
         args = []
+        if eval_args is None:
+            eval_args = ["-c", "-m", "ndcg_cut.10"]
         args.extend(eval_args)
         args.append(qrels)
         args.append(run_file)
@@ -54,9 +55,9 @@ class EvalFunction:
 
     @staticmethod
     def from_results(
-        results: List[Result],
+        results: list[Result],
         qrels: str,
-        eval_args: list[str] = ["-c", "-m", "ndcg_cut.10"],
+        eval_args: list[str] | None = None,
     ) -> str:
         """
         This method processes a list of Result objects and immediately evaluates them,
@@ -80,6 +81,8 @@ class EvalFunction:
                     file.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n")
         # make a deep copy of eval_args to preserve its default value for the next run
         args = []
+        if eval_args is None:
+            eval_args = ["-c", "-m", "ndcg_cut.10"]
         args.extend(eval_args)
         args.append(qrels)
         args.append(temp_run_file)

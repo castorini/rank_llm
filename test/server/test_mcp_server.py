@@ -24,8 +24,8 @@ class TestMCPServer(unittest.TestCase):
     """Test MCP server via HTTP transport using FastMCP Client."""
 
     def setUp(self):
-        self.rank_results_file = f"ranked_results_mcp_test.jsonl"
-        self.rank_results_trec_file = f"ranked_results_mcp_test.trec"
+        self.rank_results_file = "ranked_results_mcp_test.jsonl"
+        self.rank_results_trec_file = "ranked_results_mcp_test.trec"
         # Use vLLM legacy (V0) engine to avoid V1's 1024-sequence warmup OOM. Omit or set
         # VLLM_USE_V1=1 to use V1 when you have enough GPU memory.
         os.environ.setdefault("VLLM_USE_V1", "0")

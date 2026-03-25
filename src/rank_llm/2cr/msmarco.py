@@ -15,7 +15,6 @@
 #
 
 import argparse
-import glob
 import math
 import os
 import re
@@ -199,7 +198,7 @@ def format_command(raw):
 
 
 def read_file(f):
-    fin = open(f, "r")
+    fin = open(f)
     text = fin.read()
     fin.close()
 
@@ -251,16 +250,6 @@ def generate_report(args):
                     else find_msmarco_table_topic_set_key_v2(topic_key)
                 )
 
-                latest_file = max(
-                    glob.glob(
-                        os.path.join(
-                            "rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/",
-                            f"{name}_4096_100_rank_GPT_{short_topic_key}*.txt",
-                        )
-                    ),
-                    key=os.path.getctime,
-                    default=None,
-                )
                 runfile = f'"rerank_results/SPLADE_P_P_ENSEMBLE_DISTIL/{name}_4096_100_rank_GPT_{short_topic_key}*.txt\\")'
                 cmd = Template(condition["command"]).substitute(
                     topics=topic_key,
@@ -294,7 +283,7 @@ def generate_report(args):
             row_data.update(
                 {
                     "s1": (
-                        f'{table[name]["dl19"]["MULT"]:.0f}'
+                        f"{table[name]['dl19']['MULT']:.0f}"
                         if table[name]["dl19"]["MULT"] != 0
                         else "-"
                     ),
@@ -313,12 +302,12 @@ def generate_report(args):
                         else "-"
                     ),
                     "s4": (
-                        f'{table[name]["dl19"]["nDCG@10"]:.4f}'
+                        f"{table[name]['dl19']['nDCG@10']:.4f}"
                         if table[name]["dl19"]["nDCG@10"] != 0
                         else "-"
                     ),
                     "s5": (
-                        f'{table[name]["dl20"]["nDCG@10"]:.4f}'
+                        f"{table[name]['dl20']['nDCG@10']:.4f}"
                         if table[name]["dl20"]["nDCG@10"] != 0
                         else "-"
                     ),
@@ -332,7 +321,7 @@ def generate_report(args):
             row_data.update(
                 {
                     "s1": (
-                        f'{table[name]["dl21"]["MULT"]:.0f}'
+                        f"{table[name]['dl21']['MULT']:.0f}"
                         if table[name]["dl21"]["MULT"] != 0
                         else "-"
                     ),
@@ -351,17 +340,17 @@ def generate_report(args):
                         else "-"
                     ),
                     "s4": (
-                        f'{table[name]["dl21"].get("nDCG@10", 0):.4f}'
+                        f"{table[name]['dl21'].get('nDCG@10', 0):.4f}"
                         if "dl21" in table[name]
                         else "-"
                     ),
                     "s5": (
-                        f'{table[name]["dl22"].get("nDCG@10", 0):.4f}'
+                        f"{table[name]['dl22'].get('nDCG@10', 0):.4f}"
                         if "dl22" in table[name]
                         else "-"
                     ),
                     "s6": (
-                        f'{table[name]["dl23"].get("nDCG@10", 0):.4f}'
+                        f"{table[name]['dl23'].get('nDCG@10', 0):.4f}"
                         if "dl23" in table[name]
                         else "-"
                     ),
@@ -597,9 +586,9 @@ def run_conditions(args):
             name = args.condition
             print(
                 f"{table_keys[name]:65}"
-                + f'{table[name]["dl19"]["MAP"]:8.4f}{table[name]["dl19"]["nDCG@10"]:8.4f}{table[name]["dl19"]["R@1K"]:8.4f}  '
-                + f'{table[name]["dl20"]["MAP"]:8.4f}{table[name]["dl20"]["nDCG@10"]:8.4f}{table[name]["dl20"]["R@1K"]:8.4f}  '
-                + f'{table[name]["dev"]["MRR@10"]:8.4f}{table[name]["dev"]["R@1K"]:8.4f}'
+                + f"{table[name]['dl19']['MAP']:8.4f}{table[name]['dl19']['nDCG@10']:8.4f}{table[name]['dl19']['R@1K']:8.4f}  "
+                + f"{table[name]['dl20']['MAP']:8.4f}{table[name]['dl20']['nDCG@10']:8.4f}{table[name]['dl20']['R@1K']:8.4f}  "
+                + f"{table[name]['dev']['MRR@10']:8.4f}{table[name]['dev']['R@1K']:8.4f}"
             )
         else:
             # Otherwise, print out all rows
@@ -609,9 +598,9 @@ def run_conditions(args):
                     continue
                 print(
                     f"{table_keys[name]:65}"
-                    + f'{table[name]["dl19"]["MAP"]:8.4f}{table[name]["dl19"]["nDCG@10"]:8.4f}{table[name]["dl19"]["R@1K"]:8.4f}  '
-                    + f'{table[name]["dl20"]["MAP"]:8.4f}{table[name]["dl20"]["nDCG@10"]:8.4f}{table[name]["dl20"]["R@1K"]:8.4f}  '
-                    + f'{table[name]["dev"]["MRR@10"]:8.4f}{table[name]["dev"]["R@1K"]:8.4f}'
+                    + f"{table[name]['dl19']['MAP']:8.4f}{table[name]['dl19']['nDCG@10']:8.4f}{table[name]['dl19']['R@1K']:8.4f}  "
+                    + f"{table[name]['dl20']['MAP']:8.4f}{table[name]['dl20']['nDCG@10']:8.4f}{table[name]['dl20']['R@1K']:8.4f}  "
+                    + f"{table[name]['dev']['MRR@10']:8.4f}{table[name]['dev']['R@1K']:8.4f}"
                 )
     elif args.collection == "msmarco-v2-passage":
         print(" " * 50 + "TREC 2021" + " " * 14 + "TREC 2022" + " " * 14 + "TREC 2023")
@@ -622,11 +611,11 @@ def run_conditions(args):
             name = args.condition
             print(
                 f"{table_keys[name]:48}"
-                + f'{table[name]["dl21"]["nDCG@10"]:8.4f}'
+                + f"{table[name]['dl21']['nDCG@10']:8.4f}"
                 + " " * 14
-                + f'{table[name]["dl22"]["nDCG@10"]:8.4f}'
+                + f"{table[name]['dl22']['nDCG@10']:8.4f}"
                 + " " * 14
-                + f'{table[name]["dl23"]["nDCG@10"]:8.4f}'
+                + f"{table[name]['dl23']['nDCG@10']:8.4f}"
             )
         else:
             for name in models[args.collection]:
@@ -635,11 +624,11 @@ def run_conditions(args):
                     continue
                 print(
                     f"{table_keys[name]:48}"
-                    + f'{table[name]["dl21"]["nDCG@10"]:8.4f}'
+                    + f"{table[name]['dl21']['nDCG@10']:8.4f}"
                     + " " * 14
-                    + f'{table[name]["dl22"]["nDCG@10"]:8.4f}'
+                    + f"{table[name]['dl22']['nDCG@10']:8.4f}"
                     + " " * 14
-                    + f'{table[name]["dl23"]["nDCG@10"]:8.4f}'
+                    + f"{table[name]['dl23']['nDCG@10']:8.4f}"
                 )
     else:
         print(
@@ -661,10 +650,10 @@ def run_conditions(args):
             name = args.condition
             print(
                 f"{table_keys[name]:60}"
-                + f'{table[name]["dl21"]["MAP@100"]:8.4f}{table[name]["dl21"]["nDCG@10"]:8.4f}'
-                + f'{table[name]["dl21"]["MRR@100"]:8.4f}{table[name]["dl21"]["R@100"]:8.4f}{table[name]["dl21"]["R@1K"]:8.4f}  '
-                + f'{table[name]["dev"]["MRR@100"]:8.4f}{table[name]["dev"]["R@1K"]:8.4f}  '
-                + f'{table[name]["dev2"]["MRR@100"]:8.4f}{table[name]["dev2"]["R@1K"]:8.4f}'
+                + f"{table[name]['dl21']['MAP@100']:8.4f}{table[name]['dl21']['nDCG@10']:8.4f}"
+                + f"{table[name]['dl21']['MRR@100']:8.4f}{table[name]['dl21']['R@100']:8.4f}{table[name]['dl21']['R@1K']:8.4f}  "
+                + f"{table[name]['dev']['MRR@100']:8.4f}{table[name]['dev']['R@1K']:8.4f}  "
+                + f"{table[name]['dev2']['MRR@100']:8.4f}{table[name]['dev2']['R@1K']:8.4f}"
             )
         else:
             # Otherwise, print out all rows
@@ -674,10 +663,10 @@ def run_conditions(args):
                     continue
                 print(
                     f"{table_keys[name]:60}"
-                    + f'{table[name]["dl21"]["MAP@100"]:8.4f}{table[name]["dl21"]["nDCG@10"]:8.4f}'
-                    + f'{table[name]["dl21"]["MRR@100"]:8.4f}{table[name]["dl21"]["R@100"]:8.4f}{table[name]["dl21"]["R@1K"]:8.4f}  '
-                    + f'{table[name]["dev"]["MRR@100"]:8.4f}{table[name]["dev"]["R@1K"]:8.4f}  '
-                    + f'{table[name]["dev2"]["MRR@100"]:8.4f}{table[name]["dev2"]["R@1K"]:8.4f}'
+                    + f"{table[name]['dl21']['MAP@100']:8.4f}{table[name]['dl21']['nDCG@10']:8.4f}"
+                    + f"{table[name]['dl21']['MRR@100']:8.4f}{table[name]['dl21']['R@100']:8.4f}{table[name]['dl21']['R@1K']:8.4f}  "
+                    + f"{table[name]['dev']['MRR@100']:8.4f}{table[name]['dev']['R@1K']:8.4f}  "
+                    + f"{table[name]['dev2']['MRR@100']:8.4f}{table[name]['dev2']['R@1K']:8.4f}"
                 )
 
     end = time.time()
@@ -687,7 +676,7 @@ def run_conditions(args):
     print("\n")
     print(f"Start time: {start_str}")
     print(f"End time: {end_str}")
-    print(f"Total elapsed time: {end - start:.0f}s ~{(end - start)/3600:.1f}hr")
+    print(f"Total elapsed time: {end - start:.0f}s ~{(end - start) / 3600:.1f}hr")
 
 
 if __name__ == "__main__":
@@ -761,7 +750,7 @@ if __name__ == "__main__":
 
     if args.generate_report:
         if not args.output:
-            print(f"Must specify report filename with --output.")
+            print("Must specify report filename with --output.")
             sys.exit()
 
         generate_report(args)
@@ -769,7 +758,7 @@ if __name__ == "__main__":
 
     if not args.all and not args.condition:
         print(
-            f"Must specify a specific condition using --condition or use --all to run all conditions."
+            "Must specify a specific condition using --condition or use --all to run all conditions."
         )
         sys.exit()
 

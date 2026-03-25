@@ -4,7 +4,7 @@ import os
 import re
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from dacite import from_dict
 
@@ -27,7 +27,7 @@ class Retriever:
     def __init__(
         self,
         retrieval_mode: RetrievalMode,
-        dataset: Union[str, List[str], List[Dict[str, Any]]],
+        dataset: str | list[str] | list[dict[str, Any]],
         retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
         query: str = None,
         index_path: str = None,
@@ -134,7 +134,7 @@ class Retriever:
         retrieval_method_name: str,
         dataset_name: str,
         file_pattern: str = "retrieve_results_{dataset_name}_top{k}.jsonl",
-    ) -> Tuple[Optional[str], int]:
+    ) -> tuple[str | None, int]:
         """
         Finds the file with the highest `k` value in a directory.
 
@@ -160,13 +160,13 @@ class Retriever:
             return None, -1
 
         def _extract_k(file_path):
-            match = re.search(rf"top(\d+)\.jsonl$", file_path)
+            match = re.search(r"top(\d+)\.jsonl$", file_path)
             return int(match.group(1))
 
         file_with_max_k = max(matching_files, key=_extract_k)
         return file_with_max_k, _extract_k(file_with_max_k)
 
-    def retrieve(self, k: int = 100) -> List[Request]:
+    def retrieve(self, k: int = 100) -> list[Request]:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance.
 
@@ -186,7 +186,7 @@ class Retriever:
                 max_k_file and max_k >= k
             ):  # try to see if retrieving from local file works
                 try:
-                    with open(max_k_file, "r") as f:
+                    with open(max_k_file) as f:
                         results = [
                             from_dict(data_class=Request, data=json.loads(line))
                             for line in f
@@ -203,7 +203,7 @@ class Retriever:
                 query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{100 if k <= 100 else 1000}.jsonl"
                 cached_file = download_cached_hits(query_name)
                 print(f"Cached file: {cached_file}")
-                with open(cached_file, "r") as f:
+                with open(cached_file) as f:
                     results = [
                         from_dict(data_class=Request, data=json.loads(line))
                         for line in enumerate(f)
@@ -223,7 +223,9 @@ class Retriever:
                 pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
                 return pyserini.retrieve_and_store(k=k)
             except Exception as pyserini_error:
-                raise ValueError(f"Pyserini error: {pyserini_error}")
+                raise ValueError(
+                    f"Pyserini error: {pyserini_error}"
+                ) from pyserini_error
         elif self._retrieval_mode == RetrievalMode.CUSTOM:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
@@ -244,7 +246,7 @@ class Retriever:
                 retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
-                with open(candidates_file, "r") as f:
+                with open(candidates_file) as f:
                     loaded_results = json.load(f)
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results

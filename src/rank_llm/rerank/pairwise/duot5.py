@@ -2,7 +2,6 @@ import logging
 import math
 import re
 from importlib.resources import files
-from typing import List, Optional, Tuple
 
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers.generation import GenerationConfig
@@ -20,11 +19,11 @@ class DuoT5(PairwiseRankLLM):
     def __init__(
         self,
         model: str,
-        prompt_mode: Optional[PromptMode] = None,
+        prompt_mode: PromptMode | None = None,
         prompt_template_path: str = (TEMPLATES / "duot5_template.yaml"),
         context_size: int = 512,
         num_few_shot_examples: int = 0,
-        few_shot_file: Optional[str] = None,
+        few_shot_file: str | None = None,
         device: str = "cuda",
         batch_size: int = 32,
     ):
@@ -55,8 +54,8 @@ class DuoT5(PairwiseRankLLM):
 
     def run_llm_batched(
         self,
-        prompts: List[str],
-    ) -> Tuple[List[str], List[int], List[float]]:
+        prompts: list[str],
+    ) -> tuple[list[str], list[int], list[float]]:
         gen_cfg = GenerationConfig.from_model_config(self._llm.config)
         gen_cfg.max_new_tokens = self.num_output_tokens()
         gen_cfg.min_new_tokens = self.num_output_tokens()
@@ -99,13 +98,13 @@ class DuoT5(PairwiseRankLLM):
 
         return batch_outputs, all_output_token_counts, all_scores
 
-    def run_llm(self, prompt: str) -> Tuple[str, int, float]:
+    def run_llm(self, prompt: str) -> tuple[str, int, float]:
         ret = self.run_llm_batched([prompt])
         return ret[0][0], ret[1][0], ret[2][0]
 
     def create_prompt(
         self, result: Result, index1: int, index2: int
-    ) -> Tuple[str, int]:
+    ) -> tuple[str, int]:
         query = re.sub(r"\[(\d+)\]", r"(\1)", result.query.text)
 
         reserved_for_output = (

@@ -40,16 +40,15 @@ pip install -e .[all]
 ## Formatting and Linting
 - Install pre-commit hooks once:
 ```bash
-pre-commit install
+uv run pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push
 ```
 - Run full formatting/lint checks:
 ```bash
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 - Enforced tools:
-  - `black` (Python 3.11)
-  - `isort` (`--profile=black`)
-  - `flake8` with repo config (`--ignore=E501 --select=F401`)
+  - `ruff check` (`E` and `F`, with `E501` ignored)
+  - `ruff format`
 
 ## Testing
 - Canonical local command (from CONTRIBUTING):
@@ -101,7 +100,7 @@ Note: it runs real model pipelines and is compute/network heavy.
   - `docs/release-notes/` entries for new releases
 
 ## Practical Checklist Before Opening a PR
-1. Run `pre-commit run --all-files`.
+1. Run `uv run pre-commit run --all-files`.
 2. Run `python -m unittest discover test`.
 3. Update docs/examples if user-facing behavior changed.
 4. Add/adjust tests for changed logic.

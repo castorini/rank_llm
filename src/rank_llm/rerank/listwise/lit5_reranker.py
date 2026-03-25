@@ -1,5 +1,5 @@
 from importlib.resources import files
-from typing import Any, List, Optional
+from typing import Any
 
 import torch
 
@@ -16,7 +16,7 @@ class LiT5DistillReranker:
         self,
         model_path: str = "castorini/LiT5-Distill-base",
         context_size: int = 300,
-        prompt_mode: Optional[PromptMode] = None,
+        prompt_mode: PromptMode | None = None,
         prompt_template_path: str = (TEMPLATES / "rank_fid_template.yaml"),
         precision: str = "bfloat16",
         window_size: int = 20,
@@ -45,7 +45,7 @@ class LiT5DistillReranker:
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Reranks a list of requests using the LiT5-Distill model.
 
@@ -115,7 +115,7 @@ class LiT5ScoreReranker:
         self,
         model_path: str = "castorini/LiT5-Score-base",
         context_size: int = 300,
-        prompt_mode: Optional[PromptMode] = None,
+        prompt_mode: PromptMode | None = None,
         prompt_template_path: str = (TEMPLATES / "rank_fid_score_template.yaml"),
         window_size: int = 20,
         stride: int = 10,
@@ -143,7 +143,7 @@ class LiT5ScoreReranker:
         shuffle_candidates: bool = False,
         logging: bool = False,
         **kwargs: Any,
-    ) -> List[Result]:
+    ) -> list[Result]:
         """
         Reranks a list of requests using the LiT5-Score model.
 

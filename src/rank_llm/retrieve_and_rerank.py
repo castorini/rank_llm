@@ -1,7 +1,7 @@
 import copy
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from huggingface_hub import hf_hub_download
 
@@ -21,12 +21,12 @@ from rank_llm.retrieve import (
 def retrieve_and_rerank(
     model_path: str,
     query: str,
-    dataset: Union[str, List[str], List[Dict[str, Any]]],
+    dataset: str | list[str] | list[dict[str, Any]],
     retrieval_mode: RetrievalMode = RetrievalMode.DATASET,
     retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
     top_k_retrieve: int = 50,
     top_k_rerank: int = 10,
-    max_queries: Optional[int] = None,
+    max_queries: int | None = None,
     shuffle_candidates: bool = False,
     print_prompts_responses: bool = False,
     qid: int = 1,
@@ -222,15 +222,13 @@ def retrieve(
     # Retrieve
     if interactive and retrieval_mode != RetrievalMode.DATASET:
         raise ValueError(
-            f"Unsupport retrieval mode for interactive retrieval. Currently only DATASET mode is supported."
+            "Unsupport retrieval mode for interactive retrieval. Currently only DATASET mode is supported."
         )
 
-    requests: List[Request] = []
+    requests: list[Request] = []
     if retrieval_mode == RetrievalMode.DATASET:
-        dataset: Union[str, List[str], List[Dict[str, Any]]] = kwargs.get(
-            "dataset", None
-        )
-        if dataset == None:
+        dataset: str | list[str] | list[dict[str, Any]] = kwargs.get("dataset", None)
+        if dataset is None:
             raise ValueError("Must provide a dataset")
 
         if interactive:
@@ -305,13 +303,13 @@ def retrieve(
                 )
                 print(f"Successfully downloaded requests file to {local_file_path}")
                 requests = read_requests_from_file(local_file_path)
-            except Exception as e:
+            except Exception as err:
                 dir_path = os.path.dirname(requests_file)
                 if os.path.exists(dir_path) and not os.listdir(dir_path):
                     os.rmdir(dir_path)
                 raise ValueError(
-                    f"Error downloading requests file from huggingface: {e}"
-                )
+                    f"Error downloading requests file from huggingface: {err}"
+                ) from err
         else:
             requests = read_requests_from_file(requests_file)
 

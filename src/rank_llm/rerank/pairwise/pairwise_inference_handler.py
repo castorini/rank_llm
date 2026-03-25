@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from transformers import T5Tokenizer
@@ -11,11 +11,11 @@ from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
 
 class PairwiseInferenceHandler(BaseInferenceHandler):
-    def __init__(self, template: Dict[str, str]):
+    def __init__(self, template: dict[str, str]):
         super().__init__(template)
 
-    def _validate_template(self, template: Dict[str, str], strict: bool = False):
-        TEMPLATE_SECTIONS: Dict[str, TemplateSectionConfig] = {
+    def _validate_template(self, template: dict[str, str], strict: bool = False):
+        TEMPLATE_SECTIONS: dict[str, TemplateSectionConfig] = {
             "method": TemplateSectionConfig(
                 required=True,
                 required_placeholders=set(),
@@ -43,8 +43,10 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
     def _generate_fewshot_prompt(
         self,
         num_examples: int = 0,
-        examples: List[Dict[str, List[Dict[str, str]]]] = [],
+        examples: list[dict[str, list[dict[str, str]]]] | None = None,
     ) -> str:
+        if examples is None:
+            examples = []
         text_examples = []
         pattern = re.compile(
             r"Query: (?P<query>.+?) Document0: (?P<doc0>.+?) Document1: (?P<doc1>.+)$"
@@ -132,8 +134,8 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
             tokenizer = kwargs["tokenizer"]
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
-        except KeyError as e:
-            raise ValueError(f"Missing required parameter: {e}")
+        except KeyError as err:
+            raise ValueError(f"Missing required parameter: {err}") from err
 
         single_doc_max_token = max_token // 2
 
