@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from rank_llm.data import Candidate, Query, Request, Result
 from rank_llm.rerank import IdentityReranker, Reranker
@@ -145,7 +146,9 @@ def run_mcp_rerank(
                 Candidate(
                     docid=c["docid"],
                     score=c["score"],
-                    doc={"contents": c["doc"]} if isinstance(c["doc"], str) else c["doc"],
+                    doc={"contents": c["doc"]}
+                    if isinstance(c["doc"], str)
+                    else c["doc"],
                 )
                 for c in candidates
             ],
