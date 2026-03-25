@@ -5,7 +5,6 @@ from pathlib import Path
 from shutil import which
 from unittest.mock import Mock, patch
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FASTMCP_AVAILABLE = find_spec("fastmcp") is not None
 
