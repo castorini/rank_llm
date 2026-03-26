@@ -917,7 +917,7 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
             run_mcp_server(transport=args.transport, port=args.port)
         except ImportError as error:
             raise CLIError(
-                "serve mcp requires MCP dependencies; install the `server` extra",
+                "serve mcp requires MCP dependencies; install the `mcp` extra",
                 exit_code=EXIT_CODES["missing_resource"],
                 status="validation_error",
                 error_code="missing_mcp_dependencies",
@@ -937,7 +937,7 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
         from rank_llm.api.runtime import ServerConfig
     except ModuleNotFoundError as error:
         raise CLIError(
-            "serve http requires FastAPI dependencies; install the `server` extra",
+            "serve http requires FastAPI dependencies; install the `api` extra",
             exit_code=EXIT_CODES["missing_resource"],
             status="validation_error",
             error_code="missing_api_dependencies",

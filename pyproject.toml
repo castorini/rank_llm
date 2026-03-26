@@ -65,15 +65,20 @@ pyserini = [
     "pandas>=1.4.0",
     "pyserini==1.2.0"
 ]
-server = [
-    "fastmcp>=2.0,<3",
+api = [
     "fastapi>=0.115.0",
     "flask>=3.0.0",
-    "rank-llm[local]",
+    "uvicorn>=0.32.0",
+]
+mcp = [
+    "fastmcp>=2.0,<3",
     "rank-llm[openai]",
     "rank-llm[pyserini]",
     "rank-llm[vllm]",
-    "uvicorn>=0.32.0",
+]
+server = [
+    "rank-llm[api]",
+    "rank-llm[mcp]",
 ]
 training = [
     "rank-llm[local]",
@@ -86,8 +91,10 @@ training = [
     "numpy>=1.26.4"
 ]
 all = [
+    "rank-llm[api]",
     "rank-llm[cloud]",
     "rank-llm[local]",
+    "rank-llm[mcp]",
     "rank-llm[pyserini]",
     "rank-llm[server]",
     "rank-llm[sglang]",
