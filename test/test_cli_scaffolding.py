@@ -38,6 +38,28 @@ class TestCLIParserAndOutput(unittest.TestCase):
         self.assertEqual(payload["status"], "validation_error")
         self.assertEqual(payload["errors"][0]["code"], "invalid_arguments")
 
+    def test_invalid_argument_json_error_with_equals_form(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = main(["--output=json", "bogus"])
+        self.assertEqual(exit_code, 2)
+        self.assertEqual("", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertEqual(payload["errors"][0]["code"], "invalid_arguments")
+
+    def test_invalid_argument_uses_passed_argv_for_command_detection(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = main(["--output", "json", "doctor", "--bad"])
+        self.assertEqual(exit_code, 2)
+        self.assertEqual("", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["command"], "doctor")
+        self.assertEqual(payload["errors"][0]["code"], "invalid_arguments")
+
     def test_not_implemented_command_text_warning(self):
         stdout = io.StringIO()
         stderr = io.StringIO()

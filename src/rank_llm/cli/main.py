@@ -32,6 +32,18 @@ class CLIError(Exception):
 
 
 class CLIArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._current_argv: list[str] = []
+
+    def parse_args(
+        self,
+        args: Sequence[str] | None = None,
+        namespace: argparse.Namespace | None = None,
+    ) -> argparse.Namespace:
+        self._current_argv = list(args) if args is not None else list(sys.argv[1:])
+        return super().parse_args(args, namespace)
+
     def error(self, message: str) -> NoReturn:
         if message == "the following arguments are required: command":
             raise CLIError(
@@ -50,7 +62,7 @@ class CLIArgumentParser(argparse.ArgumentParser):
             exit_code=EXIT_CODES["invalid_arguments"],
             status="validation_error",
             error_code="invalid_arguments",
-            command=_detect_command(sys.argv[1:]),
+            command=_detect_command(self._current_argv),
         )
 
 
@@ -94,6 +106,8 @@ def _wants_json(argv: Sequence[str]) -> bool:
     for index, token in enumerate(argv):
         if token == "--output" and index + 1 < len(argv):
             return argv[index + 1] == "json"
+        if token == "--output=json":
+            return True
     return False
 
 
