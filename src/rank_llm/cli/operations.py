@@ -182,7 +182,6 @@ def run_mcp_rerank(
                 **kwargs,
             )
         )
-    
 
     top_k_retrieve = len(candidates)
     top_k_rerank_effective = top_k_retrieve if top_k_rerank == -1 else top_k_rerank

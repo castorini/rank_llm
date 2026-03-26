@@ -559,6 +559,8 @@ def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
     return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
+
+
 def _validation_error_response(
     command: str,
     validation: dict[str, Any],

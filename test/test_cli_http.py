@@ -56,8 +56,12 @@ class TestCLIHTTP(unittest.TestCase):
             patch("rank_llm.api.runtime.Reranker", return_value=reranker),
         ):
             client = TestClient(create_app(ServerConfig(model_path="model")))
-            first = client.post("/v1/rerank", json={"query": "cats", "candidates": ["doc one"]})
-            second = client.post("/v1/rerank", json={"query": "dogs", "candidates": ["doc two"]})
+            first = client.post(
+                "/v1/rerank", json={"query": "cats", "candidates": ["doc one"]}
+            )
+            second = client.post(
+                "/v1/rerank", json={"query": "dogs", "candidates": ["doc two"]}
+            )
 
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
