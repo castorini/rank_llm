@@ -1,23 +1,12 @@
-"""
-Register tools for the MCP server.
+"""Register tools for the MCP server."""
 
-All parameters use explicit types and sentinel defaults (no Optional[X]) so that
-the generated JSON Schema has a single "type" per property. This avoids vLLM's
-trim_schema failing on anyOf entries that lack a "type" key.
-"""
-
-import copy
 from typing import Any
 
 from fastmcp import FastMCP
 
-from rank_llm.data import Candidate, Query, Request, Result
-from rank_llm.rerank import IdentityReranker, Reranker
+from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
+from rank_llm.data import Result
 from rank_llm.retrieve import TOPICS, RetrievalMethod, RetrievalMode
-from rank_llm.retrieve_and_rerank import (
-    retrieve_and_rerank as retrieve_and_rerank_function,
-)
-from rank_llm.utils import default_device
 
 
 def register_rankllm_tools(mcp: FastMCP):
@@ -89,82 +78,7 @@ def register_rankllm_tools(mcp: FastMCP):
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
     ) -> list[Result]:
-        kwargs = locals().copy()
-        del kwargs["model_path"]
-
-        # Convert sentinel defaults to None for Reranker.create_model_coordinator (reranker.py: extract_kwargs with None defaults)
-        prompt_template_path_or_none = (
-            prompt_template_path if prompt_template_path else None
-        )
-        few_shot_file_or_none = few_shot_file if few_shot_file else None
-        base_url_or_none = base_url if base_url else None
-        kwargs["prompt_template_path"] = prompt_template_path_or_none
-        kwargs["few_shot_file"] = few_shot_file_or_none
-        kwargs["base_url"] = base_url_or_none
-
-        reranker = Reranker(
-            Reranker.create_model_coordinator(
-                model_path,
-                None,
-                False,
-                **kwargs,
-            )
-        )
-
-        top_k_retrieve = len(candidates)
-        # -1 means same as input size (reranker.rerank_batch / final slice)
-        top_k_rerank_effective = top_k_retrieve if top_k_rerank == -1 else top_k_rerank
-        del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
-        requests = [
-            Request(
-                query=Query(text=query_text, qid=query_id),
-                candidates=[
-                    Candidate(
-                        docid=c["docid"],
-                        score=c["score"],
-                        doc=(
-                            {"contents": c["doc"]}
-                            if type(c["doc"]) is str
-                            else c["doc"]
-                        ),
-                    )
-                    for c in candidates
-                ],
-            )
-        ]
-        if reranker.get_model_coordinator() is None:
-            # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
-            shuffle_candidates = True if model_path == "rank_random" else False
-            rerank_results = IdentityReranker().rerank_batch(
-                requests,
-                rank_end=top_k_retrieve,
-                shuffle_candidates=shuffle_candidates,
-            )
-        else:
-            # Reranker is of type RankLLM
-            for pass_ct in range(num_passes):
-                print(f"Pass {pass_ct + 1} of {num_passes}:")
-
-                rerank_results = reranker.rerank_batch(
-                    requests,
-                    rank_end=top_k_retrieve,
-                    rank_start=0,
-                    shuffle_candidates=shuffle_candidates,
-                    logging=print_prompts_responses,
-                    top_k_retrieve=top_k_retrieve,
-                    **kwargs,
-                )
-
-                if num_passes > 1:
-                    requests = [
-                        Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                        for r in rerank_results
-                    ]
-
-        for rr in rerank_results:
-            rr.candidates = rr.candidates[:top_k_rerank_effective]
-
-        return rerank_results
+        return run_mcp_rerank(**locals())
 
     @mcp.tool(
         description=f"""
@@ -247,66 +161,4 @@ def register_rankllm_tools(mcp: FastMCP):
         sglang_batched: bool = False,
         tensorrt_batched: bool = False,
     ) -> list[Result]:
-        top_k_rerank = top_k_candidates if top_k_rerank == -1 else top_k_rerank
-        device = default_device()
-        retrieval_mode = RetrievalMode.DATASET if dataset else RetrievalMode.CACHED_FILE
-
-        # Convert sentinel defaults to None for the underlying API
-        dataset_or_none = dataset if dataset else None
-        retrieval_method_or_none = (
-            retrieval_method
-            if retrieval_method != RetrievalMethod.UNSPECIFIED
-            else None
-        )
-        max_queries_or_none = max_queries if max_queries >= 0 else None
-        prompt_template_path_or_none = (
-            prompt_template_path if prompt_template_path else None
-        )
-        few_shot_file_or_none = few_shot_file if few_shot_file else None
-        base_url_or_none = base_url if base_url else None
-
-        if requests_file:
-            if retrieval_method != RetrievalMethod.UNSPECIFIED:
-                raise ValueError("retrieval_method must not be used with requests_file")
-        if dataset_or_none and not retrieval_method_or_none:
-            raise ValueError("retrieval_method is required when dataset is provided")
-
-        return retrieve_and_rerank_function(
-            model_path=model_path,
-            query=query,
-            batch_size=batch_size,
-            dataset=dataset_or_none,
-            retrieval_mode=retrieval_mode,
-            requests_file=requests_file,
-            qrels_file=qrels_file,
-            output_jsonl_file=output_jsonl_file,
-            output_trec_file=output_trec_file,
-            invocations_history_file=invocations_history_file,
-            retrieval_method=retrieval_method_or_none,
-            top_k_retrieve=top_k_candidates,
-            top_k_rerank=top_k_rerank,
-            max_queries=max_queries_or_none,
-            context_size=context_size,
-            device=device,
-            num_gpus=num_gpus,
-            prompt_template_path=prompt_template_path_or_none,
-            num_few_shot_examples=num_few_shot_examples,
-            few_shot_file=few_shot_file_or_none,
-            shuffle_candidates=shuffle_candidates,
-            print_prompts_responses=print_prompts_responses,
-            use_azure_openai=use_azure_openai,
-            use_openrouter=use_openrouter,
-            base_url=base_url_or_none,
-            variable_passages=variable_passages,
-            num_passes=num_passes,
-            window_size=window_size,
-            stride=stride,
-            system_message=system_message,
-            populate_invocations_history=populate_invocations_history,
-            is_thinking=is_thinking,
-            reasoning_token_budget=reasoning_token_budget,
-            use_logits=use_logits,
-            use_alpha=use_alpha,
-            sglang_batched=sglang_batched,
-            tensorrt_batched=tensorrt_batched,
-        )
+        return run_mcp_retrieve_and_rerank(**locals())
