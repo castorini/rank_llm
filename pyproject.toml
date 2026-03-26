@@ -104,6 +104,9 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/castorini/rank_llm"
 
+[project.scripts]
+rank-llm = "rank_llm.cli.main:main"
+
 [tool.bumpver]
 current_version = "0.25.7"
 version_pattern = "MAJOR.MINOR.PATCH"
@@ -138,10 +141,13 @@ where = ["src"]
 include = [
     "rank_llm",
     "rank_llm.analysis",
+    "rank_llm.cli",
     "rank_llm.evaluation",
     "rank_llm.rerank",
     "rank_llm.rerank.*",
     "rank_llm.retrieve",
+    "rank_llm.server",
+    "rank_llm.server.*",
 ]
 namespaces = false
 
