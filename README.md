@@ -34,8 +34,6 @@ current_version = "0.25.7"
 <a id="installation"></a>
 # 📟 Installation
 
-> **⚠️ RankLLM is not compatible with macOS**, regardless of whether you are using an Intel-based Mac or Apple Silicon (M-series). We recommend using Linux or Windows instead.
-
 `uv` is the canonical contributor workflow for this repository. The existing
 `conda` and `pip` paths remain available as fallbacks.
 

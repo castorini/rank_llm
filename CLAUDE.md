@@ -8,7 +8,6 @@
 ## Environment and Setup
 - Use Python `>=3.11` for package/runtime workflows.
 - Use JDK 21 when retrieval/`pyserini` paths are involved (Anserini dependency).
-- Prefer Linux/Windows for runtime; README states RankLLM is not compatible with macOS.
 - Typical dev install:
 ```bash
 pip install -e .[all]
