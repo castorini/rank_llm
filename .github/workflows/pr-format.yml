@@ -75,3 +75,45 @@ jobs:
 
       - name: Run tests
         run: .venv/bin/python -m unittest discover -s "test/${{ matrix.test-suite }}"
+
+  cli_smoke:
+    needs: lint
+    runs-on: ubuntu-latest
+    env:
+      TMPDIR: /mnt/tmp
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare temp directory on /mnt
+        run: |
+          sudo mkdir -p "$TMPDIR"
+          sudo chown "$USER":"$USER" "$TMPDIR"
+          df -h /
+          df -h /mnt
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+
+      - name: Create CLI environment
+        run: uv venv --python 3.11
+
+      - name: Install CLI smoke environment
+        run: |
+          uv pip install --python .venv/bin/python -e .
+          uv pip install --python .venv/bin/python fastapi uvicorn "fastmcp>=2.0,<3"
+
+      - name: Run CLI smoke tests
+        run: |
+          .venv/bin/python -m unittest \
+            test.test_cli_packaging \
+            test.test_cli_scaffolding \
+            test.test_cli_rerank_command \
+            test.test_cli_validation \
+            test.test_cli_prompt \
+            test.test_cli_view \
+            test.test_cli_introspection \
+            test.test_cli_utilities \
+            test.test_cli_http \
+            test.test_cli_mcp \
+            test.test_cli_legacy_wrappers
