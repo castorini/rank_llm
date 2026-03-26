@@ -599,6 +599,15 @@ def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
 def _run_view_command(args: argparse.Namespace) -> CommandResponse:
     try:
         summary = build_view_summary(args.path, records=args.records)
+    except json.JSONDecodeError as error:
+        return _validation_error_response(
+            "view",
+            {
+                "valid": False,
+                "record_count": 0,
+                "errors": [f"invalid JSON content: {error.msg}"],
+            },
+        )
     except ViewError as error:
         return _validation_error_response(
             "view",

@@ -13,7 +13,7 @@ class TestCLIView(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "results.jsonl"
             path.write_text(
-                '{"query":"cats","candidates":[{"docid":"d1","score":1.0,"doc":{"contents":"doc"}}]}\n',
+                '{"query":{"text":"cats","qid":"q1"},"candidates":[{"docid":"d1","score":1.0,"doc":{"contents":"doc"}}]}\n',
                 encoding="utf-8",
             )
             stdout = io.StringIO()
@@ -23,6 +23,21 @@ class TestCLIView(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         summary = payload["artifacts"][0]["value"]
         self.assertEqual(summary["artifact_type"], "rerank-output")
+
+    def test_view_detects_request_input_when_candidates_are_not_ranked(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "requests.jsonl"
+            path.write_text(
+                '{"query":{"text":"cats","qid":"q1"},"candidates":[{"text":"doc"}]}\n',
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["--output", "json", "view", str(path)])
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        summary = payload["artifacts"][0]["value"]
+        self.assertEqual(summary["artifact_type"], "request-input")
 
     def test_view_detects_trec_output(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -81,6 +96,18 @@ class TestCLIView(unittest.TestCase):
         self.assertEqual(exit_code, 5)
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["status"], "validation_error")
+
+    def test_view_invalid_json_returns_validation_error(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "broken.jsonl"
+            path.write_text('{"query":', encoding="utf-8")
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["--output", "json", "view", str(path)])
+        self.assertEqual(exit_code, 5)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertIn("invalid JSON content", payload["errors"][0]["message"])
 
 
 if __name__ == "__main__":

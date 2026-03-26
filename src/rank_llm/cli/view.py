@@ -49,9 +49,9 @@ def detect_artifact_type(path: Path) -> str:
     if path.suffix == ".jsonl":
         first_record = _first_jsonl_record(path)
         if "query" in first_record and "candidates" in first_record:
-            if (
-                isinstance(first_record["query"], dict)
-                and "qid" in first_record["query"]
+            candidates = first_record["candidates"]
+            if any(
+                not _looks_like_ranked_candidate(candidate) for candidate in candidates
             ):
                 return "request-input"
             return "rerank-output"
@@ -98,3 +98,9 @@ def _first_jsonl_record(path: Path) -> dict[str, Any]:
         if line.strip():
             return json.loads(line)
     raise ViewError(f"empty jsonl file: {path}")
+
+
+def _looks_like_ranked_candidate(candidate: Any) -> bool:
+    if not isinstance(candidate, dict):
+        return False
+    return {"docid", "score", "doc"}.issubset(candidate)
