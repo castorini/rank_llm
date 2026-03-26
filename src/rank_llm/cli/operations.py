@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import copy
+import contextlib
+import io
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +25,18 @@ def _default_retrieve_and_rerank(*args: Any, **kwargs: Any) -> Any:
     from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
     return retrieve_and_rerank(*args, **kwargs)
+
+
+def _run_with_captured_stdout(
+    capture_stdout: bool,
+    runner: Callable[..., Any],
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    if not capture_stdout:
+        return runner(*args, **kwargs)
+    with contextlib.redirect_stdout(io.StringIO()):
+        return runner(*args, **kwargs)
 
 
 def run_script_rerank(
@@ -281,3 +295,101 @@ def run_mcp_retrieve_and_rerank(
         reasoning_effort=reasoning_effort,
         max_passage_words=max_passage_words,
     )
+
+
+def run_evaluate_aggregate(
+    *,
+    model_name: str,
+    context_size: int = 4096,
+    rerank_results_dirname: str = "rerank_results",
+    runner: Callable[[Any], Any] | None = None,
+    capture_stdout: bool = False,
+) -> dict[str, Any]:
+    if runner is None:
+        from argparse import Namespace
+
+        from rank_llm.scripts.run_trec_eval import main as runner
+
+        args = Namespace(
+            model_name=model_name,
+            context_size=context_size,
+            rerank_results_dirname=rerank_results_dirname,
+        )
+        _run_with_captured_stdout(capture_stdout, runner, args)
+    else:
+        _run_with_captured_stdout(
+            capture_stdout,
+            runner,
+            model_name,
+            context_size,
+            rerank_results_dirname,
+        )
+    return {
+        "model_name": model_name,
+        "context_size": context_size,
+        "rerank_results_dirname": rerank_results_dirname,
+        "output_file": f"trec_eval_aggregated_results_{model_name}.jsonl",
+    }
+
+
+def run_response_analysis_files(
+    *,
+    files: list[str],
+    verbose: bool = False,
+    runner: Callable[..., Any] | None = None,
+    capture_stdout: bool = False,
+) -> dict[str, Any]:
+    if runner is None:
+        from rank_llm.analysis.response_analysis import ResponseAnalyzer
+
+        runner = ResponseAnalyzer.from_stored_files
+        analyzer = _run_with_captured_stdout(capture_stdout, runner, files)
+        return {
+            "files": files,
+            "verbose": verbose,
+            "metrics": _run_with_captured_stdout(
+                capture_stdout, analyzer.count_errors, verbose
+            ),
+        }
+    return _run_with_captured_stdout(capture_stdout, runner, files, verbose)
+
+
+def run_retrieve_cache_generation(
+    *,
+    trec_file: str,
+    collection_file: str,
+    query_file: str,
+    output_file: str,
+    output_trec_file: str | None = None,
+    topk: int = 20,
+    generator: Callable[..., Any] | None = None,
+    writer: Callable[[str, Any], None] | None = None,
+    capture_stdout: bool = False,
+) -> dict[str, Any]:
+    if generator is None or writer is None:
+        from rank_llm.scripts.generate_retrieve_results_json_cache import (
+            generate_retrieve_results,
+            write_output_file,
+        )
+
+        generator = generate_retrieve_results
+        writer = write_output_file
+    results = _run_with_captured_stdout(
+        capture_stdout,
+        generator,
+        trec_file,
+        collection_file,
+        query_file,
+        topk,
+        output_trec_file,
+    )
+    _run_with_captured_stdout(capture_stdout, writer, output_file, results)
+    return {
+        "trec_file": trec_file,
+        "collection_file": collection_file,
+        "query_file": query_file,
+        "output_file": output_file,
+        "output_trec_file": output_trec_file,
+        "topk": topk,
+        "record_count": len(results),
+    }

@@ -12,6 +12,21 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "input_modes": ["dataset", "requests-file", "input-json", "stdin"],
         "inspection_safe": False,
     },
+    "evaluate": {
+        "summary": "Aggregate trec_eval metrics across stored RankLLM rerank outputs.",
+        "input_modes": ["directory"],
+        "inspection_safe": False,
+    },
+    "analyze": {
+        "summary": "Analyze stored RankLLM responses and error counts.",
+        "input_modes": ["files"],
+        "inspection_safe": False,
+    },
+    "retrieve-cache": {
+        "summary": "Generate cached retrieval JSON from a TREC run file and corpus/query sources.",
+        "input_modes": ["files"],
+        "inspection_safe": False,
+    },
     "validate": {
         "summary": "Validate rerank inputs without executing a model.",
         "targets": ["rerank"],
@@ -152,6 +167,9 @@ def doctor_report() -> dict[str, Any]:
     }
     command_readiness = {
         "rerank": {"ready": True},
+        "evaluate": {"ready": True},
+        "analyze": {"ready": True},
+        "retrieve-cache": {"ready": True},
         "prompt": {"ready": optional_dependencies["yaml"]},
         "view": {"ready": True},
         "describe": {"ready": True},
