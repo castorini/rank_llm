@@ -102,30 +102,50 @@ def build_parser() -> argparse.ArgumentParser:
     rerank_parser.add_argument(
         "--top-k-rerank", dest="top_k_rerank", type=int, default=-1
     )
-    rerank_parser.add_argument("--max-queries", dest="max_queries", type=int, default=-1)
-    rerank_parser.add_argument("--context-size", dest="context_size", type=int, default=4096)
+    rerank_parser.add_argument(
+        "--max-queries", dest="max_queries", type=int, default=-1
+    )
+    rerank_parser.add_argument(
+        "--context-size", dest="context_size", type=int, default=4096
+    )
     rerank_parser.add_argument("--num-gpus", dest="num_gpus", type=int, default=1)
-    rerank_parser.add_argument("--prompt-template-path", dest="prompt_template_path", default="")
+    rerank_parser.add_argument(
+        "--prompt-template-path", dest="prompt_template_path", default=""
+    )
     rerank_parser.add_argument(
         "--num-few-shot-examples", dest="num_few_shot_examples", type=int, default=0
     )
     rerank_parser.add_argument("--few-shot-file", dest="few_shot_file", default="")
     rerank_parser.add_argument("--qrels-file", dest="qrels_file", default="")
-    rerank_parser.add_argument("--output-jsonl-file", dest="output_jsonl_file", default="")
-    rerank_parser.add_argument("--output-trec-file", dest="output_trec_file", default="")
+    rerank_parser.add_argument(
+        "--output-jsonl-file", dest="output_jsonl_file", default=""
+    )
+    rerank_parser.add_argument(
+        "--output-trec-file", dest="output_trec_file", default=""
+    )
     rerank_parser.add_argument(
         "--invocations-history-file", dest="invocations_history_file", default=""
     )
-    rerank_parser.add_argument("--shuffle-candidates", dest="shuffle_candidates", action="store_true")
+    rerank_parser.add_argument(
+        "--shuffle-candidates", dest="shuffle_candidates", action="store_true"
+    )
     rerank_parser.add_argument(
         "--print-prompts-responses", dest="print_prompts_responses", action="store_true"
     )
-    rerank_parser.add_argument("--use-azure-openai", dest="use_azure_openai", action="store_true")
-    rerank_parser.add_argument("--use-openrouter", dest="use_openrouter", action="store_true")
+    rerank_parser.add_argument(
+        "--use-azure-openai", dest="use_azure_openai", action="store_true"
+    )
+    rerank_parser.add_argument(
+        "--use-openrouter", dest="use_openrouter", action="store_true"
+    )
     rerank_parser.add_argument("--base-url", dest="base_url", default="")
-    rerank_parser.add_argument("--variable-passages", dest="variable_passages", action="store_true")
+    rerank_parser.add_argument(
+        "--variable-passages", dest="variable_passages", action="store_true"
+    )
     rerank_parser.add_argument("--num-passes", dest="num_passes", type=int, default=1)
-    rerank_parser.add_argument("--window-size", dest="window_size", type=int, default=20)
+    rerank_parser.add_argument(
+        "--window-size", dest="window_size", type=int, default=20
+    )
     rerank_parser.add_argument("--stride", dest="stride", type=int, default=10)
     rerank_parser.add_argument(
         "--system-message",
@@ -146,7 +166,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     rerank_parser.add_argument("--use-logits", dest="use_logits", action="store_true")
     rerank_parser.add_argument("--use-alpha", dest="use_alpha", action="store_true")
-    rerank_parser.add_argument("--sglang-batched", dest="sglang_batched", action="store_true")
+    rerank_parser.add_argument(
+        "--sglang-batched", dest="sglang_batched", action="store_true"
+    )
     rerank_parser.add_argument(
         "--tensorrt-batched", dest="tensorrt_batched", action="store_true"
     )
@@ -218,15 +240,38 @@ def _build_error_response(error: CLIError) -> CommandResponse:
 
 
 def _read_direct_payload(args: argparse.Namespace) -> dict[str, Any]:
-    if args.stdin:
-        return json.loads(sys.stdin.read())
-    if args.input_json:
-        return json.loads(args.input_json)
+    try:
+        if args.stdin:
+            return json.loads(sys.stdin.read())
+        if args.input_json:
+            return json.loads(args.input_json)
+    except json.JSONDecodeError as exc:
+        source = "stdin" if args.stdin else "--input-json"
+        raise CLIError(
+            f"Invalid JSON payload provided via {source}: {exc.msg}",
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_json",
+            command="rerank",
+            details={"source": source, "line": exc.lineno, "column": exc.colno},
+        ) from exc
     raise CLIError(
         "Direct input requires --stdin or --input-json",
         exit_code=EXIT_CODES["invalid_arguments"],
         status="validation_error",
         error_code="missing_direct_input",
+        command="rerank",
+    )
+
+
+def _validate_rerank_sources(args: argparse.Namespace) -> None:
+    if args.dataset or args.requests_file or args.input_json is not None or args.stdin:
+        return
+    raise CLIError(
+        "Rerank requires one input source: --dataset, --requests-file, --input-json, or --stdin",
+        exit_code=EXIT_CODES["invalid_arguments"],
+        status="validation_error",
+        error_code="missing_input_source",
         command="rerank",
     )
 
@@ -261,7 +306,10 @@ def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _serialize_data(value: Any) -> Any:
     if dataclasses.is_dataclass(value):
-        return {key: _serialize_data(item) for key, item in dataclasses.asdict(value).items()}
+        return {
+            key: _serialize_data(item)
+            for key, item in dataclasses.asdict(value).items()
+        }
     if isinstance(value, list):
         return [_serialize_data(item) for item in value]
     if isinstance(value, dict):
@@ -270,6 +318,7 @@ def _serialize_data(value: Any) -> Any:
 
 
 def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
+    _validate_rerank_sources(args)
     direct_mode = args.input_json is not None or args.stdin
     if direct_mode:
         payload = _read_direct_payload(args)
@@ -303,6 +352,8 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
             tensorrt_batched=args.tensorrt_batched,
+            reasoning_effort=args.reasoning_effort,
+            max_passage_words=args.max_passage_words,
         )
         input_mode = "direct"
     else:
@@ -342,6 +393,8 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
             tensorrt_batched=args.tensorrt_batched,
+            reasoning_effort=args.reasoning_effort,
+            max_passage_words=args.max_passage_words,
         )
         input_mode = "requests-file" if args.requests_file else "dataset"
 
