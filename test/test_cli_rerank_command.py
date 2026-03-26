@@ -1,7 +1,9 @@
 import contextlib
 import io
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from rank_llm.cli.main import main
@@ -41,21 +43,30 @@ class TestCLIRerankCommand(unittest.TestCase):
         self.assertEqual(mocked.call_args.kwargs["max_passage_words"], 300)
 
     def test_rerank_requests_file_mode_uses_retrieve_handler(self):
-        with patch(
-            "rank_llm.cli.main.run_mcp_retrieve_and_rerank",
-            return_value=[{"requests_file": True}],
-        ) as mocked:
-            exit_code = main(
-                [
-                    "rerank",
-                    "--model-path",
-                    "model",
-                    "--requests-file",
-                    "requests.jsonl",
-                ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            requests_file = Path(temp_dir) / "requests.jsonl"
+            requests_file.write_text(
+                '{"query":"cats","candidates":["doc"]}\n',
+                encoding="utf-8",
             )
+            with patch(
+                "rank_llm.cli.main.run_mcp_retrieve_and_rerank",
+                return_value=[{"requests_file": True}],
+            ) as mocked:
+                exit_code = main(
+                    [
+                        "rerank",
+                        "--model-path",
+                        "model",
+                        "--requests-file",
+                        str(requests_file),
+                    ]
+                )
         self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["requests_file"], "requests.jsonl")
+        self.assertEqual(
+            mocked.call_args.kwargs["requests_file"],
+            str(requests_file),
+        )
 
     def test_rerank_direct_json_mode_uses_inline_handler(self):
         payload = '{"query":"cats","candidates":["doc one"]}'

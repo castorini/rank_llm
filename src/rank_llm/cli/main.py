@@ -9,6 +9,10 @@ from typing import Any, NoReturn
 
 from rank_llm.cli.adapters import make_data_artifact
 from rank_llm.cli.config import load_config
+from rank_llm.cli.introspection import (
+    validate_rerank_batch_file,
+    validate_rerank_payload,
+)
 from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
 from rank_llm.cli.responses import CommandResponse
 from rank_llm.cli.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
@@ -89,6 +93,12 @@ def build_parser() -> argparse.ArgumentParser:
     rerank_parser.add_argument("--requests-file", dest="requests_file")
     rerank_parser.add_argument("--input-json", dest="input_json")
     rerank_parser.add_argument("--stdin", action="store_true")
+    rerank_parser.add_argument("--dry-run", dest="dry_run", action="store_true")
+    rerank_parser.add_argument(
+        "--validate-only",
+        dest="validate_only",
+        action="store_true",
+    )
     rerank_parser.add_argument(
         "--retrieval-method",
         dest="retrieval_method",
@@ -184,8 +194,23 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=300,
     )
+    validate_parser = subparsers.add_parser("validate", help=argparse.SUPPRESS)
+    validate_subparsers = validate_parser.add_subparsers(
+        dest="validate_target",
+        required=True,
+    )
+    validate_rerank_parser = validate_subparsers.add_parser(
+        "rerank",
+        help="Validate rerank inputs without executing models.",
+    )
+    validate_rerank_parser.add_argument("--input-json", dest="input_json")
+    validate_rerank_parser.add_argument("--stdin", action="store_true")
+    validate_rerank_parser.add_argument("--requests-file", dest="requests_file")
+
     for command in KNOWN_COMMANDS:
         if command == "rerank":
+            continue
+        if command == "validate":
             continue
         subparsers.add_parser(command, help=argparse.SUPPRESS)
     return parser
@@ -276,6 +301,25 @@ def _validate_rerank_sources(args: argparse.Namespace) -> None:
     )
 
 
+def _validate_rerank_execution_args(args: argparse.Namespace) -> None:
+    if args.requests_file and args.retrieval_method:
+        raise CLIError(
+            "--retrieval-method must not be used with --requests-file",
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_arguments",
+            command="rerank",
+        )
+    if args.dataset and not args.retrieval_method:
+        raise CLIError(
+            "--retrieval-method is required when --dataset is provided",
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_arguments",
+            command="rerank",
+        )
+
+
 def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
     query = payload["query"]
     query_text = query["text"] if isinstance(query, dict) else query
@@ -304,6 +348,26 @@ def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
     return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
 
 
+def _validation_error_response(
+    command: str,
+    validation: dict[str, Any],
+) -> CommandResponse:
+    return CommandResponse(
+        command=command,
+        status="validation_error",
+        exit_code=EXIT_CODES["validation_error"],
+        validation=validation,
+        errors=[
+            {
+                "code": "validation_error",
+                "message": "; ".join(validation.get("errors", ["validation failed"])),
+                "details": validation,
+                "retryable": False,
+            }
+        ],
+    )
+
+
 def _serialize_data(value: Any) -> Any:
     if dataclasses.is_dataclass(value):
         return {
@@ -322,6 +386,17 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
     direct_mode = args.input_json is not None or args.stdin
     if direct_mode:
         payload = _read_direct_payload(args)
+        validation = validate_rerank_payload(payload)
+        if not validation["valid"]:
+            return _validation_error_response("rerank", validation)
+        if args.validate_only or args.dry_run:
+            return CommandResponse(
+                command="rerank",
+                mode="validate" if args.validate_only else "dry_run",
+                validation=validation,
+                inputs={"mode": "direct"},
+                resolved={"model_path": args.model_path, "input_mode": "direct"},
+            )
         normalized = _normalize_direct_rerank_input(payload)
         results = run_mcp_rerank(
             model_path=args.model_path,
@@ -357,6 +432,21 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
         )
         input_mode = "direct"
     else:
+        validation = {"valid": True, "record_count": 0, "errors": []}
+        _validate_rerank_execution_args(args)
+        if args.requests_file:
+            validation = validate_rerank_batch_file(args.requests_file)
+            if not validation["valid"]:
+                return _validation_error_response("rerank", validation)
+        if args.validate_only or args.dry_run:
+            input_mode = "requests-file" if args.requests_file else "dataset"
+            return CommandResponse(
+                command="rerank",
+                mode="validate" if args.validate_only else "dry_run",
+                validation=validation,
+                inputs={"mode": input_mode},
+                resolved={"model_path": args.model_path, "input_mode": input_mode},
+            )
         results = run_mcp_retrieve_and_rerank(
             model_path=args.model_path,
             query=args.query,
@@ -400,15 +490,39 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
 
     return CommandResponse(
         command="rerank",
+        validation={"valid": True, "record_count": 1 if direct_mode else 0},
         inputs={"mode": input_mode},
         resolved={"model_path": args.model_path, "input_mode": input_mode},
         artifacts=[make_data_artifact("rerank-results", _serialize_data(results))],
     )
 
 
+def _run_validate_command(args: argparse.Namespace) -> CommandResponse:
+    if args.validate_target != "rerank":
+        return CommandResponse(
+            command="validate",
+            warnings=["validate target not implemented yet."],
+        )
+    if args.requests_file:
+        validation = validate_rerank_batch_file(args.requests_file)
+    else:
+        validation = validate_rerank_payload(_read_direct_payload(args))
+    if not validation["valid"]:
+        return _validation_error_response("validate", validation)
+    return CommandResponse(
+        command="validate",
+        mode="validate",
+        validation=validation,
+        inputs={"target": "rerank"},
+        resolved={"target": "rerank"},
+    )
+
+
 def _run_command(args: argparse.Namespace) -> CommandResponse:
     if args.command == "rerank":
         return _run_rerank_command(args)
+    if args.command == "validate":
+        return _run_validate_command(args)
     return CommandResponse(
         command=args.command,
         status="success",
