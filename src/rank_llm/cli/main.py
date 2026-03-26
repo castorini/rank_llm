@@ -722,6 +722,7 @@ def _run_evaluate_command(args: argparse.Namespace) -> CommandResponse:
         model_name=args.model_name,
         context_size=args.context_size,
         rerank_results_dirname=args.rerank_results_dirname,
+        capture_stdout=args.output == "json",
     )
     return CommandResponse(
         command="evaluate",
@@ -735,7 +736,11 @@ def _run_evaluate_command(args: argparse.Namespace) -> CommandResponse:
 
 
 def _run_analyze_command(args: argparse.Namespace) -> CommandResponse:
-    summary = run_response_analysis_files(files=args.files, verbose=args.verbose)
+    summary = run_response_analysis_files(
+        files=args.files,
+        verbose=args.verbose,
+        capture_stdout=args.output == "json",
+    )
     return CommandResponse(
         command="analyze",
         inputs={"files": args.files, "verbose": args.verbose},
@@ -751,6 +756,7 @@ def _run_retrieve_cache_command(args: argparse.Namespace) -> CommandResponse:
         output_file=args.output_file,
         output_trec_file=args.output_trec_file,
         topk=args.topk,
+        capture_stdout=args.output == "json",
     )
     return CommandResponse(
         command="retrieve-cache",
