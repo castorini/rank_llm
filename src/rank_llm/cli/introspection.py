@@ -25,11 +25,20 @@ def validate_rerank_batch_file(path: str) -> dict[str, Any]:
 
     record_count = 0
     with file_path.open("r", encoding="utf-8") as handle:
-        for line in handle:
+        for line_number, line in enumerate(handle, start=1):
             stripped = line.strip()
             if not stripped:
                 continue
-            payload = json.loads(stripped)
+            try:
+                payload = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                return {
+                    "valid": False,
+                    "record_count": record_count,
+                    "errors": [
+                        f"invalid JSON on line {line_number}: {exc.msg}",
+                    ],
+                }
             validation = validate_rerank_payload(payload)
             if not validation["valid"]:
                 return validation

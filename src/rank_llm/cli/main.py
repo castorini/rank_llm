@@ -301,6 +301,25 @@ def _validate_rerank_sources(args: argparse.Namespace) -> None:
     )
 
 
+def _validate_rerank_execution_args(args: argparse.Namespace) -> None:
+    if args.requests_file and args.retrieval_method:
+        raise CLIError(
+            "--retrieval-method must not be used with --requests-file",
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_arguments",
+            command="rerank",
+        )
+    if args.dataset and not args.retrieval_method:
+        raise CLIError(
+            "--retrieval-method is required when --dataset is provided",
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_arguments",
+            command="rerank",
+        )
+
+
 def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
     query = payload["query"]
     query_text = query["text"] if isinstance(query, dict) else query
@@ -414,6 +433,7 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
         input_mode = "direct"
     else:
         validation = {"valid": True, "record_count": 0, "errors": []}
+        _validate_rerank_execution_args(args)
         if args.requests_file:
             validation = validate_rerank_batch_file(args.requests_file)
             if not validation["valid"]:
