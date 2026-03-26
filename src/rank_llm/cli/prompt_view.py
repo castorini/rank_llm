@@ -9,6 +9,10 @@ import yaml
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
+class PromptTemplateError(Exception):
+    pass
+
+
 def list_prompt_templates() -> list[dict[str, Any]]:
     catalog = []
     for path in sorted(Path(str(TEMPLATES)).glob("*.yaml")):
@@ -33,6 +37,8 @@ def load_prompt_template(name_or_path: str) -> dict[str, Any]:
             name_or_path if name_or_path.endswith(".yaml") else f"{name_or_path}.yaml"
         )
         path = Path(str(TEMPLATES / template_name))
+    if not path.exists():
+        raise PromptTemplateError(f"Unknown prompt template: {name_or_path}")
     with path.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
 
@@ -148,11 +154,17 @@ def build_rendered_prompt_view(
             }
         ]
     elif method == "rankfid":
-        lines = [
-            template["query"].format(query=query_text),
-        ]
-        for candidate in candidates:
-            lines.append(template["text"].format(text=_candidate_text(candidate)))
+        lines: list[str] = []
+        if template.get("query"):
+            lines.append(template["query"].format(query=query_text))
+        for index, candidate in enumerate(candidates, start=1):
+            lines.append(
+                template["text"].format(
+                    query=query_text,
+                    passage=_candidate_text(candidate),
+                    index=index,
+                )
+            )
         messages = [{"role": "user", "content": "\n".join(lines)}]
     else:
         raise ValueError(f"Unsupported template method: {method}")

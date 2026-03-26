@@ -77,6 +77,38 @@ class TestCLIPrompt(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["status"], "validation_error")
 
+    def test_prompt_show_missing_template_returns_validation_error(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            exit_code = main(["--output", "json", "prompt", "show", "missing-template"])
+        self.assertEqual(exit_code, 2)
+        self.assertEqual("", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertEqual(payload["errors"][0]["code"], "missing_resource")
+
+    def test_prompt_render_rankfid_template_uses_query_and_passage_fields(self):
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "--output",
+                    "json",
+                    "prompt",
+                    "render",
+                    "rank_fid_template",
+                    "--input-json",
+                    '{"query":"cats","candidates":["doc one","doc two"]}',
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        content = payload["artifacts"][0]["value"]["messages"][0]["content"]
+        self.assertIn("Search Query: cats", content)
+        self.assertIn("Passage: [1] doc one", content)
+        self.assertIn("Passage: [2] doc two", content)
+
 
 if __name__ == "__main__":
     unittest.main()

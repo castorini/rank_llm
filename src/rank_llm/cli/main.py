@@ -15,6 +15,7 @@ from rank_llm.cli.introspection import (
 )
 from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
 from rank_llm.cli.prompt_view import (
+    PromptTemplateError,
     build_prompt_template_view,
     build_rendered_prompt_view,
     list_prompt_templates,
@@ -548,32 +549,41 @@ def _run_validate_command(args: argparse.Namespace) -> CommandResponse:
 
 
 def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
-    if args.prompt_command == "list":
-        catalog = list_prompt_templates()
-        return CommandResponse(
+    try:
+        if args.prompt_command == "list":
+            catalog = list_prompt_templates()
+            return CommandResponse(
+                command="prompt",
+                inputs={"subcommand": "list"},
+                artifacts=[make_data_artifact("prompt-catalog", catalog)],
+            )
+        if args.prompt_command == "show":
+            view = build_prompt_template_view(args.name)
+            return CommandResponse(
+                command="prompt",
+                inputs={"subcommand": "show", "name": args.name},
+                artifacts=[make_data_artifact("prompt-template", view)],
+            )
+        if args.prompt_command == "render":
+            payload = _read_direct_payload(args)
+            validation = validate_rerank_payload(payload)
+            if not validation["valid"]:
+                return _validation_error_response("prompt", validation)
+            view = build_rendered_prompt_view(args.name, payload)
+            return CommandResponse(
+                command="prompt",
+                inputs={"subcommand": "render", "name": args.name},
+                validation=validation,
+                artifacts=[make_data_artifact("rendered-prompt", view)],
+            )
+    except PromptTemplateError as exc:
+        raise CLIError(
+            str(exc),
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="missing_resource",
             command="prompt",
-            inputs={"subcommand": "list"},
-            artifacts=[make_data_artifact("prompt-catalog", catalog)],
-        )
-    if args.prompt_command == "show":
-        view = build_prompt_template_view(args.name)
-        return CommandResponse(
-            command="prompt",
-            inputs={"subcommand": "show", "name": args.name},
-            artifacts=[make_data_artifact("prompt-template", view)],
-        )
-    if args.prompt_command == "render":
-        payload = _read_direct_payload(args)
-        validation = validate_rerank_payload(payload)
-        if not validation["valid"]:
-            return _validation_error_response("prompt", validation)
-        view = build_rendered_prompt_view(args.name, payload)
-        return CommandResponse(
-            command="prompt",
-            inputs={"subcommand": "render", "name": args.name},
-            validation=validation,
-            artifacts=[make_data_artifact("rendered-prompt", view)],
-        )
+        ) from exc
     return CommandResponse(
         command="prompt", warnings=["prompt command not implemented yet."]
     )
