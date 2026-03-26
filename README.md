@@ -81,6 +81,8 @@ uv sync --group dev --extra genai
 uv sync --group dev --extra cloud
 uv sync --group dev --extra local
 uv sync --group dev --extra pyserini
+uv sync --group dev --extra api
+uv sync --group dev --extra mcp
 uv sync --group dev --extra vllm
 uv sync --group dev --extra sglang
 uv sync --group dev --extra tensorrt-llm
@@ -102,10 +104,12 @@ hosted-provider stacks.
 | All hosted-provider rerankers | `cloud` | Installs `openai` and `genai` |
 | Local Hugging Face and PyTorch rerankers | `local` | Installs `torch` and `transformers` for MonoT5, DuoT5, MonoELECTRA, and related local paths |
 | Pyserini retrieval and evaluation | `pyserini` | Requires Java 21 |
+| Lightweight HTTP API dependencies | `api` | Installs FastAPI, Flask, and Uvicorn without the heavier retrieval or inference stacks |
+| MCP server dependencies | `mcp` | Pulls the packaged `serve mcp` dependency set, including Pyserini and model-serving backends |
 | Listwise reranking with open-source models via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
 | Batched SGLang inference | `sglang` | Install `flashinfer` separately when needed |
 | Batched TensorRT-LLM inference | `tensorrt-llm` | Install `flash-attn` separately when needed |
-| HTTP and MCP server surfaces | `server` | Pulls the packaged `serve http` and `serve mcp` dependency set |
+| Full HTTP and MCP server bundle | `server` | Aggregate of the `api` and `mcp` extras |
 | Finetuning and training scripts | `training` | Keeps training-only deps out of base installs |
 | Everything | `all` | Aggregate of all extras |
 
@@ -137,6 +141,8 @@ pip install -e ".[genai]"
 pip install -e ".[cloud]"
 pip install -e ".[local]"
 pip install -e ".[pyserini]"
+pip install -e ".[api]"
+pip install -e ".[mcp]"
 pip install -e ".[vllm]"
 ```
 

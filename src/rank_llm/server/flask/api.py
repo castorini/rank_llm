@@ -17,6 +17,7 @@ Default to 20, 10, None, and 1 respectively
 def create_app(model, port, use_azure_openai=False):
     import torch
     from flask import Flask, jsonify, request
+
     from rank_llm.rerank import (
         IdentityReranker,
         get_azure_openai_args,

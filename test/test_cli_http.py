@@ -26,12 +26,14 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(response.json(), {"status": "ok"})
 
     def test_rerank_route_returns_envelope(self):
-        client = TestClient(create_app(ServerConfig(model_path="model")))
-
-        with patch(
-            "rank_llm.api.runtime.run_mcp_rerank",
-            return_value=[{"query": {"text": "cats"}, "candidates": []}],
-        ) as mocked:
+        with (
+            patch("rank_llm.api.runtime.initialize_reranker"),
+            patch(
+                "rank_llm.api.runtime.run_mcp_rerank",
+                return_value=[{"query": {"text": "cats"}, "candidates": []}],
+            ) as mocked,
+        ):
+            client = TestClient(create_app(ServerConfig(model_path="model")))
             response = client.post(
                 "/v1/rerank",
                 json={"query": "cats", "candidates": ["doc one"]},
@@ -48,13 +50,9 @@ class TestCLIHTTP(unittest.TestCase):
         reranker.get_model_coordinator.return_value = object()
         reranker.rerank_batch.return_value = []
 
-        with (
-            patch(
-                "rank_llm.api.runtime.Reranker.create_model_coordinator",
-                return_value=object(),
-            ) as create_coordinator,
-            patch("rank_llm.api.runtime.Reranker", return_value=reranker),
-        ):
+        with patch("rank_llm.api.runtime.Reranker") as reranker_class:
+            reranker_class.create_model_coordinator.return_value = object()
+            reranker_class.return_value = reranker
             client = TestClient(create_app(ServerConfig(model_path="model")))
             first = client.post(
                 "/v1/rerank", json={"query": "cats", "candidates": ["doc one"]}
@@ -65,25 +63,28 @@ class TestCLIHTTP(unittest.TestCase):
 
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
-        self.assertEqual(create_coordinator.call_count, 1)
+        self.assertEqual(reranker_class.create_model_coordinator.call_count, 1)
+        self.assertEqual(reranker_class.call_count, 1)
         self.assertEqual(reranker.rerank_batch.call_count, 2)
 
     def test_rerank_route_returns_400_for_invalid_payload(self):
-        client = TestClient(create_app(ServerConfig(model_path="model")))
-
-        response = client.post("/v1/rerank", json={"query": "cats"})
+        with patch("rank_llm.api.runtime.initialize_reranker"):
+            client = TestClient(create_app(ServerConfig(model_path="model")))
+            response = client.post("/v1/rerank", json={"query": "cats"})
 
         self.assertEqual(response.status_code, 400)
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
 
     def test_rerank_route_returns_500_for_runtime_error(self):
-        client = TestClient(create_app(ServerConfig(model_path="model")))
-
-        with patch(
-            "rank_llm.api.runtime.run_mcp_rerank",
-            side_effect=RuntimeError("boom"),
+        with (
+            patch("rank_llm.api.runtime.initialize_reranker"),
+            patch(
+                "rank_llm.api.runtime.run_mcp_rerank",
+                side_effect=RuntimeError("boom"),
+            ),
         ):
+            client = TestClient(create_app(ServerConfig(model_path="model")))
             response = client.post(
                 "/v1/rerank",
                 json={"query": "cats", "candidates": ["doc one"]},

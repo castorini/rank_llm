@@ -69,6 +69,7 @@ class TestCLIParserAndOutput(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["command"], "doctor")
         self.assertEqual(payload["errors"][0]["code"], "invalid_arguments")
+
     def test_doctor_text_output(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
