@@ -30,8 +30,12 @@ def main(args: argparse.Namespace | Sequence[str] | None = None) -> int:
 
 
 def _validate_backend_flags_from_namespace(args: argparse.Namespace) -> None:
-    if getattr(args, "sglang_batched", False) and getattr(args, "tensorrt_batched", False):
-        raise ValueError("--sglang_batched and --tensorrt_batched are mutually exclusive")
+    if getattr(args, "sglang_batched", False) and getattr(
+        args, "tensorrt_batched", False
+    ):
+        raise ValueError(
+            "--sglang_batched and --tensorrt_batched are mutually exclusive"
+        )
 
 
 def _validate_backend_flags_from_argv(argv: Sequence[str]) -> None:
@@ -42,7 +46,9 @@ def _validate_backend_flags_from_argv(argv: Sequence[str]) -> None:
         token in {"--tensorrt_batched", "--tensorrt-batched"} for token in argv
     )
     if has_sglang and has_tensorrt:
-        raise ValueError("--sglang_batched and --tensorrt_batched are mutually exclusive")
+        raise ValueError(
+            "--sglang_batched and --tensorrt_batched are mutually exclusive"
+        )
 
 
 if __name__ == "__main__":

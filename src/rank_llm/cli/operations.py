@@ -339,7 +339,7 @@ def run_evaluate_aggregate(
     if runner is None:
         from argparse import Namespace
 
-        from rank_llm.scripts.run_trec_eval import evaluate_aggregate
+        from rank_llm.scripts.run_trec_eval import main as runner
 
         args = Namespace(
             model_name=model_name,
