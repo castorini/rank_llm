@@ -102,6 +102,7 @@ jobs:
         run: |
           uv pip install --python .venv/bin/python -e .
           uv pip install --python .venv/bin/python fastapi uvicorn "fastmcp>=2.0,<3"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Run CLI smoke tests
         run: |
