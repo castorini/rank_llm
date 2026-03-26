@@ -60,14 +60,14 @@ class TestCLIParserAndOutput(unittest.TestCase):
         self.assertEqual(payload["command"], "doctor")
         self.assertEqual(payload["errors"][0]["code"], "invalid_arguments")
 
-    def test_not_implemented_command_text_warning(self):
+    def test_doctor_text_output(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             exit_code = main(["doctor"])
         self.assertEqual(exit_code, 0)
         self.assertEqual("", stderr.getvalue())
-        self.assertIn("doctor is not implemented yet.", stdout.getvalue())
+        self.assertIn('"python_version"', stdout.getvalue())
 
 
 if __name__ == "__main__":
