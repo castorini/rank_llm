@@ -1,6 +1,7 @@
 import argparse
 
 from rank_llm._optional import missing_extra_error
+from rank_llm.cli.main import main as cli_main
 
 
 def build_mcp_server():
@@ -27,7 +28,33 @@ def run_mcp_server(*, transport: str = "stdio", port: int = 8000):
     mcp.run(transport=transport, port=port)
 
 
-def main():
+def main(argv=None):
+    if argv is not None:
+        parser = argparse.ArgumentParser(description="MCPyserini Server")
+        parser.add_argument(
+            "--transport",
+            choices=["stdio", "http"],
+            default="stdio",
+            help="Transport mode for the MCP server (default: stdio)",
+        )
+        parser.add_argument(
+            "--port",
+            type=int,
+            default=8000,
+            help="Port number for HTTP transport (default: 8000)",
+        )
+        args = parser.parse_args(argv)
+        return cli_main(
+            [
+                "serve",
+                "mcp",
+                "--transport",
+                args.transport,
+                "--port",
+                str(args.port),
+            ]
+        )
+
     """Main entry point for the server."""
 
     parser = argparse.ArgumentParser(description="MCPyserini Server")
@@ -47,9 +74,13 @@ def main():
 
     args = parser.parse_args()
 
-    try:
-        run_mcp_server(transport=args.transport, port=args.port)
-
-    except Exception as e:
-        print("Error", e)
-        raise
+    return cli_main(
+        [
+            "serve",
+            "mcp",
+            "--transport",
+            args.transport,
+            "--port",
+            str(args.port),
+        ]
+    )

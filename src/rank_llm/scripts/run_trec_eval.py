@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import json
 import os
-from argparse import ArgumentParser
+from argparse import Namespace
+from collections.abc import Sequence
 
+from rank_llm.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
+from rank_llm.cli.main import main as cli_main
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.retrieve import TOPICS, RetrievalMethod
 
 
-def main(args):
-    # TODO: make metrics configurable
+def evaluate_aggregate(args: Namespace) -> None:
     model = args.model_name
     context_size = args.context_size
     rerank_results_dirname = args.rerank_results_dirname
@@ -28,12 +32,11 @@ def main(args):
                             continue
                         if filename.endswith(".json"):
                             continue
-                        f = os.path.join(directory, filename)
-                        # checking if it is a file
-                        if os.path.isfile(f):
+                        file_path = os.path.join(directory, filename)
+                        if os.path.isfile(file_path):
                             json.dump(
                                 {
-                                    "file": f,
+                                    "file": file_path,
                                     "result": [
                                         EvalFunction.eval(
                                             [
@@ -41,10 +44,9 @@ def main(args):
                                                 "-m",
                                                 "ndcg_cut.10",
                                                 TOPICS[dataset],
-                                                f,
+                                                file_path,
                                             ]
                                         ),
-                                        # AP@100
                                         EvalFunction.eval(
                                             [
                                                 "-c",
@@ -52,27 +54,25 @@ def main(args):
                                                 "map_cut.100",
                                                 "-l2",
                                                 TOPICS[dataset],
-                                                f,
+                                                file_path,
                                             ]
                                         ),
-                                        # R@20
                                         EvalFunction.eval(
                                             [
                                                 "-c",
                                                 "-m",
                                                 "recall.20",
                                                 TOPICS[dataset],
-                                                f,
+                                                file_path,
                                             ]
                                         ),
-                                        # R@100
                                         EvalFunction.eval(
                                             [
                                                 "-c",
                                                 "-m",
                                                 "recall.100",
                                                 TOPICS[dataset],
-                                                f,
+                                                file_path,
                                             ]
                                         ),
                                     ],
@@ -82,22 +82,19 @@ def main(args):
                             output.write("\n")
 
 
+def main(args: Namespace | Sequence[str] | None = None) -> int:
+    if isinstance(args, Namespace):
+        argv = namespace_to_legacy_argv(args)
+    elif args is None:
+        import sys
+
+        argv = sys.argv[1:]
+    else:
+        argv = list(args)
+
+    translated = translate_legacy_argv(argv)
+    return cli_main(["evaluate", *translated])
+
+
 if __name__ == "__main__":
-    parser = ArgumentParser()
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        required=True,
-        help="name of the model used for price estimation",
-    )
-    parser.add_argument(
-        "--context_size", type=int, default=4096, help="context size used for model"
-    )
-    parser.add_argument(
-        "--rerank_results_dirname",
-        type=str,
-        default="rerank_results",
-        help="name of the directory used for storing rerank results",
-    )
-    args = parser.parse_args()
-    main(args)
+    raise SystemExit(main())

@@ -1,14 +1,6 @@
 import argparse
 from importlib.resources import files
 
-import torch
-from flask import Flask, jsonify, request
-
-from rank_llm.rerank import IdentityReranker, get_azure_openai_args, get_openai_api_key
-from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
-from rank_llm.retrieve import RetrievalMethod, RetrievalMode
-from rank_llm.retrieve_and_rerank import retrieve_and_rerank
-
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
@@ -23,6 +15,17 @@ Default to 20, 10, None, and 1 respectively
 
 
 def create_app(model, port, use_azure_openai=False):
+    import torch
+    from flask import Flask, jsonify, request
+    from rank_llm.rerank import (
+        IdentityReranker,
+        get_azure_openai_args,
+        get_openai_api_key,
+    )
+    from rank_llm.rerank.listwise import RankListwiseOSLLM, SafeOpenai
+    from rank_llm.retrieve import RetrievalMethod, RetrievalMode
+    from rank_llm.retrieve_and_rerank import retrieve_and_rerank
+
     app = Flask(__name__)
 
     global default_model_coordinator
@@ -165,7 +168,7 @@ def create_app(model, port, use_azure_openai=False):
     return app, port
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Start the RankLLM Flask server.")
     parser.add_argument(
         "--model",
@@ -179,11 +182,12 @@ def main():
     parser.add_argument(
         "--use_azure_openai", action="store_true", help="Use Azure OpenAI API."
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     app, port = create_app(args.model, args.port, args.use_azure_openai)
     app.run(host="0.0.0.0", port=port, debug=False)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1,27 +1,25 @@
+from __future__ import annotations
+
 import argparse
-import os
-import sys
+from collections.abc import Sequence
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-parent = os.path.dirname(SCRIPT_DIR)
-parent = os.path.dirname(parent)
-sys.path.append(parent)
-
-from rank_llm.analysis.response_analysis import ResponseAnalyzer
+from rank_llm.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
+from rank_llm.cli.main import main as cli_main
 
 
-def main(args):
-    response_analyzer = ResponseAnalyzer(args.files, 100)
-    responses, num_passages = response_analyzer.read_saved_responses()
-    print("Normalized scores:")
+def main(args: argparse.Namespace | Sequence[str] | None = None) -> int:
+    if isinstance(args, argparse.Namespace):
+        argv = namespace_to_legacy_argv(args)
+    elif args is None:
+        import sys
 
-    print(response_analyzer.count_errors(responses, num_passages, args.verbose))
-    # Print normalized scores
+        argv = sys.argv[1:]
+    else:
+        argv = list(args)
+
+    translated = translate_legacy_argv(argv)
+    return cli_main(["analyze", *translated])
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--files", type=str, nargs="+", required=True)
-    parser.add_argument("--verbose", action="store_true")
-    args = parser.parse_args()
-    main(args)
+    raise SystemExit(main())
