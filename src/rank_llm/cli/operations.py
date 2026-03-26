@@ -120,6 +120,8 @@ def run_mcp_rerank(
     use_alpha: bool = False,
     sglang_batched: bool = False,
     tensorrt_batched: bool = False,
+    reasoning_effort: str | None = None,
+    max_passage_words: int = 300,
 ) -> list[Result]:
     kwargs = locals().copy()
     del kwargs["model_path"]
@@ -220,6 +222,8 @@ def run_mcp_retrieve_and_rerank(
     use_alpha: bool = False,
     sglang_batched: bool = False,
     tensorrt_batched: bool = False,
+    reasoning_effort: str | None = None,
+    max_passage_words: int = 300,
     runner: Callable[..., Any] = _default_retrieve_and_rerank,
     device_resolver: Callable[[], str] = default_device,
 ) -> list[Result] | Any:
@@ -274,4 +278,6 @@ def run_mcp_retrieve_and_rerank(
         use_alpha=use_alpha,
         sglang_batched=sglang_batched,
         tensorrt_batched=tensorrt_batched,
+        reasoning_effort=reasoning_effort,
+        max_passage_words=max_passage_words,
     )

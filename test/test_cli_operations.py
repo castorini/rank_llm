@@ -90,6 +90,8 @@ class TestCLIOperations(unittest.TestCase):
             few_shot_file="few.jsonl",
             base_url="https://example.invalid/v1",
             max_queries=-1,
+            reasoning_effort="high",
+            max_passage_words=222,
             runner=runner,
             device_resolver=lambda: "cpu",
         )
@@ -103,6 +105,8 @@ class TestCLIOperations(unittest.TestCase):
         self.assertEqual(kwargs["base_url"], "https://example.invalid/v1")
         self.assertIsNone(kwargs["max_queries"])
         self.assertEqual(kwargs["device"], "cpu")
+        self.assertEqual(kwargs["reasoning_effort"], "high")
+        self.assertEqual(kwargs["max_passage_words"], 222)
 
 
 class TestLegacyAdapters(unittest.TestCase):
