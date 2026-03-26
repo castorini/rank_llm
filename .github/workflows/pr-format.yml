@@ -101,7 +101,7 @@ jobs:
       - name: Install CLI smoke environment
         run: |
           uv pip install --python .venv/bin/python -e .
-          uv pip install --python .venv/bin/python fastapi uvicorn fastmcp
+          uv pip install --python .venv/bin/python fastapi uvicorn "fastmcp>=2.0,<3"
 
       - name: Run CLI smoke tests
         run: |
