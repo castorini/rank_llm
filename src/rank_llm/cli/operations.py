@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import copy
 import contextlib
+import copy
 import io
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -338,8 +338,6 @@ def run_evaluate_aggregate(
 ) -> dict[str, Any]:
     if runner is None:
         from argparse import Namespace
-
-        from rank_llm.scripts.run_trec_eval import evaluate_aggregate
 
         args = Namespace(
             model_name=model_name,

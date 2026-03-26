@@ -5,10 +5,10 @@ from typing import Any
 
 from rank_llm.cli.adapters import make_data_artifact, serialize_data
 from rank_llm.cli.introspection import validate_rerank_payload
-from rank_llm.rerank import Reranker
 from rank_llm.cli.operations import normalize_direct_rerank_input, run_mcp_rerank
 from rank_llm.cli.responses import CommandResponse
 from rank_llm.cli.spec import EXIT_CODES
+from rank_llm.rerank import Reranker
 
 
 @dataclass
