@@ -27,6 +27,11 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "input_modes": ["files"],
         "inspection_safe": False,
     },
+    "serve": {
+        "summary": "Start RankLLM long-running transport servers.",
+        "subcommands": ["http"],
+        "inspection_safe": False,
+    },
     "validate": {
         "summary": "Validate rerank inputs without executing a model.",
         "targets": ["rerank"],
@@ -163,6 +168,7 @@ def doctor_report() -> dict[str, Any]:
         "yaml": find_spec("yaml") is not None,
         "fastmcp": find_spec("fastmcp") is not None,
         "fastapi": find_spec("fastapi") is not None,
+        "uvicorn": find_spec("uvicorn") is not None,
         "pyserini": find_spec("pyserini") is not None,
     }
     command_readiness = {
@@ -170,6 +176,10 @@ def doctor_report() -> dict[str, Any]:
         "evaluate": {"ready": True},
         "analyze": {"ready": True},
         "retrieve-cache": {"ready": True},
+        "serve": {
+            "ready": optional_dependencies["fastapi"]
+            and optional_dependencies["uvicorn"]
+        },
         "prompt": {"ready": optional_dependencies["yaml"]},
         "view": {"ready": True},
         "describe": {"ready": True},
