@@ -8,6 +8,13 @@ from unittest.mock import Mock, patch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FASTAPI_AVAILABLE = find_spec("fastapi") is not None
 
+
+class ProviderError(Exception):
+    pass
+
+
+ProviderError.__module__ = "openai"
+
 if FASTAPI_AVAILABLE:
     from fastapi.testclient import TestClient
 
@@ -93,6 +100,25 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(response.status_code, 500)
         payload = response.json()
         self.assertEqual(payload["status"], "runtime_error")
+
+    def test_rerank_route_returns_502_for_provider_error(self):
+        with (
+            patch("rank_llm.api.runtime.initialize_reranker"),
+            patch(
+                "rank_llm.api.runtime.run_mcp_rerank",
+                side_effect=ProviderError("Rate limit exceeded"),
+            ),
+        ):
+            client = TestClient(create_app(ServerConfig(model_path="model")))
+            response = client.post(
+                "/v1/rerank",
+                json={"query": "cats", "candidates": ["doc one"]},
+            )
+
+        self.assertEqual(response.status_code, 502)
+        payload = response.json()
+        self.assertEqual(payload["status"], "provider_error")
+        self.assertTrue(payload["errors"][0]["retryable"])
 
     def test_console_entrypoint_serve_http_help_resolves(self):
         cli = which("rank-llm")

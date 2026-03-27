@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from rank_llm.cli.adapters import make_data_artifact, serialize_data
+from rank_llm.cli.error_utils import classify_exception
 from rank_llm.cli.introspection import validate_rerank_payload
 from rank_llm.cli.operations import normalize_direct_rerank_input, run_mcp_rerank
 from rank_llm.cli.responses import CommandResponse
@@ -148,16 +149,17 @@ def validation_error_response(message: str) -> CommandResponse:
 
 
 def runtime_error_response(error: Exception) -> CommandResponse:
+    descriptor = classify_exception(error)
     return CommandResponse(
         command="rerank",
-        status="runtime_error",
-        exit_code=EXIT_CODES["runtime_error"],
+        status=descriptor.status,
+        exit_code=descriptor.exit_code,
         errors=[
             {
-                "code": "runtime_error",
-                "message": str(error),
-                "details": {},
-                "retryable": False,
+                "code": descriptor.error_code,
+                "message": descriptor.message,
+                "details": descriptor.details,
+                "retryable": descriptor.retryable,
             }
         ],
     )

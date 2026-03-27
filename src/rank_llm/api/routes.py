@@ -30,6 +30,7 @@ def build_router(config: ServerConfig) -> APIRouter:
             return JSONResponse(response.to_envelope(), status_code=400)
         except Exception as error:  # noqa: BLE001
             response = runtime_error_response(error)
-            return JSONResponse(response.to_envelope(), status_code=500)
+            status_code = 502 if response.status == "provider_error" else 500
+            return JSONResponse(response.to_envelope(), status_code=status_code)
 
     return router
