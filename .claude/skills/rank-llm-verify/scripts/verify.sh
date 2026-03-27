@@ -39,7 +39,7 @@ fi
 pass "File is non-empty"
 
 if [[ -z "$ARTIFACT_TYPE" ]]; then
-  DETECTED_TYPE=$(rank-llm view "$ARTIFACT_PATH" --output json 2>/dev/null | python3 -c '
+  DETECTED_TYPE=$(rank-llm --output json view "$ARTIFACT_PATH" 2>/dev/null | python3 -c '
 import json
 import sys
 

@@ -67,7 +67,7 @@ uv pip install rank-llm
 ## Smoke Test
 
 ```bash
-rank-llm doctor --output json
+rank-llm --output json doctor
 rank-llm --help
 ```
 
