@@ -68,6 +68,8 @@ class VllmHandler:
         min_tokens: int,
         max_tokens: int,
         temperature: float,
+        top_p: float = 1.0,
+        top_k: int = -1,
         logprobs: int | None = None,
     ) -> tuple[str, int, int]:
         """
@@ -78,6 +80,8 @@ class VllmHandler:
             min_tokens=min_tokens,
             max_tokens=max_tokens,
             temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
             logprobs=logprobs,
         )
         request_id = str(uuid.uuid4())
