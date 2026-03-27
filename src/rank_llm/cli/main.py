@@ -848,9 +848,13 @@ def _run_schema_command(args: argparse.Namespace) -> CommandResponse:
 
 
 def _run_doctor_command() -> CommandResponse:
+    config, config_path = load_config()
+    report = doctor_report()
+    report["config_file"] = str(config_path) if config_path else None
     return CommandResponse(
         command="doctor",
-        artifacts=[make_data_artifact("doctor-output", doctor_report())],
+        resolved={"config": config},
+        artifacts=[make_data_artifact("doctor-output", report)],
     )
 
 
@@ -1009,7 +1013,7 @@ def _run_command(args: argparse.Namespace) -> CommandResponse:
     return CommandResponse(
         command=args.command,
         status="success",
-        resolved={"config": load_config()},
+        resolved={"config": load_config()[0]},
         warnings=[f"{args.command} is not implemented yet."],
     )
 
@@ -1017,8 +1021,14 @@ def _run_command(args: argparse.Namespace) -> CommandResponse:
 def main(argv: Sequence[str] | None = None) -> int:
     argv = list(argv) if argv is not None else sys.argv[1:]
     parser = build_parser()
+    config, config_path = load_config()
     try:
         args = parser.parse_args(argv)
+        args._config_path = config_path
+        for key, value in config.items():
+            flag = f"--{key.replace('_', '-')}"
+            if not any(arg == flag or arg.startswith(f"{flag}=") for arg in argv):
+                setattr(args, key, value)
         response = _run_command(args)
     except CLIError as error:
         response = _build_error_response(error)

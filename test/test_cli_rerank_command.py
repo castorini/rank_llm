@@ -1,6 +1,7 @@
 import contextlib
 import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -199,6 +200,113 @@ class TestCLIRerankCommand(unittest.TestCase):
         self.assertEqual(direct_mock.call_args.kwargs["max_passage_words"], 111)
         self.assertEqual(dataset_mock.call_args.kwargs["reasoning_effort"], "medium")
         self.assertEqual(dataset_mock.call_args.kwargs["max_passage_words"], 222)
+
+    def test_rerank_applies_repo_local_config_defaults(self):
+        payload = '{"query":"cats","candidates":["doc one"]}'
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / ".rank-llm.toml").write_text(
+                'base_url = "http://localhost:9000"\nmax_passage_words = 444\n',
+                encoding="utf-8",
+            )
+            stdout = io.StringIO()
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                with (
+                    patch(
+                        "rank_llm.cli.main.run_mcp_rerank",
+                        return_value=[{"direct": True}],
+                    ) as mocked,
+                    contextlib.redirect_stdout(stdout),
+                ):
+                    exit_code = main(
+                        [
+                            "--output",
+                            "json",
+                            "rerank",
+                            "--model-path",
+                            "model",
+                            "--input-json",
+                            payload,
+                        ]
+                    )
+            finally:
+                os.chdir(old_cwd)
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(mocked.call_args.kwargs["base_url"], "http://localhost:9000")
+        self.assertEqual(mocked.call_args.kwargs["max_passage_words"], 444)
+
+    def test_rerank_explicit_cli_flags_override_config_defaults(self):
+        payload = '{"query":"cats","candidates":["doc one"]}'
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / ".rank-llm.toml").write_text(
+                'base_url = "http://localhost:9000"\nmax_passage_words = 444\n',
+                encoding="utf-8",
+            )
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                with patch(
+                    "rank_llm.cli.main.run_mcp_rerank",
+                    return_value=[{"direct": True}],
+                ) as mocked:
+                    exit_code = main(
+                        [
+                            "rerank",
+                            "--model-path",
+                            "model",
+                            "--input-json",
+                            payload,
+                            "--base-url=http://localhost:9001",
+                            "--max-passage-words",
+                            "555",
+                        ]
+                    )
+            finally:
+                os.chdir(old_cwd)
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(mocked.call_args.kwargs["base_url"], "http://localhost:9001")
+        self.assertEqual(mocked.call_args.kwargs["max_passage_words"], 555)
+
+    def test_rerank_uses_xdg_config_when_repo_local_file_absent(self):
+        payload = '{"query":"cats","candidates":["doc one"]}'
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            xdg_home = root / "xdg"
+            config_dir = xdg_home / "rank_llm"
+            config_dir.mkdir(parents=True)
+            (config_dir / "config.toml").write_text(
+                'base_url = "http://localhost:9010"\n',
+                encoding="utf-8",
+            )
+            old_cwd = Path.cwd()
+            old_xdg = os.environ.get("XDG_CONFIG_HOME")
+            try:
+                os.chdir(root)
+                os.environ["XDG_CONFIG_HOME"] = str(xdg_home)
+                with patch(
+                    "rank_llm.cli.main.run_mcp_rerank",
+                    return_value=[{"direct": True}],
+                ) as mocked:
+                    exit_code = main(
+                        [
+                            "rerank",
+                            "--model-path",
+                            "model",
+                            "--input-json",
+                            payload,
+                        ]
+                    )
+            finally:
+                os.chdir(old_cwd)
+                if old_xdg is None:
+                    os.environ.pop("XDG_CONFIG_HOME", None)
+                else:
+                    os.environ["XDG_CONFIG_HOME"] = old_xdg
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(mocked.call_args.kwargs["base_url"], "http://localhost:9010")
 
 
 if __name__ == "__main__":
