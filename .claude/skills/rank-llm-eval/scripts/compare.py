@@ -21,7 +21,9 @@ def load_metrics(path: str) -> dict[str, dict[str, float]]:
         try:
             record = json.loads(stripped)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"{path}: invalid JSON on line {line_number}: {exc.msg}") from exc
+            raise ValueError(
+                f"{path}: invalid JSON on line {line_number}: {exc.msg}"
+            ) from exc
         file_name = record.get("file")
         results = record.get("result", [])
         if not isinstance(file_name, str) or not isinstance(results, list):
