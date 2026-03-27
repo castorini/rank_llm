@@ -145,7 +145,9 @@ class TestCLIParserAndOutput(unittest.TestCase):
             "metrics": {"ok": 2, "wrong_format": 1, "repetition": 0},
         }
         with (
-            patch("rank_llm.cli.main.run_response_analysis_files", return_value=summary),
+            patch(
+                "rank_llm.cli.main.run_response_analysis_files", return_value=summary
+            ),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
         ):
