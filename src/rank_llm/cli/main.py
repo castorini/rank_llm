@@ -8,6 +8,7 @@ from typing import Any, NoReturn
 
 from rank_llm.cli.adapters import make_data_artifact, serialize_data
 from rank_llm.cli.config import load_config
+from rank_llm.cli.error_utils import classify_exception, has_partial_success_metrics
 from rank_llm.cli.introspection import (
     COMMAND_DESCRIPTIONS,
     SCHEMAS,
@@ -882,10 +883,22 @@ def _run_analyze_command(args: argparse.Namespace) -> CommandResponse:
         verbose=args.verbose,
         capture_stdout=args.output == "json",
     )
+    status = "success"
+    exit_code = EXIT_CODES["success"]
+    warnings: list[str] = []
+    if has_partial_success_metrics(summary.get("metrics")):
+        status = "partial_success"
+        exit_code = EXIT_CODES["partial_success"]
+        warnings.append(
+            "Analyzed responses include a mix of valid outputs and malformed outputs."
+        )
     return CommandResponse(
         command="analyze",
+        status=status,
+        exit_code=exit_code,
         inputs={"files": args.files, "verbose": args.verbose},
         artifacts=[make_data_artifact("analysis-summary", summary)],
+        warnings=warnings,
     )
 
 
@@ -1037,6 +1050,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             sys.stderr.write(f"{error.message}\n")
         return error.exit_code
+    except Exception as error:  # noqa: BLE001
+        descriptor = classify_exception(error)
+        response = CommandResponse(
+            command=_detect_command(argv),
+            status=descriptor.status,
+            exit_code=descriptor.exit_code,
+            errors=[
+                {
+                    "code": descriptor.error_code,
+                    "message": descriptor.message,
+                    "details": descriptor.details,
+                    "retryable": descriptor.retryable,
+                }
+            ],
+        )
+        if _wants_json(argv):
+            _emit_json(response.to_envelope())
+        else:
+            sys.stderr.write(f"{descriptor.message}\n")
+        return descriptor.exit_code
 
     if args.output == "json":
         _emit_json(response.to_envelope())
