@@ -53,6 +53,9 @@ def classify_exception(error: Exception) -> ErrorDescriptor:
     message = str(error)
     normalized = message.lower()
     module_name = type(error).__module__.lower()
+    assertion_is_prerequisite = isinstance(error, AssertionError) and any(
+        token in normalized for token in _PREREQUISITE_MESSAGE_TOKENS
+    )
 
     if isinstance(error, FileNotFoundError):
         return ErrorDescriptor(
@@ -63,8 +66,9 @@ def classify_exception(error: Exception) -> ErrorDescriptor:
             details={},
         )
 
-    if isinstance(error, (ImportError, ModuleNotFoundError, AssertionError)) or any(
-        token in normalized for token in _PREREQUISITE_MESSAGE_TOKENS
+    if (
+        isinstance(error, ImportError | ModuleNotFoundError)
+        or assertion_is_prerequisite
     ):
         return ErrorDescriptor(
             message=message,

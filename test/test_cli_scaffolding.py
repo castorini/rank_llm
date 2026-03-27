@@ -136,6 +136,44 @@ class TestCLIParserAndOutput(unittest.TestCase):
         self.assertEqual(payload["status"], "validation_error")
         self.assertEqual(payload["errors"][0]["code"], "missing_prerequisite")
 
+    def test_assertion_error_without_prerequisite_markers_stays_runtime_error(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with (
+            patch(
+                "rank_llm.cli.main._run_command",
+                side_effect=AssertionError("tuple shape mismatch"),
+            ),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            exit_code = main(["--output", "json", "doctor"])
+        self.assertEqual(exit_code, 6)
+        self.assertEqual("", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "runtime_error")
+        self.assertEqual(payload["errors"][0]["code"], "runtime_error")
+
+    def test_prerequisite_assertion_maps_to_missing_prerequisite(self):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with (
+            patch(
+                "rank_llm.cli.main._run_command",
+                side_effect=AssertionError(
+                    "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
+                ),
+            ),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            exit_code = main(["--output", "json", "doctor"])
+        self.assertEqual(exit_code, 3)
+        self.assertEqual("", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertEqual(payload["errors"][0]["code"], "missing_prerequisite")
+
     def test_analyze_can_report_partial_success(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
