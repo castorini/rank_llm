@@ -129,7 +129,10 @@ def _merge_config_with_payload(
 
 
 def _cache_key(config: ServerConfig) -> tuple[tuple[str, Any], ...]:
-    return tuple((field_name, getattr(config, field_name)) for field_name in _RERANKER_CACHE_FIELDS)
+    return tuple(
+        (field_name, getattr(config, field_name))
+        for field_name in _RERANKER_CACHE_FIELDS
+    )
 
 
 def initialize_reranker(
