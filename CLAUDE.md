@@ -41,9 +41,21 @@ pip install -e .[all]
 ```bash
 uv run pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push
 ```
-- Run full formatting/lint checks:
+- Preferred local lint path: use the repo-local `.venv` when it already exists.
 ```bash
-uv run pre-commit run --all-files
+.venv/bin/pre-commit run --all-files
+```
+- If `.venv` does not exist, create only the minimal lint environment instead of installing `.[all]`:
+```bash
+uv venv --python 3.11
+uv pip install --python .venv/bin/python pre-commit black isort
+.venv/bin/pre-commit run --all-files
+```
+- `.[all]` is not required for pre-commit linting alone; reserve it for broader runtime or test coverage.
+- If `pre-commit` rewrites files, stage those rewritten files and run the same `pre-commit` command again until it exits clean with no further modifications.
+- Run full formatting/lint checks with:
+```bash
+.venv/bin/pre-commit run --all-files
 ```
 - Enforced tools:
   - `ruff check` (`E` and `F`, with `E501` ignored)
@@ -99,7 +111,7 @@ Note: it runs real model pipelines and is compute/network heavy.
   - `docs/release-notes/` entries for new releases
 
 ## Practical Checklist Before Opening a PR
-1. Run `uv run pre-commit run --all-files`.
+1. Run `.venv/bin/pre-commit run --all-files` or create the minimal lint env above and run it there.
 2. Run `python -m unittest discover test`.
 3. Update docs/examples if user-facing behavior changed.
 4. Add/adjust tests for changed logic.
