@@ -39,6 +39,10 @@ class TestCLIIntrospection(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         schema = payload["artifacts"][0]["value"]["schema"]
         self.assertIn("overrides", schema["properties"])
+        self.assertEqual(
+            schema["properties"]["overrides"]["properties"]["reasoning_effort"]["enum"],
+            ["low", "medium", "high"],
+        )
 
     def test_doctor_returns_readiness(self):
         stdout = io.StringIO()

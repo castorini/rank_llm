@@ -91,6 +91,10 @@ SCHEMAS: dict[str, dict[str, Any]] = {
                     "populate_invocations_history": {"type": "boolean"},
                     "is_thinking": {"type": "boolean"},
                     "reasoning_token_budget": {"type": "integer"},
+                    "reasoning_effort": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high"],
+                    },
                     "use_logits": {"type": "boolean"},
                     "use_alpha": {"type": "boolean"},
                     "sglang_batched": {"type": "boolean"},

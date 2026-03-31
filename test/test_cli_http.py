@@ -74,6 +74,7 @@ class TestCLIHTTP(unittest.TestCase):
                     "overrides": {
                         "model_path": "other-model",
                         "top_k_rerank": 5,
+                        "reasoning_effort": "medium",
                     },
                 },
             )
@@ -82,8 +83,10 @@ class TestCLIHTTP(unittest.TestCase):
         effective_config = initialize_reranker.call_args.args[1]
         self.assertEqual(effective_config.model_path, "other-model")
         self.assertEqual(effective_config.top_k_rerank, 5)
+        self.assertEqual(effective_config.reasoning_effort, "medium")
         self.assertEqual(mocked.call_args.kwargs["model_path"], "other-model")
         self.assertEqual(mocked.call_args.kwargs["top_k_rerank"], 5)
+        self.assertEqual(mocked.call_args.kwargs["reasoning_effort"], "medium")
         self.assertIs(mocked.call_args.kwargs["reranker"], reranker)
 
     def test_rerank_route_reuses_initialized_reranker(self):
@@ -188,6 +191,27 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(payload["status"], "validation_error")
         self.assertIn(
             "override 'use_openrouter' must be a boolean",
+            payload["errors"][0]["message"],
+        )
+
+    def test_rerank_route_returns_400_for_invalid_reasoning_effort(self):
+        client = TestClient(create_app(ServerConfig(model_path="model")))
+        response = client.post(
+            "/v1/rerank",
+            json={
+                "query": "cats",
+                "candidates": ["doc one"],
+                "overrides": {
+                    "reasoning_effort": "max",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertIn(
+            "override 'reasoning_effort' must be one of: high, low, medium",
             payload["errors"][0]["message"],
         )
 

@@ -37,6 +37,7 @@ class ServerConfig:
     populate_invocations_history: bool = False
     is_thinking: bool = False
     reasoning_token_budget: int = 10000
+    reasoning_effort: str | None = None
     use_logits: bool = False
     use_alpha: bool = False
     sglang_batched: bool = False
@@ -68,6 +69,7 @@ _OVERRIDABLE_FIELDS = {
     "populate_invocations_history",
     "is_thinking",
     "reasoning_token_budget",
+    "reasoning_effort",
     "use_logits",
     "use_alpha",
     "sglang_batched",
@@ -95,6 +97,7 @@ _RERANKER_CACHE_FIELDS = (
     "populate_invocations_history",
     "is_thinking",
     "reasoning_token_budget",
+    "reasoning_effort",
     "use_logits",
     "use_alpha",
     "sglang_batched",
@@ -123,10 +126,15 @@ _OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
     "populate_invocations_history": bool,
     "is_thinking": bool,
     "reasoning_token_budget": int,
+    "reasoning_effort": str,
     "use_logits": bool,
     "use_alpha": bool,
     "sglang_batched": bool,
     "tensorrt_batched": bool,
+}
+
+_OVERRIDE_FIELD_CHOICES: dict[str, set[str]] = {
+    "reasoning_effort": {"low", "medium", "high"},
 }
 
 
@@ -141,6 +149,9 @@ def _validate_override_types(overrides: dict[str, Any]) -> None:
             raise TypeError(f"override '{key}' must be an integer")
         if expected_type is str and not isinstance(value, str):
             raise TypeError(f"override '{key}' must be a string")
+        if key in _OVERRIDE_FIELD_CHOICES and value not in _OVERRIDE_FIELD_CHOICES[key]:
+            valid_values = ", ".join(sorted(_OVERRIDE_FIELD_CHOICES[key]))
+            raise ValueError(f"override '{key}' must be one of: {valid_values}")
 
 
 def _extract_override_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -209,6 +220,7 @@ def initialize_reranker(
             populate_invocations_history=effective_config.populate_invocations_history,
             is_thinking=effective_config.is_thinking,
             reasoning_token_budget=effective_config.reasoning_token_budget,
+            reasoning_effort=effective_config.reasoning_effort,
             use_logits=effective_config.use_logits,
             use_alpha=effective_config.use_alpha,
             sglang_batched=effective_config.sglang_batched,
@@ -254,6 +266,7 @@ def run_rerank_request(
         populate_invocations_history=effective_config.populate_invocations_history,
         is_thinking=effective_config.is_thinking,
         reasoning_token_budget=effective_config.reasoning_token_budget,
+        reasoning_effort=effective_config.reasoning_effort,
         use_logits=effective_config.use_logits,
         use_alpha=effective_config.use_alpha,
         sglang_batched=effective_config.sglang_batched,

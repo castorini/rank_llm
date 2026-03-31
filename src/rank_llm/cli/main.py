@@ -375,6 +375,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=10000,
     )
     serve_http_parser.add_argument(
+        "--reasoning-effort",
+        dest="reasoning_effort",
+        choices=("low", "medium", "high"),
+        default=None,
+    )
+    serve_http_parser.add_argument(
         "--use-logits",
         dest="use_logits",
         action="store_true",
@@ -987,6 +993,7 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
             populate_invocations_history=args.populate_invocations_history,
             is_thinking=args.is_thinking,
             reasoning_token_budget=args.reasoning_token_budget,
+            reasoning_effort=args.reasoning_effort,
             use_logits=args.use_logits,
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
