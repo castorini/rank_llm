@@ -40,7 +40,7 @@ class InferenceInvocation:
 class Result:
     query: Query
     candidates: list[Candidate] = field(default_factory=list)
-    invocations_history: list[InferenceInvocation] = (field(default_factory=list),)
+    invocations_history: list[InferenceInvocation] = field(default_factory=list)
 
 
 @dataclass
@@ -76,16 +76,20 @@ class DataWriter:
         self,
         data: Request | Result | list[Result] | list[Request],
         append: bool = False,
-    ):
+    ) -> None:
         if isinstance(data, list):
-            self._data = data
+            self._data: list[Request | Result] = list(data)
         else:
             self._data = [data]
         self._append = append
 
-    def write_inference_invocations_history(self, filename: str):
+    def write_inference_invocations_history(self, filename: str) -> None:
         aggregated_history = []
         for d in self._data:
+            if not isinstance(d, Result):
+                raise TypeError(
+                    "write_inference_invocations_history expects Result objects"
+                )
             values = []
             for info in d.invocations_history:
                 values.append(info.__dict__)
@@ -96,7 +100,7 @@ class DataWriter:
             output = json.dumps(aggregated_history, indent=2, ensure_ascii=False)
             f.write(output)
 
-    def write_in_json_format(self, filename: str):
+    def write_in_json_format(self, filename: str) -> None:
         results = []
         for d in self._data:
             candidates = [candidate.__dict__ for candidate in d.candidates]
@@ -105,7 +109,7 @@ class DataWriter:
             output = json.dumps(results, indent=2, ensure_ascii=False)
             f.write(output)
 
-    def write_in_jsonl_format(self, filename: str):
+    def write_in_jsonl_format(self, filename: str) -> None:
         with open(filename, "a" if self._append else "w") as f:
             for d in self._data:
                 candidates = [candidate.__dict__ for candidate in d.candidates]
@@ -116,7 +120,7 @@ class DataWriter:
                 f.write(output)
                 f.write("\n")
 
-    def write_in_trec_eval_format(self, filename: str):
+    def write_in_trec_eval_format(self, filename: str) -> None:
         with open(filename, "a" if self._append else "w") as f:
             for d in self._data:
                 qid = d.query.qid

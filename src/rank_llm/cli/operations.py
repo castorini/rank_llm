@@ -6,7 +6,7 @@ import io
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from rank_llm.data import Candidate, Query, Request, Result
 from rank_llm.rerank import IdentityReranker, Reranker
@@ -339,6 +339,9 @@ def run_evaluate_aggregate(
     if runner is None:
         from argparse import Namespace
 
+        from rank_llm.evaluation.trec_eval import EvalFunction
+
+        runner = EvalFunction.eval
         args = Namespace(
             model_name=model_name,
             context_size=context_size,
@@ -380,7 +383,10 @@ def run_response_analysis_files(
                 capture_stdout, analyzer.count_errors, verbose
             ),
         }
-    return _run_with_captured_stdout(capture_stdout, runner, files, verbose)
+    return cast(
+        dict[str, Any],
+        _run_with_captured_stdout(capture_stdout, runner, files, verbose),
+    )
 
 
 def run_retrieve_cache_generation(

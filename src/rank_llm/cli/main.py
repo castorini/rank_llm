@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
-from typing import Any, NoReturn
+from typing import Any, NoReturn, TypeVar, overload
 
 from rank_llm.cli.adapters import make_data_artifact, serialize_data
 from rank_llm.cli.config import load_config
@@ -38,6 +38,8 @@ from rank_llm.cli.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
 from rank_llm.cli.view import ViewError, build_view_summary, render_view_summary
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 
+_NamespaceT = TypeVar("_NamespaceT")
+
 
 class CLIError(Exception):
     def __init__(
@@ -64,11 +66,32 @@ class CLIArgumentParser(argparse.ArgumentParser):
         super().__init__(*args, **kwargs)
         self._current_argv: list[str] = []
 
+    @overload
     def parse_args(
         self,
         args: Sequence[str] | None = None,
-        namespace: argparse.Namespace | None = None,
-    ) -> argparse.Namespace:
+        namespace: None = None,
+    ) -> argparse.Namespace: ...
+
+    @overload
+    def parse_args(
+        self,
+        args: Sequence[str] | None,
+        namespace: _NamespaceT,
+    ) -> _NamespaceT: ...
+
+    @overload
+    def parse_args(
+        self,
+        *,
+        namespace: _NamespaceT,
+    ) -> _NamespaceT: ...
+
+    def parse_args(
+        self,
+        args: Sequence[str] | None = None,
+        namespace: _NamespaceT | None = None,
+    ) -> argparse.Namespace | _NamespaceT:
         self._current_argv = list(args) if args is not None else list(sys.argv[1:])
         return super().parse_args(args, namespace)
 
@@ -525,9 +548,27 @@ def _build_error_response(error: CLIError) -> CommandResponse:
 def _read_direct_payload(args: argparse.Namespace) -> dict[str, Any]:
     try:
         if args.stdin:
-            return json.loads(sys.stdin.read())
+            payload = json.loads(sys.stdin.read())
+            if not isinstance(payload, dict):
+                raise CLIError(
+                    "Direct rerank payload must deserialize to a JSON object.",
+                    exit_code=EXIT_CODES["invalid_arguments"],
+                    status="validation_error",
+                    error_code="invalid_json",
+                    command="rerank",
+                )
+            return payload
         if args.input_json:
-            return json.loads(args.input_json)
+            payload = json.loads(args.input_json)
+            if not isinstance(payload, dict):
+                raise CLIError(
+                    "Direct rerank payload must deserialize to a JSON object.",
+                    exit_code=EXIT_CODES["invalid_arguments"],
+                    status="validation_error",
+                    error_code="invalid_json",
+                    command="rerank",
+                )
+            return payload
     except json.JSONDecodeError as exc:
         source = "stdin" if args.stdin else "--input-json"
         raise CLIError(
