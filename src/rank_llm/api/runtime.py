@@ -134,7 +134,7 @@ _OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
 }
 
 _OVERRIDE_FIELD_CHOICES: dict[str, set[str]] = {
-    "reasoning_effort": {"low", "medium", "high"},
+    "reasoning_effort": {"none", "minimal", "low", "medium", "high", "xhigh"},
 }
 
 

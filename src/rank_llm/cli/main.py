@@ -205,7 +205,7 @@ def build_parser() -> argparse.ArgumentParser:
     rerank_parser.add_argument(
         "--reasoning-effort",
         dest="reasoning_effort",
-        choices=("low", "medium", "high"),
+        choices=("none", "minimal", "low", "medium", "high", "xhigh"),
         default=None,
     )
     rerank_parser.add_argument(
@@ -377,7 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_http_parser.add_argument(
         "--reasoning-effort",
         dest="reasoning_effort",
-        choices=("low", "medium", "high"),
+        choices=("none", "minimal", "low", "medium", "high", "xhigh"),
         default=None,
     )
     serve_http_parser.add_argument(

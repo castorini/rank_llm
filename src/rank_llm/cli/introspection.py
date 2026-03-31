@@ -93,7 +93,14 @@ SCHEMAS: dict[str, dict[str, Any]] = {
                     "reasoning_token_budget": {"type": "integer"},
                     "reasoning_effort": {
                         "type": "string",
-                        "enum": ["low", "medium", "high"],
+                        "enum": [
+                            "none",
+                            "minimal",
+                            "low",
+                            "medium",
+                            "high",
+                            "xhigh",
+                        ],
                     },
                     "use_logits": {"type": "boolean"},
                     "use_alpha": {"type": "boolean"},

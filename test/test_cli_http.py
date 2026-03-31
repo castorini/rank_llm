@@ -211,7 +211,7 @@ class TestCLIHTTP(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
         self.assertIn(
-            "override 'reasoning_effort' must be one of: high, low, medium",
+            "override 'reasoning_effort' must be one of: high, low, medium, minimal, none, xhigh",
             payload["errors"][0]["message"],
         )
 
