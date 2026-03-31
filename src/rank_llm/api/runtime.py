@@ -101,6 +101,47 @@ _RERANKER_CACHE_FIELDS = (
     "tensorrt_batched",
 )
 
+_OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
+    "model_path": str,
+    "batch_size": int,
+    "top_k_rerank": int,
+    "context_size": int,
+    "num_gpus": int,
+    "prompt_template_path": str,
+    "num_few_shot_examples": int,
+    "few_shot_file": str,
+    "shuffle_candidates": bool,
+    "print_prompts_responses": bool,
+    "use_azure_openai": bool,
+    "use_openrouter": bool,
+    "base_url": str,
+    "variable_passages": bool,
+    "num_passes": int,
+    "window_size": int,
+    "stride": int,
+    "system_message": str,
+    "populate_invocations_history": bool,
+    "is_thinking": bool,
+    "reasoning_token_budget": int,
+    "use_logits": bool,
+    "use_alpha": bool,
+    "sglang_batched": bool,
+    "tensorrt_batched": bool,
+}
+
+
+def _validate_override_types(overrides: dict[str, Any]) -> None:
+    for key, value in overrides.items():
+        expected_type = _OVERRIDE_FIELD_TYPES[key]
+        if expected_type is bool and not isinstance(value, bool):
+            raise TypeError(f"override '{key}' must be a boolean")
+        if expected_type is int and (
+            not isinstance(value, int) or isinstance(value, bool)
+        ):
+            raise TypeError(f"override '{key}' must be an integer")
+        if expected_type is str and not isinstance(value, str):
+            raise TypeError(f"override '{key}' must be a string")
+
 
 def _extract_override_payload(payload: dict[str, Any]) -> dict[str, Any]:
     overrides = payload.get("overrides", {})
@@ -111,6 +152,7 @@ def _extract_override_payload(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(
             "unsupported rerank override field(s): " + ", ".join(unknown_keys)
         )
+    _validate_override_types(overrides)
     return overrides
 
 

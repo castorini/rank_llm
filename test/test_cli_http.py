@@ -170,6 +170,27 @@ class TestCLIHTTP(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
 
+    def test_rerank_route_returns_400_for_invalid_override_types(self):
+        client = TestClient(create_app(ServerConfig(model_path="model")))
+        response = client.post(
+            "/v1/rerank",
+            json={
+                "query": "cats",
+                "candidates": ["doc one"],
+                "overrides": {
+                    "use_openrouter": "false",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertIn(
+            "override 'use_openrouter' must be a boolean",
+            payload["errors"][0]["message"],
+        )
+
     def test_rerank_route_returns_500_for_runtime_error(self):
         with (
             patch("rank_llm.api.runtime.initialize_reranker"),
