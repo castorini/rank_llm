@@ -31,6 +31,19 @@ class TestCLIIntrospection(unittest.TestCase):
         self.assertEqual(schema["name"], "cli-envelope")
         self.assertIn("required", schema["schema"])
 
+    def test_rerank_direct_input_schema_includes_overrides(self):
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(["--output", "json", "schema", "rerank-direct-input"])
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        schema = payload["artifacts"][0]["value"]["schema"]
+        self.assertIn("overrides", schema["properties"])
+        self.assertEqual(
+            schema["properties"]["overrides"]["properties"]["reasoning_effort"]["enum"],
+            ["none", "minimal", "low", "medium", "high", "xhigh"],
+        )
+
     def test_doctor_returns_readiness(self):
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):

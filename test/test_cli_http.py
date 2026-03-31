@@ -52,6 +52,43 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(payload["command"], "rerank")
         self.assertEqual(payload["artifacts"][0]["name"], "rerank-results")
 
+    def test_rerank_route_applies_request_overrides(self):
+        reranker = Mock()
+
+        with (
+            patch(
+                "rank_llm.api.runtime.initialize_reranker",
+                return_value=reranker,
+            ) as initialize_reranker,
+            patch(
+                "rank_llm.api.runtime.run_mcp_rerank",
+                return_value=[{"query": {"text": "cats"}, "candidates": []}],
+            ) as mocked,
+        ):
+            client = TestClient(create_app(ServerConfig(model_path="model")))
+            response = client.post(
+                "/v1/rerank",
+                json={
+                    "query": "cats",
+                    "candidates": ["doc one"],
+                    "overrides": {
+                        "model_path": "other-model",
+                        "top_k_rerank": 5,
+                        "reasoning_effort": "medium",
+                    },
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        effective_config = initialize_reranker.call_args.args[1]
+        self.assertEqual(effective_config.model_path, "other-model")
+        self.assertEqual(effective_config.top_k_rerank, 5)
+        self.assertEqual(effective_config.reasoning_effort, "medium")
+        self.assertEqual(mocked.call_args.kwargs["model_path"], "other-model")
+        self.assertEqual(mocked.call_args.kwargs["top_k_rerank"], 5)
+        self.assertEqual(mocked.call_args.kwargs["reasoning_effort"], "medium")
+        self.assertIs(mocked.call_args.kwargs["reranker"], reranker)
+
     def test_rerank_route_reuses_initialized_reranker(self):
         reranker = Mock()
         reranker.get_model_coordinator.return_value = object()
@@ -74,6 +111,41 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(reranker_class.call_count, 1)
         self.assertEqual(reranker.rerank_batch.call_count, 2)
 
+    def test_rerank_route_caches_rerankers_by_effective_config(self):
+        reranker = Mock()
+        reranker.get_model_coordinator.return_value = object()
+        reranker.rerank_batch.return_value = []
+        alternate_reranker = Mock()
+        alternate_reranker.get_model_coordinator.return_value = object()
+        alternate_reranker.rerank_batch.return_value = []
+
+        with patch("rank_llm.api.runtime.Reranker") as reranker_class:
+            reranker_class.create_model_coordinator.side_effect = [object(), object()]
+            reranker_class.side_effect = [reranker, alternate_reranker]
+            client = TestClient(create_app(ServerConfig(model_path="model")))
+            first = client.post(
+                "/v1/rerank", json={"query": "cats", "candidates": ["doc one"]}
+            )
+            second = client.post(
+                "/v1/rerank",
+                json={
+                    "query": "dogs",
+                    "candidates": ["doc two"],
+                    "overrides": {"model_path": "other-model"},
+                },
+            )
+            third = client.post(
+                "/v1/rerank", json={"query": "mice", "candidates": ["doc three"]}
+            )
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(third.status_code, 200)
+        self.assertEqual(reranker_class.create_model_coordinator.call_count, 2)
+        self.assertEqual(reranker_class.call_count, 2)
+        self.assertEqual(reranker.rerank_batch.call_count, 2)
+        self.assertEqual(alternate_reranker.rerank_batch.call_count, 1)
+
     def test_rerank_route_returns_400_for_invalid_payload(self):
         with patch("rank_llm.api.runtime.initialize_reranker"):
             client = TestClient(create_app(ServerConfig(model_path="model")))
@@ -82,6 +154,66 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
+
+    def test_rerank_route_returns_400_for_invalid_overrides(self):
+        client = TestClient(create_app(ServerConfig(model_path="model")))
+        response = client.post(
+            "/v1/rerank",
+            json={
+                "query": "cats",
+                "candidates": ["doc one"],
+                "overrides": {
+                    "use_azure_openai": True,
+                    "use_openrouter": True,
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["status"], "validation_error")
+
+    def test_rerank_route_returns_400_for_invalid_override_types(self):
+        client = TestClient(create_app(ServerConfig(model_path="model")))
+        response = client.post(
+            "/v1/rerank",
+            json={
+                "query": "cats",
+                "candidates": ["doc one"],
+                "overrides": {
+                    "use_openrouter": "false",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertIn(
+            "override 'use_openrouter' must be a boolean",
+            payload["errors"][0]["message"],
+        )
+
+    def test_rerank_route_returns_400_for_invalid_reasoning_effort(self):
+        client = TestClient(create_app(ServerConfig(model_path="model")))
+        response = client.post(
+            "/v1/rerank",
+            json={
+                "query": "cats",
+                "candidates": ["doc one"],
+                "overrides": {
+                    "reasoning_effort": "max",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        payload = response.json()
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertIn(
+            "override 'reasoning_effort' must be one of: high, low, medium, minimal, none, xhigh",
+            payload["errors"][0]["message"],
+        )
 
     def test_rerank_route_returns_500_for_runtime_error(self):
         with (
