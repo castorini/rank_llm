@@ -13,7 +13,7 @@ from rank_llm.server.mcp import mcp_rankllm
 
 
 class TestCLILegacyWrappers(unittest.TestCase):
-    def test_run_rank_llm_wrapper_translates_snake_case_flags(self):
+    def test_run_rank_llm_wrapper_translates_snake_case_flags(self) -> None:
         with patch("rank_llm.scripts.run_rank_llm.cli_main", return_value=0) as mocked:
             exit_code = run_rank_llm.main(
                 [
@@ -42,7 +42,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
             ],
         )
 
-    def test_run_trec_eval_wrapper_delegates_to_evaluate(self):
+    def test_run_trec_eval_wrapper_delegates_to_evaluate(self) -> None:
         with patch("rank_llm.scripts.run_trec_eval.cli_main", return_value=0) as mocked:
             exit_code = run_trec_eval.main(
                 argparse.Namespace(
@@ -66,7 +66,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
             ],
         )
 
-    def test_run_response_analysis_wrapper_delegates_to_analyze(self):
+    def test_run_response_analysis_wrapper_delegates_to_analyze(self) -> None:
         with patch(
             "rank_llm.scripts.run_response_analysis.cli_main",
             return_value=0,
@@ -81,7 +81,9 @@ class TestCLILegacyWrappers(unittest.TestCase):
             ["analyze", "--files", "one.json", "--verbose"],
         )
 
-    def test_generate_retrieve_results_wrapper_delegates_to_retrieve_cache(self):
+    def test_generate_retrieve_results_wrapper_delegates_to_retrieve_cache(
+        self,
+    ) -> None:
         with patch(
             "rank_llm.scripts.generate_retrieve_results_json_cache.cli_main",
             return_value=0,
@@ -115,7 +117,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
             ],
         )
 
-    def test_run_rank_llm_wrapper_rejects_conflicting_backend_flags(self):
+    def test_run_rank_llm_wrapper_rejects_conflicting_backend_flags(self) -> None:
         with self.assertRaisesRegex(ValueError, "mutually exclusive"):
             run_rank_llm.main(
                 [
@@ -128,7 +130,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
                 ]
             )
 
-    def test_flask_legacy_entrypoint_runs_flask_app(self):
+    def test_flask_legacy_entrypoint_runs_flask_app(self) -> None:
         app = Mock()
         with patch(
             "rank_llm.server.flask.api.create_app",
@@ -144,7 +146,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
             debug=False,
         )
 
-    def test_mcp_legacy_entrypoint_delegates_to_serve_mcp(self):
+    def test_mcp_legacy_entrypoint_delegates_to_serve_mcp(self) -> None:
         with patch(
             "rank_llm.server.mcp.mcp_rankllm.cli_main", return_value=0
         ) as mocked:
