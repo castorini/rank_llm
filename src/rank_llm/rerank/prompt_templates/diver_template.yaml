@@ -29,15 +29,7 @@ body: |
   [1]. {doc_content}
   
   ## Final Output Format 
-  You must structure your response in exactly two parts: provide your brief reasoning process first, then output final scores in JSON format like below, with document IDs as string keys and integer scores as values for all 1 documents. 
-  The reasoning process and answer are enclosed within <reason> </reason> and <answer> </answer> tags, respectively. Do NOT output anything outside the specified tags. Follow this exact format: 
-  
-  <reason> 
-  [Analyze each document's usefulness and relevance to the query, explaining your scoring rationale] 
-  </reason> 
-  
-  <answer> 
-  ```json
-  {"[1]": 5}
-  ```
-  </answer>
+  Output only the final score as JSON, with document IDs as string keys and integer scores as values.
+  Do not provide any reasoning, explanation, tags, markdown, code fences, or extra text.
+  Return exactly this format:
+  {{"[1]": 5}}
