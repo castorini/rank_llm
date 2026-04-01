@@ -3,6 +3,8 @@ import json
 import os
 import sys
 import unittest
+from collections.abc import Coroutine
+from typing import Any
 
 from fastmcp import Client, FastMCP
 from fastmcp.client.transports import StreamableHttpTransport
@@ -11,7 +13,7 @@ from fastmcp.utilities.tests import run_server_async
 from rank_llm.retrieve import RetrievalMethod
 
 
-def _make_mcp_server():
+def _make_mcp_server() -> FastMCP[Any]:
     """Build a MCP server with RankLLM tools."""
     from rank_llm.server.mcp.tools import register_rankllm_tools
 
@@ -23,7 +25,7 @@ def _make_mcp_server():
 class TestMCPServer(unittest.TestCase):
     """Test MCP server via HTTP transport using FastMCP Client."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         self.rank_results_file = "ranked_results_mcp_test.jsonl"
         self.rank_results_trec_file = "ranked_results_mcp_test.trec"
         # Use vLLM legacy (V0) engine to avoid V1's 1024-sequence warmup OOM. Omit or set
@@ -37,15 +39,15 @@ class TestMCPServer(unittest.TestCase):
         sys.stdout = self._devnull
         sys.stderr = self._devnull
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         sys.stdout = self._saved_stdout
         sys.stderr = self._saved_stderr
         self._devnull.close()
 
-    def _run_async(self, coro):
+    def _run_async(self, coro: Coroutine[Any, Any, Any]) -> Any:
         return asyncio.run(coro)
 
-    async def _call_tool(self, name, arguments):
+    async def _call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
         # Create server inside this event loop so server._started is bound to it
         mcp = _make_mcp_server()
         async with run_server_async(
@@ -55,7 +57,7 @@ class TestMCPServer(unittest.TestCase):
             async with Client(StreamableHttpTransport(url)) as client:
                 return await client.call_tool(name, arguments)
 
-    def test_01_retrieve_and_rerank_tool(self):
+    def test_01_retrieve_and_rerank_tool(self) -> None:
         os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")
         response = self._run_async(
             self._call_tool(
@@ -97,7 +99,7 @@ class TestMCPServer(unittest.TestCase):
         )
         os.remove(self.rank_results_trec_file)
 
-    def test_02_rerank_tool(self):
+    def test_02_rerank_tool(self) -> None:
         with open(self.rank_results_file) as f:
             lines = f.readlines()
         first = json.loads(lines[0])

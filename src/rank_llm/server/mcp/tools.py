@@ -9,7 +9,7 @@ from rank_llm.data import Result
 from rank_llm.retrieve import RetrievalMethod
 
 
-def register_rankllm_tools(mcp: FastMCP):
+def register_rankllm_tools(mcp: FastMCP[Any]) -> None:
     """Register RankLLM tools with the MCP server."""
 
     @mcp.tool(

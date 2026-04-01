@@ -1,10 +1,18 @@
+from __future__ import annotations
+
 import argparse
+from typing import TYPE_CHECKING, Any, Literal
 
 from rank_llm._optional import missing_extra_error
 from rank_llm.cli.main import main as cli_main
 
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
 
-def build_mcp_server():
+MCPTransport = Literal["stdio", "http", "sse", "streamable-http"]
+
+
+def build_mcp_server() -> FastMCP[Any]:
     try:
         from fastmcp import FastMCP
         from pyserini.server.mcp.tools import register_tools
@@ -23,12 +31,12 @@ def build_mcp_server():
     return mcp
 
 
-def run_mcp_server(*, transport: str = "stdio", port: int = 8000):
+def run_mcp_server(*, transport: MCPTransport = "stdio", port: int = 8000) -> None:
     mcp = build_mcp_server()
     mcp.run(transport=transport, port=port)
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     if argv is not None:
         parser = argparse.ArgumentParser(description="MCPyserini Server")
         parser.add_argument(
