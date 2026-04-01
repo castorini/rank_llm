@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from typing import Any, cast
 
 from rank_llm._optional import install_hint
 
@@ -42,16 +43,16 @@ PYSERINI_INSTALL_HINT = install_hint("pyserini")
 class PyseriniRetriever:
     def __init__(
         self,
-        dataset: str = None,
+        dataset: str | None = None,
         retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
-        index_path: str = None,
-        topics_path: str = None,
-        index_type: str = None,
-        encoder: str = None,
+        index_path: str | None = None,
+        topics_path: str | None = None,
+        index_type: str | None = None,
+        encoder: str | None = None,
         onnx: bool = False,
-        encoded_queries: str = None,
+        encoded_queries: str | None = None,
     ) -> None:
-        self._dataset = dataset
+        self._dataset = dataset or ""
         self._retrieval_method = retrieval_method
         if index_path:
             if os.path.exists(index_path):
@@ -61,6 +62,8 @@ class PyseriniRetriever:
                     index_path, encoder, onnx, encoded_queries
                 )
         else:
+            if dataset is None:
+                raise ValueError("dataset must be provided when index_path is not set")
             self._init_from_retrieval_method(dataset, retrieval_method)
 
         if topics_path:
@@ -69,11 +72,13 @@ class PyseriniRetriever:
             else:
                 self._init_prebuilt_topics(topics_path, index_path)
         else:
+            if dataset is None:
+                raise ValueError("dataset must be provided when topics_path is not set")
             self._init_topics_from_dict(dataset)
 
     def _init_from_retrieval_method(
         self, dataset: str, retrieval_method: RetrievalMethod
-    ):
+    ) -> None:
         if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             if LuceneSearcher is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
@@ -117,9 +122,13 @@ class PyseriniRetriever:
             if QueryEncoder is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
 
-            query_encoder = QueryEncoder.load_encoded_queries(
-                query_encoders_map[(retrieval_method, dataset)]
-            )
+            try:
+                encoded_query_name = query_encoders_map[(retrieval_method, dataset)]
+            except KeyError as err:
+                raise ValueError(
+                    f"Unsupported dataset `{dataset}` for retrieval method `{retrieval_method}`."
+                ) from err
+            query_encoder = QueryEncoder.load_encoded_queries(encoded_query_name)
 
             if FaissSearcher is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
@@ -137,8 +146,12 @@ class PyseriniRetriever:
             )
 
     def _init_from_custom_index(
-        self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False
-    ):
+        self,
+        index_path: str,
+        index_type: str | None,
+        encoder: str | None = None,
+        onnx: bool = False,
+    ) -> None:
         if index_type == "lucene":
             if LuceneSearcher is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
@@ -162,10 +175,10 @@ class PyseriniRetriever:
     def _init_from_prebuilt_index(
         self,
         index_path: str,
-        encoder: str = None,
+        encoder: str | None = None,
         onnx: bool = False,
-        encoded_queries: str = None,
-    ):
+        encoded_queries: str | None = None,
+    ) -> None:
         if (
             TF_INDEX_INFO is None
             or IMPACT_INDEX_INFO is None
@@ -210,7 +223,7 @@ class PyseriniRetriever:
         else:
             raise ValueError(f"Cannot build pre-built index: {index_path}")
 
-    def _init_custom_index_reader(self, index_path: str, topics_path: str):
+    def _init_custom_index_reader(self, index_path: str, topics_path: str) -> None:
         if (
             LuceneIndexReader is None
             or TF_INDEX_INFO is None
@@ -231,15 +244,17 @@ class PyseriniRetriever:
                 f"Could not build LuceneIndexReader from topics: {topics_path}"
             )
 
-    def _init_custom_topics(self, topics_path: str, index_path: str):
+    def _init_custom_topics(self, topics_path: str, index_path: str | None) -> None:
         if DefaultQueryIterator is None:
             raise ImportError(PYSERINI_INSTALL_HINT)
+        if index_path is None:
+            raise ValueError("index_path must be specified with custom topics")
 
         self._topics = DefaultQueryIterator.from_topics(topics_path).topics
         self._qrels = None
         self._init_custom_index_reader(index_path, topics_path)
 
-    def _init_prebuilt_topics(self, topics_path: str, index_path: str):
+    def _init_prebuilt_topics(self, topics_path: str, index_path: str | None) -> None:
         if get_qrels is None or get_topics is None:
             raise ImportError(PYSERINI_INSTALL_HINT)
 
@@ -252,9 +267,10 @@ class PyseriniRetriever:
         if not index_path:
             raise ValueError("prebuilt_index must be specified with prebuilt_topics")
 
-        self._init_custom_index_reader(index_path, topics_path)
+        resolved_index_path = index_path
+        self._init_custom_index_reader(resolved_index_path, topics_path)
 
-    def _init_topics_from_dict(self, dataset: str):
+    def _init_topics_from_dict(self, dataset: str) -> None:
         if get_qrels is None or get_topics is None:
             raise ImportError(PYSERINI_INSTALL_HINT)
         if dataset not in TOPICS:
@@ -285,7 +301,7 @@ class PyseriniRetriever:
             self._get_index("bm25")
         )
 
-    def _get_index(self, key: str = None) -> str:
+    def _get_index(self, key: str | None = None) -> str:
         if not key:
             key = self._retrieval_method.value
             # bm25_rm3 uses the same indices as bm25
@@ -296,20 +312,20 @@ class PyseriniRetriever:
         return INDICES[key][self._dataset]
 
     def _retrieve_query(
-        self, query: str, ranks: list[Request], k: int, qid=None
+        self, query: str, ranks: list[Request], k: int, qid: str | int | None = None
     ) -> None:
         hits = self._searcher.search(query, k=k)
         ranks.append(Request(query=Query(text=query, qid=str(qid)), candidates=[]))
         for hit in hits:
             document = self._index_reader.doc(hit.docid)
-            content = json.loads(document.raw())
+            content = cast(dict[str, Any], json.loads(document.raw()))
             # hit.score could be of type 'numpy.float32' which is not json serializable. Always explicitly cast it to float.
             ranks[-1].candidates.append(
-                Candidate(docid=hit.docid, score=hit.score, doc=content)
+                Candidate(docid=hit.docid, score=float(hit.score), doc=content)
             )
 
     def retrieve_for_query_text(
-        self, query_text: str, k: int = 100, qid=1
+        self, query_text: str, k: int = 100, qid: str | int = 1
     ) -> list[Request]:
         """
         Retrieves documents for a single query string against the configured index.
@@ -328,7 +344,7 @@ class PyseriniRetriever:
         self._retrieve_query(query_text, ranks, k, qid)
         return ranks
 
-    def retrieve(self, k=100, qid=None) -> list[Request]:
+    def retrieve(self, k: int = 100, qid: str | int | None = None) -> list[Request]:
         """
         Retrieves documents for each query, specified by query id `qid`, in the configured topics.
         Returns list of retrieved documents with specified ranking.
@@ -340,7 +356,7 @@ class PyseriniRetriever:
         Returns:
             List[Result]: A list of retrieval results.
         """
-        ranks = []
+        ranks: list[Request] = []
         if isinstance(self._topics, str):
             self._retrieve_query(self._topics, ranks, k, qid)
             return ranks
@@ -364,8 +380,8 @@ class PyseriniRetriever:
 
     def retrieve_and_store(
         self,
-        k=100,
-        qid=None,
+        k: int = 100,
+        qid: str | int | None = None,
         store_trec: bool = True,
         store_qrels: bool = True,
         retrieve_results_dirname: str = "retrieve_results",

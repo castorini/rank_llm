@@ -1,4 +1,7 @@
-from pyserini.prebuilt_index_info import IMPACT_INDEX_INFO, TF_INDEX_INFO
+from pyserini.prebuilt_index_info import (
+    IMPACT_INDEX_INFO,
+    TF_INDEX_INFO,
+)
 
 INDICES = {
     "bm25": {

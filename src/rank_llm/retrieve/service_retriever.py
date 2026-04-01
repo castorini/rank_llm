@@ -71,6 +71,8 @@ class ServiceRetriever:
             ) from e
 
         data = response.json()
+        if not isinstance(data, dict):
+            raise ValueError("Anserini server response must be a JSON object")
         retrieved_results = Request(
             query=Query(text=data["query"]["text"], qid=data["query"]["qid"])
         )

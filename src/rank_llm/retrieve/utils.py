@@ -10,7 +10,12 @@ logger = logging.getLogger(__name__)
 
 # https://gist.github.com/leimao/37ff6e990b3226c2c9670a2cd1e4a6f5
 class TqdmUpTo(tqdm):
-    def update_to(self, b=1, bsize=1, tsize=None):
+    def update_to(
+        self,
+        b: int = 1,
+        bsize: int = 1,
+        tsize: int | None = None,
+    ) -> None:
         """
         b  : int, optional
             Number of blocks transferred so far [default: 1].
@@ -24,7 +29,7 @@ class TqdmUpTo(tqdm):
         self.update(b * bsize - self.n)  # will also set self.n = b * bsize
 
 
-def get_cache_home():
+def get_cache_home() -> str:
     custom_dir = os.environ.get("RANK_LLM_CACHE")
     if custom_dir is not None and custom_dir != "":
         print("custom")
