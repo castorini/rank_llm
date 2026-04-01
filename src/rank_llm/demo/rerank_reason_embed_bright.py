@@ -19,7 +19,7 @@ except RuntimeError:
 
 # Point HF to the shared local cache so models load without re-downloading.
 # vLLM paths in this codebase use HF_HOME as download_dir.
-os.environ.setdefault("HF_HOME", "/home/tardis/shared/raghavv/hub")
+os.environ.setdefault("HF_HOME", "/home/r2vasudeva/.cache/huggingface/hub")
 
 from rank_llm.data import DataWriter, read_requests_from_file
 from rank_llm.evaluation.trec_eval import EvalFunction
@@ -27,8 +27,8 @@ from rank_llm.rerank.pointwise.reason_embed_reranker import ReasonEmbedReranker
 
 MODEL_PATH = "ljw13/retro-star-qwen3-8b-0928"
 REPO_ROOT = Path(__file__).resolve().parents[3]
-INPUT_BASE = REPO_ROOT / "../reranker_requests_sigir_submission"
-QRELS_BASE = REPO_ROOT / "../pyan/pyserini/tools/topics-and-qrels"
+INPUT_BASE = Path("/home/r2vasudeva/reranker_requests_sigir_submission")
+QRELS_BASE = Path("/home/r2vasudeva/pyserini/tools/topics-and-qrels")
 
 TASKS = [
     "aops",
