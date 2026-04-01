@@ -11,5 +11,5 @@ class RetrievalMethod(Enum):
     REP_LLAMA = "rep-llama"
     CUSTOM_INDEX = "custom_index"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value

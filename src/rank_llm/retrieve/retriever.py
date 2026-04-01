@@ -19,7 +19,7 @@ class RetrievalMode(Enum):
     CUSTOM = "custom"
     CACHED_FILE = "cached_file"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
@@ -29,11 +29,11 @@ class Retriever:
         retrieval_mode: RetrievalMode,
         dataset: str | list[str] | list[dict[str, Any]],
         retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
-        query: str = None,
-        index_path: str = None,
-        topics_path: str = None,
-        index_type: str = None,
-        encoder: str = None,
+        query: str | None = None,
+        index_path: str | None = None,
+        topics_path: str | None = None,
+        index_type: str | None = None,
+        encoder: str | None = None,
         onnx: bool = False,
     ) -> None:
         self._retrieval_mode = retrieval_mode
@@ -51,7 +51,7 @@ class Retriever:
         dataset_name: str,
         retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
         k: int = 100,
-    ):
+    ) -> list[Request]:
         """
         Creates a Retriever instance for a dataset with a prebuilt index.
 
@@ -84,10 +84,10 @@ class Retriever:
         index_path: str,
         topics_path: str,
         index_type: str,
-        encoder: str = None,
+        encoder: str | None = None,
         onnx: bool = False,
         k: int = 100,
-    ):
+    ) -> list[Request]:
         """
         Creates a Retriever instance for a dataset with a prebuilt index.
 
@@ -159,8 +159,10 @@ class Retriever:
         if not matching_files:
             return None, -1
 
-        def _extract_k(file_path):
+        def _extract_k(file_path: str) -> int:
             match = re.search(r"top(\d+)\.jsonl$", file_path)
+            if match is None:
+                raise ValueError(f"Could not extract top-k value from {file_path}")
             return int(match.group(1))
 
         file_with_max_k = max(matching_files, key=_extract_k)
@@ -179,12 +181,15 @@ class Retriever:
         retrieve_results_dirname = get_cache_home()
 
         if self._retrieval_mode == RetrievalMode.DATASET:
+            if not isinstance(self._dataset, str):
+                raise ValueError(
+                    "Dataset retrieval requires dataset to be a single dataset name."
+                )
+
             max_k_file, max_k = self._get_file_with_highest_k(
                 retrieve_results_dirname, self._retrieval_method.name, self._dataset
             )
-            if (
-                max_k_file and max_k >= k
-            ):  # try to see if retrieving from local file works
+            if max_k_file and max_k >= k:
                 try:
                     with open(max_k_file) as f:
                         results = [
@@ -199,24 +204,24 @@ class Retriever:
                         return results
                 except Exception as local_error:
                     print(f"Local file invalid, attempting HF download: {local_error}")
-            try:  # fallback #1: download from HF repo
+            try:
                 query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{100 if k <= 100 else 1000}.jsonl"
                 cached_file = download_cached_hits(query_name)
                 print(f"Cached file: {cached_file}")
                 with open(cached_file) as f:
                     results = [
                         from_dict(data_class=Request, data=json.loads(line))
-                        for line in enumerate(f)
+                        for line in f
                     ]
-                    for result in results:
-                        result.candidates = result.candidates[:k]
-                    print(
-                        f"Successfully downloaded cached results to {retrieve_results_dirname}/{cached_file}"
-                    )
-                    return results
+                for result in results:
+                    result.candidates = result.candidates[:k]
+                print(
+                    f"Successfully downloaded cached results to {retrieve_results_dirname}/{cached_file}"
+                )
+                return results
             except Exception as hf_error:
                 print(f"HF download failed, using Pyserini: {hf_error}")
-            try:  # fallback #2: retrieve on the spot with pyserini
+            try:
                 print(f"Using Pyserini to retrieve with dataset {self._dataset}")
                 from .pyserini_retriever import PyseriniRetriever
 
@@ -233,6 +238,11 @@ class Retriever:
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
                 from .pyserini_retriever import PyseriniRetriever
+
+                if not isinstance(self._dataset, str):
+                    raise ValueError(
+                        "Custom retrieval requires dataset metadata to be a string."
+                    )
 
                 pyserini = PyseriniRetriever(
                     dataset=self._dataset,

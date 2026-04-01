@@ -13,7 +13,7 @@ from rank_llm.retrieve import RetrievalMethod, RetrievalMode
 
 
 class TestCLIOperations(unittest.TestCase):
-    def test_run_script_rerank_builds_expected_runner_args(self):
+    def test_run_script_rerank_builds_expected_runner_args(self) -> None:
         args = argparse.Namespace(
             model_path="model",
             batch_size=4,
@@ -69,7 +69,7 @@ class TestCLIOperations(unittest.TestCase):
         self.assertEqual(kwargs["top_k_rerank"], 50)
         self.assertEqual(str(kwargs["prompt_template_path"]), "template.yaml")
 
-    def test_run_script_rerank_uses_parser_error_for_invalid_combo(self):
+    def test_run_script_rerank_uses_parser_error_for_invalid_combo(self) -> None:
         args = argparse.Namespace(
             dataset=None,
             requests_file="requests.jsonl",
@@ -82,7 +82,7 @@ class TestCLIOperations(unittest.TestCase):
             "--retrieval_method must not be used with --requests_file"
         )
 
-    def test_run_mcp_retrieve_and_rerank_normalizes_inputs(self):
+    def test_run_mcp_retrieve_and_rerank_normalizes_inputs(self) -> None:
         runner = Mock(return_value=["results"])
         result = run_mcp_retrieve_and_rerank(
             model_path="model",
@@ -110,7 +110,7 @@ class TestCLIOperations(unittest.TestCase):
         self.assertEqual(kwargs["reasoning_effort"], "high")
         self.assertEqual(kwargs["max_passage_words"], 222)
 
-    def test_run_evaluate_aggregate_uses_custom_runner(self):
+    def test_run_evaluate_aggregate_uses_custom_runner(self) -> None:
         runner = Mock()
         summary = run_evaluate_aggregate(
             model_name="model",
@@ -124,7 +124,7 @@ class TestCLIOperations(unittest.TestCase):
             summary["output_file"], "trec_eval_aggregated_results_model.jsonl"
         )
 
-    def test_run_response_analysis_files_uses_custom_runner(self):
+    def test_run_response_analysis_files_uses_custom_runner(self) -> None:
         runner = Mock(return_value={"files": ["one.json"], "metrics": {"errors": 0}})
         summary = run_response_analysis_files(
             files=["one.json"],
@@ -135,7 +135,7 @@ class TestCLIOperations(unittest.TestCase):
         runner.assert_called_once_with(["one.json"], True)
         self.assertEqual(summary["metrics"]["errors"], 0)
 
-    def test_run_retrieve_cache_generation_uses_generator_and_writer(self):
+    def test_run_retrieve_cache_generation_uses_generator_and_writer(self) -> None:
         generator = Mock(return_value=[{"query": "cats"}])
         writer = Mock()
 

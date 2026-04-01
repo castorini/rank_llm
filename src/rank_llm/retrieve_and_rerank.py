@@ -1,7 +1,7 @@
 import copy
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from huggingface_hub import hf_hub_download
 
@@ -32,9 +32,9 @@ def retrieve_and_rerank(
     qid: int = 1,
     num_passes: int = 1,
     interactive: bool = False,
-    default_model_coordinator: RankLLM = None,
+    default_model_coordinator: RankLLM | None = None,
     **kwargs: Any,
-):
+) -> list[Any] | tuple[list[Any], RankLLM | None]:
     """Retrieve candidates using Anserini API and rerank them
 
     Returns:
@@ -146,7 +146,7 @@ def retrieve_and_rerank(
         and reranker.get_model_coordinator() is not None
     ):
         writer = DataWriter(rerank_results)
-        keys_and_defaults = [
+        keys_and_defaults: list[tuple[str, Any]] = [
             ("output_jsonl_file", ""),
             ("output_trec_file", ""),
             ("invocations_history_file", ""),
@@ -164,8 +164,12 @@ def retrieve_and_rerank(
             path = Path(output_trec_file)
             path.parent.mkdir(parents=True, exist_ok=True)
             writer.write_in_trec_eval_format(output_trec_file)
-        keys_and_defaults = [("populate_invocations_history", False)]
-        [populate_invocations_history] = extract_kwargs(keys_and_defaults, **kwargs)
+        history_keys_and_defaults: list[tuple[str, Any]] = [
+            ("populate_invocations_history", False)
+        ]
+        [populate_invocations_history] = extract_kwargs(
+            history_keys_and_defaults, **kwargs
+        )
         if populate_invocations_history:
             if invocations_history_file:
                 path = Path(invocations_history_file)
@@ -175,8 +179,8 @@ def retrieve_and_rerank(
                 raise ValueError(
                     "--invocations_history_file must be a valid jsonl file to store invocations history."
                 )
-        keys_and_defaults = [("qrels_file", "")]
-        [qrels_file] = extract_kwargs(keys_and_defaults, **kwargs)
+        qrels_keys_and_defaults: list[tuple[str, Any]] = [("qrels_file", "")]
+        [qrels_file] = extract_kwargs(qrels_keys_and_defaults, **kwargs)
         if qrels_file:
             from rank_llm.evaluation.trec_eval import EvalFunction
 
@@ -204,8 +208,8 @@ def retrieve(
     retrieval_method: RetrievalMethod = RetrievalMethod.BM25,
     query: str = "",
     qid: int = 1,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> list[Request]:
     """Retrieve initial candidates
 
     Keyword arguments:
@@ -227,7 +231,10 @@ def retrieve(
 
     requests: list[Request] = []
     if retrieval_mode == RetrievalMode.DATASET:
-        dataset: str | list[str] | list[dict[str, Any]] = kwargs.get("dataset", None)
+        dataset = cast(
+            str | list[str] | list[dict[str, Any]] | None,
+            kwargs.get("dataset"),
+        )
         if dataset is None:
             raise ValueError("Must provide a dataset")
 
@@ -273,22 +280,22 @@ def retrieve(
                 k=top_k_retrieve,
             )
     elif retrieval_mode == RetrievalMode.CUSTOM:
-        keys_and_defaults = [
+        custom_keys_and_defaults: list[tuple[str, Any]] = [
             ("index_path", None),
             ("topics_path", None),
             ("index_type", None),
         ]
         [index_path, topics_path, index_type] = extract_kwargs(
-            keys_and_defaults, **kwargs
+            custom_keys_and_defaults, **kwargs
         )
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )
     elif retrieval_mode == RetrievalMode.CACHED_FILE:
-        keys_and_defaults = [
+        cached_file_keys_and_defaults: list[tuple[str, Any]] = [
             ("requests_file", ""),
         ]
-        [requests_file] = extract_kwargs(keys_and_defaults, **kwargs)
+        [requests_file] = extract_kwargs(cached_file_keys_and_defaults, **kwargs)
         if not os.path.exists(requests_file):
             print(
                 f"Requests file {requests_file} does not exist locally, proceeding to download from huggingface."

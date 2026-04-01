@@ -1,4 +1,5 @@
 from importlib import import_module
+from typing import Any
 
 __all__ = [
     "INDICES",
@@ -23,7 +24,7 @@ _MODULE_BY_SYMBOL = {
 }
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     if name not in _MODULE_BY_SYMBOL:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
