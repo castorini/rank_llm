@@ -157,7 +157,11 @@ files = [
     "src/rank_llm/_optional.py",
     "src/rank_llm/retrieve",
     "src/rank_llm/retrieve_and_rerank.py",
+    "src/rank_llm/server/mcp",
     "test/retrieve/test_PyseriniRetriever.py",
+    "test/server/test_mcp_server.py",
+    "test/test_cli_http.py",
+    "test/test_cli_mcp.py",
     "test/test_cli_operations.py",
 ]
 explicit_package_bases = true

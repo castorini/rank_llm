@@ -22,9 +22,19 @@ if FASTAPI_AVAILABLE:
     from rank_llm.api.runtime import ServerConfig
 
 
+def _resolve_cli_path() -> str | None:
+    cli = which("rank-llm")
+    if cli is not None:
+        return cli
+    venv_cli = REPO_ROOT / ".venv" / "bin" / "rank-llm"
+    if venv_cli.is_file():
+        return str(venv_cli)
+    return None
+
+
 @unittest.skipUnless(FASTAPI_AVAILABLE, "fastapi is required for HTTP route tests")
 class TestCLIHTTP(unittest.TestCase):
-    def test_healthz_route(self):
+    def test_healthz_route(self) -> None:
         client = TestClient(create_app(ServerConfig(model_path="model")))
 
         response = client.get("/healthz")
@@ -32,7 +42,7 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
-    def test_rerank_route_returns_envelope(self):
+    def test_rerank_route_returns_envelope(self) -> None:
         with (
             patch("rank_llm.api.runtime.initialize_reranker"),
             patch(
@@ -52,7 +62,7 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(payload["command"], "rerank")
         self.assertEqual(payload["artifacts"][0]["name"], "rerank-results")
 
-    def test_rerank_route_applies_request_overrides(self):
+    def test_rerank_route_applies_request_overrides(self) -> None:
         reranker = Mock()
 
         with (
@@ -89,7 +99,7 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(mocked.call_args.kwargs["reasoning_effort"], "medium")
         self.assertIs(mocked.call_args.kwargs["reranker"], reranker)
 
-    def test_rerank_route_reuses_initialized_reranker(self):
+    def test_rerank_route_reuses_initialized_reranker(self) -> None:
         reranker = Mock()
         reranker.get_model_coordinator.return_value = object()
         reranker.rerank_batch.return_value = []
@@ -111,7 +121,7 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(reranker_class.call_count, 1)
         self.assertEqual(reranker.rerank_batch.call_count, 2)
 
-    def test_rerank_route_caches_rerankers_by_effective_config(self):
+    def test_rerank_route_caches_rerankers_by_effective_config(self) -> None:
         reranker = Mock()
         reranker.get_model_coordinator.return_value = object()
         reranker.rerank_batch.return_value = []
@@ -146,7 +156,7 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(reranker.rerank_batch.call_count, 2)
         self.assertEqual(alternate_reranker.rerank_batch.call_count, 1)
 
-    def test_rerank_route_returns_400_for_invalid_payload(self):
+    def test_rerank_route_returns_400_for_invalid_payload(self) -> None:
         with patch("rank_llm.api.runtime.initialize_reranker"):
             client = TestClient(create_app(ServerConfig(model_path="model")))
             response = client.post("/v1/rerank", json={"query": "cats"})
@@ -155,7 +165,7 @@ class TestCLIHTTP(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
 
-    def test_rerank_route_returns_400_for_invalid_overrides(self):
+    def test_rerank_route_returns_400_for_invalid_overrides(self) -> None:
         client = TestClient(create_app(ServerConfig(model_path="model")))
         response = client.post(
             "/v1/rerank",
@@ -173,7 +183,7 @@ class TestCLIHTTP(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
 
-    def test_rerank_route_returns_400_for_invalid_override_types(self):
+    def test_rerank_route_returns_400_for_invalid_override_types(self) -> None:
         client = TestClient(create_app(ServerConfig(model_path="model")))
         response = client.post(
             "/v1/rerank",
@@ -194,7 +204,7 @@ class TestCLIHTTP(unittest.TestCase):
             payload["errors"][0]["message"],
         )
 
-    def test_rerank_route_returns_400_for_invalid_reasoning_effort(self):
+    def test_rerank_route_returns_400_for_invalid_reasoning_effort(self) -> None:
         client = TestClient(create_app(ServerConfig(model_path="model")))
         response = client.post(
             "/v1/rerank",
@@ -215,7 +225,7 @@ class TestCLIHTTP(unittest.TestCase):
             payload["errors"][0]["message"],
         )
 
-    def test_rerank_route_returns_500_for_runtime_error(self):
+    def test_rerank_route_returns_500_for_runtime_error(self) -> None:
         with (
             patch("rank_llm.api.runtime.initialize_reranker"),
             patch(
@@ -233,7 +243,7 @@ class TestCLIHTTP(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "runtime_error")
 
-    def test_rerank_route_returns_502_for_provider_error(self):
+    def test_rerank_route_returns_502_for_provider_error(self) -> None:
         with (
             patch("rank_llm.api.runtime.initialize_reranker"),
             patch(
@@ -252,9 +262,10 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(payload["status"], "provider_error")
         self.assertTrue(payload["errors"][0]["retryable"])
 
-    def test_console_entrypoint_serve_http_help_resolves(self):
-        cli = which("rank-llm")
+    def test_console_entrypoint_serve_http_help_resolves(self) -> None:
+        cli = _resolve_cli_path()
         self.assertIsNotNone(cli, msg="rank-llm is not installed in PATH")
+        assert cli is not None
 
         help_result = subprocess.run(
             [cli, "serve", "http", "--help"],
