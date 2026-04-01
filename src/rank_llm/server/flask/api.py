@@ -1,7 +1,15 @@
+from __future__ import annotations
+
 import argparse
 from importlib.resources import files
+from typing import TYPE_CHECKING, Any
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
+
+if TYPE_CHECKING:
+    from flask import Flask, Response
+
+default_model_coordinator: Any | None = None
 
 
 """ API URL FORMAT
@@ -14,7 +22,9 @@ Default to 20, 10, None, and 1 respectively
 """
 
 
-def create_app(model, port, use_azure_openai=False):
+def create_app(
+    model: str, port: int, use_azure_openai: bool = False
+) -> tuple[Flask, int]:
     import torch
     from flask import Flask, jsonify, request
 
@@ -99,7 +109,9 @@ def create_app(model, port, use_azure_openai=False):
         "/api/model/<string:model_path>/index/<string:dataset>/<string:retriever_host>",
         methods=["GET"],
     )
-    def search(model_path, dataset, retriever_host):
+    def search(
+        model_path: str, dataset: str, retriever_host: str
+    ) -> tuple[Response, int]:
         """retrieve and rerank (search)
 
         Args:
@@ -109,13 +121,13 @@ def create_app(model, port, use_azure_openai=False):
         """
 
         # query to search for
-        query = request.args.get("query", type=str)
+        query = request.args.get("query", type=str) or ""
         # search all of dataset and return top k candidates
         top_k_retrieve = request.args.get("hits_retriever", default=20, type=int)
         # rerank top_k_retrieve candidates from retrieve stage and return top_k_rerank candidates
         top_k_rerank = request.args.get("hits_reranker", default=10, type=int)
         # qid of query
-        qid = request.args.get("qid", default=None, type=str)
+        qid = request.args.get("qid", default=1, type=int)
         # number of passes reranker goes through
         num_passes = request.args.get("num_passes", default=1, type=int)
         # retrieval method to use
@@ -163,13 +175,13 @@ def create_app(model, port, use_azure_openai=False):
             default_model_coordinator = model_coordinator
 
             return jsonify(response[0]), 200
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+        except Exception as error:
+            return jsonify({"error": str(error)}), 500
 
     return app, port
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Start the RankLLM Flask server.")
     parser.add_argument(
         "--model",
