@@ -56,10 +56,10 @@ sglang = [
     "rank-llm[local]",
     "sglang[all]~=0.4.0"
 ]
-tensorrt-llm = [
-    "rank-llm[local]",
-    "tensorrt-llm[all]>=0.14.0"
-]
+# tensorrt-llm is not declarable as a uv-resolvable extra because the PyPI
+# stub needs NVIDIA's index and the NVIDIA wheel carries git-URL deps that
+# uv rejects.  Install manually:
+#   pip install --extra-index-url https://pypi.nvidia.com/ 'rank-llm[local]' 'tensorrt-llm[all]>=0.14.0'
 pyserini = [
     "faiss-cpu>=1.8.0",
     "pandas>=1.4.0",
@@ -98,7 +98,6 @@ all = [
     "rank-llm[pyserini]",
     "rank-llm[server]",
     "rank-llm[sglang]",
-    "rank-llm[tensorrt-llm]",
     "rank-llm[training]",
     "rank-llm[vllm]",
 ]
