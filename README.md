@@ -81,10 +81,6 @@ uv sync --group dev --extra <extra>
 Replace `<extra>` with one of the extras in the feature matrix below. You can
 repeat `--extra` to combine stacks in one environment.
 
-`genai` is the canonical Google Gemini extra. `gemini` remains available as a
-compatibility alias. `cloud` installs both the OpenAI-compatible and Gemini
-hosted-provider stacks.
-
 ### Feature Matrix
 
 | Workflow | Extra | Notes |
