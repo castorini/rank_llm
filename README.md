@@ -75,20 +75,11 @@ If you prefer not to activate the virtual environment, run commands through
 Install only the stacks you need:
 
 ```bash
-uv sync --group dev --extra openai
-uv sync --group dev --extra genai
-uv sync --group dev --extra cloud
-uv sync --group dev --extra local
-uv sync --group dev --extra pyserini
-uv sync --group dev --extra api
-uv sync --group dev --extra mcp
-uv sync --group dev --extra vllm
-uv sync --group dev --extra sglang
-uv sync --group dev --extra tensorrt-llm
-uv sync --group dev --extra server
-uv sync --group dev --extra training
-uv sync --group dev --extra all
+uv sync --group dev --extra <extra>
 ```
+
+Replace `<extra>` with one of the extras in the feature matrix below. You can
+repeat `--extra` to combine stacks in one environment.
 
 `genai` is the canonical Google Gemini extra. `gemini` remains available as a
 compatibility alias. `cloud` installs both the OpenAI-compatible and Gemini
@@ -135,15 +126,11 @@ pip install -e .
 Then install the optional stack you need, for example:
 
 ```bash
-pip install -e ".[openai]"
-pip install -e ".[genai]"
-pip install -e ".[cloud]"
-pip install -e ".[local]"
-pip install -e ".[pyserini]"
-pip install -e ".[api]"
-pip install -e ".[mcp]"
-pip install -e ".[vllm]"
+pip install -e ".[<extra>]"
 ```
+
+Replace `<extra>` with one of the extras in the feature matrix below. You can
+combine extras as needed, for example `pip install -e ".[openai,api]"`.
 
 Remember to install `flashinfer` for the `sglang` backend and `flash-attn` for
 optimized TensorRT-LLM or training workflows when those stacks require them.
