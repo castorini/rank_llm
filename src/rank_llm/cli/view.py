@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 class ViewError(Exception):
@@ -60,7 +60,7 @@ def detect_artifact_type(path: Path) -> str:
 
 def load_records(path: Path, artifact_type: str) -> list[Any]:
     if artifact_type == "invocations-history":
-        return json.loads(path.read_text(encoding="utf-8"))
+        return cast(list[Any], json.loads(path.read_text(encoding="utf-8")))
     return [
         json.loads(line)
         for line in path.read_text(encoding="utf-8").splitlines()
@@ -96,7 +96,7 @@ def summarize_records(records: list[Any], artifact_type: str) -> dict[str, Any]:
 def _first_jsonl_record(path: Path) -> dict[str, Any]:
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.strip():
-            return json.loads(line)
+            return cast(dict[str, Any], json.loads(line))
     raise ViewError(f"empty jsonl file: {path}")
 
 

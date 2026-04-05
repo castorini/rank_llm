@@ -218,7 +218,7 @@ def doctor_report() -> dict[str, Any]:
     serve_mcp_ready = (
         optional_dependencies["fastmcp"] and optional_dependencies["pyserini"]
     )
-    command_readiness = {
+    command_readiness: dict[str, dict[str, Any]] = {
         "rerank": {"ready": True},
         "evaluate": {"ready": True},
         "analyze": {"ready": True},
@@ -238,7 +238,7 @@ def doctor_report() -> dict[str, Any]:
     }
     overall_status = (
         "ready"
-        if python_ok and all(item["ready"] for item in command_readiness.values())
+        if python_ok and all(bool(item["ready"]) for item in command_readiness.values())
         else "degraded"
     )
     return {

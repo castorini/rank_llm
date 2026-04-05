@@ -104,9 +104,11 @@ all = [
 
 [dependency-groups]
 dev = [
+    "mypy>=1.11.2",
     "pre-commit>=3.8.0",
     "pytest>=8.4.2",
     "ruff>=0.12.0",
+    "types-PyYAML>=6.0.12.20250516",
 ]
 
 [project.urls]
@@ -143,6 +145,28 @@ ignore = ["E501"]
 "src/rank_llm/analysis/response_analysis.py" = ["E402"]
 "src/rank_llm/demo/*.py" = ["E402"]
 "src/rank_llm/scripts/*.py" = ["E402"]
+
+[tool.mypy]
+files = [
+    "src/rank_llm/api",
+    "src/rank_llm/cli",
+    "src/rank_llm/data.py",
+    "src/rank_llm/_optional.py",
+]
+explicit_package_bases = true
+mypy_path = "src"
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unused_configs = true
+follow_imports = "silent"
+cache_dir = ".mypy_cache"
+incremental = true
 
 [tool.setuptools.packages.find]
 where = ["src"]

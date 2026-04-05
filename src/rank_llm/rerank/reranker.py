@@ -195,7 +195,7 @@ class Reranker:
 
     def create_model_coordinator(
         model_path: str,
-        default_model_coordinator: RankLLM,
+        default_model_coordinator: RankLLM | None,
         interactive: bool,
         **kwargs: Any,
     ) -> RankLLM:
