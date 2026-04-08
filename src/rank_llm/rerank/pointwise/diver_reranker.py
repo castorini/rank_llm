@@ -242,7 +242,7 @@ class DiverPointwiseReranker(PointwiseRankLLM):
                     scores = await self._score_candidates_batched_async(
                         query, doc_texts
                     )
-                    for cand, score in zip(batch, scores):
+                    for cand, score in zip(batch, scores, strict=False):
                         cand.score = score
                     progress.update(len(batch))
                 result.candidates.sort(key=lambda x: x.score, reverse=True)

@@ -10,7 +10,7 @@ from ftfy import fix_text
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from rank_llm.data import Request, Result
+from rank_llm.data import InferenceInvocation, Request, Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler import VllmHandler
@@ -138,8 +138,14 @@ class ReasonEmbedReranker(PointwiseRankLLM):
 
     def _build_user_input(self, query: str, doc_text: str) -> str:
         fmt_values = {"query": query, "doc_content": doc_text}
-        return self._inference_handler._format_template(
+        base_prompt = self._inference_handler._format_template(
             template_key="body", fmt_values=fmt_values
+        )
+        # Force compact, parseable model outputs for stable score extraction.
+        return (
+            f"{base_prompt}\n\n"
+            "IMPORTANT OUTPUT FORMAT: Return exactly one line in this form and no other text:\n"
+            "<score>INTEGER_0_TO_100</score>"
         )
 
     def _materialize_template_placeholders(self) -> None:
@@ -224,11 +230,7 @@ class ReasonEmbedReranker(PointwiseRankLLM):
             score = float(match.group(1))
             return min(max(score, 0.0), 100.0)
 
-        # Fallback: extract first standalone integer and clamp.
-        fallback = re.search(r"\b(\d{1,3})\b", response)
-        if fallback:
-            score = float(fallback.group(1))
-            return min(max(score, 0.0), 100.0)
+        logger.debug("ReasonEmbed response missing score tags; assigning score=0")
         return 0.0
 
     async def _run_prompts_async(
@@ -251,16 +253,30 @@ class ReasonEmbedReranker(PointwiseRankLLM):
 
     async def _score_candidates_batched_async(
         self, query: str, doc_texts: list[str]
-    ) -> list[float]:
+    ) -> list[tuple[str, int, int, float, str]]:
         prompts = [self._prepare_prompt(query, doc_text) for doc_text in doc_texts]
         responses = await self._run_prompts_async(prompts)
-        return [self._parse_score(response) for response, _, _ in responses]
+        scored_responses: list[tuple[str, int, int, float, str]] = []
+        for prompt, (response, input_tokens, output_tokens) in zip(
+            prompts, responses, strict=False
+        ):
+            scored_responses.append(
+                (
+                    prompt,
+                    input_tokens,
+                    output_tokens,
+                    self._parse_score(response),
+                    response,
+                )
+            )
+        return scored_responses
 
     async def _rerank_results_async(
         self,
         results: list[Result],
         rank_start: int,
         rank_end: int,
+        populate_invocations_history: bool,
     ) -> None:
         total = sum(len(res.candidates[rank_start:rank_end]) for res in results)
         with tqdm(total=total, desc="ReasonEmbed reranking") as progress:
@@ -270,11 +286,26 @@ class ReasonEmbedReranker(PointwiseRankLLM):
                 for batch_start in range(0, len(candidates), self._batch_size):
                     batch = candidates[batch_start : batch_start + self._batch_size]
                     doc_texts = [self._extract_doc_text(cand.doc) for cand in batch]
-                    scores = await self._score_candidates_batched_async(
+                    scored_responses = await self._score_candidates_batched_async(
                         query, doc_texts
                     )
-                    for cand, score in zip(batch, scores):
+                    for cand, (
+                        prompt,
+                        input_tokens,
+                        output_tokens,
+                        score,
+                        response,
+                    ) in zip(batch, scored_responses, strict=False):
                         cand.score = score
+                        if populate_invocations_history:
+                            result.invocations_history.append(
+                                InferenceInvocation(
+                                    prompt=prompt,
+                                    response=response,
+                                    input_token_count=input_tokens,
+                                    output_token_count=output_tokens,
+                                )
+                            )
                     progress.update(len(batch))
                 result.candidates.sort(key=lambda x: x.score, reverse=True)
 
@@ -295,7 +326,15 @@ class ReasonEmbedReranker(PointwiseRankLLM):
             )
             for r in requests
         ]
-        asyncio.run(self._rerank_results_async(results, rank_start, rank_end))
+        populate_invocations_history = kwargs.get("populate_invocations_history", False)
+        asyncio.run(
+            self._rerank_results_async(
+                results,
+                rank_start,
+                rank_end,
+                populate_invocations_history=populate_invocations_history,
+            )
+        )
         return results
 
     # --- Abstract method stubs (rerank_batch is overridden above) ---
