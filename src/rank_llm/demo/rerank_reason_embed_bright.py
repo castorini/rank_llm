@@ -68,6 +68,7 @@ CONDITIONS = [
 def main():
     reranker = ReasonEmbedReranker(
         MODEL_PATH,
+        batch_size=8,
         relevance_definition=(
             "Given a query and a document in a reasoning-intensive retrieval task, "
             "the document is relevant if it helps answer or verify the query intent."
