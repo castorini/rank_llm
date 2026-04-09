@@ -1,0 +1,30 @@
+method: "pointwise"
+system_message: "You are an expert in retrieval relevance assessment. Reason carefully and output exactly one final relevance score in <score> tags."
+body: |
+  Here is the relevance definition in a retrieval task: {relevance_definition}
+
+  Now given a query ({query_type}) and a document ({doc_type}) in this retrieval task, your mission is to perform the following steps.
+
+  1. Query Analysis: Think to reason and describe what information would be most helpful in answering the query.
+  2. Document Analysis: Discuss how the information provided by the document fulfills or fails to fulfill the requirements implied by the query.
+  3. Relevance Annotation: Based on the relevance definition and the insights from the previous two steps, clearly justify your final relevance annotation result and annotate an integer score from a scale of 0 to 100. Please use the following guide:
+      - 80-100 (Highly Relevant): The document directly and comprehensively addresses the query's intent. It is a core and authoritative answer.
+      - 60-80 (Relevant): The document substantially addresses the query's intent, providing most of the key information, but might miss some minor details.
+      - 40-60 (Moderately Relevant): The document is on-topic and addresses a part of the query's intent, but it is not a comprehensive answer.
+      - 20-40 (Slightly Relevant): The document mentions keywords from the query, but its main topic is different. It offers very limited value.
+      - 0-20 (Irrelevant): The document does not address the query's intent at all and is off-topic.
+
+  After providing your detailed analysis and justification for all the steps above, conclude your entire response with the final relevance score. The score must be placed strictly between the <score> tags. There should be no other text or explanation inside the tags:
+  <score>
+  [From a scale of 0 to 100, annotate the degree of relevance between the query and the document.]
+  </score>
+
+  Query ({query_type}):
+  [Begin of Query]
+  {query}
+  [End of Query]
+
+  Document ({doc_type}):
+  [Begin of Document]
+  {doc_content}
+  [End of Document]
