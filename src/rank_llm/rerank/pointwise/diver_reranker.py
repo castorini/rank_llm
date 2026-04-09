@@ -264,7 +264,9 @@ class DiverPointwiseReranker(PointwiseRankLLM):
             )
             for r in requests
         ]
-        asyncio.run(self._rerank_results_async(results, rank_start, rank_end))
+        self._vllm_handler.run_coroutine(
+            self._rerank_results_async(results, rank_start, rank_end)
+        )
         return results
 
     # --- Abstract method stubs (rerank_batch is overridden above) ---

@@ -319,7 +319,7 @@ class ReasonEmbedReranker(PointwiseRankLLM):
             for request in requests
         ]
         populate_invocations_history = kwargs.get("populate_invocations_history", False)
-        asyncio.run(
+        self._vllm_handler.run_coroutine(
             self._rerank_results_async(
                 results,
                 rank_start,
@@ -352,3 +352,6 @@ class ReasonEmbedReranker(PointwiseRankLLM):
 
     def num_output_tokens(self) -> int:
         return self._max_new_tokens
+
+    def close(self) -> None:
+        self._vllm_handler.close()

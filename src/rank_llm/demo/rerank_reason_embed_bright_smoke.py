@@ -1,4 +1,5 @@
 import json
+import multiprocessing as mp
 import os
 import sys
 from pathlib import Path
@@ -10,8 +11,6 @@ sys.path.append(parent)
 
 # vLLM CUDA workers must use spawn, not fork.
 os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")
-import multiprocessing as mp
-
 try:
     mp.set_start_method("spawn")
 except RuntimeError:
@@ -26,26 +25,11 @@ from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.pointwise.reason_embed_reranker import ReasonEmbedReranker
 
 MODEL_PATH = "ljw13/retro-star-qwen3-8b-0928"
-REPO_ROOT = Path(__file__).resolve().parents[3]
 INPUT_BASE = Path("/home/r2vasudeva/reranker_requests_sigir_submission")
 QRELS_BASE = Path("/home/r2vasudeva/pyserini/tools/topics-and-qrels")
 
-TASKS = [
-    "aops",
-    "biology",
-    "earth-science",
-    "economics",
-    "leetcode",
-    "pony",
-    "psychology",
-    "robotics",
-    "stackoverflow",
-    "sustainable-living",
-    "theoremqa-questions",
-    "theoremqa-theorems",
-]
-
-# (condition_name, subdir_under INPUT_BASE, filename_template)
+# Smoke-test settings: keep this small so we can verify the pipeline cheaply.
+TASKS = ["pony"]
 CONDITIONS = [
     (
         "reason_embed_solo",
@@ -63,6 +47,9 @@ CONDITIONS = [
         "retrieve_results_bright-{task}-naf-bm25qs-bge_top100.jsonl",
     ),
 ]
+MAX_REQUESTS = 5
+RERANK_TOP_K = 20
+OUTPUT_DIR = Path("rerank_results/reason_embed_smoke")
 
 
 def main():
@@ -80,29 +67,42 @@ def main():
         for condition_name, subdir, filename_template in CONDITIONS:
             for task in TASKS:
                 file_name = str(INPUT_BASE / subdir / filename_template.format(task=task))
-                retrieve_results = read_requests_from_file(file_name)
+                retrieve_results = read_requests_from_file(file_name)[:MAX_REQUESTS]
                 qrels = str(QRELS_BASE / f"qrels.bright-{task}.fixed.txt")
                 retrieve_ndcg_10 = EvalFunction.from_results(retrieve_results, qrels)
 
                 rerank_results = reranker.rerank_batch(
                     requests=retrieve_results,
+                    rank_end=RERANK_TOP_K,
                     populate_invocations_history=True,
                 )
                 rerank_ndcg_10 = EvalFunction.from_results(rerank_results, qrels)
 
-                writer = DataWriter(rerank_results)
-                out_path = Path(f"rerank_results/reason_embed/{condition_name}")
+                out_path = OUTPUT_DIR / condition_name
                 out_path.mkdir(parents=True, exist_ok=True)
-                writer.write_in_jsonl_format(str(out_path / f"{task}_top100.jsonl"))
-                writer.write_in_trec_eval_format(str(out_path / f"{task}_top100.txt"))
-                with open(str(out_path / f"{task}_top100_metrics.json"), "w") as f:
-                    json.dump({"retrieve": retrieve_ndcg_10, "rerank": rerank_ndcg_10}, f)
-                print(
-                    f"[{condition_name}] {task}: retrieve={retrieve_ndcg_10:.4f}, rerank={rerank_ndcg_10:.4f}"
+
+                writer = DataWriter(rerank_results)
+                writer.write_in_jsonl_format(
+                    str(out_path / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}.jsonl")
                 )
+                writer.write_in_trec_eval_format(
+                    str(out_path / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}.txt")
+                )
+                with open(
+                    out_path / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}_metrics.json",
+                    "w",
+                ) as f:
+                    json.dump(
+                        {
+                            "retrieve": retrieve_ndcg_10,
+                            "rerank": rerank_ndcg_10,
+                            "max_requests": MAX_REQUESTS,
+                            "rerank_top_k": RERANK_TOP_K,
+                        },
+                        f,
+                    )
     finally:
         reranker.close()
-
 
 if __name__ == "__main__":
     main()
