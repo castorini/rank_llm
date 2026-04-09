@@ -69,7 +69,9 @@ class VllmHandler:
         except Exception:
             pass
         try:
-            pending = [task for task in asyncio.all_tasks(self._loop) if not task.done()]
+            pending = [
+                task for task in asyncio.all_tasks(self._loop) if not task.done()
+            ]
             for task in pending:
                 task.cancel()
             if pending:

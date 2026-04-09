@@ -66,7 +66,9 @@ def main():
     try:
         for condition_name, subdir, filename_template in CONDITIONS:
             for task in TASKS:
-                file_name = str(INPUT_BASE / subdir / filename_template.format(task=task))
+                file_name = str(
+                    INPUT_BASE / subdir / filename_template.format(task=task)
+                )
                 retrieve_results = read_requests_from_file(file_name)[:MAX_REQUESTS]
                 qrels = str(QRELS_BASE / f"qrels.bright-{task}.fixed.txt")
                 retrieve_ndcg_10 = EvalFunction.from_results(retrieve_results, qrels)
@@ -83,13 +85,16 @@ def main():
 
                 writer = DataWriter(rerank_results)
                 writer.write_in_jsonl_format(
-                    str(out_path / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}.jsonl")
+                    str(
+                        out_path / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}.jsonl"
+                    )
                 )
                 writer.write_in_trec_eval_format(
                     str(out_path / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}.txt")
                 )
                 with open(
-                    out_path / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}_metrics.json",
+                    out_path
+                    / f"{task}_top{RERANK_TOP_K}_first{MAX_REQUESTS}_metrics.json",
                     "w",
                 ) as f:
                     json.dump(
@@ -103,6 +108,7 @@ def main():
                     )
     finally:
         reranker.close()
+
 
 if __name__ == "__main__":
     main()

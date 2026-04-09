@@ -79,7 +79,9 @@ def main():
     try:
         for condition_name, subdir, filename_template in CONDITIONS:
             for task in TASKS:
-                file_name = str(INPUT_BASE / subdir / filename_template.format(task=task))
+                file_name = str(
+                    INPUT_BASE / subdir / filename_template.format(task=task)
+                )
                 retrieve_results = read_requests_from_file(file_name)
                 qrels = str(QRELS_BASE / f"qrels.bright-{task}.fixed.txt")
                 retrieve_ndcg_10 = EvalFunction.from_results(retrieve_results, qrels)
@@ -96,7 +98,9 @@ def main():
                 writer.write_in_jsonl_format(str(out_path / f"{task}_top100.jsonl"))
                 writer.write_in_trec_eval_format(str(out_path / f"{task}_top100.txt"))
                 with open(str(out_path / f"{task}_top100_metrics.json"), "w") as f:
-                    json.dump({"retrieve": retrieve_ndcg_10, "rerank": rerank_ndcg_10}, f)
+                    json.dump(
+                        {"retrieve": retrieve_ndcg_10, "rerank": rerank_ndcg_10}, f
+                    )
                 print(
                     f"[{condition_name}] {task}: retrieve={retrieve_ndcg_10:.4f}, rerank={rerank_ndcg_10:.4f}"
                 )
