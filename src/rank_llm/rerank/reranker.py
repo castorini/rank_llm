@@ -59,6 +59,7 @@ class Reranker:
         logging: bool = False,
         **kwargs: Any,
     ) -> list[Result]:
+        """Delegates to the coordinator; listwise coordinators expect one process, one loop, one instance."""
         return await self._model_coordinator.rerank_batch_async(
             requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
         )
@@ -72,6 +73,7 @@ class Reranker:
         logging: bool = False,
         **kwargs: Any,
     ) -> Result:
+        """Delegates to the coordinator; listwise coordinators expect one process, one loop, one instance."""
         return await self._model_coordinator.rerank_async(
             request, rank_start, rank_end, shuffle_candidates, logging, **kwargs
         )

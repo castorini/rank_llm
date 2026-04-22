@@ -63,10 +63,15 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._stride = stride
         self._max_passage_words = max_passage_words
         # Shared across concurrent rerank_batch_async / rerank_async calls on one instance.
+        # Requires one process, one long-lived event loop, and one reranker instance (see rerank_async).
         self._llm_concurrency_sem: asyncio.Semaphore | None = None
 
     def _get_llm_concurrency_sem(self) -> asyncio.Semaphore:
-        """Semaphore limiting in-flight LLM calls across overlapping async rerank operations."""
+        """Semaphore limiting in-flight LLM calls across overlapping async rerank operations.
+
+        The semaphore is tied to the event loop in which it is first created; reuse the same
+        reranker only under that loop (see ``rerank_async``).
+        """
         if self._llm_concurrency_sem is None:
             self._llm_concurrency_sem = asyncio.Semaphore(max(self._batch_size, 1))
         return self._llm_concurrency_sem
@@ -454,7 +459,13 @@ class ListwiseRankLLM(RankLLM, ABC):
         isolate_llm_slots: bool = False,
         **kwargs: Any,
     ) -> list[Result]:
-        """Async sliding-window rerank; overlapping calls share this instance's LLM slot cap."""
+        """Async sliding-window rerank; overlapping calls share this instance's LLM slot cap.
+
+        Contract: use **one process**, **one long-lived asyncio event loop**, and **one
+        reranker instance** for concurrent ``rerank_batch_async`` / ``rerank_async`` calls.
+        Do not reuse the same instance across separate ``asyncio.run()`` invocations or
+        different loops; the shared semaphore is bound to the loop where it was created.
+        """
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end_adj = min(top_k_retrieve, rank_end)
         populate_invocations_history: bool = kwargs.get(
@@ -482,7 +493,10 @@ class ListwiseRankLLM(RankLLM, ABC):
         isolate_llm_slots: bool = False,
         **kwargs: Any,
     ) -> Result:
-        """Rerank one request; overlaps with other rerank_async on the same instance."""
+        """Rerank one request; overlaps with other rerank_async on the same instance.
+
+        Same usage contract as :meth:`rerank_batch_async` (one process, one loop, one instance).
+        """
         results = await self.rerank_batch_async(
             [request],
             rank_start=rank_start,

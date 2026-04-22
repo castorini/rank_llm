@@ -210,7 +210,12 @@ class RankLLM(ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> list[Result]:
-        """Async wrapper for backends without a native async path (runs sync rerank in a thread)."""
+        """Async wrapper for backends without a native async path (runs sync rerank in a thread).
+
+        Listwise subclasses that override this share an LLM concurrency limit per instance;
+        for those, follow the contract documented on ``ListwiseRankLLM.rerank_batch_async``
+        (one process, one long-lived event loop, one reranker instance).
+        """
         return await asyncio.to_thread(
             self.rerank_batch,
             requests,
@@ -230,7 +235,10 @@ class RankLLM(ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> Result:
-        """Async single-request rerank; implementations may override for cross-call concurrency."""
+        """Async single-request rerank; implementations may override for cross-call concurrency.
+
+        Listwise implementations document loop/instance constraints on ``rerank_batch_async``.
+        """
         results = await self.rerank_batch_async(
             [request],
             rank_start=rank_start,

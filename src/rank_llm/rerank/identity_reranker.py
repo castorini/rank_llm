@@ -44,6 +44,25 @@ class IdentityReranker:
             results.append(rerank_result)
         return results
 
+    def rerank(
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> Result:
+        results = self.rerank_batch(
+            requests=[request],
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            **kwargs,
+        )
+        return results[0]
+
     async def rerank_batch_async(
         self,
         requests: list[Request],
