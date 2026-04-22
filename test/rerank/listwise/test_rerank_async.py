@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from dacite import from_dict
 
-from rank_llm.data import Request, Result
+from rank_llm.data import Request
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
 
 
@@ -35,8 +35,9 @@ class TestRerankAsyncSharedConcurrency(unittest.IsolatedAsyncioTestCase):
     async def test_concurrent_rerank_async_shares_semaphore(self):
         with (
             patch("rank_llm.utils.default_device", return_value="cuda"),
-            patch("rank_llm.rerank.listwise.rank_listwise_os_llm.torch", new=MagicMock())
-            as mock_torch,
+            patch(
+                "rank_llm.rerank.listwise.rank_listwise_os_llm.torch", new=MagicMock()
+            ) as mock_torch,
         ):
             mock_torch.cuda.is_available.return_value = True
             mock_torch.cuda.device_count.return_value = 1
@@ -48,9 +49,7 @@ class TestRerankAsyncSharedConcurrency(unittest.IsolatedAsyncioTestCase):
                         "rank_llm.rerank.vllm_handler_with_openai_sdk.VllmHandlerWithOpenAISDK"
                     ) as oa:
                         mock_tok = MagicMock()
-                        mock_tok.apply_chat_template.side_effect = (
-                            lambda m, **k: str(m)
-                        )
+                        mock_tok.apply_chat_template.side_effect = lambda m, **k: str(m)
                         mock_tok.encode.side_effect = lambda x, **k: [0] * 4
                         vh.return_value.get_tokenizer.return_value = mock_tok
                         oa.return_value.get_tokenizer.return_value = mock_tok
