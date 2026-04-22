@@ -315,14 +315,13 @@ class ListwiseRankLLM(RankLLM, ABC):
         populate_invocations_history: bool = False,
         *,
         isolate_llm_slots: bool = False,
-        concurrency_sem: asyncio.Semaphore | None = None,
     ) -> list[Result]:
         """
         Async sliding-window rerank for one or more requests.
 
         isolate_llm_slots: if True, use a fresh semaphore for this invocation only (legacy
-        sync rerank_batch behavior). If False, share capacity with other concurrent async
-        reranks via concurrency_sem or the instance-level limiter.
+        sync rerank_batch behavior). If False, use this instance's shared semaphore so
+        overlapping rerank_async / rerank_batch_async calls share the same in-flight cap.
         """
         stride = self._stride
         window_size = min(self._window_size, top_k_retrieve)
@@ -355,8 +354,6 @@ class ListwiseRankLLM(RankLLM, ABC):
 
         if isolate_llm_slots:
             semaphore = asyncio.Semaphore(max(self._batch_size, 1))
-        elif concurrency_sem is not None:
-            semaphore = concurrency_sem
         else:
             semaphore = self._get_llm_concurrency_sem()
 
@@ -455,10 +452,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         *,
         isolate_llm_slots: bool = False,
-        llm_concurrency_sem: asyncio.Semaphore | None = None,
         **kwargs: Any,
     ) -> list[Result]:
-        """Async sliding-window rerank; overlapping calls share LLM concurrency by default."""
+        """Async sliding-window rerank; overlapping calls share this instance's LLM slot cap."""
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end_adj = min(top_k_retrieve, rank_end)
         populate_invocations_history: bool = kwargs.get(
@@ -473,7 +469,6 @@ class ListwiseRankLLM(RankLLM, ABC):
             logging=logging,
             populate_invocations_history=populate_invocations_history,
             isolate_llm_slots=isolate_llm_slots,
-            concurrency_sem=llm_concurrency_sem,
         )
 
     async def rerank_async(
@@ -485,10 +480,9 @@ class ListwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         *,
         isolate_llm_slots: bool = False,
-        llm_concurrency_sem: asyncio.Semaphore | None = None,
         **kwargs: Any,
     ) -> Result:
-        """Rerank one request without batching many queries; overlaps with other rerank_async calls."""
+        """Rerank one request; overlaps with other rerank_async on the same instance."""
         results = await self.rerank_batch_async(
             [request],
             rank_start=rank_start,
@@ -496,7 +490,6 @@ class ListwiseRankLLM(RankLLM, ABC):
             shuffle_candidates=shuffle_candidates,
             logging=logging,
             isolate_llm_slots=isolate_llm_slots,
-            llm_concurrency_sem=llm_concurrency_sem,
             **kwargs,
         )
         return results[0]

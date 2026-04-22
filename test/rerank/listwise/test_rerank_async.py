@@ -61,8 +61,6 @@ class TestRerankAsyncSharedConcurrency(unittest.IsolatedAsyncioTestCase):
                             stride=1,
                             batch_size=1,
                         )
-        _shared_sem = asyncio.Semaphore(1)
-        m._get_llm_concurrency_sem = lambda: _shared_sem  # type: ignore[method-assign]
         m.create_prompt = MagicMock(  # type: ignore[method-assign]
             return_value=("[p]", 1)
         )
