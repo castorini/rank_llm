@@ -1,3 +1,4 @@
+import asyncio
 from importlib.resources import files
 from typing import Any
 
@@ -147,6 +148,25 @@ class RankFiDDistill(ListwiseRankLLM):
                 bar.update(len(batch))
 
         return result
+
+    async def rerank_batch_async(
+        self,
+        requests: list[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        return await asyncio.to_thread(
+            self.rerank_batch,
+            requests,
+            rank_start,
+            rank_end,
+            shuffle_candidates,
+            logging,
+            **kwargs,
+        )
 
     def run_llm_batched(
         self, prompts: list[list[dict[str, str]]], **kwargs
@@ -393,6 +413,25 @@ class RankFiDScore(ListwiseRankLLM):
                 bar.update(len(batch))
 
         return result
+
+    async def rerank_batch_async(
+        self,
+        requests: list[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        return await asyncio.to_thread(
+            self.rerank_batch,
+            requests,
+            rank_start,
+            rank_end,
+            shuffle_candidates,
+            logging,
+            **kwargs,
+        )
 
     def run_llm_batched(
         self, prompts: list[list[dict[str, str]]], **kwargs

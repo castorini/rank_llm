@@ -50,6 +50,32 @@ class Reranker:
             requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
         )
 
+    async def rerank_batch_async(
+        self,
+        requests: list[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        return await self._model_coordinator.rerank_batch_async(
+            requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
+        )
+
+    async def rerank_async(
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> Result:
+        return await self._model_coordinator.rerank_async(
+            request, rank_start, rank_end, shuffle_candidates, logging, **kwargs
+        )
+
     def rerank(
         self,
         request: Request,
