@@ -1,13 +1,8 @@
 """
 Concurrent async reranking demo (Qwen + vLLM).
 
-Uses multiple concurrent ``rerank_async`` calls on one event loop and one loaded
-listwise model so sliding-window LLM work overlaps across queries.
-
-The demo keeps a ``Reranker`` wrapper for parity with ``rerank_qwen.py``; async work
-is dispatched via ``Reranker.rerank_async`` when present, otherwise
-``reranker._model_coordinator.rerank_async`` (for trees where ``Reranker`` has not
-yet gained async methods).
+Uses multiple ``await reranker.rerank_async(...)`` calls on one event loop and one
+``Reranker`` instance so sliding-window LLM work overlaps across queries.
 
 The reranker is constructed **before** ``asyncio.run`` (sync setup); only the gather phase
 runs under the event loop, matching the one-loop contract and avoiding nested
@@ -46,21 +41,14 @@ from rank_llm.retrieve.topics_dict import TOPICS
 NUM_ASYNC_REQUESTS: int | None = 16
 
 
-async def _rerank_one_async(reranker: Reranker, req: Request, **kwargs):
-    """Prefer ``Reranker.rerank_async``; fall back to the coordinator (older installs)."""
-    if hasattr(reranker, "rerank_async"):
-        return await reranker.rerank_async(req, **kwargs)
-    return await reranker._model_coordinator.rerank_async(req, **kwargs)
-
-
 async def rerank_requests_concurrently(
     reranker: Reranker,
     requests: list[Request],
     **kwargs,
 ):
-    """Rerank each request concurrently; all tasks share the same event loop and model instance."""
+    """Rerank each request with ``rerank_async``; all tasks share the same event loop and reranker."""
     return await asyncio.gather(
-        *(_rerank_one_async(reranker, req, **kwargs) for req in requests)
+        *(reranker.rerank_async(req, **kwargs) for req in requests)
     )
 
 
