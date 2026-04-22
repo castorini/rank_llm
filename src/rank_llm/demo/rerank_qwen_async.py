@@ -4,6 +4,10 @@ Concurrent async reranking demo (Qwen + vLLM).
 Uses multiple ``await reranker.rerank_async(...)`` calls on one event loop and one
 ``Reranker`` instance so sliding-window LLM work overlaps across queries.
 
+The reranker is constructed **before** ``asyncio.run`` (sync setup); only the gather phase
+runs under the event loop, matching the one-loop contract and avoiding nested
+``asyncio.run`` during model init.
+
 Requires the same runtime setup as ``rerank_qwen.py`` (local vLLM with the model loaded).
 """
 
@@ -48,19 +52,35 @@ async def rerank_requests_concurrently(
     )
 
 
-async def async_main():
-    dataset_name = "dl19"
+def load_requests(dataset_name: str) -> list[Request]:
     requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
     if NUM_ASYNC_REQUESTS is not None:
-        requests = requests[:NUM_ASYNC_REQUESTS]
+        return requests[:NUM_ASYNC_REQUESTS]
+    return requests
 
+
+def build_reranker() -> Reranker:
     model_coordinator = RankListwiseOSLLM(
         model="Qwen/Qwen2.5-7B-Instruct",
     )
-    reranker = Reranker(model_coordinator)
+    return Reranker(model_coordinator)
+
+
+async def async_rerank_phase(
+    reranker: Reranker,
+    requests: list[Request],
+    **kwargs,
+):
+    return await rerank_requests_concurrently(reranker, requests, **kwargs)
+
+
+def main():
+    dataset_name = "dl19"
+    requests = load_requests(dataset_name)
+    reranker = build_reranker()
     kwargs = {"populate_invocations_history": True}
 
-    rerank_results = await rerank_requests_concurrently(reranker, requests, **kwargs)
+    rerank_results = asyncio.run(async_rerank_phase(reranker, requests, **kwargs))
 
     analyzer = ResponseAnalyzer.from_inline_results(rerank_results, use_alpha=False)
     error_counts = analyzer.count_errors()
@@ -81,10 +101,6 @@ async def async_main():
     writer.write_inference_invocations_history(
         "demo_outputs/inference_invocations_history_qwen2.5-7b-instruct_async.json"
     )
-
-
-def main():
-    asyncio.run(async_main())
 
 
 if __name__ == "__main__":
