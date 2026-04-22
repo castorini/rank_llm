@@ -48,9 +48,7 @@ class VllmHandlerWithOpenAISDK:
             model = models.data[0].id
 
         self._model = model
-        self._tokenizer = AutoTokenizer.from_pretrained(
-            model, trust_remote_code=True
-        )
+        self._tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
         """Return the tokenizer loaded in ``__init__`` (always sync, loop-safe)."""
