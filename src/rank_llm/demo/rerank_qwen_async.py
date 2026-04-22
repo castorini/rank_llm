@@ -37,8 +37,8 @@ from rank_llm.rerank.listwise import RankListwiseOSLLM
 from rank_llm.retrieve import Retriever
 from rank_llm.retrieve.topics_dict import TOPICS
 
-# Limit how many queries run concurrently for a faster smoke test; set to None for all.
-NUM_ASYNC_REQUESTS: int | None = 16
+# Set to an int (e.g. 8) to cap topics for a quick smoke test; None = all requests like rerank_qwen.py.
+NUM_ASYNC_REQUESTS: int | None = None
 
 
 async def rerank_requests_concurrently(
