@@ -1,5 +1,5 @@
 """
-Concurrent async reranking demo (Qwen + vLLM).
+Concurrent async reranking demo (Qwen3.5 9B + vLLM).
 
 Uses multiple ``await reranker.rerank_async(...)`` calls on one event loop and one
 ``Reranker`` instance so sliding-window LLM work overlaps across queries.
@@ -8,7 +8,8 @@ The reranker is constructed **before** ``asyncio.run`` (sync setup); only the ga
 runs under the event loop, matching the one-loop contract and avoiding nested
 ``asyncio.run`` during model init.
 
-Requires the same runtime setup as ``rerank_qwen.py`` (local vLLM with the model loaded).
+Requires local vLLM with ``Qwen/Qwen3.5-9B`` loaded (same general setup as ``rerank_qwen.py``,
+but serve this model id).
 """
 
 import asyncio
@@ -61,7 +62,7 @@ def load_requests(dataset_name: str) -> list[Request]:
 
 def build_reranker() -> Reranker:
     model_coordinator = RankListwiseOSLLM(
-        model="Qwen/Qwen2.5-7B-Instruct",
+        model="Qwen/Qwen3.5-9B",
     )
     return Reranker(model_coordinator)
 
@@ -92,14 +93,10 @@ def main():
 
     writer = DataWriter(rerank_results)
     Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
-    writer.write_in_jsonl_format(
-        "demo_outputs/rerank_results_qwen2.5-7b-instruct_async.jsonl"
-    )
-    writer.write_in_trec_eval_format(
-        "demo_outputs/rerank_results_qwen2.5-7b-instruct_async.txt"
-    )
+    writer.write_in_jsonl_format("demo_outputs/rerank_results_qwen3.5-9b_async.jsonl")
+    writer.write_in_trec_eval_format("demo_outputs/rerank_results_qwen3.5-9b_async.txt")
     writer.write_inference_invocations_history(
-        "demo_outputs/inference_invocations_history_qwen2.5-7b-instruct_async.json"
+        "demo_outputs/inference_invocations_history_qwen3.5-9b_async.json"
     )
 
 
