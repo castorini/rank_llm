@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -199,6 +200,54 @@ class RankLLM(ABC):
             List[Result]: A list containing the reranked candidates.
         """
         pass
+
+    async def rerank_batch_async(
+        self,
+        requests: list[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        """Async wrapper for backends without a native async path (runs sync rerank in a thread).
+
+        Listwise subclasses that override this share an LLM concurrency limit per instance;
+        for those, follow the contract documented on ``ListwiseRankLLM.rerank_batch_async``
+        (one process, one long-lived event loop, one reranker instance).
+        """
+        return await asyncio.to_thread(
+            self.rerank_batch,
+            requests,
+            rank_start,
+            rank_end,
+            shuffle_candidates,
+            logging,
+            **kwargs,
+        )
+
+    async def rerank_async(
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> Result:
+        """Async single-request rerank; implementations may override for cross-call concurrency.
+
+        Listwise implementations document loop/instance constraints on ``rerank_batch_async``.
+        """
+        results = await self.rerank_batch_async(
+            [request],
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            **kwargs,
+        )
+        return results[0]
 
     @abstractmethod
     def get_output_filename(

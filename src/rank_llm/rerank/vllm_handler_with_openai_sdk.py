@@ -24,6 +24,11 @@ class VllmHandlerWithOpenAISDK:
     Uses AsyncOpenAI for inference so all concurrently submitted coroutines
     are in-flight simultaneously. The sync OpenAI client is kept only for the
     one-time model discovery call at init time.
+
+    Unlike :class:`~rank_llm.rerank.vllm_handler.VllmHandler`, the tokenizer is
+    loaded synchronously in ``__init__`` (no ``asyncio.run``). It is therefore
+    safe to construct this handler while an asyncio event loop is already
+    running (e.g. building ``RankListwiseOSLLM`` from inside an async task).
     """
 
     def __init__(
@@ -43,9 +48,10 @@ class VllmHandlerWithOpenAISDK:
             model = models.data[0].id
 
         self._model = model
-        self._tokenizer = AutoTokenizer.from_pretrained(model)
+        self._tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
+        """Return the tokenizer loaded in ``__init__`` (always sync, loop-safe)."""
         return self._tokenizer
 
     async def chat_completion_async(

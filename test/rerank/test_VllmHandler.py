@@ -53,6 +53,24 @@ class TestVllmHandler(unittest.TestCase):
         self.handler.get_tokenizer()
         self.mock_engine_instance.get_tokenizer.assert_awaited_once()
 
+    def test_get_tokenizer_inside_running_loop_uses_autotokenizer(self):
+        """When no loop is running, engine path is used; inside a loop, AutoTokenizer is used."""
+        mock_tok = MagicMock(name="from_pretrained_tok")
+        mock_auto = MagicMock()
+        mock_auto.from_pretrained.return_value = mock_tok
+
+        async def inner() -> None:
+            self.handler._tokenizer = None
+            with patch.object(vllm_handler_module, "AutoTokenizer", mock_auto):
+                out = self.handler.get_tokenizer()
+            self.assertIs(out, mock_tok)
+            mock_auto.from_pretrained.assert_called_once_with(
+                "test-model", trust_remote_code=True
+            )
+            self.mock_engine_instance.get_tokenizer.assert_not_called()
+
+        asyncio.run(inner())
+
     def test_generate_output_async(self):
         mock_request_output = MagicMock()
         mock_request_output.finished = True

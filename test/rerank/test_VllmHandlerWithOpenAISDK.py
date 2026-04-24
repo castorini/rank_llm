@@ -10,6 +10,7 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
     @patch("rank_llm.rerank.vllm_handler_with_openai_sdk.OpenAI")
     @patch("rank_llm.rerank.vllm_handler_with_openai_sdk.AutoTokenizer")
     def setUp(self, mock_tokenizer_class, mock_openai_class, mock_async_openai_class):
+        self.mock_tokenizer_class = mock_tokenizer_class
         self.mock_sync_client = mock_openai_class.return_value
         self.mock_async_client = mock_async_openai_class.return_value
         self.mock_tokenizer = mock_tokenizer_class.from_pretrained.return_value
@@ -25,6 +26,9 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
     def test_init(self):
         self.assertEqual(self.handler._model, "test-model")
         self.assertEqual(self.handler._tokenizer, self.mock_tokenizer)
+        self.mock_tokenizer_class.from_pretrained.assert_called_once_with(
+            "test-model", trust_remote_code=True
+        )
 
     def test_get_tokenizer(self):
         self.assertEqual(self.handler.get_tokenizer(), self.mock_tokenizer)

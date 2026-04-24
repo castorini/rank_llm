@@ -8,6 +8,11 @@ try:
 except ImportError:
     vllm = None
 
+try:
+    from transformers import AutoTokenizer
+except ImportError:
+    AutoTokenizer = None
+
 if TYPE_CHECKING:
     from transformers import PreTrainedTokenizerBase
 else:
@@ -57,7 +62,22 @@ class VllmHandler:
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
         if self._tokenizer is None:
-            self._tokenizer = asyncio.run(self._engine.get_tokenizer())
+            try:
+                asyncio.get_running_loop()
+                in_running_loop = True
+            except RuntimeError:
+                in_running_loop = False
+            if in_running_loop:
+                # asyncio.run() is invalid here; load the same weights the engine uses.
+                if AutoTokenizer is None:
+                    raise ImportError(
+                        "Tokenizer loading inside a running event loop requires transformers."
+                    )
+                self._tokenizer = AutoTokenizer.from_pretrained(
+                    self._model, trust_remote_code=True
+                )
+            else:
+                self._tokenizer = asyncio.run(self._engine.get_tokenizer())
             if "rank_vicuna" in self._model:
                 self._tokenizer.chat_template = """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}\n                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}"""
         return self._tokenizer

@@ -62,6 +62,19 @@ class ListwiseRankLLM(RankLLM, ABC):
         self._batch_size = batch_size
         self._stride = stride
         self._max_passage_words = max_passage_words
+        # Shared across concurrent rerank_batch_async / rerank_async calls on one instance.
+        # Requires one process, one long-lived event loop, and one reranker instance (see rerank_async).
+        self._llm_concurrency_sem: asyncio.Semaphore | None = None
+
+    def _get_llm_concurrency_sem(self) -> asyncio.Semaphore:
+        """Semaphore limiting in-flight LLM calls across overlapping async rerank operations.
+
+        The semaphore is tied to the event loop in which it is first created; reuse the same
+        reranker only under that loop (see ``rerank_async``).
+        """
+        if self._llm_concurrency_sem is None:
+            self._llm_concurrency_sem = asyncio.Semaphore(max(self._batch_size, 1))
+        return self._llm_concurrency_sem
 
     def get_output_filename(
         self,
@@ -296,6 +309,101 @@ class ListwiseRankLLM(RankLLM, ABC):
             start_pos = max(start_pos, rank_start)
         return count
 
+    async def _sliding_windows_batched_async(
+        self,
+        requests: list[Request],
+        rank_start: int,
+        rank_end: int,
+        top_k_retrieve: int,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        populate_invocations_history: bool = False,
+        *,
+        isolate_llm_slots: bool = False,
+    ) -> list[Result]:
+        """
+        Async sliding-window rerank for one or more requests.
+
+        isolate_llm_slots: if True, use a fresh semaphore for this invocation only (legacy
+        sync rerank_batch behavior). If False, use this instance's shared semaphore so
+        overlapping rerank_async / rerank_batch_async calls share the same in-flight cap.
+        """
+        stride = self._stride
+        window_size = min(self._window_size, top_k_retrieve)
+
+        rerank_results = [
+            Result(
+                query=copy.deepcopy(request.query),
+                candidates=copy.deepcopy(request.candidates),
+                invocations_history=[],
+            )
+            for request in requests
+        ]
+        if shuffle_candidates:
+            self.shuffle_and_rescore(rerank_results, rank_start, rank_end)
+
+        work_queue: deque = deque()
+        for idx in range(len(rerank_results)):
+            end_pos = min(rank_end, len(rerank_results[idx].candidates))
+            start_pos = max(end_pos - window_size, rank_start)
+            if end_pos > start_pos:
+                work_queue.append((idx, start_pos, end_pos))
+
+        total_work = sum(
+            self._count_windows(
+                len(r.candidates), rank_start, rank_end, window_size, stride
+            )
+            for r in rerank_results
+        )
+        progress = tqdm(total=total_work, desc="Sliding windows")
+
+        if isolate_llm_slots:
+            semaphore = asyncio.Semaphore(max(self._batch_size, 1))
+        else:
+            semaphore = self._get_llm_concurrency_sem()
+
+        pending_tasks: set = set()
+
+        async def _process_one(idx: int, s: int, e: int) -> None:
+            async with semaphore:
+                prompt, in_tok = self.create_prompt(rerank_results[idx], s, e)
+                if logging:
+                    logger.debug(f"[req {idx}] window [{s}, {e}] prompt: {prompt}\n")
+                llm_out = await self.run_llm_async(prompt, e - s)
+                rerank_results[idx] = self._apply_llm_output_to_result(
+                    rerank_results[idx],
+                    llm_out,
+                    prompt,
+                    in_tok,
+                    s,
+                    e,
+                    logging,
+                    populate_invocations_history,
+                )
+                progress.update(1)
+
+                next_end = e - stride
+                next_start = s - stride
+                next_start = max(next_start, rank_start)
+                if next_end > next_start and s != rank_start:
+                    task = asyncio.ensure_future(
+                        _process_one(idx, next_start, next_end)
+                    )
+                    pending_tasks.add(task)
+                    task.add_done_callback(pending_tasks.discard)
+
+        async def _run_all() -> None:
+            for idx, s, e in work_queue:
+                task = asyncio.ensure_future(_process_one(idx, s, e))
+                pending_tasks.add(task)
+                task.add_done_callback(pending_tasks.discard)
+            while pending_tasks:
+                await asyncio.wait(list(pending_tasks))
+
+        await _run_all()
+        progress.close()
+        return rerank_results
+
     def sliding_windows_batched(
         self,
         requests: list[Request],
@@ -325,90 +433,80 @@ class ListwiseRankLLM(RankLLM, ABC):
         Returns:
             List[Result]: The list of result objects after applying the sliding window technique.
         """
-        stride = self._stride
-        window_size = min(self._window_size, top_k_retrieve)
 
-        rerank_results = [
-            Result(
-                query=copy.deepcopy(request.query),
-                candidates=copy.deepcopy(request.candidates),
-                invocations_history=[],
+        async def _run() -> list[Result]:
+            return await self._sliding_windows_batched_async(
+                requests,
+                rank_start,
+                rank_end,
+                top_k_retrieve,
+                shuffle_candidates,
+                logging,
+                populate_invocations_history,
+                isolate_llm_slots=True,
             )
-            for request in requests
-        ]
-        if shuffle_candidates:
-            self.shuffle_and_rescore(rerank_results, rank_start, rank_end)
 
-        # Each work item is (result_idx, start_pos, end_pos).
-        # Initialise with the first (rightmost) window for every request.
-        work_queue: deque = deque()
-        for idx in range(len(rerank_results)):
-            end_pos = min(rank_end, len(rerank_results[idx].candidates))
-            start_pos = max(end_pos - window_size, rank_start)
-            # Mirror the original loop condition before clamping start_pos.
-            if end_pos > start_pos:
-                work_queue.append((idx, start_pos, end_pos))
+        return asyncio.run(_run())
 
-        total_work = sum(
-            self._count_windows(
-                len(r.candidates), rank_start, rank_end, window_size, stride
-            )
-            for r in rerank_results
+    async def rerank_batch_async(
+        self,
+        requests: list[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        *,
+        isolate_llm_slots: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        """Async sliding-window rerank; overlapping calls share this instance's LLM slot cap.
+
+        Contract: use **one process**, **one long-lived asyncio event loop**, and **one
+        reranker instance** for concurrent ``rerank_batch_async`` / ``rerank_async`` calls.
+        Do not reuse the same instance across separate ``asyncio.run()`` invocations or
+        different loops; the shared semaphore is bound to the loop where it was created.
+        """
+        top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
+        rank_end_adj = min(top_k_retrieve, rank_end)
+        populate_invocations_history: bool = kwargs.get(
+            "populate_invocations_history", False
         )
-        progress = tqdm(total=total_work, desc="Sliding windows")
+        return await self._sliding_windows_batched_async(
+            requests,
+            rank_start=max(rank_start, 0),
+            rank_end=rank_end_adj,
+            top_k_retrieve=top_k_retrieve,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            populate_invocations_history=populate_invocations_history,
+            isolate_llm_slots=isolate_llm_slots,
+        )
 
-        # Semaphore caps the number of concurrently in-flight LLM requests.
-        # Each coroutine handles one (request, window) pair end-to-end:
-        # create prompt → await LLM → apply permutation → enqueue next window.
-        # Because all coroutines are gathered concurrently, the async LLM
-        # backend (AsyncLLMEngine / AsyncOpenAI) sees all requests at once and
-        # schedules them with continuous batching — no waiting for stragglers.
-        semaphore = asyncio.Semaphore(self._batch_size)
-        pending_tasks: set = set()
+    async def rerank_async(
+        self,
+        request: Request,
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        *,
+        isolate_llm_slots: bool = False,
+        **kwargs: Any,
+    ) -> Result:
+        """Rerank one request; overlaps with other rerank_async on the same instance.
 
-        async def _process_one(idx: int, s: int, e: int) -> None:
-            async with semaphore:
-                prompt, in_tok = self.create_prompt(rerank_results[idx], s, e)
-                if logging:
-                    logger.debug(f"[req {idx}] window [{s}, {e}] prompt: {prompt}\n")
-                llm_out = await self.run_llm_async(prompt, e - s)
-                rerank_results[idx] = self._apply_llm_output_to_result(
-                    rerank_results[idx],
-                    llm_out,
-                    prompt,
-                    in_tok,
-                    s,
-                    e,
-                    logging,
-                    populate_invocations_history,
-                )
-                progress.update(1)
-
-                # Immediately spawn the next window for this request so it
-                # can run concurrently with all other in-flight windows.
-                next_end = e - stride
-                next_start = s - stride
-                next_start = max(next_start, rank_start)
-                if next_end > next_start and s != rank_start:
-                    task = asyncio.ensure_future(
-                        _process_one(idx, next_start, next_end)
-                    )
-                    pending_tasks.add(task)
-                    task.add_done_callback(pending_tasks.discard)
-
-        async def _run_all() -> None:
-            # Seed: one task per request for its first window.
-            for idx, s, e in work_queue:
-                task = asyncio.ensure_future(_process_one(idx, s, e))
-                pending_tasks.add(task)
-                task.add_done_callback(pending_tasks.discard)
-            # Wait until every task (including dynamically spawned ones) is done.
-            while pending_tasks:
-                await asyncio.wait(list(pending_tasks))
-
-        asyncio.run(_run_all())
-        progress.close()
-        return rerank_results
+        Same usage contract as :meth:`rerank_batch_async` (one process, one loop, one instance).
+        """
+        results = await self.rerank_batch_async(
+            [request],
+            rank_start=rank_start,
+            rank_end=rank_end,
+            shuffle_candidates=shuffle_candidates,
+            logging=logging,
+            isolate_llm_slots=isolate_llm_slots,
+            **kwargs,
+        )
+        return results[0]
 
     def sliding_windows(
         self,

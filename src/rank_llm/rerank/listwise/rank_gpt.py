@@ -1,3 +1,4 @@
+import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from importlib.resources import files
@@ -204,6 +205,25 @@ class SafeOpenai(ListwiseRankLLM):
                 progress.close()
 
         return [results[index] for index in range(len(requests))]
+
+    async def rerank_batch_async(
+        self,
+        requests: list[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        return await asyncio.to_thread(
+            self.rerank_batch,
+            requests,
+            rank_start,
+            rank_end,
+            shuffle_candidates,
+            logging,
+            **kwargs,
+        )
 
     def _call_completion(
         self,
