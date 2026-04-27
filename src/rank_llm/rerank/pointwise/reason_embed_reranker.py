@@ -1,0 +1,357 @@
+import asyncio
+import copy
+import logging
+import os
+import re
+from importlib.resources import files
+from typing import Any
+
+from ftfy import fix_text
+from tqdm import tqdm
+from transformers import AutoTokenizer
+
+from rank_llm.data import InferenceInvocation, Request, Result
+from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
+from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank.vllm_handler import VllmHandler
+
+logger = logging.getLogger(__name__)
+TEMPLATES = files("rank_llm.rerank.prompt_templates")
+QWEN_CHAT_TEMPLATE = (
+    "{% if not add_generation_prompt is defined %}"
+    "{% set add_generation_prompt = false %}"
+    "{% endif %}"
+    "{% for message in messages %}"
+    "{% if message['role'] == 'system' %}"
+    "<|im_start|>system\n{{ message['content'] }}<|im_end|>\n"
+    "{% elif message['role'] == 'user' %}"
+    "<|im_start|>user\n{{ message['content'] }}<|im_end|>\n"
+    "{% elif message['role'] == 'assistant' %}"
+    "<|im_start|>assistant\n{{ message['content'] }}<|im_end|>\n"
+    "{% endif %}"
+    "{% endfor %}"
+    "{% if add_generation_prompt %}<|im_start|>assistant\n{% endif %}"
+)
+
+
+class ReasonEmbedReranker(PointwiseRankLLM):
+    def __init__(
+        self,
+        model_path: str,
+        prompt_mode: PromptMode = None,
+        prompt_template_path: str = (TEMPLATES / "reason_embed_template.yaml"),
+        context_size: int = 40960,
+        num_few_shot_examples: int = 0,
+        few_shot_file: str = None,
+        device: str = "cuda",
+        batch_size: int = 8,
+        attn_implementation: str = "sdpa",
+        max_new_tokens: int = 1024,
+        temperature: float = 0.6,
+        top_p: float = 1.0,
+        top_k: int = -1,
+        do_sample: bool = True,
+        logprobs: int = 10,
+        *,
+        relevance_definition: str,
+        query_type: str = "user query",
+        doc_type: str = "retrieved document",
+    ):
+        super().__init__(
+            model=model_path,
+            context_size=context_size,
+            prompt_mode=prompt_mode,
+            prompt_template_path=prompt_template_path,
+            num_few_shot_examples=num_few_shot_examples,
+            few_shot_file=few_shot_file,
+            device=device,
+            batch_size=batch_size,
+        )
+        logger.info(
+            "ReasonEmbedReranker: using attn_implementation='%s'",
+            attn_implementation,
+        )
+
+        self._vllm_handler = VllmHandler(
+            model=model_path,
+            download_dir=os.getenv("HF_HOME"),
+            enforce_eager=False,
+            max_logprobs=logprobs,
+            tensor_parallel_size=1,
+            gpu_memory_utilization=0.90,
+            max_model_len=context_size,
+            trust_remote_code=True,
+        )
+        self._tokenizer = self._load_tokenizer(model_path)
+        if self._tokenizer.pad_token is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
+        if not getattr(self._tokenizer, "chat_template", None):
+            self._tokenizer.chat_template = QWEN_CHAT_TEMPLATE
+
+        self._max_new_tokens = max_new_tokens
+        self._temperature = temperature
+        self._top_p = top_p
+        self._top_k = top_k
+        self._do_sample = do_sample
+        self._logprobs = logprobs
+        self._relevance_definition = relevance_definition
+        self._query_type = query_type
+        self._doc_type = doc_type
+
+    def _load_tokenizer(self, model_path: str):
+        try:
+            return self._vllm_handler.get_tokenizer()
+        except ValueError as err:
+            if "a coroutine was expected" not in str(err):
+                raise
+            logger.warning(
+                "Falling back to AutoTokenizer because vLLM returned a synchronous tokenizer object."
+            )
+            return AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+
+    def _extract_doc_text(self, doc: Any) -> str:
+        if not isinstance(doc, dict):
+            return str(doc)
+
+        for key in ["text", "segment", "contents", "content", "body", "passage"]:
+            if key in doc:
+                content = doc[key]
+                break
+        else:
+            content = ""
+
+        if doc.get("title"):
+            content = f"Title: {doc['title']} Content: {content}"
+        return fix_text(str(content).strip())
+
+    def _build_user_input(self, query: str, doc_text: str) -> str:
+        return self._inference_handler.format_body(
+            query=query,
+            doc_content=doc_text,
+            relevance_definition=self._relevance_definition,
+            query_type=self._query_type,
+            doc_type=self._doc_type,
+        )
+
+    def _count_tokens(self, text: str) -> int:
+        return len(self._tokenizer.encode(text, add_special_tokens=False))
+
+    def _truncate_doc_text(self, query: str, doc_text: str) -> str:
+        query_tokens = self._count_tokens(query)
+        max_doc_tokens = max(
+            self._context_size - self._max_new_tokens - query_tokens - 512,
+            128,
+        )
+        doc_tokens = self._tokenizer.encode(doc_text, add_special_tokens=False)
+        if len(doc_tokens) <= max_doc_tokens:
+            return doc_text
+        return self._tokenizer.decode(
+            doc_tokens[:max_doc_tokens],
+            skip_special_tokens=True,
+        )
+
+    def _build_messages(self, user_input: str) -> list[dict[str, str]]:
+        # The model card formats the prompt as a single user turn.
+        return [{"role": "user", "content": user_input}]
+
+    def _prepare_prompt(self, query: str, doc_text: str) -> str:
+        doc_text = self._truncate_doc_text(query, doc_text)
+        prompt_budget = max(self._context_size - self._max_new_tokens, 128)
+
+        while True:
+            user_input = self._build_user_input(query, doc_text)
+            prompt = self._apply_chat_template(self._build_messages(user_input))
+            if self._count_tokens(prompt) <= prompt_budget:
+                return prompt
+
+            doc_tokens = self._tokenizer.encode(doc_text, add_special_tokens=False)
+            overflow = self._count_tokens(prompt) - prompt_budget
+            next_doc_len = max(len(doc_tokens) - overflow - 64, 128)
+            if next_doc_len >= len(doc_tokens):
+                next_doc_len = max(len(doc_tokens) - 128, 128)
+            doc_text = self._tokenizer.decode(
+                doc_tokens[:next_doc_len],
+                skip_special_tokens=True,
+            )
+
+    def _apply_chat_template(self, messages: list[dict[str, str]]) -> str:
+        if not getattr(self._tokenizer, "chat_template", None):
+            raise ValueError(
+                "Tokenizer chat_template is missing for ReasonEmbed; unable to build a chat prompt."
+            )
+        try:
+            return self._tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+                enable_thinking=False,
+            )
+        except TypeError:
+            return self._tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+
+    def _parse_score(self, response: str) -> float:
+        matches = re.findall(r"<score>\s*(\d{1,3})\s*</score>", response)
+        if matches:
+            return min(max(float(matches[-1]), 0.0), 100.0)
+
+        logger.debug(
+            "ReasonEmbed response missing score tags; assigning score=0. Response: %r",
+            response[:200],
+        )
+        return 0.0
+
+    async def _run_prompts_async(
+        self, prompts: list[str]
+    ) -> list[tuple[str, int, int]]:
+        if not prompts:
+            return []
+
+        return await asyncio.gather(
+            *[
+                self._vllm_handler.generate_output_async(
+                    prompt=prompt,
+                    min_tokens=1,
+                    max_tokens=self._max_new_tokens,
+                    temperature=self._temperature if self._do_sample else 0.0,
+                    top_p=self._top_p,
+                    top_k=self._top_k,
+                    logprobs=self._logprobs,
+                )
+                for prompt in prompts
+            ]
+        )
+
+    async def _score_candidates_batched_async(
+        self, query: str, doc_texts: list[str]
+    ) -> list[tuple[str, int, int, float, str]]:
+        prompts = [self._prepare_prompt(query, doc_text) for doc_text in doc_texts]
+        responses = await self._run_prompts_async(prompts)
+
+        return [
+            (
+                prompt,
+                input_tokens,
+                output_tokens,
+                self._parse_score(response),
+                response,
+            )
+            for prompt, (response, input_tokens, output_tokens) in zip(
+                prompts, responses, strict=False
+            )
+        ]
+
+    def _sort_reranked_slice(
+        self,
+        result: Result,
+        rank_start: int,
+        rank_end: int,
+    ) -> None:
+        reranked_slice = sorted(
+            result.candidates[rank_start:rank_end],
+            key=lambda candidate: candidate.score,
+            reverse=True,
+        )
+        result.candidates[rank_start:rank_end] = reranked_slice
+
+    async def _rerank_results_async(
+        self,
+        results: list[Result],
+        rank_start: int,
+        rank_end: int,
+        populate_invocations_history: bool,
+    ) -> None:
+        total = sum(len(result.candidates[rank_start:rank_end]) for result in results)
+        with tqdm(total=total, desc="ReasonEmbed reranking") as progress:
+            for result in results:
+                query = result.query.text
+                candidates = result.candidates[rank_start:rank_end]
+
+                for batch_start in range(0, len(candidates), self._batch_size):
+                    batch = candidates[batch_start : batch_start + self._batch_size]
+                    doc_texts = [
+                        self._extract_doc_text(candidate.doc) for candidate in batch
+                    ]
+                    scored_responses = await self._score_candidates_batched_async(
+                        query, doc_texts
+                    )
+
+                    for candidate, (
+                        prompt,
+                        input_tokens,
+                        output_tokens,
+                        score,
+                        response,
+                    ) in zip(batch, scored_responses, strict=False):
+                        candidate.score = score
+                        if populate_invocations_history:
+                            result.invocations_history.append(
+                                InferenceInvocation(
+                                    prompt=prompt,
+                                    response=response,
+                                    input_token_count=input_tokens,
+                                    output_token_count=output_tokens,
+                                )
+                            )
+
+                    progress.update(len(batch))
+
+                self._sort_reranked_slice(result, rank_start, rank_end)
+
+    def rerank_batch(
+        self,
+        requests: list[Request],
+        rank_start: int = 0,
+        rank_end: int = 100,
+        shuffle_candidates: bool = False,
+        logging: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        results = [
+            Result(
+                query=copy.deepcopy(request.query),
+                candidates=copy.deepcopy(request.candidates),
+                invocations_history=[],
+            )
+            for request in requests
+        ]
+        populate_invocations_history = kwargs.get("populate_invocations_history", False)
+        self._vllm_handler.run_coroutine(
+            self._rerank_results_async(
+                results,
+                rank_start,
+                rank_end,
+                populate_invocations_history=populate_invocations_history,
+            )
+        )
+        return results
+
+    def run_llm(self, prompt: str | list[dict[str, str]], **kwargs) -> tuple[str, int]:
+        raise NotImplementedError("Use rerank_batch directly.")
+
+    def run_llm_batched(
+        self, prompts: list[str | list[dict[str, str]]], **kwargs
+    ) -> list[tuple[str, int]]:
+        raise NotImplementedError("Use rerank_batch directly.")
+
+    def create_prompt(
+        self, result: Result, rank_start: int, rank_end: int
+    ) -> tuple[str, int]:
+        raise NotImplementedError("Use rerank_batch directly.")
+
+    def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
+        if isinstance(prompt, str):
+            return self._count_tokens(prompt)
+        return sum(self._count_tokens(message["content"]) for message in prompt)
+
+    def cost_per_1k_token(self, input_token: bool) -> float:
+        return 0.0
+
+    def num_output_tokens(self) -> int:
+        return self._max_new_tokens
+
+    def close(self) -> None:
+        self._vllm_handler.close()

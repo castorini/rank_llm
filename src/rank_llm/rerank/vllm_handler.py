@@ -50,15 +50,65 @@ class VllmHandler:
             **kwargs,
         )
         self._engine = vllm.AsyncLLMEngine.from_engine_args(engine_args)
+        self._loop = asyncio.new_event_loop()
+        self._closed = False
         self._model = model
         self._tokenizer: PreTrainedTokenizerBase | None = None
         atexit.register(self._shutdown)
 
     def _shutdown(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+
+        previous_loop = None
         try:
+            previous_loop = asyncio.get_event_loop_policy().get_event_loop()
+        except RuntimeError:
+            previous_loop = None
+
+        try:
+            asyncio.set_event_loop(self._loop)
             self._engine.shutdown()
         except Exception:
             pass
+        try:
+            pending = [
+                task for task in asyncio.all_tasks(self._loop) if not task.done()
+            ]
+            for task in pending:
+                task.cancel()
+            if pending:
+                self._loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            self._loop.run_until_complete(self._loop.shutdown_asyncgens())
+        except Exception:
+            pass
+        try:
+            self._loop.close()
+        except Exception:
+            pass
+        finally:
+            asyncio.set_event_loop(previous_loop)
+
+    def close(self) -> None:
+        self._shutdown()
+
+    def run_coroutine(self, coro: Any) -> Any:
+        if self._closed:
+            raise RuntimeError("VllmHandler is closed.")
+        previous_loop = None
+        try:
+            previous_loop = asyncio.get_event_loop_policy().get_event_loop()
+        except RuntimeError:
+            previous_loop = None
+
+        try:
+            asyncio.set_event_loop(self._loop)
+            return self._loop.run_until_complete(coro)
+        finally:
+            asyncio.set_event_loop(previous_loop)
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
         if self._tokenizer is None:
@@ -88,6 +138,8 @@ class VllmHandler:
         min_tokens: int,
         max_tokens: int,
         temperature: float,
+        top_p: float = 1.0,
+        top_k: int = -1,
         logprobs: int | None = None,
     ) -> tuple[str, int, int]:
         """
@@ -98,6 +150,8 @@ class VllmHandler:
             min_tokens=min_tokens,
             max_tokens=max_tokens,
             temperature=temperature,
+            top_p=top_p,
+            top_k=top_k,
             logprobs=logprobs,
         )
         request_id = str(uuid.uuid4())

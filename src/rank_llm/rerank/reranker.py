@@ -376,6 +376,65 @@ class Reranker:
                 keys=genai_keys,
                 max_passage_words=max_passage_words,
             )
+        elif (
+            "reason-embed" in model_path.lower()
+            or "reasoner-embed" in model_path.lower()
+            or "retro-star" in model_path.lower()
+        ):
+            # using bge-reasoner-embed
+            from rank_llm.rerank.pointwise.reason_embed_reranker import (
+                ReasonEmbedReranker,
+            )
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    (TEMPLATES / "reason_embed_template.yaml"),
+                ),
+                (
+                    "context_size",
+                    40960 if "retro-star" in model_path.lower() else 8192,
+                ),
+                ("device", "cuda"),
+                ("batch_size", 8),
+                ("max_new_tokens", 1024),
+                ("temperature", 0.6),
+                ("top_p", 1.0),
+                ("top_k", -1),
+                ("do_sample", True),
+                ("logprobs", 10),
+            ]
+
+            [
+                prompt_template_path,
+                context_size,
+                device,
+                batch_size,
+                max_new_tokens,
+                temperature,
+                top_p,
+                top_k,
+                do_sample,
+                logprobs,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = ReasonEmbedReranker(
+                model_path=model_path,
+                prompt_template_path=prompt_template_path,
+                context_size=context_size,
+                device=device,
+                batch_size=batch_size,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                do_sample=do_sample,
+                logprobs=logprobs,
+                relevance_definition=(
+                    "Given a query and a document, the document is relevant if it "
+                    "helps answer the query intent."
+                ),
+            )
         elif "monot5" in model_path:
             # using monot5
             from rank_llm.rerank.pointwise.monot5 import MonoT5
