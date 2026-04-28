@@ -21,10 +21,19 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders=set(),
             ),
+            "system_message": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
             "body": TemplateSectionConfig(
                 required=True,
                 required_placeholders={"query", "doc_content"},
-                allowed_placeholders=set(),
+                allowed_placeholders={
+                    "relevance_definition",
+                    "query_type",
+                    "doc_type",
+                },
             ),
         }
 
@@ -106,6 +115,14 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         body_text = self._format_template(template_key="body", fmt_values=fmt_values)
 
         return body_text
+
+    def format_body(self, query: str, doc_content: str, **extra_values: str) -> str:
+        fmt_values: dict[str, str] = {
+            "query": self._replace_number(query),
+            "doc_content": doc_content,
+        }
+        fmt_values.update(extra_values)
+        return self._format_template(template_key="body", fmt_values=fmt_values)
 
     def generate_prompt(self, result: Result, **kwargs: Any) -> str:
         try:

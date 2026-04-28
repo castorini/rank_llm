@@ -8,4 +8,10 @@ try:
 except ImportError:
     MonoT5 = None
 
-__all__ = ["MonoT5", "MonoELECTRA"]
+
+try:
+    from .reason_embed_reranker import ReasonEmbedReranker
+except ImportError:
+    ReasonEmbedReranker = None
+
+__all__ = ["MonoT5", "MonoELECTRA", "ReasonEmbedReranker"]

@@ -124,6 +124,8 @@ class TestVllmHandler(unittest.TestCase):
             min_tokens=5,
             max_tokens=20,
             temperature=0.7,
+            top_p=1.0,
+            top_k=-1,
             logprobs=3,
         )
 
