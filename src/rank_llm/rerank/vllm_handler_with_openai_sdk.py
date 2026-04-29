@@ -1,3 +1,4 @@
+import math
 from typing import TYPE_CHECKING, Any
 
 try:
@@ -15,6 +16,42 @@ if TYPE_CHECKING:
     from transformers import PreTrainedTokenizerBase
 else:
     PreTrainedTokenizerBase = Any
+
+# First-completion-token logprob bucketing for binary pointwise scoring.
+# ``token`` strings from the API are matched after ``str.strip()`` so values
+# like ``"yes "`` or ``" no"`` still map to the same class as ``"yes"`` / ``"no"``.
+POINTWISE_YES_LOGPROB_TOKEN_STRINGS: tuple[str, ...] = ("yes", "Yes", "YES")
+POINTWISE_NO_LOGPROB_TOKEN_STRINGS: tuple[str, ...] = ("no", "No", "NO")
+
+POINTWISE_YES_LOGPROB_STRIPPED: frozenset[str] = frozenset(
+    {s.strip() for s in POINTWISE_YES_LOGPROB_TOKEN_STRINGS}
+)
+POINTWISE_NO_LOGPROB_STRIPPED: frozenset[str] = frozenset(
+    {s.strip() for s in POINTWISE_NO_LOGPROB_TOKEN_STRINGS}
+)
+
+# Extra spellings tried for ``allowed_token_ids`` only (each must be one token).
+# Logprob bucketing uses stripped strings, so ``"yes "`` in API responses still
+# scores as yes; if the tokenizer maps ``"yes "`` to a *different* single id
+# than ``"yes"``, include that spelling here so both can be sampled.
+POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS: tuple[str, ...] = (
+    *POINTWISE_YES_LOGPROB_TOKEN_STRINGS,
+    "yes ",
+    "Yes ",
+    "YES ",
+    " yes",
+    " Yes",
+    " YES",
+)
+POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS: tuple[str, ...] = (
+    *POINTWISE_NO_LOGPROB_TOKEN_STRINGS,
+    "no ",
+    "No ",
+    "NO ",
+    " no",
+    " No",
+    " NO",
+)
 
 
 class VllmHandlerWithOpenAISDK:
@@ -71,3 +108,77 @@ class VllmHandlerWithOpenAISDK:
         except Exception as e:
             print(f"Error during async inference: {e}")
             return str(e), "", {}
+
+    @staticmethod
+    def score_from_top_logprobs(
+        top_logprobs: list[dict[str, Any]] | None,
+        fallback_lp: float = -20.0,
+    ) -> tuple[float, float, float]:
+        """Normalize yes/no mass from the first completion token's top logprobs."""
+        total_yes_prob = 0.0
+        total_no_prob = 0.0
+
+        if top_logprobs:
+            for e in top_logprobs:
+                tok = (e.get("token") or "").strip()
+                lp = e.get("logprob")
+                if lp is None:
+                    continue
+                prob = math.exp(float(lp))
+                if tok in POINTWISE_YES_LOGPROB_STRIPPED:
+                    total_yes_prob += prob
+                elif tok in POINTWISE_NO_LOGPROB_STRIPPED:
+                    total_no_prob += prob
+
+        if total_yes_prob == 0.0 and total_no_prob == 0.0:
+            return 0.0, fallback_lp, fallback_lp
+
+        score = total_yes_prob / (total_yes_prob + total_no_prob)
+        yes_lp = math.log(total_yes_prob) if total_yes_prob > 0 else fallback_lp
+        no_lp = math.log(total_no_prob) if total_no_prob > 0 else fallback_lp
+        return score, yes_lp, no_lp
+
+    async def chat_completion_score_async(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        max_tokens: int = 1,
+        temperature: float = 0.0,
+        logprobs: bool = True,
+        top_logprobs: int = 20,
+        extra_body: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> tuple[str, int, float, dict[str, Any]]:
+        """Single-token chat completion with logprobs; returns (text, out_tokens, score, usage)."""
+        body = dict(kwargs)
+        body.setdefault("max_tokens", max_tokens)
+        body.setdefault("temperature", temperature)
+        body.setdefault("logprobs", logprobs)
+        body.setdefault("top_logprobs", top_logprobs)
+        if extra_body is not None:
+            body["extra_body"] = {**(body.get("extra_body") or {}), **extra_body}
+
+        try:
+            response = await self._async_client.chat.completions.create(
+                model=self._model,
+                messages=messages,
+                **body,
+            )
+        except Exception as e:
+            print(f"Error during async score inference: {e}")
+            return str(e), 0, -1.0, {}
+
+        usage = response.usage.model_dump(mode="json") if response.usage else {}
+        choice = response.choices[0]
+        text = (choice.message.content or "").strip()
+        out_tokens = int(
+            usage.get("completion_tokens") or usage.get("output_tokens") or 0
+        )
+
+        top_lp: list[dict[str, Any]] = []
+        if choice.logprobs and choice.logprobs.content:
+            token_lps = choice.logprobs.content[0].top_logprobs or []
+            top_lp = [{"token": lp.token, "logprob": lp.logprob} for lp in token_lps]
+
+        score, _, _ = self.score_from_top_logprobs(top_lp)
+        return text, out_tokens, float(score), usage

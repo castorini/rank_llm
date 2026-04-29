@@ -138,6 +138,60 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
         self.assertEqual(results[1][0], "Specific Error")
         self.assertEqual(results[2][0], "success")
 
+    def test_score_from_top_logprobs(self):
+        top = [
+            {"token": "yes", "logprob": -0.1},
+            {"token": "no", "logprob": -2.0},
+        ]
+        score, _, _ = VllmHandlerWithOpenAISDK.score_from_top_logprobs(top)
+        self.assertGreater(score, 0.5)
+
+    def test_score_from_top_logprobs_mixed_case(self):
+        top = [
+            {"token": "YES", "logprob": -0.2},
+            {"token": "No", "logprob": -1.5},
+        ]
+        score, _, _ = VllmHandlerWithOpenAISDK.score_from_top_logprobs(top)
+        self.assertGreater(score, 0.5)
+
+    def test_score_from_top_logprobs_whitespace_in_token_string(self):
+        top = [
+            {"token": "yes ", "logprob": -0.1},
+            {"token": "no", "logprob": -2.0},
+        ]
+        score, _, _ = VllmHandlerWithOpenAISDK.score_from_top_logprobs(top)
+        self.assertGreater(score, 0.5)
+
+    def test_chat_completion_score_async(self):
+        mock_lp = MagicMock()
+        mock_lp.token = "yes"
+        mock_lp.logprob = -0.05
+        mock_content_lp = MagicMock()
+        mock_content_lp.top_logprobs = [mock_lp]
+        mock_choice = MagicMock()
+        mock_choice.message.content = "yes"
+        mock_choice.logprobs.content = [mock_content_lp]
+        mock_resp = MagicMock()
+        mock_resp.choices = [mock_choice]
+        mock_resp.usage.model_dump.return_value = {
+            "prompt_tokens": 3,
+            "completion_tokens": 1,
+        }
+        self.mock_async_client.chat.completions.create = AsyncMock(
+            return_value=mock_resp
+        )
+
+        async def run():
+            return await self.handler.chat_completion_score_async(
+                [{"role": "user", "content": "hi"}]
+            )
+
+        text, out_tok, score, usage = asyncio.run(run())
+        self.assertEqual(text, "yes")
+        self.assertEqual(out_tok, 1)
+        self.assertGreater(score, 0.5)
+        self.assertIn("prompt_tokens", usage)
+
 
 if __name__ == "__main__":
     unittest.main()

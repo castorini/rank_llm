@@ -288,6 +288,38 @@ class Reranker:
                 max_passage_words=max_passage_words,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
+        elif base_url and (
+            kwargs.get("pointwise_vllm") or kwargs.get("pointwise_qwen3_vllm")
+        ):
+            from rank_llm.rerank.pointwise.pointwise_vllm import PointwiseVLLM
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    (TEMPLATES / "pointwise_vllm_template.yaml"),
+                ),
+                ("context_size", 8192),
+                ("batch_size", 32),
+                ("max_concurrent_llm_calls", None),
+                ("disable_thinking_extra_body", True),
+            ]
+            (
+                prompt_template_path,
+                context_size,
+                batch_size,
+                max_concurrent_llm_calls,
+                disable_thinking_extra_body,
+            ) = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = PointwiseVLLM(
+                model=model_path,
+                base_url=base_url,
+                prompt_template_path=prompt_template_path,
+                context_size=context_size,
+                batch_size=batch_size,
+                max_concurrent_llm_calls=max_concurrent_llm_calls,
+                disable_thinking_extra_body=disable_thinking_extra_body,
+            )
         elif "gpt" in model_path or use_azure_openai or base_url:
             # GPT based reranking models
             from rank_llm.rerank.listwise import SafeOpenai
