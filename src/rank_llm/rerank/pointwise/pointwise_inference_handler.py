@@ -21,6 +21,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 required_placeholders=set(),
                 allowed_placeholders=set(),
             ),
+            "system_message": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
             "body": TemplateSectionConfig(
                 required=True,
                 required_placeholders={"query", "doc_content"},
@@ -129,3 +134,40 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             tokenizer=tokenizer,
         )
         return prompt.replace("<unk>", "")
+
+    def generate_chat_messages(
+        self, result: Result, **kwargs: Any
+    ) -> list[dict[str, str]]:
+        """Build OpenAI-style chat messages (system + user) for pointwise VLLM backends."""
+        try:
+            index = kwargs["index"]
+            max_doc_tokens = kwargs["max_doc_tokens"]
+            tokenizer = kwargs["tokenizer"]
+            num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
+            fewshot_examples = kwargs.get("fewshot_examples", [])
+        except KeyError as err:
+            raise ValueError(f"Missing required parameter: {err}") from err
+
+        user_parts: list[str] = []
+        if num_fewshot_examples > 0 and fewshot_examples:
+            user_parts.append(
+                self._generate_fewshot_prompt(
+                    num_examples=num_fewshot_examples, examples=fewshot_examples
+                )
+            )
+        user_parts.append(
+            self._generate_body(
+                result=result,
+                index=index,
+                max_doc_tokens=max_doc_tokens,
+                tokenizer=tokenizer,
+            )
+        )
+        user_content = "".join(user_parts).replace("<unk>", "")
+
+        messages: list[dict[str, str]] = []
+        system_msg = self.template.get("system_message")
+        if system_msg:
+            messages.append({"role": "system", "content": system_msg.strip()})
+        messages.append({"role": "user", "content": user_content})
+        return messages

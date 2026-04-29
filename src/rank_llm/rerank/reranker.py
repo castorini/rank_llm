@@ -288,6 +288,46 @@ class Reranker:
                 max_passage_words=max_passage_words,
                 **(get_azure_openai_args() if use_azure_openai else {}),
             )
+        elif base_url and (
+            kwargs.get("pointwise_qwen3_vllm") or "qwen3" in model_path.lower()
+        ):
+            from rank_llm.rerank.pointwise.qwen3_pointwise_vllm import (
+                Qwen3PointwiseVLLM,
+            )
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    (TEMPLATES / "qwen3_pointwise_vllm_template.yaml"),
+                ),
+                ("context_size", 8192),
+                ("num_few_shot_examples", 0),
+                ("few_shot_file", None),
+                ("batch_size", 32),
+                ("max_concurrent_llm_calls", None),
+                ("disable_thinking_extra_body", True),
+            ]
+            (
+                prompt_template_path,
+                context_size,
+                num_few_shot_examples,
+                few_shot_file,
+                batch_size,
+                max_concurrent_llm_calls,
+                disable_thinking_extra_body,
+            ) = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = Qwen3PointwiseVLLM(
+                model=model_path,
+                base_url=base_url,
+                prompt_template_path=prompt_template_path,
+                context_size=context_size,
+                num_few_shot_examples=num_few_shot_examples,
+                few_shot_file=few_shot_file,
+                batch_size=batch_size,
+                max_concurrent_llm_calls=max_concurrent_llm_calls,
+                disable_thinking_extra_body=disable_thinking_extra_body,
+            )
         elif "gpt" in model_path or use_azure_openai or base_url:
             # GPT based reranking models
             from rank_llm.rerank.listwise import SafeOpenai

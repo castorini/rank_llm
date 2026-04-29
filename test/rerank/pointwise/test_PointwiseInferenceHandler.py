@@ -109,6 +109,25 @@ class TestPointwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(prompt_text_1, expected_prompt_1)
         self.assertEqual(prompt_text_2, expected_prompt_2)
 
+    def test_generate_chat_messages_with_system(self):
+        template = {
+            "method": "pointwise",
+            "system_message": "System line.",
+            "body": "Q: {query}\nD: {doc_content}\n",
+        }
+        inference_handler = PointwiseInferenceHandler(template)
+        msgs = inference_handler.generate_chat_messages(
+            result=r,
+            index=0,
+            max_doc_tokens=6000,
+            tokenizer=tokenizer,
+        )
+        self.assertEqual(msgs[0]["role"], "system")
+        self.assertEqual(msgs[0]["content"], "System line.")
+        self.assertEqual(msgs[1]["role"], "user")
+        self.assertIn("Sample Query", msgs[1]["content"])
+        self.assertIn("Sample Text1", msgs[1]["content"])
+
 
 if __name__ == "__main__":
     unittest.main()
