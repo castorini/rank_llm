@@ -5,15 +5,18 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from dacite import from_dict
 
 from rank_llm.data import Request
-from rank_llm.rerank.pointwise.qwen3_pointwise_vllm import Qwen3PointwiseVLLM
+from rank_llm.rerank.pointwise.pointwise_vllm import PointwiseVLLM
 
 
 class _MockTokenizer:
-    """Minimal tokenizer: word-split documents; literal yes/no token ids."""
+    """Minimal tokenizer: word-split documents; yes/no token ids by string form."""
 
     def encode(self, text: str, add_special_tokens: bool = False, **kwargs):
-        if add_special_tokens is False and text.strip().lower() in ("yes", "no"):
-            return [101] if text.strip().lower() == "yes" else [102]
+        t = text.strip()
+        if t in ("yes", "Yes", "YES"):
+            return [101]
+        if t in ("no", "No", "NO"):
+            return [102]
         max_length = kwargs.get("max_length")
         toks = text.split()
         if max_length is not None:
@@ -55,7 +58,7 @@ def _sample_request() -> Request:
     )
 
 
-class TestQwen3PointwiseVLLM(unittest.IsolatedAsyncioTestCase):
+class TestPointwiseVLLM(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.mock_vllm = MagicMock()
         self.mock_vllm.get_tokenizer.return_value = _MockTokenizer()
@@ -68,12 +71,12 @@ class TestQwen3PointwiseVLLM(unittest.IsolatedAsyncioTestCase):
             )
         )
 
-    def _make_reranker(self) -> Qwen3PointwiseVLLM:
+    def _make_reranker(self) -> PointwiseVLLM:
         with patch(
-            "rank_llm.rerank.pointwise.qwen3_pointwise_vllm.VllmHandlerWithOpenAISDK",
+            "rank_llm.rerank.pointwise.pointwise_vllm.VllmHandlerWithOpenAISDK",
             return_value=self.mock_vllm,
         ):
-            return Qwen3PointwiseVLLM(
+            return PointwiseVLLM(
                 model="dummy-model",
                 base_url="http://127.0.0.1:8000/v1",
                 batch_size=8,
@@ -88,7 +91,7 @@ class TestQwen3PointwiseVLLM(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(out[0].candidates[1].docid, "d1")
 
     async def test_rerank_batch_async_concurrency_cap(self):
-        """Overlapping async work respects semaphore; more than cap can be in flight only up to max."""
+        """Overlapping async work respects semaphore."""
         in_flight = 0
         max_in_flight = 0
 

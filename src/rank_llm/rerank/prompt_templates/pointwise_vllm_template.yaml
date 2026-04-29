@@ -1,5 +1,5 @@
-# Pointwise yes/no relevance for Qwen-style chat models on an OpenAI-compatible
-# vLLM server (see Qwen3PointwiseVLLM: max_tokens=1 + logprobs for "yes"/"no").
+# Pointwise binary relevance for chat models on an OpenAI-compatible vLLM server
+# (PointwiseVLLM: max_tokens=1 + logprobs over yes/no token variants).
 method: "pointwise"
 system_message: >-
   Judge whether the Document meets the requirements based on the Query

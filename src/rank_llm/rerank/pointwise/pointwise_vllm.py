@@ -1,4 +1,4 @@
-"""Qwen3 (and similar) pointwise reranking via an OpenAI-compatible vLLM server."""
+"""Pointwise yes/no reranking via an OpenAI-compatible vLLM server (logprob scoring)."""
 
 from __future__ import annotations
 
@@ -14,22 +14,45 @@ from tqdm import tqdm
 from rank_llm.data import InferenceInvocation, Request, Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 from rank_llm.rerank.rankllm import PromptMode
-from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
+from rank_llm.rerank.vllm_handler_with_openai_sdk import (
+    POINTWISE_NO_LOGPROB_TOKEN_STRINGS,
+    POINTWISE_YES_LOGPROB_TOKEN_STRINGS,
+    VllmHandlerWithOpenAISDK,
+)
 
 logger = logging.getLogger(__name__)
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
-class Qwen3PointwiseVLLM(PointwiseRankLLM):
-    """
-    Pointwise relevance with a single ``yes``/``no`` output token and logprob-based
-    scores (DeepHone-style batch pointwise on vLLM).
+def _unique_token_ids_from_strings(tokenizer: Any, strings: tuple[str, ...]) -> list[int]:
+    """Token ids for constrained decoding; deduped, order preserved."""
+    seen: set[int] = set()
+    out: list[int] = []
+    for s in strings:
+        for tid in tokenizer.encode(s, add_special_tokens=False):
+            if tid not in seen:
+                seen.add(tid)
+                out.append(tid)
+    return out
 
-    Sync ``rerank_batch`` runs HTTP calls concurrently (up to ``batch_size`` per chunk).
-    Async ``rerank_batch_async`` uses a per-instance semaphore so concurrent
-    ``rerank_async`` / ``rerank_batch_async`` calls share one cap while still
-    overlapping in-flight requests up to that limit.
+
+class PointwiseVLLM(PointwiseRankLLM):
+    """
+    Pointwise relevance with a single-token yes/no style output and
+    logprob-based scores over an OpenAI-compatible vLLM HTTP API.
+
+    This is a generative pointwise judge (prompt + one constrained token), not
+    a small neural cross-encoder like MonoT5. Any chat LLM served with vLLM can
+    work if it follows the template and ``allowed_token_ids``; Qwen, Llama,
+    Mistral, etc. differ mainly by tokenizer and optional chat extras (e.g.
+    ``enable_thinking``).
+
+    Few-shot examples are not supported (``num_few_shot_examples`` is fixed at 0).
+
+    Sync ``rerank_batch`` runs HTTP calls concurrently per micro-batch.
+    Async ``rerank_batch_async`` uses a per-instance semaphore so overlapping
+    calls share one concurrency cap.
     """
 
     def __init__(
@@ -37,10 +60,8 @@ class Qwen3PointwiseVLLM(PointwiseRankLLM):
         model: str,
         base_url: str,
         prompt_mode: PromptMode | None = None,
-        prompt_template_path: str = (TEMPLATES / "qwen3_pointwise_vllm_template.yaml"),
+        prompt_template_path: str = (TEMPLATES / "pointwise_vllm_template.yaml"),
         context_size: int = 8192,
-        num_few_shot_examples: int = 0,
-        few_shot_file: str | None = None,
         batch_size: int = 32,
         max_concurrent_llm_calls: int | None = None,
         disable_thinking_extra_body: bool = True,
@@ -50,8 +71,8 @@ class Qwen3PointwiseVLLM(PointwiseRankLLM):
             context_size=context_size,
             prompt_mode=prompt_mode,
             prompt_template_path=prompt_template_path,
-            num_few_shot_examples=num_few_shot_examples,
-            few_shot_file=few_shot_file,
+            num_few_shot_examples=0,
+            few_shot_file=None,
             device="remote",
             batch_size=batch_size,
         )
@@ -60,12 +81,16 @@ class Qwen3PointwiseVLLM(PointwiseRankLLM):
         self._llm_concurrency_sem: asyncio.Semaphore | None = None
         self._max_concurrent = max_concurrent_llm_calls or max(batch_size, 1)
 
-        enc = self._tokenizer
-        self._yes_token_id = enc.encode("yes", add_special_tokens=False)[0]
-        self._no_token_id = enc.encode("no", add_special_tokens=False)[0]
+        yes_ids = _unique_token_ids_from_strings(
+            self._tokenizer, POINTWISE_YES_LOGPROB_TOKEN_STRINGS
+        )
+        no_ids = _unique_token_ids_from_strings(
+            self._tokenizer, POINTWISE_NO_LOGPROB_TOKEN_STRINGS
+        )
+        self._allowed_token_ids = list(dict.fromkeys(yes_ids + no_ids))
 
         self._score_extra_body: dict[str, Any] = {
-            "allowed_token_ids": [self._yes_token_id, self._no_token_id],
+            "allowed_token_ids": self._allowed_token_ids,
         }
         if disable_thinking_extra_body:
             self._score_extra_body["chat_template_kwargs"] = {"enable_thinking": False}
@@ -85,18 +110,12 @@ class Qwen3PointwiseVLLM(PointwiseRankLLM):
 
     def _probe_messages(self, result: Result) -> list[dict[str, str]]:
         """Messages matching ``generate_chat_messages`` layout with an empty document."""
-        few_shot_section = ""
-        if self._num_few_shot_examples > 0 and self._examples:
-            few_shot_section = self._inference_handler._generate_fewshot_prompt(
-                num_examples=self._num_few_shot_examples,
-                examples=self._examples,
-            )
         query = self._inference_handler._replace_number(result.query.text)
         body_empty = self._inference_handler._format_template(
             "body",
             {"query": query, "doc_content": ""},
         )
-        user_content = (few_shot_section + body_empty).replace("<unk>", "")
+        user_content = body_empty.replace("<unk>", "")
         messages: list[dict[str, str]] = []
         system_msg = self._inference_handler.template.get("system_message")
         if system_msg:
@@ -117,8 +136,8 @@ class Qwen3PointwiseVLLM(PointwiseRankLLM):
             index=index,
             max_doc_tokens=max_doc_tokens,
             tokenizer=self._tokenizer,
-            num_few_shot_examples=self._num_few_shot_examples,
-            fewshot_examples=self._examples,
+            num_few_shot_examples=0,
+            fewshot_examples=[],
         )
         n_tok = self._input_token_count(messages)
         if n_tok > self._context_size - reserved_for_output:
@@ -158,7 +177,7 @@ class Qwen3PointwiseVLLM(PointwiseRankLLM):
         self, prompt: str | list[dict[str, str]], **kwargs: Any
     ) -> tuple[str, int, float]:
         if not isinstance(prompt, list):
-            raise TypeError("Qwen3PointwiseVLLM expects chat messages (list of dicts).")
+            raise TypeError("PointwiseVLLM expects chat messages (list of dicts).")
 
         async def _one() -> tuple[str, int, float, dict[str, Any]]:
             return await self._score_one_async(prompt, use_sem=False)
@@ -173,7 +192,7 @@ class Qwen3PointwiseVLLM(PointwiseRankLLM):
     ) -> tuple[list[str], list[int], list[float]]:
         messages_list = [p for p in prompts if isinstance(p, list)]
         if len(messages_list) != len(prompts):
-            raise TypeError("Qwen3PointwiseVLLM batch expects chat message lists.")
+            raise TypeError("PointwiseVLLM batch expects chat message lists.")
 
         async def _all() -> list[tuple[str, int, float, dict[str, Any]]]:
             return await asyncio.gather(

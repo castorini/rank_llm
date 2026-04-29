@@ -17,6 +17,11 @@ if TYPE_CHECKING:
 else:
     PreTrainedTokenizerBase = Any
 
+# First-completion-token logprob bucketing for binary pointwise scoring.
+# Match stripped API token strings (vLLM may return different casings).
+POINTWISE_YES_LOGPROB_TOKEN_STRINGS: tuple[str, ...] = ("yes", "Yes", "YES")
+POINTWISE_NO_LOGPROB_TOKEN_STRINGS: tuple[str, ...] = ("no", "No", "NO")
+
 
 class VllmHandlerWithOpenAISDK:
     """
@@ -84,14 +89,14 @@ class VllmHandlerWithOpenAISDK:
 
         if top_logprobs:
             for e in top_logprobs:
-                tok = (e.get("token") or "").strip().lower()
+                tok = (e.get("token") or "").strip()
                 lp = e.get("logprob")
                 if lp is None:
                     continue
                 prob = math.exp(float(lp))
-                if tok == "yes":
+                if tok in POINTWISE_YES_LOGPROB_TOKEN_STRINGS:
                     total_yes_prob += prob
-                elif tok == "no":
+                elif tok in POINTWISE_NO_LOGPROB_TOKEN_STRINGS:
                     total_no_prob += prob
 
         if total_yes_prob == 0.0 and total_no_prob == 0.0:

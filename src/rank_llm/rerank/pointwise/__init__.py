@@ -9,10 +9,10 @@ except ImportError:
     MonoT5 = None
 
 try:
-    from .qwen3_pointwise_vllm import Qwen3PointwiseVLLM
+    from .pointwise_vllm import PointwiseVLLM
 except ImportError:
-    Qwen3PointwiseVLLM = None
+    PointwiseVLLM = None
 
 __all__ = ["MonoT5", "MonoELECTRA"]
-if Qwen3PointwiseVLLM is not None:
-    __all__.append("Qwen3PointwiseVLLM")
+if PointwiseVLLM is not None:
+    __all__.append("PointwiseVLLM")

@@ -146,6 +146,14 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
         score, _, _ = VllmHandlerWithOpenAISDK.score_from_top_logprobs(top)
         self.assertGreater(score, 0.5)
 
+    def test_score_from_top_logprobs_mixed_case(self):
+        top = [
+            {"token": "YES", "logprob": -0.2},
+            {"token": "No", "logprob": -1.5},
+        ]
+        score, _, _ = VllmHandlerWithOpenAISDK.score_from_top_logprobs(top)
+        self.assertGreater(score, 0.5)
+
     def test_chat_completion_score_async(self):
         mock_lp = MagicMock()
         mock_lp.token = "yes"

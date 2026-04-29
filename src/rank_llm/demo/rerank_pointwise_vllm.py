@@ -1,16 +1,16 @@
 """
-Demo: Qwen3 pointwise reranking against a local OpenAI-compatible vLLM server.
+Demo: generative pointwise reranking (yes/no + logprobs) against a local
+OpenAI-compatible vLLM server.
 
 Prerequisites:
-  1. Install extras: pip install -e '.[vllm]'  (or at least openai + transformers).
-  2. Serve a Qwen3 chat model with vLLM, e.g.:
-       vllm serve Qwen/Qwen3-0.6B --port 8000
-     (Adjust model id and port; pass the same to this script.)
+  1. pip install -e '.[vllm]'  (or at least openai + transformers).
+  2. Serve a chat model with vLLM, e.g.:
+       vllm serve meta-llama/Llama-3.2-1B-Instruct --port 8000
 
 Usage:
-  .venv/bin/python src/rank_llm/demo/rerank_qwen3_pointwise_vllm.py \\
+  python src/rank_llm/demo/rerank_pointwise_vllm.py \\
       --base-url http://127.0.0.1:8000/v1 \\
-      --model Qwen/Qwen3-0.6B
+      --model meta-llama/Llama-3.2-1B-Instruct
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ if repo_src not in sys.path:
 
 from rank_llm.data import Candidate, Query, Request
 from rank_llm.rerank import Reranker
-from rank_llm.rerank.pointwise.qwen3_pointwise_vllm import Qwen3PointwiseVLLM
+from rank_llm.rerank.pointwise.pointwise_vllm import PointwiseVLLM
 
 
 def _demo_requests() -> list[Request]:
@@ -71,7 +71,7 @@ def main() -> None:
     p.add_argument("--max-concurrent", type=int, default=None)
     args = p.parse_args()
 
-    coordinator = Qwen3PointwiseVLLM(
+    coordinator = PointwiseVLLM(
         model=args.model or "placeholder",
         base_url=args.base_url,
         batch_size=args.batch_size,
