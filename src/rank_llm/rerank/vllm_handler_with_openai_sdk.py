@@ -18,9 +18,40 @@ else:
     PreTrainedTokenizerBase = Any
 
 # First-completion-token logprob bucketing for binary pointwise scoring.
-# Match stripped API token strings (vLLM may return different casings).
+# ``token`` strings from the API are matched after ``str.strip()`` so values
+# like ``"yes "`` or ``" no"`` still map to the same class as ``"yes"`` / ``"no"``.
 POINTWISE_YES_LOGPROB_TOKEN_STRINGS: tuple[str, ...] = ("yes", "Yes", "YES")
 POINTWISE_NO_LOGPROB_TOKEN_STRINGS: tuple[str, ...] = ("no", "No", "NO")
+
+POINTWISE_YES_LOGPROB_STRIPPED: frozenset[str] = frozenset(
+    {s.strip() for s in POINTWISE_YES_LOGPROB_TOKEN_STRINGS}
+)
+POINTWISE_NO_LOGPROB_STRIPPED: frozenset[str] = frozenset(
+    {s.strip() for s in POINTWISE_NO_LOGPROB_TOKEN_STRINGS}
+)
+
+# Extra spellings tried for ``allowed_token_ids`` only (each must be one token).
+# Logprob bucketing uses stripped strings, so ``"yes "`` in API responses still
+# scores as yes; if the tokenizer maps ``"yes "`` to a *different* single id
+# than ``"yes"``, include that spelling here so both can be sampled.
+POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS: tuple[str, ...] = (
+    *POINTWISE_YES_LOGPROB_TOKEN_STRINGS,
+    "yes ",
+    "Yes ",
+    "YES ",
+    " yes",
+    " Yes",
+    " YES",
+)
+POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS: tuple[str, ...] = (
+    *POINTWISE_NO_LOGPROB_TOKEN_STRINGS,
+    "no ",
+    "No ",
+    "NO ",
+    " no",
+    " No",
+    " NO",
+)
 
 
 class VllmHandlerWithOpenAISDK:
@@ -94,9 +125,9 @@ class VllmHandlerWithOpenAISDK:
                 if lp is None:
                     continue
                 prob = math.exp(float(lp))
-                if tok in POINTWISE_YES_LOGPROB_TOKEN_STRINGS:
+                if tok in POINTWISE_YES_LOGPROB_STRIPPED:
                     total_yes_prob += prob
-                elif tok in POINTWISE_NO_LOGPROB_TOKEN_STRINGS:
+                elif tok in POINTWISE_NO_LOGPROB_STRIPPED:
                     total_no_prob += prob
 
         if total_yes_prob == 0.0 and total_no_prob == 0.0:

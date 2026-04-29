@@ -15,8 +15,8 @@ from rank_llm.data import InferenceInvocation, Request, Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler_with_openai_sdk import (
-    POINTWISE_NO_LOGPROB_TOKEN_STRINGS,
-    POINTWISE_YES_LOGPROB_TOKEN_STRINGS,
+    POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS,
+    POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS,
     VllmHandlerWithOpenAISDK,
 )
 
@@ -25,17 +25,25 @@ logger = logging.getLogger(__name__)
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
-def _unique_token_ids_from_strings(
+def _single_token_ids_from_strings(
     tokenizer: Any, strings: tuple[str, ...]
 ) -> list[int]:
-    """Token ids for constrained decoding; deduped, order preserved."""
+    """Token ids for ``allowed_token_ids`` when ``max_tokens=1``.
+
+    Only ids where ``encode(s)`` returns exactly one token are included.
+    Multi-piece spellings of ``yes``/``no`` are skipped so the server cannot
+    sample a continuation piece that logprob scoring would not recognize.
+    """
     seen: set[int] = set()
     out: list[int] = []
     for s in strings:
-        for tid in tokenizer.encode(s, add_special_tokens=False):
-            if tid not in seen:
-                seen.add(tid)
-                out.append(tid)
+        ids = tokenizer.encode(s, add_special_tokens=False)
+        if len(ids) != 1:
+            continue
+        tid = ids[0]
+        if tid not in seen:
+            seen.add(tid)
+            out.append(tid)
     return out
 
 
@@ -83,13 +91,19 @@ class PointwiseVLLM(PointwiseRankLLM):
         self._llm_concurrency_sem: asyncio.Semaphore | None = None
         self._max_concurrent = max_concurrent_llm_calls or max(batch_size, 1)
 
-        yes_ids = _unique_token_ids_from_strings(
-            self._tokenizer, POINTWISE_YES_LOGPROB_TOKEN_STRINGS
+        yes_ids = _single_token_ids_from_strings(
+            self._tokenizer, POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS
         )
-        no_ids = _unique_token_ids_from_strings(
-            self._tokenizer, POINTWISE_NO_LOGPROB_TOKEN_STRINGS
+        no_ids = _single_token_ids_from_strings(
+            self._tokenizer, POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS
         )
         self._allowed_token_ids = list(dict.fromkeys(yes_ids + no_ids))
+        if not self._allowed_token_ids:
+            raise ValueError(
+                "PointwiseVLLM: no single-token yes/no ids found for this tokenizer. "
+                "Extend POINTWISE_*_LOGPROB_TOKEN_STRINGS or use a model whose tokenizer "
+                "maps at least one yes/no spelling to one token."
+            )
 
         self._score_extra_body: dict[str, Any] = {
             "allowed_token_ids": self._allowed_token_ids,
