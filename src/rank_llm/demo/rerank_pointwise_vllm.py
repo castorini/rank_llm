@@ -4,13 +4,27 @@ OpenAI-compatible vLLM server.
 
 Prerequisites:
   1. pip install -e '.[vllm]'  (or at least openai + transformers).
-  2. Serve a chat model with vLLM, e.g.:
-       vllm serve meta-llama/Llama-3.2-1B-Instruct --port 8000
+  2. Start vLLM with an OpenAI-compatible HTTP API, for example (Qwen reranker
+     model, long context, prompt token details for usage logging):
+
+       RANK_MODEL_ID="Qwen/Qwen3-Reranker-0.6B"
+       RANK_PORT=8765
+       RANK_VLLM_LOG=/tmp/vllm_rerank.log   # or any writable path
+       CUDA_VISIBLE_DEVICES=0 vllm serve "$RANK_MODEL_ID" \\
+         --port "$RANK_PORT" \\
+         --dtype auto \\
+         --gpu-memory-utilization 0.9 \\
+         --enable-prompt-tokens-details \\
+         --enable-prefix-caching \\
+         --max-model-len 32768 \\
+         >> "$RANK_VLLM_LOG" 2>&1 &
+
+     PointwiseVLLM talks to ``http://127.0.0.1:${RANK_PORT}/v1`` by default.
 
 Usage:
   python src/rank_llm/demo/rerank_pointwise_vllm.py \\
-      --base-url http://127.0.0.1:8000/v1 \\
-      --model meta-llama/Llama-3.2-1B-Instruct
+      --base-url http://127.0.0.1:8765/v1 \\
+      --model Qwen/Qwen3-Reranker-0.6B
 """
 
 from __future__ import annotations
@@ -61,20 +75,20 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument(
         "--base-url",
-        default=os.environ.get("VLLM_BASE_URL", "http://127.0.0.1:8000/v1"),
-        help="OpenAI-compatible base URL (vLLM default ends with /v1).",
+        default=os.environ.get("VLLM_BASE_URL", "http://127.0.0.1:8765/v1"),
+        help="OpenAI-compatible base URL (must end with /v1; match vLLM --port).",
     )
     p.add_argument(
         "--model",
-        default=os.environ.get("VLLM_MODEL", None),
-        help="Model id as registered on the server (default: first from /v1/models).",
+        default=os.environ.get("VLLM_MODEL", "Qwen/Qwen3-Reranker-0.6B"),
+        help="Model id as registered on the server (default: Qwen reranker above).",
     )
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--max-concurrent", type=int, default=None)
     args = p.parse_args()
 
     coordinator = PointwiseVLLM(
-        model=args.model or "placeholder",
+        model=args.model,
         base_url=args.base_url,
         batch_size=args.batch_size,
         max_concurrent_llm_calls=args.max_concurrent,
