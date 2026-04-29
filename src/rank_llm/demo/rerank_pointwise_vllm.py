@@ -119,6 +119,7 @@ def main() -> None:
         _print_eval(requests, qrels)
 
     # --- Rerank ---
+
     coordinator = PointwiseVLLM(
         model=args.model,
         base_url=args.base_url,
