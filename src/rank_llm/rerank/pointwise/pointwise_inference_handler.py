@@ -15,6 +15,8 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         super().__init__(template)
 
     def _validate_template(self, template: dict[str, str], strict: bool = False):
+        is_reranker = template.get("message_roles") == "reranker"
+
         TEMPLATE_SECTIONS = {
             "method": TemplateSectionConfig(
                 required=True,
@@ -27,8 +29,22 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 allowed_placeholders=set(),
             ),
             "body": TemplateSectionConfig(
-                required=True,
-                required_placeholders={"query", "doc_content"},
+                required=not is_reranker,
+                required_placeholders=(
+                    set() if is_reranker else {"query", "doc_content"}
+                ),
+                allowed_placeholders=(
+                    {"instruction", "query", "doc_content"} if is_reranker else set()
+                ),
+            ),
+            "message_roles": TemplateSectionConfig(
+                required=False,
+                required_placeholders=set(),
+                allowed_placeholders=set(),
+            ),
+            "instruction": TemplateSectionConfig(
+                required=is_reranker,
+                required_placeholders=set(),
                 allowed_placeholders=set(),
             ),
         }
@@ -138,7 +154,13 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
     def generate_chat_messages(
         self, result: Result, **kwargs: Any
     ) -> list[dict[str, str]]:
-        """Build OpenAI-style chat messages (system + user) for pointwise VLLM backends."""
+        """Build chat messages for pointwise VLLM backends.
+
+        When ``message_roles`` is ``"reranker"`` in the template, emits separate
+        ``query`` / ``document`` role messages expected by models like
+        Qwen3-Reranker whose chat template maps those roles to named fields.
+        Otherwise falls back to the standard ``system`` + ``user`` layout.
+        """
         try:
             index = kwargs["index"]
             max_doc_tokens = kwargs["max_doc_tokens"]
@@ -148,6 +170,23 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         except KeyError as err:
             raise ValueError(f"Missing required parameter: {err}") from err
 
+        query = self._replace_number(result.query.text)
+        doc_raw = self._convert_doc_to_prompt_content(
+            result.candidates[index].doc, max_length=max_doc_tokens
+        )
+        doc_tokens = tokenizer.encode(
+            doc_raw, truncation=True, max_length=max_doc_tokens
+        )
+        doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
+
+        if self.template.get("message_roles") == "reranker":
+            instruction = self.template.get("instruction", "").strip()
+            return [
+                {"role": "system", "content": instruction},
+                {"role": "query", "content": query},
+                {"role": "document", "content": doc},
+            ]
+
         user_parts: list[str] = []
         if num_fewshot_examples > 0 and fewshot_examples:
             user_parts.append(
@@ -155,14 +194,9 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                     num_examples=num_fewshot_examples, examples=fewshot_examples
                 )
             )
-        user_parts.append(
-            self._generate_body(
-                result=result,
-                index=index,
-                max_doc_tokens=max_doc_tokens,
-                tokenizer=tokenizer,
-            )
-        )
+        fmt_values = {"query": query, "doc_content": doc}
+        body_text = self._format_template(template_key="body", fmt_values=fmt_values)
+        user_parts.append(body_text)
         user_content = "".join(user_parts).replace("<unk>", "")
 
         messages: list[dict[str, str]] = []

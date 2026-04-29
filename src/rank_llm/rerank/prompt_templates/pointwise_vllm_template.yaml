@@ -1,11 +1,19 @@
 # Pointwise binary relevance for chat models on an OpenAI-compatible vLLM server
 # (PointwiseVLLM: max_tokens=1 + logprobs over yes/no token variants).
+#
+# message_roles: "reranker" emits separate query / document role messages so that
+# models whose chat template expects {role: "query"} / {role: "document"} (e.g.
+# Qwen3-Reranker) receive the correct format.  The model's chat template adds
+# its own system prompt, so only the task *instruction* is needed here.
+#
+# When message_roles is absent or set to "default", the handler falls back to
+# the standard system + user layout using system_message / body.
 method: "pointwise"
-system_message: >-
-  Judge whether the Document meets the requirements based on the Query
-  and the Instruction provided. Note that the answer can only be "yes" or "no".
+message_roles: "reranker"
+instruction: >-
+  Given a web search query, retrieve relevant passages that answer the query
 body: |
-  Instruction: Given a web search query, retrieve relevant passages that answer the query.
+  Instruction: {instruction}
 
   Query: {query}
 

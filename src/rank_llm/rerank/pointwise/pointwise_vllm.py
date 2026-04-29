@@ -113,6 +113,17 @@ class PointwiseVLLM(PointwiseRankLLM):
     def _probe_messages(self, result: Result) -> list[dict[str, str]]:
         """Messages matching ``generate_chat_messages`` layout with an empty document."""
         query = self._inference_handler._replace_number(result.query.text)
+
+        if self._inference_handler.template.get("message_roles") == "reranker":
+            instruction = self._inference_handler.template.get(
+                "instruction", ""
+            ).strip()
+            return [
+                {"role": "system", "content": instruction},
+                {"role": "query", "content": query},
+                {"role": "document", "content": ""},
+            ]
+
         body_empty = self._inference_handler._format_template(
             "body",
             {"query": query, "doc_content": ""},
