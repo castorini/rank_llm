@@ -113,9 +113,9 @@ def main() -> None:
 
     # --- Retrieval-only evaluation ---
     if qrels:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Retrieval metrics  (BM25, k={args.k})")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         _print_eval(requests, qrels)
 
     # --- Rerank ---
@@ -136,9 +136,9 @@ def main() -> None:
 
     # --- Reranking evaluation ---
     if qrels:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Reranking metrics  ({args.model})")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         _print_eval(sync_out, qrels)
 
     async def async_demo():
