@@ -25,7 +25,9 @@ logger = logging.getLogger(__name__)
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
-def _unique_token_ids_from_strings(tokenizer: Any, strings: tuple[str, ...]) -> list[int]:
+def _unique_token_ids_from_strings(
+    tokenizer: Any, strings: tuple[str, ...]
+) -> list[int]:
     """Token ids for constrained decoding; deduped, order preserved."""
     seen: set[int] = set()
     out: list[int] = []
@@ -123,7 +125,9 @@ class PointwiseVLLM(PointwiseRankLLM):
         messages.append({"role": "user", "content": user_content})
         return messages
 
-    def create_prompt(self, result: Result, index: int) -> tuple[list[dict[str, str]], int]:
+    def create_prompt(
+        self, result: Result, index: int
+    ) -> tuple[list[dict[str, str]], int]:
         reserved_for_output = 8
         overhead = self._input_token_count(self._probe_messages(result))
         max_doc_tokens = max(
@@ -248,7 +252,9 @@ class PointwiseVLLM(PointwiseRankLLM):
                 )
 
                 for i, score in enumerate(scores):
-                    qn, cn = self.get_query_and_candidate_index(rerank_results, index + i)
+                    qn, cn = self.get_query_and_candidate_index(
+                        rerank_results, index + i
+                    )
                     rerank_results[qn].candidates[cn].score = score
                     if populate_invocations_history:
                         rerank_results[qn].invocations_history.append(
@@ -305,13 +311,18 @@ class PointwiseVLLM(PointwiseRankLLM):
 
         async def score_one(
             qi: int, ci: int, msgs: list[dict[str, str]], n_tok: int
-        ) -> tuple[int, int, list[dict[str, str]], int, str, int, float, dict[str, Any]]:
+        ) -> tuple[
+            int, int, list[dict[str, str]], int, str, int, float, dict[str, Any]
+        ]:
             async with sem:
-                text, out_tok, score, usage = (
-                    await self._vllm.chat_completion_score_async(
-                        msgs,
-                        extra_body=self._score_extra_body,
-                    )
+                (
+                    text,
+                    out_tok,
+                    score,
+                    usage,
+                ) = await self._vllm.chat_completion_score_async(
+                    msgs,
+                    extra_body=self._score_extra_body,
                 )
             return qi, ci, msgs, n_tok, text, out_tok, score, usage
 
@@ -323,9 +334,7 @@ class PointwiseVLLM(PointwiseRankLLM):
             rerank_results[qi].candidates[ci].score = score
             if populate_invocations_history:
                 in_tok = int(
-                    usage.get("prompt_tokens")
-                    or usage.get("input_tokens")
-                    or n_tok
+                    usage.get("prompt_tokens") or usage.get("input_tokens") or n_tok
                 )
                 rerank_results[qi].invocations_history.append(
                     InferenceInvocation(

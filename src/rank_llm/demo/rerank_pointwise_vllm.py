@@ -38,7 +38,9 @@ def _demo_requests() -> list[Request]:
                 Candidate(
                     docid="1",
                     score=0.5,
-                    doc={"contents": "Paris is the capital and largest city of France."},
+                    doc={
+                        "contents": "Paris is the capital and largest city of France."
+                    },
                 ),
                 Candidate(
                     docid="2",
