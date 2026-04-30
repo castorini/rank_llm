@@ -18,8 +18,9 @@ Usage (from repo root, after indexes are available):
 
   python src/rank_llm/demo/rerank_jina.py \\
       --model jinaai/jina-reranker-v3 \\
-      --batch-size 32 \\
-      --max-passage-words 256 \\
+      --window-size 32 \\
+      --max-passage-words 512 \\
+      --batch-size 2 \\
       --device cuda
 """
 
@@ -84,11 +85,12 @@ def main() -> None:
         default="jinaai/jina-reranker-v3",
         help="HuggingFace model ID (default: jinaai/jina-reranker-v3).",
     )
-    p.add_argument("--batch-size", type=int, default=64)
+    p.add_argument("--window-size", type=int, default=32)
+    p.add_argument("--batch-size", type=int, default=2)
     p.add_argument(
         "--max-passage-words",
         type=int,
-        default=None,
+        default=512,
         help="Truncate each passage to this many words. "
         "When unset, derived from context_size / num_docs.",
     )
@@ -115,6 +117,7 @@ def main() -> None:
         model=args.model,
         context_size=args.context_size,
         device=args.device,
+        window_size=args.window_size,
         batch_size=args.batch_size,
         dtype=args.dtype,
         max_passage_words=args.max_passage_words,

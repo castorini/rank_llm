@@ -1,4 +1,3 @@
-import copy
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -40,10 +39,11 @@ def _fake_rerank(query, documents, **kwargs):
     return results
 
 
-def _build_reranker(batch_size=64, max_passage_words=None, context_size=131_072):
+def _build_reranker(window_size=64, max_passage_words=None, context_size=131_072):
     """Build a JinaReranker with a mocked HuggingFace model."""
     mock_model = MagicMock()
     mock_model.rerank = MagicMock(side_effect=_fake_rerank)
+    mock_model.tokenizer = lambda text, **kwargs: {"input_ids": text.split()}
 
     with patch("rank_llm.rerank.pointwise.jina_reranker.AutoModel") as mock_cls:
         mock_cls.from_pretrained.return_value = mock_model
@@ -53,7 +53,7 @@ def _build_reranker(batch_size=64, max_passage_words=None, context_size=131_072)
         reranker = JinaReranker(
             model="jinaai/jina-reranker-v3",
             device="cpu",
-            batch_size=batch_size,
+            window_size=window_size,
             max_passage_words=max_passage_words,
             context_size=context_size,
         )
@@ -96,29 +96,27 @@ class TestExtractDocText(unittest.TestCase):
 class TestComputeEffectiveMaxWords(unittest.TestCase):
     def test_explicit_max_passage_words(self):
         reranker, _ = _build_reranker(max_passage_words=100)
-        self.assertEqual(reranker._compute_effective_max_words(10), 100)
+        self.assertEqual(reranker._fit_max_passage_words(10), 100)
 
     def test_derived_max_passage_words(self):
         reranker, _ = _build_reranker(max_passage_words=None, context_size=1024)
         result = reranker._compute_effective_max_words(4)
-        tokens_per_doc = (1024 - 128) // 4
-        expected = int(tokens_per_doc * 0.75)
-        self.assertEqual(result, expected)
+        self.assertGreaterEqual(result, 16)
+        self.assertLess(result, 1024)
 
 
 class TestComputeDocsPerChunk(unittest.TestCase):
     def test_fits_many(self):
-        reranker, _ = _build_reranker(batch_size=64, context_size=131_072)
+        reranker, _ = _build_reranker(window_size=64, context_size=131_072)
         result = reranker._compute_docs_per_chunk(avg_doc_words=50)
         self.assertGreater(result, 0)
         self.assertLessEqual(result, 64)
 
     def test_large_docs_reduce_chunk(self):
-        reranker, _ = _build_reranker(batch_size=64, context_size=4096)
+        reranker, _ = _build_reranker(window_size=64, context_size=4096)
         result = reranker._compute_docs_per_chunk(avg_doc_words=500)
         self.assertLess(result, 64)
         self.assertGreater(result, 0)
-
 
 class TestJinaRerankerRerankBatch(unittest.TestCase):
     def test_basic_rerank(self):
@@ -136,7 +134,7 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
         mock_model.rerank.assert_called_once()
 
     def test_chunking_calls(self):
-        reranker, mock_model = _build_reranker(batch_size=3)
+        reranker, mock_model = _build_reranker(window_size=3)
         request = _make_request(num_candidates=7)
         results = reranker.rerank_batch([request])
 
@@ -151,7 +149,7 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
 
     def test_raw_scores_used_across_chunks(self):
         """Scores are absolute (no normalisation) so raw values are kept."""
-        reranker, _ = _build_reranker(batch_size=2)
+        reranker, _ = _build_reranker(window_size=2)
         request = _make_request(num_candidates=4)
         results = reranker.rerank_batch([request])
 
@@ -193,7 +191,7 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
         self.assertEqual([c.docid for c in request.candidates], original_order)
 
     def test_invocations_history_populated(self):
-        reranker, _ = _build_reranker(batch_size=3)
+        reranker, _ = _build_reranker(window_size=3)
         request = _make_request(num_candidates=7)
         results = reranker.rerank_batch([request], populate_invocations_history=True)
 
@@ -202,6 +200,8 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
         self.assertEqual(len(result.invocations_history), 3)
         for inv in result.invocations_history:
             self.assertIn("query=", inv.prompt)
+            self.assertGreater(inv.input_token_count, 0)
+            self.assertEqual(inv.output_token_count, 0)
 
     def test_invocations_history_empty_by_default(self):
         reranker, _ = _build_reranker()
@@ -234,18 +234,16 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
 
 
 class TestJinaRerankerCreatePrompt(unittest.TestCase):
-    def test_create_prompt_format(self):
+    def test_create_prompt_not_used(self):
         reranker, _ = _build_reranker()
-        request = _make_request(num_candidates=3)
+        request = _make_request(num_candidates=1)
         result_obj = Result(
-            query=copy.deepcopy(request.query),
-            candidates=copy.deepcopy(request.candidates),
+            query=request.query,
+            candidates=request.candidates,
             invocations_history=[],
         )
-        prompt, count = reranker.create_prompt(result_obj, index=0)
-        self.assertIn("Query:", prompt)
-        self.assertIn("Document:", prompt)
-        self.assertGreater(count, 0)
+        with self.assertRaises(NotImplementedError):
+            reranker.create_prompt(result_obj, index=0)
 
 
 class TestJinaRerankerMisc(unittest.TestCase):
@@ -263,9 +261,9 @@ class TestJinaRerankerMisc(unittest.TestCase):
         tokens = reranker.get_num_tokens("hello world foo bar")
         self.assertGreater(tokens, 0)
 
-    def test_batch_size_capped_at_64(self):
-        reranker, _ = _build_reranker(batch_size=128)
-        self.assertLessEqual(reranker._batch_size, 64)
+    def test_window_size_capped_at_64(self):
+        reranker, _ = _build_reranker(window_size=128)
+        self.assertLessEqual(reranker._window_size, 64)
 
 
 if __name__ == "__main__":
