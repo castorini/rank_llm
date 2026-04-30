@@ -591,6 +591,44 @@ class Reranker:
                 batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
+        elif "jina-reranker" in model_path.lower():
+            from rank_llm.rerank.pointwise.jina_reranker import JinaReranker
+
+            print(f"Loading {model_path} ...")
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    (TEMPLATES / "jina_template.yaml"),
+                ),
+                ("context_size", 131_072),
+                ("device", "cuda"),
+                ("window_size", 64),
+                ("batch_size", 1),
+                ("dtype", "auto"),
+                ("max_passage_words", None),
+            ]
+            (
+                prompt_template_path,
+                context_size,
+                device,
+                window_size,
+                batch_size,
+                dtype,
+                max_passage_words,
+            ) = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = JinaReranker(
+                model=model_path,
+                context_size=context_size,
+                prompt_template_path=prompt_template_path,
+                device=device,
+                window_size=window_size,
+                batch_size=batch_size,
+                dtype=dtype,
+                max_passage_words=max_passage_words,
+            )
+            print(f"Completed loading {model_path}")
         elif model_path in ["unspecified", "rank_random", "rank_identity"]:
             # NULL reranker
             model_coordinator = None
