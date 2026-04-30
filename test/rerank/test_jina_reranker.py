@@ -1,5 +1,4 @@
 import copy
-import math
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -214,9 +213,7 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
     def test_invocations_history_populated(self):
         reranker, _ = _build_reranker(batch_size=3)
         request = _make_request(num_candidates=7)
-        results = reranker.rerank_batch(
-            [request], populate_invocations_history=True
-        )
+        results = reranker.rerank_batch([request], populate_invocations_history=True)
 
         result = results[0]
         # 7 docs / batch 3 -> 3 chunks -> 3 invocations

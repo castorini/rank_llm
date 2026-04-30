@@ -7,7 +7,6 @@ from typing import Any
 
 from ftfy import fix_text
 from tqdm import tqdm
-
 from transformers import AutoModel
 
 from rank_llm.data import InferenceInvocation, Request, Result
@@ -184,8 +183,8 @@ class JinaReranker(PointwiseRankLLM):
                 ]
 
                 if self._max_passage_words is not None:
-                    avg_words = (
-                        sum(len(t.split()) for t in doc_texts) / max(len(doc_texts), 1)
+                    avg_words = sum(len(t.split()) for t in doc_texts) / max(
+                        len(doc_texts), 1
                     )
                     chunk_size = self._compute_docs_per_chunk(int(avg_words))
                 else:
@@ -247,14 +246,12 @@ class JinaReranker(PointwiseRankLLM):
         prompts: list[str],
     ) -> tuple[list[str], list[int], list[float]]:
         raise NotImplementedError(
-            "JinaReranker uses model.rerank() directly; "
-            "see rerank_batch() instead."
+            "JinaReranker uses model.rerank() directly; see rerank_batch() instead."
         )
 
     def run_llm(self, prompt: str) -> tuple[str, int, float]:
         raise NotImplementedError(
-            "JinaReranker uses model.rerank() directly; "
-            "see rerank_batch() instead."
+            "JinaReranker uses model.rerank() directly; see rerank_batch() instead."
         )
 
     def create_prompt(self, result: Result, index: int) -> tuple[str, int]:
