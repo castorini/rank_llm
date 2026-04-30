@@ -93,36 +93,6 @@ class TestExtractDocText(unittest.TestCase):
         self.assertEqual(result, "a b c d e")
 
 
-class TestNormaliseScores(unittest.TestCase):
-    def test_normalise_basic(self):
-        from rank_llm.rerank.pointwise.jina_reranker import JinaReranker
-
-        scores = [0.2, 0.5, 0.8]
-        normed = JinaReranker._normalise_scores(scores)
-        self.assertAlmostEqual(normed[0], 0.0)
-        self.assertAlmostEqual(normed[1], 0.5)
-        self.assertAlmostEqual(normed[2], 1.0)
-
-    def test_normalise_equal_scores(self):
-        from rank_llm.rerank.pointwise.jina_reranker import JinaReranker
-
-        scores = [0.5, 0.5, 0.5]
-        normed = JinaReranker._normalise_scores(scores)
-        for s in normed:
-            self.assertAlmostEqual(s, 0.5)
-
-    def test_normalise_empty(self):
-        from rank_llm.rerank.pointwise.jina_reranker import JinaReranker
-
-        self.assertEqual(JinaReranker._normalise_scores([]), [])
-
-    def test_normalise_single(self):
-        from rank_llm.rerank.pointwise.jina_reranker import JinaReranker
-
-        normed = JinaReranker._normalise_scores([0.7])
-        self.assertAlmostEqual(normed[0], 0.5)
-
-
 class TestComputeEffectiveMaxWords(unittest.TestCase):
     def test_explicit_max_passage_words(self):
         reranker, _ = _build_reranker(max_passage_words=100)
@@ -165,7 +135,7 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
             )
         mock_model.rerank.assert_called_once()
 
-    def test_chunking_with_normalisation(self):
+    def test_chunking_calls(self):
         reranker, mock_model = _build_reranker(batch_size=3)
         request = _make_request(num_candidates=7)
         results = reranker.rerank_batch([request])
@@ -179,16 +149,28 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
         # 7 docs / batch_size 3 -> 3 calls (3 + 3 + 1)
         self.assertEqual(mock_model.rerank.call_count, 3)
 
-    def test_normalisation_across_chunks(self):
-        """When chunking occurs, scores are normalised per-chunk to [0, 1]."""
+    def test_raw_scores_used_across_chunks(self):
+        """Scores are absolute (no normalisation) so raw values are kept."""
         reranker, _ = _build_reranker(batch_size=2)
         request = _make_request(num_candidates=4)
         results = reranker.rerank_batch([request])
 
         result = results[0]
-        for c in result.candidates:
-            self.assertGreaterEqual(c.score, 0.0)
-            self.assertLessEqual(c.score, 1.0)
+        scores = [c.score for c in result.candidates]
+        # _fake_rerank gives 1/1, 1/2 for first chunk and 1/1, 1/2 for second
+        # Raw scores should be preserved: two candidates at 1.0 and two at 0.5
+        self.assertAlmostEqual(scores[0], 1.0)
+        self.assertAlmostEqual(scores[1], 1.0)
+        self.assertAlmostEqual(scores[2], 0.5)
+        self.assertAlmostEqual(scores[3], 0.5)
+
+    def test_scores_are_native_float(self):
+        """Scores must be Python float, not numpy.float32, for JSON serialization."""
+        reranker, _ = _build_reranker()
+        request = _make_request(num_candidates=3)
+        results = reranker.rerank_batch([request])
+        for c in results[0].candidates:
+            self.assertIsInstance(c.score, float)
 
     def test_multiple_requests(self):
         reranker, mock_model = _build_reranker()

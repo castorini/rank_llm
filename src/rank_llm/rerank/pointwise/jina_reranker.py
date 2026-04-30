@@ -1,6 +1,5 @@
 import copy
 import logging
-import math
 from functools import cmp_to_key
 from importlib.resources import files
 from typing import Any
@@ -56,9 +55,9 @@ class JinaReranker(PointwiseRankLLM):
     per-document relevance scores (like pointwise) but benefits from
     cross-document attention within a single forward pass (like listwise).
 
-    When a query has more candidates than fit in one call, candidates are
-    chunked and scores are min-max normalised within each chunk so that
-    cross-chunk scores are comparable.
+    When a query has more candidates than fit in one call the candidates are
+    chunked.  Jina scores are absolute (not relative to the batch) so raw
+    scores are used directly without any cross-chunk normalisation.
 
     Args:
         model: HuggingFace model ID, default ``"jinaai/jina-reranker-v3"``.
@@ -132,16 +131,6 @@ class JinaReranker(PointwiseRankLLM):
         fit = max(available_tokens // max(per_doc_tokens, 1), 1)
         return min(fit, self._batch_size)
 
-    @staticmethod
-    def _normalise_scores(scores: list[float]) -> list[float]:
-        """Min-max normalise a list of scores to [0, 1]."""
-        if not scores:
-            return scores
-        lo, hi = min(scores), max(scores)
-        if math.isclose(lo, hi):
-            return [0.5] * len(scores)
-        return [(s - lo) / (hi - lo) for s in scores]
-
     def rerank_batch(
         self,
         requests: list[Request],
@@ -164,10 +153,8 @@ class JinaReranker(PointwiseRankLLM):
             for request in requests
         ]
 
-        total_candidates = sum(len(r.candidates) for r in rerank_results)
-
         with tqdm(
-            total=total_candidates, desc="Jina reranking (q, d) pairs"
+            total=len(rerank_results), desc="Jina reranking queries"
         ) as progress_bar:
             for result in rerank_results:
                 query_text = result.query.text
@@ -190,7 +177,6 @@ class JinaReranker(PointwiseRankLLM):
                 else:
                     chunk_size = self._batch_size
 
-                needs_normalisation = num_candidates > chunk_size
                 all_scores: list[float] = [0.0] * num_candidates
 
                 for chunk_start in range(0, num_candidates, chunk_size):
@@ -199,17 +185,15 @@ class JinaReranker(PointwiseRankLLM):
 
                     jina_results = self._llm.rerank(query_text, chunk_docs)
 
-                    chunk_scores: list[float] = [0.0] * len(chunk_docs)
                     for item in jina_results:
-                        chunk_scores[item["index"]] = item["relevance_score"]
-
-                    if needs_normalisation:
-                        chunk_scores = self._normalise_scores(chunk_scores)
-
-                    for i, score in enumerate(chunk_scores):
-                        all_scores[chunk_start + i] = score
+                        all_scores[chunk_start + item["index"]] = float(
+                            item["relevance_score"]
+                        )
 
                     if populate_invocations_history:
+                        chunk_scores = [0.0] * len(chunk_docs)
+                        for item in jina_results:
+                            chunk_scores[item["index"]] = float(item["relevance_score"])
                         prompt_repr = (
                             f"query={query_text!r}, "
                             f"docs[{chunk_start}:{chunk_end}] "
@@ -228,7 +212,7 @@ class JinaReranker(PointwiseRankLLM):
                             )
                         )
 
-                    progress_bar.update(len(chunk_docs))
+                progress_bar.update(1)
 
                 for idx, score in enumerate(all_scores):
                     result.candidates[idx].score = score
