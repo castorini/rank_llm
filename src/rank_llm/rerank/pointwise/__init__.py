@@ -1,4 +1,9 @@
 try:
+    from .jina_reranker import JinaReranker
+except ImportError:
+    JinaReranker = None
+
+try:
     from .monoelectra import MonoELECTRA
 except ImportError:
     MonoELECTRA = None
@@ -13,6 +18,6 @@ try:
 except ImportError:
     PointwiseVLLM = None
 
-__all__ = ["MonoT5", "MonoELECTRA"]
+__all__ = ["JinaReranker", "MonoT5", "MonoELECTRA"]
 if PointwiseVLLM is not None:
     __all__.append("PointwiseVLLM")
