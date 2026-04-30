@@ -118,6 +118,7 @@ class TestComputeDocsPerChunk(unittest.TestCase):
         self.assertLess(result, 64)
         self.assertGreater(result, 0)
 
+
 class TestJinaRerankerRerankBatch(unittest.TestCase):
     def test_basic_rerank(self):
         reranker, mock_model = _build_reranker()

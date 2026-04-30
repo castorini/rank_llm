@@ -238,8 +238,8 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.mock_tokenizer.apply_chat_template.side_effect = (
             lambda messages, **kwargs: str(messages)
         )
-        self.mock_tokenizer.encode.side_effect = lambda x, **kwargs: [0] * (
-            len(x) // 4 + 1
+        self.mock_tokenizer.encode.side_effect = lambda x, **kwargs: (
+            [0] * (len(x) // 4 + 1)
         )
 
         # Patch the handlers used by RankListwiseOSLLM (lazy-imported inside __init__)
