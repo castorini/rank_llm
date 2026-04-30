@@ -128,7 +128,6 @@ def run_script_rerank(
         "tensorrt_batched": args.tensorrt_batched,
         "reasoning_effort": args.reasoning_effort,
         "max_passage_words": args.max_passage_words,
-        "dtype": getattr(args, "dtype", "auto"),
     }
     return ScriptRerankResult(args=options, results=runner(**options))
 
@@ -165,7 +164,6 @@ def run_mcp_rerank(
     tensorrt_batched: bool = False,
     reasoning_effort: str | None = None,
     max_passage_words: int = 300,
-    dtype: str = "auto",
     reranker: Reranker | None = None,
 ) -> list[Result]:
     kwargs = locals().copy()
@@ -271,7 +269,6 @@ def run_mcp_retrieve_and_rerank(
     tensorrt_batched: bool = False,
     reasoning_effort: str | None = None,
     max_passage_words: int = 300,
-    dtype: str = "auto",
     runner: Callable[..., Any] = _default_retrieve_and_rerank,
     device_resolver: Callable[[], str] = default_device,
 ) -> list[Result] | Any:
@@ -328,7 +325,6 @@ def run_mcp_retrieve_and_rerank(
         tensorrt_batched=tensorrt_batched,
         reasoning_effort=reasoning_effort,
         max_passage_words=max_passage_words,
-        dtype=dtype,
     )
 
 

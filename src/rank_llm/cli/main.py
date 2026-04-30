@@ -214,12 +214,6 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=300,
     )
-    rerank_parser.add_argument(
-        "--dtype",
-        dest="dtype",
-        default="auto",
-        help="Torch dtype for local model loading (e.g. auto, bfloat16). Used by Jina reranker.",
-    )
     validate_parser = subparsers.add_parser(
         "validate",
         help="Validate inputs without executing a model.",
@@ -680,7 +674,6 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             tensorrt_batched=args.tensorrt_batched,
             reasoning_effort=args.reasoning_effort,
             max_passage_words=args.max_passage_words,
-            dtype=args.dtype,
         )
         input_mode = "direct"
     else:
@@ -737,7 +730,6 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             tensorrt_batched=args.tensorrt_batched,
             reasoning_effort=args.reasoning_effort,
             max_passage_words=args.max_passage_words,
-            dtype=args.dtype,
         )
         input_mode = "requests-file" if args.requests_file else "dataset"
 
