@@ -52,10 +52,10 @@ vllm = [
     "rank-llm[local]",
     "vllm>=0.19.1",
 ]
-sglang = [
-    "rank-llm[local]",
-    "sglang[all]>=0.5.10"
-]
+# sglang[all] is not declarable as a uv-resolvable extra because it pins
+# exact dependency versions (transformers, opencv-python-headless) and
+# pre-release packages (flash-attn-4) that conflict with vllm.
+# Install manually:  pip install 'rank-llm[local]' 'sglang[all]>=0.5.10'
 # tensorrt-llm is not declarable as a uv-resolvable extra because the PyPI
 # stub needs NVIDIA's index and the NVIDIA wheel carries git-URL deps that
 # uv rejects.  Install manually:
@@ -97,7 +97,6 @@ all = [
     "rank-llm[mcp]",
     "rank-llm[pyserini]",
     "rank-llm[server]",
-    "rank-llm[sglang]",
     "rank-llm[training]",
     "rank-llm[vllm]",
 ]
