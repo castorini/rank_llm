@@ -10,6 +10,7 @@ from typing import Any
 from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
+from rank_llm.rerank.listwise.response_utils import clean_ranking_response
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
 from rank_llm.utils import default_device
 
@@ -119,7 +120,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
-            None, lambda: self.run_llm(prompt, current_window_size)
+            None, lambda: self.run_llm(prompt, current_window_size=current_window_size)
         )
 
     def _apply_llm_output_to_result(
@@ -666,8 +667,10 @@ class ListwiseRankLLM(RankLLM, ABC):
         original_rank = [tt for tt in range(len(cut_range))]
         try:
             # Parse and normalize the permutation indices
-            response = self._inference_handler._clean_response(
-                permutation, use_alpha=self._use_alpha
+            response = clean_ranking_response(
+                permutation,
+                use_alpha=self._use_alpha,
+                alph_start_idx=ALPH_START_IDX,
             )
             response = [int(x) - 1 for x in response.split()]
             response = self._remove_duplicate(response)
