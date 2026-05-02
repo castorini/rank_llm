@@ -54,7 +54,7 @@ vllm = [
 ]
 sglang = [
     "rank-llm[local]",
-    "sglang[all]~=0.4.0"
+    "sglang[all]>=0.5.10"
 ]
 # tensorrt-llm is not declarable as a uv-resolvable extra because the PyPI
 # stub needs NVIDIA's index and the NVIDIA wheel carries git-URL deps that
