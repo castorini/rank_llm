@@ -77,7 +77,11 @@ class VllmHandler:
                     self._model, trust_remote_code=True
                 )
             else:
-                self._tokenizer = asyncio.run(self._engine.get_tokenizer())
+                result = self._engine.get_tokenizer()
+                if asyncio.iscoroutine(result):
+                    self._tokenizer = asyncio.run(result)
+                else:
+                    self._tokenizer = result
             if "rank_vicuna" in self._model:
                 self._tokenizer.chat_template = """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}\n                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}"""
         return self._tokenizer
