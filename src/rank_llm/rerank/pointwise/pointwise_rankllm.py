@@ -38,6 +38,7 @@ class PointwiseRankLLM(RankLLM, ABC):
         device: str = "cuda",
         filename: str = "",
         batch_size: int = 32,
+        max_passage_words: int | None = None,
     ) -> None:
         super().__init__(
             model=model,
@@ -50,6 +51,7 @@ class PointwiseRankLLM(RankLLM, ABC):
         self._device = device
         self._filename = filename
         self._batch_size = batch_size
+        self._max_passage_words = max_passage_words
 
     def rerank_batch(
         self,

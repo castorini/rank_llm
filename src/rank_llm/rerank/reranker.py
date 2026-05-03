@@ -302,6 +302,7 @@ class Reranker:
                 ("batch_size", 32),
                 ("max_concurrent_llm_calls", None),
                 ("disable_thinking_extra_body", True),
+                ("max_passage_words", None),
             ]
             (
                 prompt_template_path,
@@ -309,6 +310,7 @@ class Reranker:
                 batch_size,
                 max_concurrent_llm_calls,
                 disable_thinking_extra_body,
+                max_passage_words,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = PointwiseVLLM(
@@ -319,6 +321,7 @@ class Reranker:
                 batch_size=batch_size,
                 max_concurrent_llm_calls=max_concurrent_llm_calls,
                 disable_thinking_extra_body=disable_thinking_extra_body,
+                max_passage_words=max_passage_words,
             )
         elif "gpt" in model_path or use_azure_openai or base_url:
             # GPT based reranking models

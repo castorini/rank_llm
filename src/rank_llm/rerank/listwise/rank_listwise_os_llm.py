@@ -23,6 +23,11 @@ except ImportError:
     vllm = None
 
 try:
+    from transformers import AutoTokenizer
+except ImportError:
+    AutoTokenizer = None
+
+try:
     import sglang
     from sglang import Engine
     from sglang.srt.entrypoints.engine import Engine as SGLangEngineType
@@ -186,7 +191,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 self._vllm_handler = VllmHandlerWithOpenAISDK(
                     model=model, base_url=base_url
                 )
+                self._tokenizer = self._vllm_handler.get_tokenizer()
             else:
+                # Use the AutoTokenizer from the transformers library to load the tokenizer, since the initialization of the VllmHandler needs max_model_len which is calculated using the tokenizer.
+                self._tokenizer = AutoTokenizer.from_pretrained(
+                    model, trust_remote_code=True
+                )
+                max_output = self._get_max_output_tokens(self._window_size)
                 self._vllm_handler = VllmHandler(
                     model=model,
                     download_dir=os.getenv("HF_HOME"),
@@ -195,7 +206,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     tensor_parallel_size=num_gpus,
                     gpu_memory_utilization=0.90,
                     trust_remote_code=True,
+                    max_model_len=context_size + max_output,
                 )
+            # Now that the VllmHandler is initialized, we can get the tokenizer from it.
             self._tokenizer = self._vllm_handler.get_tokenizer()
 
     def rerank_batch(
@@ -268,6 +281,10 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         logits = output.outputs[0].logprobs[effective_location]
         return self._evaluate_logits(logits, total)
 
+    def _get_max_output_tokens(self, window_size: int) -> int:
+        min_tok = self.num_output_tokens(window_size)
+        return self._reasoning_token_budget + min_tok if self._is_thinking else min_tok
+
     async def run_llm_async(
         self,
         prompt: str | list[dict[str, str]],
@@ -285,9 +302,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             current_window_size = self._window_size
 
         min_tok = self.num_output_tokens(current_window_size)
-        max_tok = (
-            self._reasoning_token_budget + min_tok if self._is_thinking else min_tok
-        )
+        max_tok = self._get_max_output_tokens(current_window_size)
 
         if hasattr(self, "_vllm_handler"):
             if self._base_url:
