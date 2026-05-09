@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import copy
 import logging
 import os
@@ -82,6 +83,9 @@ class ReasonEmbedReranker(PointwiseRankLLM):
             max_model_len=context_size,
             trust_remote_code=True,
         )
+        self._loop = asyncio.new_event_loop()
+        self._closed = False
+        atexit.register(self.close)
         self._tokenizer = self._load_tokenizer(model_path)
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
@@ -319,7 +323,7 @@ class ReasonEmbedReranker(PointwiseRankLLM):
             for request in requests
         ]
         populate_invocations_history = kwargs.get("populate_invocations_history", False)
-        self._vllm_handler.run_coroutine(
+        self._run_coroutine(
             self._rerank_results_async(
                 results,
                 rank_start,
@@ -328,6 +332,21 @@ class ReasonEmbedReranker(PointwiseRankLLM):
             )
         )
         return results
+
+    def _run_coroutine(self, coro: Any) -> Any:
+        if self._closed:
+            raise RuntimeError("ReasonEmbedReranker is closed.")
+        previous_loop = None
+        try:
+            previous_loop = asyncio.get_event_loop_policy().get_event_loop()
+        except RuntimeError:
+            previous_loop = None
+
+        try:
+            asyncio.set_event_loop(self._loop)
+            return self._loop.run_until_complete(coro)
+        finally:
+            asyncio.set_event_loop(previous_loop)
 
     def run_llm(self, prompt: str | list[dict[str, str]], **kwargs) -> tuple[str, int]:
         raise NotImplementedError("Use rerank_batch directly.")
@@ -354,4 +373,33 @@ class ReasonEmbedReranker(PointwiseRankLLM):
         return self._max_new_tokens
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         self._vllm_handler.close()
+        previous_loop = None
+        try:
+            previous_loop = asyncio.get_event_loop_policy().get_event_loop()
+        except RuntimeError:
+            previous_loop = None
+
+        try:
+            asyncio.set_event_loop(self._loop)
+            pending = [
+                task for task in asyncio.all_tasks(self._loop) if not task.done()
+            ]
+            for task in pending:
+                task.cancel()
+            if pending:
+                self._loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            self._loop.run_until_complete(self._loop.shutdown_asyncgens())
+        except Exception:
+            pass
+        try:
+            self._loop.close()
+        except Exception:
+            pass
+        finally:
+            asyncio.set_event_loop(previous_loop)
