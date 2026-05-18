@@ -18,9 +18,11 @@ Usage (from repo root):
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
@@ -54,6 +56,26 @@ def _print_eval(results: list[Result], qrels: str) -> None:
     for label, eval_args in EVAL_METRICS:
         value = EvalFunction.from_results(results, qrels, eval_args)
         print(f"  {label:12s} {value}")
+
+
+def load_sampling_kw_dict(args: argparse.Namespace) -> dict[str, Any]:
+    """
+    Prefer --sampling-json-file > --sampling-json > SAMPLING_JSON env.
+    Returns {} when nothing is configured (RankLLM then omits extras).
+    """
+    if getattr(args, "sampling_json_file", None):
+        raw = Path(args.sampling_json_file).read_text(encoding="utf-8")
+        blob = json.loads(raw)
+    elif getattr(args, "sampling_json", None) not in (None, ""):
+        blob = json.loads(args.sampling_json)
+    else:
+        env_raw = os.environ.get("SAMPLING_JSON") or ""
+        if not env_raw.strip():
+            return {}
+        blob = json.loads(env_raw)
+    if not isinstance(blob, dict):
+        raise SystemExit("--sampling-json(|-file): root JSON must be an object.")
+    return blob
 
 
 def main() -> None:
@@ -126,6 +148,20 @@ def main() -> None:
         default=1,
         help="Number of GPUs for tensor parallelism (default: 1).",
     )
+    p.add_argument(
+        "--sampling-json-file",
+        default=None,
+        help=(
+            "JSON object file of inference sampling knobs (temperature, "
+            "top_k, repetition_penalty, presence_penalty, frequency_penalty, "
+            "stop, ...)."
+        ),
+    )
+    p.add_argument(
+        "--sampling-json",
+        default=None,
+        help="Same fields as sampling-json-file, as an inline JSON object string.",
+    )
     args = p.parse_args()
 
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
@@ -152,6 +188,7 @@ def main() -> None:
         max_passage_words=args.max_passage_words,
         is_thinking=args.thinking,
         reasoning_token_budget=args.thinking_budget,
+        sampling_kwargs=load_sampling_kw_dict(args) or None,
     )
     reranker = Reranker(coordinator)
     kwargs = {"populate_invocations_history": True}
