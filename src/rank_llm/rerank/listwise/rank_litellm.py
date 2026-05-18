@@ -30,6 +30,7 @@ class SafeLiteLLM(ListwiseRankLLM):
     - ``model`` accepts any LiteLLM model string
     - ``api_key`` is a single key (no key cycling)
     - ``api_base`` is optional (only needed for custom endpoints)
+    - ``sampling_kwargs`` optional dict of sampling overrides
     """
 
     def __init__(
@@ -46,6 +47,7 @@ class SafeLiteLLM(ListwiseRankLLM):
         api_key: str | None = None,
         api_base: str | None = None,
         max_passage_words: int = 300,
+        sampling_kwargs: dict[str, Any] | None = None,
     ) -> None:
         if litellm is None:
             raise missing_extra_error(
@@ -91,6 +93,9 @@ class SafeLiteLLM(ListwiseRankLLM):
         self._output_token_estimate = None
         self._api_key = api_key
         self._api_base = api_base
+        self._sampling_kwargs: dict[str, Any] | None = (
+            dict(sampling_kwargs) if sampling_kwargs else None
+        )
 
     def _call_kwargs(self) -> dict:
         kwargs: dict[str, Any] = {"model": self._model, "drop_params": True}
@@ -98,6 +103,8 @@ class SafeLiteLLM(ListwiseRankLLM):
             kwargs["api_key"] = self._api_key
         if self._api_base:
             kwargs["api_base"] = self._api_base
+        if self._sampling_kwargs:
+            kwargs.update(self._sampling_kwargs)
         return kwargs
 
     def rerank_batch(
@@ -206,7 +213,7 @@ class SafeLiteLLM(ListwiseRankLLM):
         self,
         prompt: str | list[dict[str, str]],
         current_window_size: int | None = None,
-    ) -> tuple[str, int] | tuple[str, str | None, dict[str, Any]]:
+    ) -> tuple[str, str | None, dict[str, Any]]:
         if isinstance(prompt, str):
             messages = [{"role": "user", "content": prompt}]
         else:
@@ -215,17 +222,18 @@ class SafeLiteLLM(ListwiseRankLLM):
         completion = self._call_completion(messages)
 
         if isinstance(completion, str):
-            token_count = self.get_num_tokens(prompt)
-            return completion, token_count
+            return completion, None, {}
 
         text = completion.choices[0].message.content
 
         usage = {}
         if completion.usage is not None:
+            prompt_tokens = getattr(completion.usage, "prompt_tokens", 0) or 0
+            completion_tokens = getattr(completion.usage, "completion_tokens", 0) or 0
             usage = {
-                "prompt_tokens": completion.usage.prompt_tokens,
-                "completion_tokens": completion.usage.completion_tokens,
-                "total_tokens": completion.usage.total_tokens,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
             }
 
         return text, None, usage
