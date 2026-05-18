@@ -36,9 +36,14 @@ genai = [
     "google-generativeai>=0.8.2",
     "python-dotenv>=1.0.1",
 ]
+litellm = [
+    "litellm>=1.67.0,<2.0",
+    "python-dotenv>=1.0.1",
+]
 cloud = [
     "rank-llm[openai]",
     "rank-llm[genai]",
+    "rank-llm[litellm]",
 ]
 gemini = [
     "rank-llm[genai]",
