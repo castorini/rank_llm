@@ -98,21 +98,47 @@ def main() -> None:
     p.add_argument("--batch-size", type=int, default=8)
     p.add_argument("--max-concurrent", type=int, default=None)
     p.add_argument(
+        "--max-passage-words",
+        type=int,
+        default=None,
+        help="Per-passage word truncation limit (default: None = token-only truncation).",
+    )
+    p.add_argument(
         "--async-sample-queries",
         type=int,
         default=2,
         help="Number of dl19 queries to rerun with rerank_batch_async (default: 2). "
         "Set to 0 to skip the async demo.",
     )
+    p.add_argument(
+        "--num-queries",
+        type=int,
+        default=None,
+        help="Cap the number of queries for a quick smoke test (default: all).",
+    )
+    p.add_argument(
+        "--output-dir",
+        default=None,
+        help="Output directory. When set, outputs go to "
+        "{output_dir}/{model_tag}/{dataset}/.",
+    )
+    p.add_argument(
+        "--skip-eval",
+        action="store_true",
+        help="Skip inline evaluation (useful in batch benchmark runs).",
+    )
     args = p.parse_args()
 
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
+    if args.num_queries is not None:
+        requests = requests[: args.num_queries]
     print(f"Loaded {len(requests)} requests from {args.dataset} (k={args.k}).")
 
     qrels = TOPICS.get(args.dataset)
+    run_eval = not args.skip_eval
 
     # --- Retrieval-only evaluation ---
-    if qrels:
+    if qrels and run_eval:
         print(f"\n{'=' * 60}")
         print(f"Retrieval metrics  (BM25, k={args.k})")
         print(f"{'=' * 60}")
@@ -125,6 +151,7 @@ def main() -> None:
         base_url=args.base_url,
         batch_size=args.batch_size,
         max_concurrent_llm_calls=args.max_concurrent,
+        max_passage_words=args.max_passage_words,
     )
     reranker = Reranker(coordinator)
     kwargs = {"populate_invocations_history": True}
@@ -135,30 +162,39 @@ def main() -> None:
     _print_sample(sync_out)
 
     # --- Reranking evaluation ---
-    if qrels:
+    if qrels and run_eval:
         print(f"\n{'=' * 60}")
         print(f"Reranking metrics  ({args.model})")
         print(f"{'=' * 60}")
         _print_eval(sync_out, qrels)
 
-    async def async_demo():
-        if args.async_sample_queries <= 0:
-            return
-        sample = requests[: args.async_sample_queries]
-        print(f"\n--- Async rerank_batch_async (first {len(sample)} queries only) ---")
-        async_out = await reranker.rerank_batch_async(sample, **kwargs)
-        print(f"Async sample: {len(async_out)} results.")
-        _print_sample(async_out)
+    if not args.skip_eval:
 
-    asyncio.run(async_demo())
+        async def async_demo():
+            if args.async_sample_queries <= 0:
+                return
+            sample = requests[: args.async_sample_queries]
+            print(
+                f"\n--- Async rerank_batch_async (first {len(sample)} queries only) ---"
+            )
+            async_out = await reranker.rerank_batch_async(sample, **kwargs)
+            print(f"Async sample: {len(async_out)} results.")
+            _print_sample(async_out)
+
+        asyncio.run(async_demo())
+
+    # --- Save outputs ---
+    model_tag = args.model.split("/")[-1].lower()
+    if args.output_dir:
+        out_path = Path(args.output_dir) / model_tag / args.dataset
+    else:
+        out_path = Path("demo_outputs")
+    out_path.mkdir(parents=True, exist_ok=True)
 
     writer = DataWriter(sync_out)
-    Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
-    writer.write_in_jsonl_format("demo_outputs/rerank_results_pointwise_vllm.jsonl")
-    writer.write_in_trec_eval_format("demo_outputs/rerank_results_pointwise_vllm.txt")
-    writer.write_inference_invocations_history(
-        "demo_outputs/inference_invocations_history_pointwise_vllm.json"
-    )
+    writer.write_in_jsonl_format(str(out_path / "rerank.jsonl"))
+    writer.write_in_trec_eval_format(str(out_path / "rerank.txt"))
+    writer.write_inference_invocations_history(str(out_path / "invocations.json"))
 
 
 if __name__ == "__main__":

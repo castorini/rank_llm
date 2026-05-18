@@ -113,10 +113,14 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         index: int,
         max_doc_tokens: int,
         tokenizer: T5Tokenizer,
+        max_passage_words: int | None = None,
     ) -> str:
         query = self._replace_number(result.query.text)
+        word_limit = (
+            max_passage_words if max_passage_words is not None else max_doc_tokens
+        )
         doc_raw = self._convert_doc_to_prompt_content(
-            result.candidates[index].doc, max_length=max_doc_tokens
+            result.candidates[index].doc, max_length=word_limit
         )
         doc_tokens = tokenizer.encode(
             doc_raw, truncation=True, max_length=max_doc_tokens
@@ -135,6 +139,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             tokenizer = kwargs["tokenizer"]
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
+            max_passage_words = kwargs.get("max_passage_words", None)
         except KeyError as err:
             raise ValueError(f"Missing required parameter: {err}") from err
 
@@ -148,6 +153,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             index=index,
             max_doc_tokens=max_doc_tokens,
             tokenizer=tokenizer,
+            max_passage_words=max_passage_words,
         )
         return prompt.replace("<unk>", "")
 
@@ -167,12 +173,16 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             tokenizer = kwargs["tokenizer"]
             num_fewshot_examples = kwargs.get("num_fewshot_examples", 0)
             fewshot_examples = kwargs.get("fewshot_examples", [])
+            max_passage_words = kwargs.get("max_passage_words", None)
         except KeyError as err:
             raise ValueError(f"Missing required parameter: {err}") from err
 
         query = self._replace_number(result.query.text)
+        word_limit = (
+            max_passage_words if max_passage_words is not None else max_doc_tokens
+        )
         doc_raw = self._convert_doc_to_prompt_content(
-            result.candidates[index].doc, max_length=max_doc_tokens
+            result.candidates[index].doc, max_length=word_limit
         )
         doc_tokens = tokenizer.encode(
             doc_raw, truncation=True, max_length=max_doc_tokens

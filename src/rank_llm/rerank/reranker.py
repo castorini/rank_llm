@@ -302,6 +302,7 @@ class Reranker:
                 ("batch_size", 32),
                 ("max_concurrent_llm_calls", None),
                 ("disable_thinking_extra_body", True),
+                ("max_passage_words", 300),
             ]
             (
                 prompt_template_path,
@@ -309,6 +310,7 @@ class Reranker:
                 batch_size,
                 max_concurrent_llm_calls,
                 disable_thinking_extra_body,
+                max_passage_words,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = PointwiseVLLM(
@@ -319,7 +321,16 @@ class Reranker:
                 batch_size=batch_size,
                 max_concurrent_llm_calls=max_concurrent_llm_calls,
                 disable_thinking_extra_body=disable_thinking_extra_body,
+                max_passage_words=max_passage_words,
             )
+        elif base_url and kwargs.get("listwise_vllm_with_openai_sdk"):
+            rest = {k: v for k, v in kwargs.items() if k != "base_url"}
+            model_coordinator = _create_rank_listwise_os_llm_coordinator(
+                model_path,
+                base_url=base_url,
+                **rest,
+            )
+            print(f"Completed loading {model_path}")
         elif "gpt" in model_path or use_azure_openai or base_url:
             # GPT based reranking models
             from rank_llm.rerank.listwise import SafeOpenai
@@ -633,80 +644,13 @@ class Reranker:
             # NULL reranker
             model_coordinator = None
         else:
-            # supports loading models from huggingface
-            from rank_llm.rerank.listwise import RankListwiseOSLLM
-
-            print(f"Loading {model_path} ...")
-            model_full_paths = {
-                "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
-                "rank_vicuna": "castorini/rank_vicuna_7b_v1",
-            }
-            keys_and_defaults = [
-                ("context_size", 4096),
-                (
-                    "prompt_template_path",
-                    None,
-                ),
-                ("num_few_shot_examples", 0),
-                ("few_shot_file", None),
-                ("device", "cuda"),
-                ("num_gpus", 1),
-                ("variable_passages", False),
-                ("window_size", 20),
-                ("stride", 10),
-                ("system_message", None),
-                ("is_thinking", False),
-                ("reasoning_token_budget", 10000),
-                ("use_logits", False),
-                ("use_alpha", False),
-                ("batch_size", 32),
-                ("base_url", None),
-                ("max_passage_words", 300),
-            ]
-            [
-                context_size,
-                prompt_template_path,
-                num_few_shot_examples,
-                few_shot_file,
-                device,
-                num_gpus,
-                variable_passages,
-                window_size,
-                stride,
-                system_message,
-                is_thinking,
-                reasoning_token_budget,
-                use_logits,
-                use_alpha,
-                batch_size,
-                base_url,
-                max_passage_words,
-            ] = extract_kwargs(keys_and_defaults, **kwargs)
-
-            model_coordinator = RankListwiseOSLLM(
-                model=(
-                    model_full_paths[model_path]
-                    if model_path in model_full_paths
-                    else model_path
-                ),
-                name=model_path,
-                context_size=context_size,
-                prompt_template_path=prompt_template_path,
-                num_few_shot_examples=num_few_shot_examples,
-                few_shot_file=few_shot_file,
-                device=device,
-                num_gpus=num_gpus,
-                variable_passages=variable_passages,
-                window_size=window_size,
-                stride=stride,
-                system_message=system_message,
-                is_thinking=is_thinking,
-                reasoning_token_budget=reasoning_token_budget,
-                use_logits=use_logits,
-                use_alpha=use_alpha,
-                batch_size=batch_size,
-                base_url=base_url,
-                max_passage_words=max_passage_words,
+            # supports loading models from huggingface (local vLLM / SGLang / TensorRT when base_url is unset)
+            coordinator_base_url: str | None = kwargs.get("base_url")
+            rest = {k: v for k, v in kwargs.items() if k != "base_url"}
+            model_coordinator = _create_rank_listwise_os_llm_coordinator(
+                model_path,
+                base_url=coordinator_base_url,
+                **rest,
             )
 
             print(f"Completed loading {model_path}")
@@ -718,6 +662,93 @@ class Reranker:
         ]:
             raise ValueError(f"Unsupported model: {model_path}")
         return model_coordinator
+
+
+def _create_rank_listwise_os_llm_coordinator(
+    model_path: str,
+    *,
+    base_url: str | None,
+    **kwargs: Any,
+) -> RankLLM:
+    """Build RankListwiseOSLLM for HF-style model ids.
+
+    ``base_url`` is passed through to ``RankListwiseOSLLM`` (remote OpenAI-compatible
+    vLLM). When ``None``, the class loads an in-process vLLM engine instead.
+    """
+    from rank_llm.rerank.listwise import RankListwiseOSLLM
+
+    print(f"Loading {model_path} ...")
+    model_full_paths = {
+        "rank_zephyr": "castorini/rank_zephyr_7b_v1_full",
+        "rank_vicuna": "castorini/rank_vicuna_7b_v1",
+    }
+    keys_and_defaults = [
+        ("context_size", 4096),
+        (
+            "prompt_template_path",
+            None,
+        ),
+        ("num_few_shot_examples", 0),
+        ("few_shot_file", None),
+        ("device", "cuda"),
+        ("num_gpus", 1),
+        ("variable_passages", False),
+        ("window_size", 20),
+        ("stride", 10),
+        ("system_message", None),
+        ("is_thinking", False),
+        ("reasoning_token_budget", 10000),
+        ("use_logits", False),
+        ("use_alpha", False),
+        ("batch_size", 32),
+        ("base_url", None),
+        ("max_passage_words", 300),
+    ]
+    [
+        context_size,
+        prompt_template_path,
+        num_few_shot_examples,
+        few_shot_file,
+        device,
+        num_gpus,
+        variable_passages,
+        window_size,
+        stride,
+        system_message,
+        is_thinking,
+        reasoning_token_budget,
+        use_logits,
+        use_alpha,
+        batch_size,
+        _ignored_base_url,
+        max_passage_words,
+    ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+    return RankListwiseOSLLM(
+        model=(
+            model_full_paths[model_path]
+            if model_path in model_full_paths
+            else model_path
+        ),
+        name=model_path,
+        context_size=context_size,
+        prompt_template_path=prompt_template_path,
+        num_few_shot_examples=num_few_shot_examples,
+        few_shot_file=few_shot_file,
+        device=device,
+        num_gpus=num_gpus,
+        variable_passages=variable_passages,
+        window_size=window_size,
+        stride=stride,
+        system_message=system_message,
+        is_thinking=is_thinking,
+        reasoning_token_budget=reasoning_token_budget,
+        use_logits=use_logits,
+        use_alpha=use_alpha,
+        batch_size=batch_size,
+        base_url=base_url,
+        max_passage_words=max_passage_words,
+    )
 
 
 def extract_kwargs(

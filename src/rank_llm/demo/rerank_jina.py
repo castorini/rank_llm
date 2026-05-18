@@ -97,15 +97,35 @@ def main() -> None:
     p.add_argument("--context-size", type=int, default=131_072)
     p.add_argument("--device", default="cuda")
     p.add_argument("--dtype", default="auto")
+    p.add_argument(
+        "--num-queries",
+        type=int,
+        default=None,
+        help="Cap the number of queries for a quick smoke test (default: all).",
+    )
+    p.add_argument(
+        "--output-dir",
+        default=None,
+        help="Output directory. When set, outputs go to "
+        "{output_dir}/{model_tag}/{dataset}/.",
+    )
+    p.add_argument(
+        "--skip-eval",
+        action="store_true",
+        help="Skip inline evaluation (useful in batch benchmark runs).",
+    )
     args = p.parse_args()
 
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
+    if args.num_queries is not None:
+        requests = requests[: args.num_queries]
     print(f"Loaded {len(requests)} requests from {args.dataset} (k={args.k}).")
 
     qrels = TOPICS.get(args.dataset)
+    run_eval = not args.skip_eval
 
     # --- Retrieval-only evaluation ---
-    if qrels:
+    if qrels and run_eval:
         print(f"\n{'=' * 60}")
         print(f"Retrieval metrics  (BM25, k={args.k})")
         print(f"{'=' * 60}")
@@ -131,20 +151,24 @@ def main() -> None:
     _print_sample(results)
 
     # --- Reranking evaluation ---
-    if qrels:
+    if qrels and run_eval:
         print(f"\n{'=' * 60}")
         print(f"Reranking metrics  ({args.model})")
         print(f"{'=' * 60}")
         _print_eval(results, qrels)
 
     # --- Write outputs ---
+    model_tag = args.model.split("/")[-1].lower()
+    if args.output_dir:
+        out_path = Path(args.output_dir) / model_tag / args.dataset
+    else:
+        out_path = Path("demo_outputs")
+    out_path.mkdir(parents=True, exist_ok=True)
+
     writer = DataWriter(results)
-    Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
-    writer.write_in_jsonl_format("demo_outputs/rerank_results_jina.jsonl")
-    writer.write_in_trec_eval_format("demo_outputs/rerank_results_jina.txt")
-    writer.write_inference_invocations_history(
-        "demo_outputs/inference_invocations_history_jina.json"
-    )
+    writer.write_in_jsonl_format(str(out_path / "rerank.jsonl"))
+    writer.write_in_trec_eval_format(str(out_path / "rerank.txt"))
+    writer.write_inference_invocations_history(str(out_path / "invocations.json"))
 
 
 if __name__ == "__main__":

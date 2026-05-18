@@ -1,40 +1,23 @@
 """
-Concurrent async listwise reranking demo against a local OpenAI-compatible
-vLLM server (e.g. Qwen3.5-9B).
+Listwise reranking using an in-process vLLM engine (no external server).
 
-Uses multiple ``await reranker.rerank_async(...)`` calls on one event loop and
-one ``Reranker`` instance so sliding-window LLM work overlaps across queries.
-
-The reranker is constructed **before** ``asyncio.run`` (sync setup); only the
-gather phase runs under the event loop, matching the one-loop contract and
-avoiding nested ``asyncio.run`` during model init.
+Unlike rerank_qwen_async.py which connects to a vLLM OpenAI-compatible server,
+this script loads the model directly into the Python process via the vLLM
+offline engine.
 
 Prerequisites:
-  1. pip install -e '.[pyserini,vllm]'
-  2. Start vLLM with an OpenAI-compatible HTTP API, for example:
+  pip install -e '.[pyserini,vllm]'
 
-       MODEL_ID="Qwen/Qwen3.5-9B"
-       PORT=8765
-       CUDA_VISIBLE_DEVICES=0 vllm serve "$MODEL_ID" \\
-         --port "$PORT" \\
-         --dtype auto \\
-         --gpu-memory-utilization 0.9 \\
-         --enable-prompt-tokens-details \\
-         --enable-prefix-caching \\
-         --max-model-len 32768 \\
-         >> /tmp/vllm_rerank.log 2>&1 &
-
-Usage (from repo root, after indexes are available):
-
-  python src/rank_llm/demo/rerank_qwen_async.py \\
-      --base-url http://127.0.0.1:8765/v1 \\
-      --model Qwen/Qwen3.5-9B
+Usage (from repo root):
+  python src/rank_llm/demo/rerank_qwen_local.py \
+      --model Qwen/Qwen3-0.6B \
+      --dataset dl19 \
+      --thinking
 """
 
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import os
 import sys
@@ -47,7 +30,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
-from rank_llm.data import DataWriter, Request, Result
+from rank_llm.data import DataWriter, Result
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker
 from rank_llm.rerank.listwise import RankListwiseOSLLM
@@ -75,18 +58,6 @@ def _print_eval(results: list[Result], qrels: str) -> None:
         print(f"  {label:12s} {value}")
 
 
-async def rerank_requests_concurrently(
-    reranker: Reranker,
-    requests: list[Request],
-    **kwargs,
-) -> list[Result]:
-    return list(
-        await asyncio.gather(
-            *(reranker.rerank_async(req, **kwargs) for req in requests)
-        )
-    )
-
-
 def load_sampling_kw_dict(args: argparse.Namespace) -> dict[str, Any]:
     """
     Prefer --sampling-json-file > --sampling-json > SAMPLING_JSON env.
@@ -109,7 +80,7 @@ def load_sampling_kw_dict(args: argparse.Namespace) -> dict[str, Any]:
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="Async listwise reranking demo with a vLLM server."
+        description="In-process listwise reranking with vLLM offline engine."
     )
     p.add_argument(
         "--dataset",
@@ -123,14 +94,9 @@ def main() -> None:
         help="Top-k passages per query from first-stage retrieval (default: 100).",
     )
     p.add_argument(
-        "--base-url",
-        default=os.environ.get("VLLM_BASE_URL", "http://127.0.0.1:8765/v1"),
-        help="OpenAI-compatible base URL (must end with /v1; match vLLM --port).",
-    )
-    p.add_argument(
         "--model",
-        default=os.environ.get("VLLM_MODEL", "Qwen/Qwen3.5-9B"),
-        help="Model id as registered on the server (default: Qwen/Qwen3.5-9B).",
+        default="Qwen/Qwen3-0.6B",
+        help="HuggingFace model id (default: Qwen/Qwen3-0.6B).",
     )
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument(
@@ -177,6 +143,12 @@ def main() -> None:
         help="Max reasoning tokens when --thinking is enabled (default: 4096).",
     )
     p.add_argument(
+        "--num-gpus",
+        type=int,
+        default=1,
+        help="Number of GPUs for tensor parallelism (default: 1).",
+    )
+    p.add_argument(
         "--sampling-json-file",
         default=None,
         help=(
@@ -212,7 +184,7 @@ def main() -> None:
         window_size=args.window_size,
         stride=args.stride,
         batch_size=args.batch_size,
-        base_url=args.base_url,
+        num_gpus=args.num_gpus,
         max_passage_words=args.max_passage_words,
         is_thinking=args.thinking,
         reasoning_token_budget=args.thinking_budget,
@@ -221,10 +193,8 @@ def main() -> None:
     reranker = Reranker(coordinator)
     kwargs = {"populate_invocations_history": True}
 
-    print(f"\n--- Async concurrent reranking ({len(requests)} queries) ---")
-    rerank_results = asyncio.run(
-        rerank_requests_concurrently(reranker, requests, **kwargs)
-    )
+    print(f"\n--- Batched reranking ({len(requests)} queries) ---")
+    rerank_results = reranker.rerank_batch(requests, **kwargs)
     print(f"Reranked {len(rerank_results)} results.")
     _print_sample(rerank_results)
 

@@ -94,7 +94,13 @@ class VllmHandlerWithOpenAISDK:
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
     ) -> tuple[str, str, dict[str, Any]]:
-        """Submit a single chat request and await its completion."""
+        """Submit a single chat request and await its completion.
+
+        ``extra_body`` (and any other vLLM-specific keys) flow through
+        ``**kwargs``; they are only forwarded when the caller actually sets them
+        so the underlying OpenAI client receives the same call shape as before
+        for callers that pass no extras.
+        """
         try:
             response = await self._async_client.chat.completions.create(
                 model=self._model,

@@ -13,7 +13,14 @@ from .modeling_t5 import T5Stack as T5StackCrossAttentionScore
 
 class FiDStack(T5Stack):
     def __init__(self, config, embed_tokens=None):
-        super().__init__(config, embed_tokens=embed_tokens)
+        # transformers>=5 removed the embed_tokens constructor arg on T5Stack.
+        # Keep compatibility with both API shapes.
+        try:
+            super().__init__(config, embed_tokens=embed_tokens)
+        except TypeError:
+            super().__init__(config)
+            if embed_tokens is not None:
+                self.set_input_embeddings(embed_tokens)
         self._n_passages = None
 
     def reset_n_passages(self, n_passages: int):

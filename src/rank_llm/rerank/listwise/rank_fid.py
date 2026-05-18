@@ -168,6 +168,15 @@ class RankFiDDistill(ListwiseRankLLM):
             **kwargs,
         )
 
+    async def run_llm_async(
+        self,
+        prompt: str | list[dict[str, str]],
+        current_window_size: int | None = None,
+    ) -> tuple:
+        # Fast tokenizer state is not thread-safe under concurrent executor calls.
+        # Keep FiD on a sync path even in async orchestration.
+        return self.run_llm(prompt, current_window_size=current_window_size)
+
     def run_llm_batched(
         self, prompts: list[list[dict[str, str]]], **kwargs
     ) -> list[tuple[str, int]]:
@@ -432,6 +441,15 @@ class RankFiDScore(ListwiseRankLLM):
             logging,
             **kwargs,
         )
+
+    async def run_llm_async(
+        self,
+        prompt: str | list[dict[str, str]],
+        current_window_size: int | None = None,
+    ) -> tuple:
+        # Fast tokenizer state is not thread-safe under concurrent executor calls.
+        # Keep FiD on a sync path even in async orchestration.
+        return self.run_llm(prompt, current_window_size=current_window_size)
 
     def run_llm_batched(
         self, prompts: list[list[dict[str, str]]], **kwargs

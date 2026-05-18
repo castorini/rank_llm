@@ -45,14 +45,60 @@ try:
         prune_linear_layer,
     )
 except ImportError:
-    from transformers.pytorch_utils import (
-        find_pruneable_heads_and_indices,
-        prune_linear_layer,
-    )
+    from transformers.pytorch_utils import prune_linear_layer
+
+    try:
+        from transformers.pytorch_utils import find_pruneable_heads_and_indices
+    except ImportError:
+        # transformers>=5 removed this helper; keep local compatibility.
+        def find_pruneable_heads_and_indices(
+            heads, n_heads, head_size, already_pruned_heads
+        ):
+            heads = set(heads) - already_pruned_heads
+            mask = torch.ones(n_heads, head_size)
+            for head in heads:
+                head = head - sum(1 if h < head else 0 for h in already_pruned_heads)
+                mask[head] = 0
+            mask = mask.view(-1).contiguous().eq(1)
+            index = torch.arange(len(mask))[mask].long()
+            return heads, index
+
+
 from transformers.modeling_utils import PreTrainedModel
 from transformers.models.t5.configuration_t5 import T5Config
 from transformers.utils import logging
-from transformers.utils.model_parallel_utils import assert_device_map, get_device_map
+
+try:
+    from transformers.utils.model_parallel_utils import (
+        assert_device_map,
+        get_device_map,
+    )
+except ImportError:
+    # transformers>=5 removed model_parallel_utils; keep local compatibility.
+    def get_device_map(n_layers, devices):
+        device_list = list(devices)
+        if not device_list:
+            return {}
+        device_map = {device: [] for device in device_list}
+        layers_per_device = math.ceil(n_layers / len(device_list))
+        for layer_idx in range(n_layers):
+            bucket = min(layer_idx // layers_per_device, len(device_list) - 1)
+            device_map[device_list[bucket]].append(layer_idx)
+        return {k: v for k, v in device_map.items() if v}
+
+    def assert_device_map(device_map, n_layers):
+        if not device_map:
+            raise ValueError("`device_map` cannot be empty for model parallelism.")
+        all_assigned_layers = sorted(
+            layer for layers in device_map.values() for layer in layers
+        )
+        expected_layers = list(range(n_layers))
+        if all_assigned_layers != expected_layers:
+            raise ValueError(
+                "Device map must assign each layer exactly once. "
+                f"Expected {expected_layers}, got {all_assigned_layers}."
+            )
+
 
 logger = logging.get_logger(__name__)
 
@@ -992,6 +1038,26 @@ class T5Stack(T5PreTrainedModel):
     def set_input_embeddings(self, new_embeddings):
         self.embed_tokens = new_embeddings
 
+    def get_head_mask(
+        self, head_mask: torch.Tensor | None, num_hidden_layers: int
+    ) -> torch.Tensor | list[None]:
+        """Compatibility helper for transformers>=5 where get_head_mask is removed."""
+        if head_mask is None:
+            return [None] * num_hidden_layers
+
+        if head_mask.dim() == 1:
+            head_mask = head_mask[None, None, :, None, None]
+            head_mask = head_mask.expand(num_hidden_layers, -1, -1, -1, -1)
+        elif head_mask.dim() == 2:
+            head_mask = head_mask[:, None, :, None, None]
+        else:
+            raise ValueError(
+                "head_mask must have dimension 1 or 2; "
+                f"got shape {tuple(head_mask.shape)}"
+            )
+
+        return head_mask.to(dtype=self.dtype)
+
     def forward(
         self,
         input_ids=None,
@@ -1085,9 +1151,16 @@ class T5Stack(T5PreTrainedModel):
 
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask = self.get_extended_attention_mask(
-            attention_mask, input_shape, inputs_embeds.device
-        )
+        # transformers>=5 changed get_extended_attention_mask signature to
+        # prioritize dtype and infer device. Keep compatibility with both APIs.
+        try:
+            extended_attention_mask = self.get_extended_attention_mask(
+                attention_mask, input_shape, device=inputs_embeds.device
+            )
+        except TypeError:
+            extended_attention_mask = self.get_extended_attention_mask(
+                attention_mask, input_shape, dtype=inputs_embeds.dtype
+            )
 
         # If a 2D or 3D attention mask is provided for the cross-attention
         # we need to make broadcastable to [batch_size, num_heads, seq_length, seq_length]

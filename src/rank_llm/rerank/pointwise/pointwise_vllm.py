@@ -75,6 +75,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         batch_size: int = 32,
         max_concurrent_llm_calls: int | None = None,
         disable_thinking_extra_body: bool = True,
+        max_passage_words: int = 300,
     ) -> None:
         super().__init__(
             model=model,
@@ -85,6 +86,7 @@ class PointwiseVLLM(PointwiseRankLLM):
             few_shot_file=None,
             device="remote",
             batch_size=batch_size,
+            max_passage_words=max_passage_words,
         )
         self._vllm = VllmHandlerWithOpenAISDK(base_url=base_url, model=model)
         self._tokenizer = self._vllm.get_tokenizer()
@@ -167,6 +169,7 @@ class PointwiseVLLM(PointwiseRankLLM):
             tokenizer=self._tokenizer,
             num_few_shot_examples=0,
             fewshot_examples=[],
+            max_passage_words=self._max_passage_words,
         )
         n_tok = self._input_token_count(messages)
         if n_tok > self._context_size - reserved_for_output:

@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 else:
     PreTrainedTokenizerBase = Any
 
+from rank_llm.rerank.sampling_kwargs import sanitize_sampling_kwargs
+
 
 class VllmHandler:
     """
@@ -77,7 +79,11 @@ class VllmHandler:
                     self._model, trust_remote_code=True
                 )
             else:
-                self._tokenizer = asyncio.run(self._engine.get_tokenizer())
+                result = self._engine.get_tokenizer()
+                if asyncio.iscoroutine(result):
+                    self._tokenizer = asyncio.run(result)
+                else:
+                    self._tokenizer = result
             if "rank_vicuna" in self._model:
                 self._tokenizer.chat_template = """{% if not add_generation_prompt is defined %}{% set add_generation_prompt = false %}{% endif %}\n                    {% for message in messages %}{% if not loop.first %}{% endif %}{% if message['role'] == 'system' %}{{ message['content'] + ' ' }}{% elif message['role'] == 'user' %}{{ 'USER: ' + message['content'] + ' ' }}{% elif message['role'] == 'assistant' %}{{ 'ASSISTANT: ' + message['content'] + '</s>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ 'ASSISTANT:' }}{% endif %}"""
         return self._tokenizer
@@ -87,19 +93,21 @@ class VllmHandler:
         prompt: str | list[dict[str, str]],
         min_tokens: int,
         max_tokens: int,
-        temperature: float,
         logprobs: int | None = None,
+        sampling_extra: dict[str, Any] | None = None,
     ) -> tuple[str, int, int]:
         """
         Submit a single prompt and await its completion.
         Returns (output_text, prompt_token_count, completion_token_count).
         """
-        sampling_params = vllm.SamplingParams(
-            min_tokens=min_tokens,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            logprobs=logprobs,
-        )
+        extras = sanitize_sampling_kwargs(sampling_extra)
+        sp_kwargs: dict[str, Any] = {
+            **extras,
+            "min_tokens": min_tokens,
+            "max_tokens": max_tokens,
+            "logprobs": logprobs,
+        }
+        sampling_params = vllm.SamplingParams(**sp_kwargs)
         request_id = str(uuid.uuid4())
         output_text = ""
         prompt_tokens = 0
