@@ -48,18 +48,24 @@ class TestRerankAsyncSharedConcurrency(unittest.IsolatedAsyncioTestCase):
                     with patch(
                         "rank_llm.rerank.vllm_handler_with_openai_sdk.VllmHandlerWithOpenAISDK"
                     ) as oa:
-                        mock_tok = MagicMock()
-                        mock_tok.apply_chat_template.side_effect = lambda m, **k: str(m)
-                        mock_tok.encode.side_effect = lambda x, **k: [0] * 4
-                        vh.return_value.get_tokenizer.return_value = mock_tok
-                        oa.return_value.get_tokenizer.return_value = mock_tok
-                        m = RankListwiseOSLLM(
-                            model="m",
-                            context_size=256,
-                            window_size=2,
-                            stride=1,
-                            batch_size=1,
-                        )
+                        with patch(
+                            "rank_llm.rerank.listwise.rank_listwise_os_llm.AutoTokenizer"
+                        ) as at:
+                            mock_tok = MagicMock()
+                            mock_tok.apply_chat_template.side_effect = lambda m, **k: (
+                                str(m)
+                            )
+                            mock_tok.encode.side_effect = lambda x, **k: [0] * 4
+                            vh.return_value.get_tokenizer.return_value = mock_tok
+                            oa.return_value.get_tokenizer.return_value = mock_tok
+                            at.from_pretrained.return_value = mock_tok
+                            m = RankListwiseOSLLM(
+                                model="m",
+                                context_size=256,
+                                window_size=2,
+                                stride=1,
+                                batch_size=1,
+                            )
         m.create_prompt = MagicMock(  # type: ignore[method-assign]
             return_value=("[p]", 1)
         )
