@@ -21,16 +21,28 @@ from rank_llm.rerank import Reranker
 from rank_llm.rerank.listwise import SafeLiteLLM
 from rank_llm.retrieve import Retriever
 
-dataset_name = "dl19"
-requests = Retriever.from_dataset_with_prebuilt_index(dataset_name)
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
+# Configurable via environment variables
+MODEL = os.environ.get("LITELLM_MODEL", "openai/gpt-4o-mini")
+CONTEXT_SIZE = int(os.environ.get("LITELLM_CONTEXT_SIZE", "4096"))
+DATASET = os.environ.get("LITELLM_DATASET", "dl19")
+WINDOW_SIZE = int(os.environ.get("LITELLM_WINDOW_SIZE", "20"))
+STRIDE = int(os.environ.get("LITELLM_STRIDE", "10"))
+BATCH_SIZE = int(os.environ.get("LITELLM_BATCH_SIZE", "32"))
+TEMPLATE = os.environ.get(
+    "LITELLM_TEMPLATE", str(TEMPLATES / "rank_zephyr_template.yaml")
+)
+
+requests = Retriever.from_dataset_with_prebuilt_index(DATASET)
+
 model_coordinator = SafeLiteLLM(
-    model="openai/gpt-4o-mini",
-    context_size=128000,
-    prompt_mode=None,
-    prompt_template_path=(TEMPLATES / "rank_zephyr_template.yaml"),
-    api_key=os.environ.get("OPENAI_API_KEY"),
+    model=MODEL,
+    context_size=CONTEXT_SIZE,
+    prompt_template_path=TEMPLATE,
+    window_size=WINDOW_SIZE,
+    stride=STRIDE,
+    batch_size=BATCH_SIZE,
 )
 
 reranker = Reranker(model_coordinator)
