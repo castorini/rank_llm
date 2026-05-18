@@ -14,6 +14,10 @@ from ftfy import fix_text
 from rank_llm._optional import missing_extra_error
 from rank_llm.data import Request, Result
 from rank_llm.rerank.rankllm import PromptMode
+from rank_llm.rerank.sampling_kwargs import (
+    sanitize_sampling_kwargs,
+    split_openai_chat_sampling,
+)
 
 from .listwise_rankllm import ListwiseRankLLM
 
@@ -61,6 +65,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         system_message: str | None = None,
         is_thinking: bool = False,
         reasoning_token_budget: int = 10000,
+        sampling_kwargs: dict[str, Any] | None = None,
         use_logits: bool = False,
         use_alpha: bool = False,
         sglang_batched: bool = False,
@@ -106,7 +111,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - This class is operates given scenarios where listwise ranking is required, with support for dynamic
          passage handling and customization of prompts through system messages and few-shot examples.
         - GPU acceleration is supported and recommended for faster computations.
-        TODO: Make repetition_penalty configurable
         """
         if prompt_template_path is None:
             prompt_template_path = (
@@ -135,6 +139,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._system_message = system_message
         self._is_thinking = is_thinking
         self._reasoning_token_budget = reasoning_token_budget
+        self._sampling_kwargs: dict[str, Any] | None = (
+            dict(sampling_kwargs) if sampling_kwargs else None
+        )
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
@@ -307,10 +314,17 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         if hasattr(self, "_vllm_handler"):
             if self._base_url:
                 logger.info("Async OpenAI SDK Generating!")
+                sanitized = sanitize_sampling_kwargs(self._sampling_kwargs)
+                direct_kw, eb_extra = split_openai_chat_sampling(sanitized)
+                extra_body: dict[str, Any] = {
+                    "chat_template_kwargs": {"enable_thinking": self._is_thinking},
+                }
+                extra_body.update(eb_extra)
                 return await self._vllm_handler.chat_completion_async(
                     messages=prompt,
                     max_tokens=max_tok,
-                    temperature=0,
+                    extra_body=extra_body,
+                    **direct_kw,
                 )
             else:
                 logger.info("Async VLLM Generating!")
@@ -322,7 +336,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     prompt=prompt,
                     min_tokens=min_tok,
                     max_tokens=max_tok,
-                    temperature=0.0,
+                    sampling_extra=sanitize_sampling_kwargs(self._sampling_kwargs),
                 )
                 return (
                     text,
@@ -352,16 +366,20 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             current_window_size = self._window_size
         n_out = self.num_output_tokens(current_window_size)
 
+        sanitized = sanitize_sampling_kwargs(self._sampling_kwargs)
+
         if (
             sglang is not None
             and SGLangEngineType is not None
             and isinstance(self._llm, SGLangEngineType)
         ):
             logger.info("SGLang Generating!")
-            output = self._llm.generate(
-                [prompt],
-                {"temperature": 0.0, "max_new_tokens": n_out, "min_new_tokens": n_out},
-            )[0]
+            sgl_opts: dict[str, Any] = {
+                **sanitized,
+                "max_new_tokens": n_out,
+                "min_new_tokens": n_out,
+            }
+            output = self._llm.generate([prompt], sgl_opts)[0]
             return (
                 output["text"],
                 "",
@@ -377,14 +395,27 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             import tensorrt_llm.hlapi.llm
             from tensorrt_llm import SamplingParams as TRTSamplingParams
 
+            trt_sampling_keys = frozenset(
+                {
+                    "temperature",
+                    "top_p",
+                    "top_k",
+                    "repetition_penalty",
+                    "presence_penalty",
+                    "frequency_penalty",
+                    "stop",
+                    "seed",
+                }
+            )
+            trt_kw: dict[str, Any] = {
+                k: v for k, v in sanitized.items() if k in trt_sampling_keys
+            }
+            trt_kw["max_tokens"] = n_out
+            trt_kw["min_tokens"] = n_out
+
             if isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM):
                 logger.info("TensorRT LLM Generating!")
-                output = self._llm.generate(
-                    [prompt],
-                    TRTSamplingParams(
-                        temperature=0.0, max_tokens=n_out, min_tokens=n_out
-                    ),
-                )[0]
+                output = self._llm.generate([prompt], TRTSamplingParams(**trt_kw))[0]
                 return (
                     output.outputs[0].text,
                     "",

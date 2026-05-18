@@ -95,10 +95,12 @@ class VllmHandlerWithOpenAISDK:
         self, messages: list[dict[str, str]], **kwargs: Any
     ) -> tuple[str, str, dict[str, Any]]:
         """Submit a single chat request and await its completion."""
+        extra_body = kwargs.pop("extra_body", None)
         try:
             response = await self._async_client.chat.completions.create(
                 model=self._model,
                 messages=messages,
+                extra_body=extra_body,
                 **kwargs,
             )
             text = response.choices[0].message.content

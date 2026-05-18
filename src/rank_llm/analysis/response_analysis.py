@@ -191,6 +191,9 @@ class ResponseAnalyzer:
         output_extraction_regex: str,
         is_alphabetical: bool = False,
     ):
+        if response is None:
+            stats_dict["wrong_format"] += 1
+            return
         resp = response.strip()
         if "</think>" in resp:
             parts = resp.split("</think>")

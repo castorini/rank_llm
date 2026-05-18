@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 else:
     PreTrainedTokenizerBase = Any
 
+from rank_llm.rerank.sampling_kwargs import sanitize_sampling_kwargs
+
 
 class VllmHandler:
     """
@@ -91,19 +93,21 @@ class VllmHandler:
         prompt: str | list[dict[str, str]],
         min_tokens: int,
         max_tokens: int,
-        temperature: float,
         logprobs: int | None = None,
+        sampling_extra: dict[str, Any] | None = None,
     ) -> tuple[str, int, int]:
         """
         Submit a single prompt and await its completion.
         Returns (output_text, prompt_token_count, completion_token_count).
         """
-        sampling_params = vllm.SamplingParams(
-            min_tokens=min_tokens,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            logprobs=logprobs,
-        )
+        extras = sanitize_sampling_kwargs(sampling_extra)
+        sp_kwargs: dict[str, Any] = {
+            **extras,
+            "min_tokens": min_tokens,
+            "max_tokens": max_tokens,
+            "logprobs": logprobs,
+        }
+        sampling_params = vllm.SamplingParams(**sp_kwargs)
         request_id = str(uuid.uuid4())
         output_text = ""
         prompt_tokens = 0

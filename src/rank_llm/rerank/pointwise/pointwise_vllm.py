@@ -75,7 +75,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         batch_size: int = 32,
         max_concurrent_llm_calls: int | None = None,
         disable_thinking_extra_body: bool = True,
-        max_passage_words: int | None = None,
+        max_passage_words: int = 300,
     ) -> None:
         super().__init__(
             model=model,

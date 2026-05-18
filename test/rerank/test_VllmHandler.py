@@ -89,7 +89,7 @@ class TestVllmHandler(unittest.TestCase):
                 prompt="test prompt",
                 min_tokens=1,
                 max_tokens=10,
-                temperature=0.0,
+                sampling_extra={"temperature": 0.0},
             )
         )
 
@@ -115,15 +115,15 @@ class TestVllmHandler(unittest.TestCase):
                 prompt="test",
                 min_tokens=5,
                 max_tokens=20,
-                temperature=0.7,
                 logprobs=3,
+                sampling_extra={"temperature": 0.7},
             )
         )
 
         self.mock_sampling_params_class.assert_called_once_with(
+            temperature=0.7,
             min_tokens=5,
             max_tokens=20,
-            temperature=0.7,
             logprobs=3,
         )
 

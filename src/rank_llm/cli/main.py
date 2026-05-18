@@ -197,6 +197,18 @@ def build_parser() -> argparse.ArgumentParser:
     rerank_parser.add_argument("--use-logits", dest="use_logits", action="store_true")
     rerank_parser.add_argument("--use-alpha", dest="use_alpha", action="store_true")
     rerank_parser.add_argument(
+        "--pointwise-vllm", dest="pointwise_vllm", action="store_true"
+    )
+    rerank_parser.add_argument(
+        "--listwise-vllm-with-openai-sdk",
+        dest="listwise_vllm_with_openai_sdk",
+        action="store_true",
+        help=(
+            "Use open-source listwise RankListwiseOSLLM against --base-url "
+            "(OpenAI-compatible remote vLLM via the OpenAI SDK) instead of SafeOpenai."
+        ),
+    )
+    rerank_parser.add_argument(
         "--sglang-batched", dest="sglang_batched", action="store_true"
     )
     rerank_parser.add_argument(
@@ -391,6 +403,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
     )
     serve_http_parser.add_argument(
+        "--pointwise-vllm",
+        dest="pointwise_vllm",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--listwise-vllm-with-openai-sdk",
+        dest="listwise_vllm_with_openai_sdk",
+        action="store_true",
+        help=(
+            "Use RankListwiseOSLLM against --base-url (remote vLLM via OpenAI SDK) "
+            "instead of SafeOpenai."
+        ),
+    )
+    serve_http_parser.add_argument(
         "--sglang-batched",
         dest="sglang_batched",
         action="store_true",
@@ -399,6 +425,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--tensorrt-batched",
         dest="tensorrt_batched",
         action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--max-passage-words",
+        dest="max_passage_words",
+        type=int,
+        default=300,
     )
     serve_mcp_parser = serve_subparsers.add_parser(
         "mcp",
@@ -578,6 +610,30 @@ def _validate_rerank_execution_args(args: argparse.Namespace) -> None:
         )
 
 
+def _validate_rerank_backend_flags(args: argparse.Namespace, *, command: str) -> None:
+    if getattr(args, "pointwise_vllm", False) and getattr(
+        args, "listwise_vllm_with_openai_sdk", False
+    ):
+        raise CLIError(
+            "--pointwise-vllm cannot be combined with --listwise-vllm-with-openai-sdk",
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_arguments",
+            command=command,
+        )
+    if (
+        getattr(args, "listwise_vllm_with_openai_sdk", False)
+        and not (getattr(args, "base_url", None) or "").strip()
+    ):
+        raise CLIError(
+            "--base-url is required when --listwise-vllm-with-openai-sdk is set",
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_arguments",
+            command=command,
+        )
+
+
 def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
     query = payload["query"]
     query_text = query["text"] if isinstance(query, dict) else query
@@ -628,6 +684,7 @@ def _validation_error_response(
 
 def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
     _validate_rerank_sources(args)
+    _validate_rerank_backend_flags(args, command="rerank")
     direct_mode = args.input_json is not None or args.stdin
     if direct_mode:
         payload = _read_direct_payload(args)
@@ -672,6 +729,8 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
             tensorrt_batched=args.tensorrt_batched,
+            pointwise_vllm=args.pointwise_vllm,
+            listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
             reasoning_effort=args.reasoning_effort,
             max_passage_words=args.max_passage_words,
         )
@@ -728,6 +787,8 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
             tensorrt_batched=args.tensorrt_batched,
+            pointwise_vllm=args.pointwise_vllm,
+            listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
             reasoning_effort=args.reasoning_effort,
             max_passage_words=args.max_passage_words,
         )
@@ -968,6 +1029,8 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
             details={"missing_dependencies": ["fastapi", "uvicorn"]},
         ) from error
 
+    _validate_rerank_backend_flags(args, command="serve")
+
     app = create_app(
         ServerConfig(
             host=args.host,
@@ -998,6 +1061,9 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
             tensorrt_batched=args.tensorrt_batched,
+            pointwise_vllm=args.pointwise_vllm,
+            listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
+            max_passage_words=args.max_passage_words,
         )
     )
     uvicorn.run(app, host=args.host, port=args.port)

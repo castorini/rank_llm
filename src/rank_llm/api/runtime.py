@@ -42,6 +42,9 @@ class ServerConfig:
     use_alpha: bool = False
     sglang_batched: bool = False
     tensorrt_batched: bool = False
+    pointwise_vllm: bool = False
+    listwise_vllm_with_openai_sdk: bool = False
+    max_passage_words: int = 300
     _reranker_cache: dict[tuple[tuple[str, Any], ...], Reranker] = field(
         default_factory=dict, init=False, repr=False
     )
@@ -74,6 +77,9 @@ _OVERRIDABLE_FIELDS = {
     "use_alpha",
     "sglang_batched",
     "tensorrt_batched",
+    "pointwise_vllm",
+    "listwise_vllm_with_openai_sdk",
+    "max_passage_words",
 }
 
 _RERANKER_CACHE_FIELDS = (
@@ -102,6 +108,9 @@ _RERANKER_CACHE_FIELDS = (
     "use_alpha",
     "sglang_batched",
     "tensorrt_batched",
+    "pointwise_vllm",
+    "listwise_vllm_with_openai_sdk",
+    "max_passage_words",
 )
 
 _OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
@@ -131,6 +140,9 @@ _OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
     "use_alpha": bool,
     "sglang_batched": bool,
     "tensorrt_batched": bool,
+    "pointwise_vllm": bool,
+    "listwise_vllm_with_openai_sdk": bool,
+    "max_passage_words": int,
 }
 
 _OVERRIDE_FIELD_CHOICES: dict[str, set[str]] = {
@@ -225,6 +237,9 @@ def initialize_reranker(
             use_alpha=effective_config.use_alpha,
             sglang_batched=effective_config.sglang_batched,
             tensorrt_batched=effective_config.tensorrt_batched,
+            pointwise_vllm=effective_config.pointwise_vllm,
+            listwise_vllm_with_openai_sdk=effective_config.listwise_vllm_with_openai_sdk,
+            max_passage_words=effective_config.max_passage_words,
         )
     )
     config._reranker_cache[cache_key] = reranker
@@ -271,6 +286,9 @@ def run_rerank_request(
         use_alpha=effective_config.use_alpha,
         sglang_batched=effective_config.sglang_batched,
         tensorrt_batched=effective_config.tensorrt_batched,
+        pointwise_vllm=effective_config.pointwise_vllm,
+        listwise_vllm_with_openai_sdk=effective_config.listwise_vllm_with_openai_sdk,
+        max_passage_words=effective_config.max_passage_words,
         reranker=reranker,
     )
     return CommandResponse(
