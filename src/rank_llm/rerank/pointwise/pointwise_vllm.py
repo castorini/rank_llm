@@ -336,6 +336,7 @@ class PointwiseVLLM(PointwiseRankLLM):
                 work.append((qi, ci, msgs, n_tok))
 
         sem = self._get_llm_concurrency_sem()
+        progress = tqdm(total=len(work), desc="Progress through (q, d) pairs")
 
         async def score_one(
             qi: int, ci: int, msgs: list[dict[str, str]], n_tok: int
@@ -352,11 +353,15 @@ class PointwiseVLLM(PointwiseRankLLM):
                     msgs,
                     extra_body=self._score_extra_body,
                 )
+            progress.update(1)
             return qi, ci, msgs, n_tok, text, out_tok, score, usage
 
-        rows = await asyncio.gather(
-            *[score_one(qi, ci, msgs, n_tok) for qi, ci, msgs, n_tok in work]
-        )
+        try:
+            rows = await asyncio.gather(
+                *[score_one(qi, ci, msgs, n_tok) for qi, ci, msgs, n_tok in work]
+            )
+        finally:
+            progress.close()
 
         for qi, ci, msgs, n_tok, text, out_tok, score, usage in rows:
             rerank_results[qi].candidates[ci].score = score
