@@ -34,7 +34,16 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                     set() if is_reranker else {"query", "doc_content"}
                 ),
                 allowed_placeholders=(
-                    {"instruction", "query", "doc_content"} if is_reranker else set()
+                    {
+                        "instruction",
+                        "query",
+                        "doc_content",
+                        "relevance_definition",
+                        "query_type",
+                        "doc_type",
+                    }
+                    if is_reranker
+                    else set()
                 ),
             ),
             "message_roles": TemplateSectionConfig(
@@ -45,7 +54,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             "instruction": TemplateSectionConfig(
                 required=is_reranker,
                 required_placeholders=set(),
-                allowed_placeholders=set(),
+                allowed_placeholders=(
+                    {"instruction", "relevance_definition", "query_type", "doc_type"}
+                    if is_reranker
+                    else set()
+                ),
             ),
         }
 
@@ -190,7 +203,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         if self.template.get("message_roles") == "reranker":
-            instruction = self.template.get("instruction", "").strip()
+            template_values = kwargs.get("template_values", {})
+            instruction = self._format_template(
+                template_key="instruction",
+                fmt_values=template_values,
+            ).strip()
             return [
                 {"role": "system", "content": instruction},
                 {"role": "query", "content": query},
@@ -204,7 +221,8 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                     num_examples=num_fewshot_examples, examples=fewshot_examples
                 )
             )
-        fmt_values = {"query": query, "doc_content": doc}
+        template_values = kwargs.get("template_values", {})
+        fmt_values = {"query": query, "doc_content": doc, **template_values}
         body_text = self._format_template(template_key="body", fmt_values=fmt_values)
         user_parts.append(body_text)
         user_content = "".join(user_parts).replace("<unk>", "")
