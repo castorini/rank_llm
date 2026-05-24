@@ -33,7 +33,7 @@ openai = [
     "tiktoken>=0.6.0",
 ]
 genai = [
-    "google-generativeai>=0.8.2",
+    "google-genai>=1.0.0",
     "python-dotenv>=1.0.1",
 ]
 cloud = [

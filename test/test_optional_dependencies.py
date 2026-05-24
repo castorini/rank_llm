@@ -59,13 +59,66 @@ class TestOptionalDependencies(unittest.TestCase):
         ):
             with self.assertRaises(ImportError) as exc:
                 rank_gemini.SafeGenai(
-                    model="gemini-2.0-flash-001",
+                    model="gemini-3-flash-preview",
                     context_size=4096,
                     prompt_template_path="unused.yaml",
                     keys="test",
                 )
 
         self.assertIn(install_hint("genai"), str(exc.exception))
+
+    def test_safe_genai_uses_google_genai_client(self):
+        fake_torch = SimpleNamespace(
+            cuda=SimpleNamespace(is_available=lambda: False, device_count=lambda: 0)
+        )
+        with patch.dict("sys.modules", {"torch": fake_torch}):
+            rank_gemini = import_module("rank_llm.rerank.listwise.rank_gemini")
+
+        calls = []
+
+        class FakeModels:
+            def generate_content(self, **kwargs):
+                calls.append(("generate_content", kwargs))
+                return SimpleNamespace(text="fake ranking")
+
+            def count_tokens(self, **kwargs):
+                calls.append(("count_tokens", kwargs))
+                return SimpleNamespace(total_tokens=7)
+
+        class FakeClient:
+            def __init__(self, api_key):
+                calls.append(("client", api_key))
+                self.models = FakeModels()
+
+        fake_genai = SimpleNamespace(Client=FakeClient)
+        fake_types = SimpleNamespace(
+            GenerateContentConfig=lambda **kwargs: kwargs,
+            SafetySetting=lambda **kwargs: kwargs,
+        )
+
+        def fake_init(self, model, *args, **kwargs):
+            self._model = model
+
+        with (
+            patch.object(rank_gemini.ListwiseRankLLM, "__init__", fake_init),
+            patch.object(rank_gemini, "genai", fake_genai),
+            patch.object(rank_gemini, "types", fake_types),
+        ):
+            reranker = rank_gemini.SafeGenai(
+                model="gemini-3-flash-preview",
+                context_size=4096,
+                prompt_template_path="unused.yaml",
+                keys="test-key",
+            )
+            response, token_count = reranker.run_llm("rank these passages")
+
+        self.assertEqual(response, "fake ranking")
+        self.assertEqual(token_count, 7)
+        self.assertEqual(calls[0], ("client", "test-key"))
+        self.assertEqual(calls[1][0], "generate_content")
+        self.assertEqual(calls[1][1]["model"], "gemini-3-flash-preview")
+        self.assertEqual(calls[1][1]["contents"], "rank these passages")
+        self.assertEqual(calls[2][0], "count_tokens")
 
     def test_rank_listwise_os_llm_reports_vllm_extra(self):
         fake_torch = SimpleNamespace(

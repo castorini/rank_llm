@@ -45,7 +45,6 @@ genai_path = "GEN_AI_API_KEY"
 def get_genai_api_key(genai_path=genai_path) -> str:
     load_dotenv(dotenv_path=".env.local")
     if os.getenv(genai_path) is not None:
-        print(os.getenv(genai_path))
         return os.getenv(genai_path)
     return None
 

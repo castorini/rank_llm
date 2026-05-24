@@ -335,7 +335,7 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=castorini/first_mistra
 
 Omit `--use_logits` if you wish to perform traditional listwise reranking.
 
-## Gemini Flash 2.0
+## Gemini 3 Flash Preview
 
 First install the Gemini provider extra:
 
@@ -347,7 +347,7 @@ uv sync --group dev --extra genai
 Then run the following command:
 
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-2.0-flash-001 --top_k_candidates=100 --dataset=dl20 \
+python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-3-flash-preview --top_k_candidates=100 --dataset=dl20 \
     --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml  --context_size=4096
 ```
 
