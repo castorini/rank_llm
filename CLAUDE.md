@@ -15,7 +15,7 @@ pip install -e .[all]
 - Optional extras:
   - `.[pyserini]` for retrieval
   - `.[genai]` for Gemini
-  - `.[sglang]` / `.[tensorrt-llm]` for specialized backends
+  - `.[sglang]` for specialized backends
   - `.[training]` for finetuning workflows
 
 ## Project Structure

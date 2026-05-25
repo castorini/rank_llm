@@ -105,7 +105,6 @@ SCHEMAS: dict[str, dict[str, Any]] = {
                     "use_logits": {"type": "boolean"},
                     "use_alpha": {"type": "boolean"},
                     "sglang_batched": {"type": "boolean"},
-                    "tensorrt_batched": {"type": "boolean"},
                 },
             },
         },

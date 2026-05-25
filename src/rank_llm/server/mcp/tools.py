@@ -45,7 +45,6 @@ def register_rankllm_tools(mcp: FastMCP):
             use_logits: whether to rerank using the logits of the first identifier only.
             use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
             sglang_batched: whether to run the model in batches using sglang backend.
-            tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
         """
     )
     def rerank(
@@ -76,7 +75,6 @@ def register_rankllm_tools(mcp: FastMCP):
         use_logits: bool = False,
         use_alpha: bool = False,
         sglang_batched: bool = False,
-        tensorrt_batched: bool = False,
     ) -> list[Result]:
         return run_mcp_rerank(**locals())
 
@@ -121,7 +119,6 @@ def register_rankllm_tools(mcp: FastMCP):
             use_logits: whether to rerank using the logits of the first identifier only.
             use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
             sglang_batched: whether to run the model in batches using sglang backend.
-            tensorrt_batched: whether to run the model in batches using tensorrtllm backend.
         """
     )
     def retrieve_and_rerank(
@@ -159,6 +156,5 @@ def register_rankllm_tools(mcp: FastMCP):
         use_logits: bool = False,
         use_alpha: bool = False,
         sglang_batched: bool = False,
-        tensorrt_batched: bool = False,
     ) -> list[Result]:
         return run_mcp_retrieve_and_rerank(**locals())

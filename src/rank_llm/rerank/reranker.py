@@ -125,7 +125,6 @@ class Reranker:
         rerank_results_dirname: str = "rerank_results",
         inference_invocations_history_dirname: str = "inference_invocations_history",
         sglang_batched: bool = False,
-        tensorrt_batched: bool = False,
         output_trec_file: str | None = None,
         output_jsonl_file: str | None = None,
         invocations_history_file: str | None = None,
@@ -169,11 +168,9 @@ class Reranker:
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
 
-        # Add vllm or sglang or tensorrt to rerank result file name if they are used
+        # Add vllm or sglang to rerank result file name if they are used
         if sglang_batched:
             name += "_sglang"
-        elif tensorrt_batched:
-            name += "_tensorrt"
         else:
             # VLLM is the fallback right now
             name += "_vllm"
@@ -644,7 +641,7 @@ class Reranker:
             # NULL reranker
             model_coordinator = None
         else:
-            # supports loading models from huggingface (local vLLM / SGLang / TensorRT when base_url is unset)
+            # supports loading models from huggingface (local vLLM / SGLang when base_url is unset)
             coordinator_base_url: str | None = kwargs.get("base_url")
             rest = {k: v for k, v in kwargs.items() if k != "base_url"}
             model_coordinator = _create_rank_listwise_os_llm_coordinator(

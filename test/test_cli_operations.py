@@ -49,7 +49,6 @@ class TestCLIOperations(unittest.TestCase):
             use_logits=True,
             use_alpha=True,
             sglang_batched=False,
-            tensorrt_batched=True,
             pointwise_vllm=False,
             listwise_vllm_with_openai_sdk=False,
             reasoning_effort="medium",

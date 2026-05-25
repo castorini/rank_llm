@@ -62,10 +62,6 @@ sglang = [
 # (flash-attn-4) that conflict with vllm.  Install via:
 #   pip install 'rank-llm[sglang]'
 
-# tensorrt-llm is not declarable as a uv-resolvable extra because the PyPI
-# stub needs NVIDIA's index and the NVIDIA wheel carries git-URL deps that
-# uv rejects.  Install manually:
-#   pip install --extra-index-url https://pypi.nvidia.com/ 'rank-llm[local]' 'tensorrt-llm[all]>=0.14.0'
 pyserini = [
     "faiss-cpu>=1.8.0",
     "pandas>=1.4.0",
