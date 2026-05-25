@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import json
 import logging
 import re
 from functools import cmp_to_key
@@ -25,6 +24,9 @@ from rank_llm.rerank.vllm_handler_with_openai_sdk import (
 logger = logging.getLogger(__name__)
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
+_BINARY_SCORING_MODE = "binary_yes_no"
+_TAGGED_SCORE_SCORING_MODE = "tagged_score_0_100"
+_SUPPORTED_SCORING_MODES = {_BINARY_SCORING_MODE, _TAGGED_SCORE_SCORING_MODE}
 
 
 def _single_token_ids_from_strings(
@@ -101,35 +103,34 @@ class PointwiseVLLM(PointwiseRankLLM):
         self._scoring_mode = scoring_mode
         self._max_generation_tokens = max_generation_tokens
 
+        if self._scoring_mode not in _SUPPORTED_SCORING_MODES:
+            raise ValueError(
+                "PointwiseVLLM scoring_mode must be one of: "
+                f"{', '.join(sorted(_SUPPORTED_SCORING_MODES))}."
+            )
+
+        self._score_extra_body: dict[str, Any] = self._build_score_extra_body()
+        if disable_thinking_extra_body:
+            self._score_extra_body["chat_template_kwargs"] = {"enable_thinking": False}
+
+    def _build_score_extra_body(self) -> dict[str, Any]:
+        if self._scoring_mode != _BINARY_SCORING_MODE:
+            return {}
+
         yes_ids = _single_token_ids_from_strings(
             self._tokenizer, POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS
         )
         no_ids = _single_token_ids_from_strings(
             self._tokenizer, POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS
         )
-        self._allowed_token_ids = list(dict.fromkeys(yes_ids + no_ids))
-        if not self._allowed_token_ids:
+        allowed_token_ids = list(dict.fromkeys(yes_ids + no_ids))
+        if not allowed_token_ids:
             raise ValueError(
                 "PointwiseVLLM: no single-token yes/no ids found for this tokenizer. "
                 "Extend POINTWISE_*_LOGPROB_TOKEN_STRINGS or use a model whose tokenizer "
                 "maps at least one yes/no spelling to one token."
             )
-
-        self._score_extra_body: dict[str, Any] = {}
-        if self._scoring_mode == "binary_yes_no":
-            self._score_extra_body["allowed_token_ids"] = self._allowed_token_ids
-        if disable_thinking_extra_body:
-            self._score_extra_body["chat_template_kwargs"] = {"enable_thinking": False}
-
-        if self._scoring_mode not in {
-            "binary_yes_no",
-            "tagged_score_0_100",
-            "json_doc_score_0_10",
-        }:
-            raise ValueError(
-                "PointwiseVLLM scoring_mode must be one of: "
-                "'binary_yes_no', 'tagged_score_0_100', 'json_doc_score_0_10'."
-            )
+        return {"allowed_token_ids": allowed_token_ids}
 
     def _get_llm_concurrency_sem(self) -> asyncio.Semaphore:
         if self._llm_concurrency_sem is None:
@@ -206,7 +207,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         return len(self._tokenizer.encode(prompt))
 
     def num_output_tokens(self) -> int:
-        if self._scoring_mode in {"tagged_score_0_100", "json_doc_score_0_10"}:
+        if self._scoring_mode == _TAGGED_SCORE_SCORING_MODE:
             return self._max_generation_tokens
         return 1
 
@@ -217,7 +218,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         self, messages: list[dict[str, str]], *, use_sem: bool
     ) -> tuple[str, int, float, dict[str, Any]]:
         async def _score_request() -> tuple[str, int, float, dict[str, Any]]:
-            if self._scoring_mode == "binary_yes_no":
+            if self._scoring_mode == _BINARY_SCORING_MODE:
                 return await self._vllm.chat_completion_score_async(
                     messages,
                     extra_body=self._score_extra_body,
@@ -232,10 +233,7 @@ class PointwiseVLLM(PointwiseRankLLM):
             full_text = text or ""
             if reasoning:
                 full_text = f"{full_text}\n\n<reasoning>\n{reasoning}\n</reasoning>"
-            if self._scoring_mode == "tagged_score_0_100":
-                score = self._extract_tagged_score(full_text)
-            else:
-                score = self._extract_json_doc_score(full_text)
+            score = self._extract_tagged_score(full_text)
             out_tok = int(
                 usage.get("completion_tokens") or usage.get("output_tokens") or 0
             )
@@ -256,25 +254,6 @@ class PointwiseVLLM(PointwiseRankLLM):
         except ValueError:
             return -1.0
         return max(0.0, min(100.0, score))
-
-    @staticmethod
-    def _extract_json_doc_score(text: str) -> float:
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if not match:
-            return -1.0
-        try:
-            payload = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return -1.0
-
-        for key in ("[1]", "1"):
-            if key in payload:
-                try:
-                    score = float(payload[key])
-                except (TypeError, ValueError):
-                    return -1.0
-                return max(0.0, min(10.0, score))
-        return -1.0
 
     def run_llm(
         self, prompt: str | list[dict[str, str]], **kwargs: Any
@@ -406,7 +385,6 @@ class PointwiseVLLM(PointwiseRankLLM):
                 msgs, n_tok = self.create_prompt(res, ci)
                 work.append((qi, ci, msgs, n_tok))
 
-        sem = self._get_llm_concurrency_sem()
         progress = tqdm(total=len(work), desc="Progress through (q, d) pairs")
 
         async def score_one(
@@ -414,16 +392,10 @@ class PointwiseVLLM(PointwiseRankLLM):
         ) -> tuple[
             int, int, list[dict[str, str]], int, str, int, float, dict[str, Any]
         ]:
-            async with sem:
-                (
-                    text,
-                    out_tok,
-                    score,
-                    usage,
-                ) = await self._vllm.chat_completion_score_async(
-                    msgs,
-                    extra_body=self._score_extra_body,
-                )
+            text, out_tok, score, usage = await self._score_one_async(
+                msgs,
+                use_sem=True,
+            )
             progress.update(1)
             return qi, ci, msgs, n_tok, text, out_tok, score, usage
 

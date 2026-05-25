@@ -34,16 +34,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                     set() if is_reranker else {"query", "doc_content"}
                 ),
                 allowed_placeholders=(
-                    {
-                        "instruction",
-                        "query",
-                        "doc_content",
-                        "relevance_definition",
-                        "query_type",
-                        "doc_type",
-                    }
-                    if is_reranker
-                    else set()
+                    {"instruction", "query", "doc_content"} if is_reranker else set()
                 ),
             ),
             "message_roles": TemplateSectionConfig(
@@ -54,11 +45,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             "instruction": TemplateSectionConfig(
                 required=is_reranker,
                 required_placeholders=set(),
-                allowed_placeholders=(
-                    {"instruction", "relevance_definition", "query_type", "doc_type"}
-                    if is_reranker
-                    else set()
-                ),
+                allowed_placeholders=set(),
             ),
         }
 
@@ -203,11 +190,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         if self.template.get("message_roles") == "reranker":
-            template_values = kwargs.get("template_values", {})
-            instruction = self._format_template(
-                template_key="instruction",
-                fmt_values=template_values,
-            ).strip()
+            instruction = self.template.get("instruction", "").strip()
             return [
                 {"role": "system", "content": instruction},
                 {"role": "query", "content": query},
