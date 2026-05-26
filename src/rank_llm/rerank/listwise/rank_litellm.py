@@ -226,15 +226,7 @@ class SafeLiteLLM(ListwiseRankLLM):
 
         text = completion.choices[0].message.content
 
-        usage = {}
-        if completion.usage is not None:
-            prompt_tokens = getattr(completion.usage, "prompt_tokens", 0) or 0
-            completion_tokens = getattr(completion.usage, "completion_tokens", 0) or 0
-            usage = {
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": prompt_tokens + completion_tokens,
-            }
+        usage = completion.usage if completion.usage is not None else {}
 
         return text, None, usage
 
