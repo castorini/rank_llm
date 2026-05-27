@@ -96,7 +96,7 @@ def main() -> None:
     parser.add_argument("--max-concurrent", type=int, default=16)
     parser.add_argument(
         "--output-root",
-        default="rerank_results/reasoner_embed_qwen3-8b-0928_their_results",
+        default="rerank_results/reasoner_embed_qwen3-8b-0928_rerank_rankllm_their_retrieval",
         help="Outputs under rerank_results/<model_alias>/<condition_name>/",
     )
     args = parser.parse_args()
