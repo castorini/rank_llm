@@ -39,7 +39,7 @@ TASKS = [
 CONDITIONS = [
     (
         "reason_embed_solo",
-        "first_stage/reason_embed",
+        ".",
         "retrieve_results_bright-{task}-reason_embed_top100.jsonl",
     )
 ]
