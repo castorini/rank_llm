@@ -27,6 +27,5 @@ def main(args: argparse.Namespace | Sequence[str] | None = None) -> int:
     return cli_main(["rerank", *translated])
 
 
-
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -29,7 +29,6 @@ Then add a batched backend only if requested:
 
 - `vllm` for vLLM
 - `sglang` for SGLang
-- `tensorrt-llm` for TensorRT-LLM
 
 ## API and MCP Workflow
 

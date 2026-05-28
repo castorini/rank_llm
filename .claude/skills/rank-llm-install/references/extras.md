@@ -26,7 +26,7 @@ This covers:
 | Local Hugging Face and PyTorch rerankers | `uv sync --group dev --extra local` | `pip install -e ".[local]"` |
 | vLLM batched inference | `uv sync --group dev --extra vllm` | `pip install -e ".[vllm]"` |
 | SGLang batched inference | `uv sync --group dev --extra sglang` | `pip install -e ".[sglang]"` |
-| TensorRT-LLM batched inference | `uv sync --group dev --extra tensorrt-llm` | `pip install -e ".[tensorrt-llm]"` |
+
 | MCP server bundle | `uv sync --group dev --extra mcp` | `pip install -e ".[mcp]"` |
 | Full HTTP and MCP server bundle | `uv sync --group dev --extra server` | `pip install -e ".[server]"` |
 | Training scripts | `uv sync --group dev --extra training` | `pip install -e ".[training]"` |
@@ -38,4 +38,4 @@ This covers:
 - `cloud` aggregates the hosted-provider stacks.
 - `api` is intentionally lighter than `server`.
 - `mcp` currently pulls a larger bundle because it includes model-serving and `pyserini`-dependent pieces.
-- Install `flashinfer` separately for some `sglang` setups and `flash-attn` separately for TensorRT-LLM or training workflows when needed.
+- Install `flashinfer` separately for some `sglang` setups and `flash-attn` separately for training workflows when needed.
