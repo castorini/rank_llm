@@ -15,7 +15,6 @@ _DROP_FLAGS = {"prompt_mode"}
 
 def main(args: argparse.Namespace | Sequence[str] | None = None) -> int:
     if isinstance(args, argparse.Namespace):
-        _validate_backend_flags_from_namespace(args)
         argv = namespace_to_legacy_argv(args, drop_flags=_DROP_FLAGS)
     elif args is None:
         import sys
@@ -24,17 +23,9 @@ def main(args: argparse.Namespace | Sequence[str] | None = None) -> int:
     else:
         argv = list(args)
 
-    _validate_backend_flags_from_argv(argv)
     translated = translate_legacy_argv(argv, drop_flags=_DROP_FLAGS)
     return cli_main(["rerank", *translated])
 
-
-def _validate_backend_flags_from_namespace(args: argparse.Namespace) -> None:
-    return None
-
-
-def _validate_backend_flags_from_argv(argv: Sequence[str]) -> None:
-    return None
 
 
 if __name__ == "__main__":
