@@ -86,4 +86,4 @@ uv run pre-commit install --install-hooks --hook-type pre-commit --hook-type pre
 - `rank-llm` is the canonical CLI entry point. The legacy scripts under `src/rank_llm/scripts/` remain available, but they are compatibility wrappers.
 - `cloud` is the default hosted-provider stack and `api` is the lightweight HTTP server stack. This pair is the best default for most contributor workflows.
 - `pyserini` requires Java 21 and is only needed for retrieval or evaluation workflows.
-- `local`, `vllm`, `sglang`, and `tensorrt-llm` pull in heavier inference stacks. Do not install them by default.
+- `local`, `vllm`, and `sglang` pull in heavier inference stacks. Do not install them by default.

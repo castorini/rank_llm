@@ -69,7 +69,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         use_logits: bool = False,
         use_alpha: bool = False,
         sglang_batched: bool = False,
-        tensorrt_batched: bool = False,
         batch_size: int = 32,
         base_url: str | None = None,
         max_passage_words: int = 300,
@@ -98,7 +97,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
-         - tensorrt_batched (bool, optional): Indicates whether batched inference using TensorRT-LLM is leveraged. Defaults to False.
          - batch_size (int, optional): The size of the batch for processing requests. Defaults to 32.
          - base_url (str, optional): When specified the Open AI API compatiable vllm handler is used.
 
@@ -133,7 +131,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             max_passage_words=max_passage_words,
         )
         self._sglang_batched = sglang_batched
-        self._tensorrt_batched = tensorrt_batched
         self._name = name
         self._variable_passages = variable_passages
         self._system_message = system_message
@@ -170,18 +167,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             port = random.randint(30000, 35000)
             self._llm = Engine(model, port=port)
             self._tokenizer = self._llm.get_tokenizer()
-        elif tensorrt_batched:
-            try:
-                from tensorrt_llm import LLM as TRTLLM
-                from tensorrt_llm import BuildConfig
-            except Exception as err:
-                raise missing_extra_error(
-                    "tensorrt-llm",
-                    "TensorRT-LLM batch inference requires tensorrt-llm.",
-                ) from err
-            build_config = BuildConfig(max_seq_len=4096)
-            self._llm = TRTLLM(model=model, build_config=build_config)
-            self._tokenizer = self._llm.tokenizer
         else:
             if vllm is None:
                 raise missing_extra_error(
@@ -303,7 +288,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         For the vLLM generate path uses AsyncLLMEngine; for the OpenAI-compatible
         path uses AsyncOpenAI. Both allow all concurrently submitted coroutines
         to be in-flight simultaneously.
-        SGLang and TensorRT fall back to running synchronously in an executor.
+        SGLang falls back to running synchronously in an executor.
         """
         if current_window_size is None:
             current_window_size = self._window_size
@@ -348,7 +333,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     },
                 )
         else:
-            # SGLang / TensorRT: no async API, offload to thread executor.
+            # SGLang: no async API, offload to thread executor.
             import asyncio
 
             loop = asyncio.get_event_loop()
@@ -361,7 +346,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         prompt: str | list[dict[str, str]],
         current_window_size: int | None = None,
     ) -> tuple[str, str, dict[str, Any]]:
-        """Synchronous fallback for SGLang and TensorRT backends."""
+        """Synchronous fallback for SGLang backend."""
         if current_window_size is None:
             current_window_size = self._window_size
         n_out = self.num_output_tokens(current_window_size)
@@ -391,41 +376,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     - 1,
                 },
             )
-        elif self._tensorrt_batched:
-            import tensorrt_llm.hlapi.llm
-            from tensorrt_llm import SamplingParams as TRTSamplingParams
-
-            trt_sampling_keys = frozenset(
-                {
-                    "temperature",
-                    "top_p",
-                    "top_k",
-                    "repetition_penalty",
-                    "presence_penalty",
-                    "frequency_penalty",
-                    "stop",
-                    "seed",
-                }
-            )
-            trt_kw: dict[str, Any] = {
-                k: v for k, v in sanitized.items() if k in trt_sampling_keys
-            }
-            trt_kw["max_tokens"] = n_out
-            trt_kw["min_tokens"] = n_out
-
-            if isinstance(self._llm, tensorrt_llm.hlapi.llm.LLM):
-                logger.info("TensorRT LLM Generating!")
-                output = self._llm.generate([prompt], TRTSamplingParams(**trt_kw))[0]
-                return (
-                    output.outputs[0].text,
-                    "",
-                    {
-                        "prompt_tokens": len(output.prompt_token_ids),
-                        "completion_tokens": len(output.outputs[0].token_ids),
-                        "total_tokens": len(output.prompt_token_ids)
-                        + len(output.outputs[0].token_ids),
-                    },
-                )
         raise ValueError(
             "Only support SGLang and VLLM inference backend for inferencing."
         )

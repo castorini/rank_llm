@@ -115,19 +115,6 @@ class TestCLILegacyWrappers(unittest.TestCase):
             ],
         )
 
-    def test_run_rank_llm_wrapper_rejects_conflicting_backend_flags(self):
-        with self.assertRaisesRegex(ValueError, "mutually exclusive"):
-            run_rank_llm.main(
-                [
-                    "--model_path",
-                    "model",
-                    "--requests_file",
-                    "requests.jsonl",
-                    "--sglang_batched",
-                    "--tensorrt_batched",
-                ]
-            )
-
     def test_flask_legacy_entrypoint_runs_flask_app(self):
         app = Mock()
         with patch(

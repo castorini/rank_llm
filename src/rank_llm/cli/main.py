@@ -212,9 +212,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--sglang-batched", dest="sglang_batched", action="store_true"
     )
     rerank_parser.add_argument(
-        "--tensorrt-batched", dest="tensorrt_batched", action="store_true"
-    )
-    rerank_parser.add_argument(
         "--reasoning-effort",
         dest="reasoning_effort",
         choices=("none", "minimal", "low", "medium", "high", "xhigh"),
@@ -419,11 +416,6 @@ def build_parser() -> argparse.ArgumentParser:
     serve_http_parser.add_argument(
         "--sglang-batched",
         dest="sglang_batched",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--tensorrt-batched",
-        dest="tensorrt_batched",
         action="store_true",
     )
     serve_http_parser.add_argument(
@@ -728,7 +720,6 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             use_logits=args.use_logits,
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
-            tensorrt_batched=args.tensorrt_batched,
             pointwise_vllm=args.pointwise_vllm,
             listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
             reasoning_effort=args.reasoning_effort,
@@ -786,7 +777,6 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             use_logits=args.use_logits,
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
-            tensorrt_batched=args.tensorrt_batched,
             pointwise_vllm=args.pointwise_vllm,
             listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
             reasoning_effort=args.reasoning_effort,
@@ -1060,7 +1050,6 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
             use_logits=args.use_logits,
             use_alpha=args.use_alpha,
             sglang_batched=args.sglang_batched,
-            tensorrt_batched=args.tensorrt_batched,
             pointwise_vllm=args.pointwise_vllm,
             listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
             max_passage_words=args.max_passage_words,

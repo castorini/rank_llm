@@ -116,7 +116,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         Async wrapper around run_llm. Subclasses with native async backends
         (AsyncLLMEngine, AsyncOpenAI) should override this for true concurrency.
         The default implementation runs run_llm in a thread-pool executor so
-        that synchronous backends (SGLang, TensorRT) don't block the event loop.
+        that synchronous backends (SGLang) don't block the event loop.
         """
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(

@@ -41,7 +41,6 @@ class ServerConfig:
     use_logits: bool = False
     use_alpha: bool = False
     sglang_batched: bool = False
-    tensorrt_batched: bool = False
     pointwise_vllm: bool = False
     listwise_vllm_with_openai_sdk: bool = False
     max_passage_words: int = 300
@@ -76,7 +75,6 @@ _OVERRIDABLE_FIELDS = {
     "use_logits",
     "use_alpha",
     "sglang_batched",
-    "tensorrt_batched",
     "pointwise_vllm",
     "listwise_vllm_with_openai_sdk",
     "max_passage_words",
@@ -107,7 +105,6 @@ _RERANKER_CACHE_FIELDS = (
     "use_logits",
     "use_alpha",
     "sglang_batched",
-    "tensorrt_batched",
     "pointwise_vllm",
     "listwise_vllm_with_openai_sdk",
     "max_passage_words",
@@ -139,7 +136,6 @@ _OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
     "use_logits": bool,
     "use_alpha": bool,
     "sglang_batched": bool,
-    "tensorrt_batched": bool,
     "pointwise_vllm": bool,
     "listwise_vllm_with_openai_sdk": bool,
     "max_passage_words": int,
@@ -236,7 +232,6 @@ def initialize_reranker(
             use_logits=effective_config.use_logits,
             use_alpha=effective_config.use_alpha,
             sglang_batched=effective_config.sglang_batched,
-            tensorrt_batched=effective_config.tensorrt_batched,
             pointwise_vllm=effective_config.pointwise_vllm,
             listwise_vllm_with_openai_sdk=effective_config.listwise_vllm_with_openai_sdk,
             max_passage_words=effective_config.max_passage_words,
@@ -285,7 +280,6 @@ def run_rerank_request(
         use_logits=effective_config.use_logits,
         use_alpha=effective_config.use_alpha,
         sglang_batched=effective_config.sglang_batched,
-        tensorrt_batched=effective_config.tensorrt_batched,
         pointwise_vllm=effective_config.pointwise_vllm,
         listwise_vllm_with_openai_sdk=effective_config.listwise_vllm_with_openai_sdk,
         max_passage_words=effective_config.max_passage_words,
