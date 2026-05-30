@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from rank_llm.api.server import create_app
 
-# Needs Anserini API to be active at 8081
+# Needs Pyserini API to be active at 8081
 
 # - name: Run API tests
 #   run: |
@@ -14,7 +14,7 @@ from rank_llm.api.server import create_app
 
 
 class TestAPI(unittest.TestCase):
-    BASE_URL = "http://localhost:8082/api/model/{model_name}/index/{index_name}/{anserini_host_addr}"
+    BASE_URL = "http://localhost:8082/api/model/{model_name}/index/{index_name}/{pyserini_host_addr}"
 
     def setUp(self):
         # rank zephyr mock
@@ -29,7 +29,7 @@ class TestAPI(unittest.TestCase):
         # Define commonly used API parameters
         self.model_name = "rank_zephyr"
         self.index_name = "msmarco-v2.1-doc"
-        self.anserini_host_addr = "8081"
+        self.pyserini_host_addr = "8081"
         self.query = "Who killed the Yardbirds"
         self.hits_retriever = 10
         self.hits_reranker = 4
@@ -54,7 +54,7 @@ class TestAPI(unittest.TestCase):
             self.BASE_URL.format(
                 model_name=self.model_name,
                 index_name=self.index_name,
-                anserini_host_addr=self.anserini_host_addr,
+                pyserini_host_addr=self.pyserini_host_addr,
             ),
             query_string=self.query_params,
         )
@@ -75,7 +75,7 @@ class TestAPI(unittest.TestCase):
             self.BASE_URL.format(
                 model_name=self.model_name,
                 index_name=self.index_name,
-                anserini_host_addr=self.anserini_host_addr,
+                pyserini_host_addr=self.pyserini_host_addr,
             ),
             query_string=query_params,
         )
@@ -93,7 +93,7 @@ class TestAPI(unittest.TestCase):
             self.BASE_URL.format(
                 model_name=self.model_name,
                 index_name=self.index_name,
-                anserini_host_addr=self.anserini_host_addr,
+                pyserini_host_addr=self.pyserini_host_addr,
             ),
             query_string=query_params,
         )
@@ -108,7 +108,7 @@ class TestAPI(unittest.TestCase):
             self.BASE_URL.format(
                 model_name=self.model_name,
                 index_name=self.index_name,
-                anserini_host_addr=self.anserini_host_addr,
+                pyserini_host_addr=self.pyserini_host_addr,
             ),
             query_string=query_params,
         )
@@ -132,7 +132,7 @@ class TestAPI(unittest.TestCase):
                 self.BASE_URL.format(
                     model_name=model_name,
                     index_name=self.index_name,
-                    anserini_host_addr=self.anserini_host_addr,
+                    pyserini_host_addr=self.pyserini_host_addr,
                 ),
                 query_string=self.query_params,
             )

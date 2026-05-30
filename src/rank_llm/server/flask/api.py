@@ -105,7 +105,7 @@ def create_app(model, port, use_azure_openai=False):
         Args:
             - model_path (str): name of reranking model (e.g., rank_zephyr)
             - dataset (str): dataset from which to retrieve
-            - retriever_host (str): host of Anserini API
+            - retriever_host (str): host of Pyserini API
         """
 
         # query to search for
@@ -141,7 +141,7 @@ def create_app(model, port, use_azure_openai=False):
             torch.cuda.empty_cache()
             default_model_coordinator = None
         try:
-            # calls Anserini retriever API and reranks
+            # calls Pyserini retriever API and reranks
             response, model_coordinator = retrieve_and_rerank(
                 dataset=dataset,
                 retrieval_mode=RetrievalMode.DATASET,
