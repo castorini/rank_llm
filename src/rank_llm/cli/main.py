@@ -168,9 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
     rerank_parser.add_argument(
         "--use-openrouter", dest="use_openrouter", action="store_true"
     )
-    rerank_parser.add_argument(
-        "--use-litellm", dest="use_litellm", action="store_true"
-    )
+    rerank_parser.add_argument("--use-litellm", dest="use_litellm", action="store_true")
     rerank_parser.add_argument("--base-url", dest="base_url", default="")
     rerank_parser.add_argument(
         "--variable-passages", dest="variable_passages", action="store_true"
