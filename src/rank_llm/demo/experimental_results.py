@@ -157,7 +157,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run experimental reranking demos across models and datasets."
     )
-    parser.add_argument("--rerankers", default=",".join(DEFAULT_RERANKERS))
+    parser.add_argument("--rerankers", default=None)
     parser.add_argument("--analysis-rerankers", default=None)
     parser.add_argument("--datasets", default=",".join(DEFAULT_DATASETS))
     parser.add_argument(
@@ -195,7 +195,7 @@ def main() -> None:
     from rank_llm.retrieve.retriever import Retriever
     from rank_llm.retrieve.topics_dict import TOPICS
 
-    rerankers = _split_csv(args.rerankers)
+    rerankers = _split_csv(args.rerankers or ",".join(DEFAULT_RERANKERS))
     datasets = _split_csv(args.datasets)
     if args.requests_file and len(datasets) != 1:
         raise ValueError("--requests-file requires exactly one --datasets value.")
@@ -213,9 +213,9 @@ def main() -> None:
                     )
                 if args.num_queries is not None:
                     retrieved_results = retrieved_results[: args.num_queries]
-                topics = TOPICS[dataset]
                 ret_ndcg_10 = None
                 if not args.skip_eval:
+                    topics = TOPICS[dataset]
                     ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
                 kwargs = {"populate_invocations_history": not args.no_history}
                 rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
@@ -250,9 +250,12 @@ def main() -> None:
 
     from rank_llm.analysis.response_analysis import ResponseAnalyzer
 
-    analysis_rerankers = _split_csv(
-        args.analysis_rerankers or ",".join(DEFAULT_ANALYSIS_RERANKERS)
-    )
+    if args.analysis_rerankers:
+        analysis_rerankers = _split_csv(args.analysis_rerankers)
+    elif args.rerankers:
+        analysis_rerankers = rerankers
+    else:
+        analysis_rerankers = DEFAULT_ANALYSIS_RERANKERS
     results = {}
     for model in analysis_rerankers:
         use_alpha = model == "mistral"
@@ -265,9 +268,12 @@ def main() -> None:
             )
             for dataset in datasets
         ]
-        analyzer = ResponseAnalyzer.from_stored_files(paths, use_alpha=use_alpha)
-        error_counts = analyzer.count_errors(verbose=True, normalize=True)
-        results[model] = error_counts.__repr__()
+        try:
+            analyzer = ResponseAnalyzer.from_stored_files(paths, use_alpha=use_alpha)
+            error_counts = analyzer.count_errors(verbose=True, normalize=True)
+            results[model] = error_counts.__repr__()
+        except Exception as e:
+            results[model] = f"analysis_failed: {e}"
 
     print(results)
 
