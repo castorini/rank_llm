@@ -18,7 +18,9 @@ TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Rerank with Gemini via Google Gen AI.")
+    parser = argparse.ArgumentParser(
+        description="Rerank with Gemini via Google Gen AI."
+    )
     parser.add_argument("--dataset", default="dl19")
     parser.add_argument(
         "--requests-file",
