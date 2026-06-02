@@ -28,7 +28,7 @@ except ImportError:
 
 try:
     from transformers import AutoTokenizer
-except ImportError:
+except (ImportError, RuntimeError, TypeError):
     AutoTokenizer = None
 
 try:
@@ -186,6 +186,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 self._tokenizer = self._vllm_handler.get_tokenizer()
             else:
                 # Use the AutoTokenizer from the transformers library to load the tokenizer, since the initialization of the VllmHandler needs max_model_len which is calculated using the tokenizer.
+                if AutoTokenizer is None:
+                    raise missing_extra_error(
+                        "local",
+                        "Open-source listwise reranking requires transformers.",
+                    )
                 self._tokenizer = AutoTokenizer.from_pretrained(
                     model, trust_remote_code=True
                 )
