@@ -6,11 +6,13 @@ __all__ = [
     "ZephyrReranker",
     "SafeOpenai",
     "SafeGenai",
+    "SafeLiteLLM",
 ]
 
 _MODULE_BY_SYMBOL = {
     "RankListwiseOSLLM": "rank_llm.rerank.listwise.rank_listwise_os_llm",
     "SafeGenai": "rank_llm.rerank.listwise.rank_gemini",
+    "SafeLiteLLM": "rank_llm.rerank.listwise.rank_litellm",
     "SafeOpenai": "rank_llm.rerank.listwise.rank_gpt",
     "VicunaReranker": "rank_llm.rerank.listwise.vicuna_reranker",
     "ZephyrReranker": "rank_llm.rerank.listwise.zephyr_reranker",

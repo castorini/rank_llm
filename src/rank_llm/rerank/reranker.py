@@ -236,6 +236,7 @@ class Reranker:
         """
         use_azure_openai: bool = kwargs.get("use_azure_openai", False)
         use_openrouter: bool = kwargs.get("use_openrouter", False)
+        use_litellm: bool = kwargs.get("use_litellm", False)
         base_url: str | None = kwargs.get("base_url")
 
         if interactive and default_model_coordinator is not None:
@@ -284,6 +285,46 @@ class Reranker:
                 reasoning_effort=reasoning_effort,
                 max_passage_words=max_passage_words,
                 **(get_azure_openai_args() if use_azure_openai else {}),
+            )
+        elif use_litellm:
+            from rank_llm.rerank.listwise import SafeLiteLLM
+
+            keys_and_defaults = [
+                ("context_size", 4096),
+                (
+                    "prompt_template_path",
+                    (TEMPLATES / "rank_gpt_template.yaml"),
+                ),
+                ("num_few_shot_examples", 0),
+                ("few_shot_file", None),
+                ("window_size", 20),
+                ("stride", 10),
+                ("batch_size", 32),
+                ("max_passage_words", 300),
+                ("sampling_kwargs", None),
+            ]
+            [
+                context_size,
+                prompt_template_path,
+                num_few_shot_examples,
+                few_shot_file,
+                window_size,
+                stride,
+                batch_size,
+                max_passage_words,
+                sampling_kwargs,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+            model_coordinator = SafeLiteLLM(
+                model=model_path,
+                context_size=context_size,
+                prompt_template_path=prompt_template_path,
+                num_few_shot_examples=num_few_shot_examples,
+                few_shot_file=few_shot_file,
+                window_size=window_size,
+                stride=stride,
+                batch_size=batch_size,
+                max_passage_words=max_passage_words,
+                sampling_kwargs=sampling_kwargs,
             )
         elif base_url and (
             kwargs.get("pointwise_vllm") or kwargs.get("pointwise_qwen3_vllm")

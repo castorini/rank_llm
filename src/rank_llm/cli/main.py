@@ -168,6 +168,7 @@ def build_parser() -> argparse.ArgumentParser:
     rerank_parser.add_argument(
         "--use-openrouter", dest="use_openrouter", action="store_true"
     )
+    rerank_parser.add_argument("--use-litellm", dest="use_litellm", action="store_true")
     rerank_parser.add_argument("--base-url", dest="base_url", default="")
     rerank_parser.add_argument(
         "--variable-passages", dest="variable_passages", action="store_true"
@@ -347,6 +348,11 @@ def build_parser() -> argparse.ArgumentParser:
     serve_http_parser.add_argument(
         "--use-openrouter",
         dest="use_openrouter",
+        action="store_true",
+    )
+    serve_http_parser.add_argument(
+        "--use-litellm",
+        dest="use_litellm",
         action="store_true",
     )
     serve_http_parser.add_argument("--base-url", dest="base_url", default="")
@@ -708,6 +714,7 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             print_prompts_responses=args.print_prompts_responses,
             use_azure_openai=args.use_azure_openai,
             use_openrouter=args.use_openrouter,
+            use_litellm=getattr(args, "use_litellm", False),
             base_url=args.base_url,
             variable_passages=args.variable_passages,
             num_passes=args.num_passes,
@@ -765,6 +772,7 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             print_prompts_responses=args.print_prompts_responses,
             use_azure_openai=args.use_azure_openai,
             use_openrouter=args.use_openrouter,
+            use_litellm=getattr(args, "use_litellm", False),
             base_url=args.base_url,
             variable_passages=args.variable_passages,
             num_passes=args.num_passes,
@@ -1037,6 +1045,7 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
             print_prompts_responses=args.print_prompts_responses,
             use_azure_openai=args.use_azure_openai,
             use_openrouter=args.use_openrouter,
+            use_litellm=getattr(args, "use_litellm", False),
             base_url=args.base_url,
             variable_passages=args.variable_passages,
             num_passes=args.num_passes,
