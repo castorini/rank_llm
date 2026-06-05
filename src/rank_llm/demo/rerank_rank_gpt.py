@@ -175,7 +175,7 @@ def main() -> None:
         base_url=args.base_url,
     )
     reranker = Reranker(coordinator)
-    kwargs = {"populate_invocations_history": True}
+    kwargs = {"populate_invocations_history": True, "top_k_retrieve": args.k}
 
     print(f"\n--- Batched reranking ({len(requests)} queries) ---")
     rerank_results = reranker.rerank_batch(requests, **kwargs)
