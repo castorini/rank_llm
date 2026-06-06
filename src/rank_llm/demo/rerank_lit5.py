@@ -182,7 +182,11 @@ def main() -> None:
             device=args.device,
             batch_size=args.batch_size,
         )
-        kwargs = {"populate_invocations_history": True, "top_k_retrieve": args.k}
+        kwargs = {
+            "populate_invocations_history": True,
+            "top_k_retrieve": args.k,
+            "rank_end": args.k,
+        }
         print(f"\n--- LiT5-Distill batched reranking ({len(requests)} queries) ---")
         rerank_results = distill.rerank_batch(requests, **kwargs)
         print(f"Reranked {len(rerank_results)} results.")
@@ -206,7 +210,10 @@ def main() -> None:
         request = requests[0]
         print(f"\n--- LiT5-Score single-query demo (qid={request.query.qid}) ---")
         score_results = score.rerank_batch(
-            [request], populate_invocations_history=True, top_k_retrieve=args.k
+            [request],
+            populate_invocations_history=True,
+            top_k_retrieve=args.k,
+            rank_end=args.k,
         )
         score_result = score_results[0]
         print(f"qid={score_result.query.qid} text={score_result.query.text!r}")
