@@ -113,6 +113,7 @@ def run_mode(
         requests,
         populate_invocations_history=True,
         top_k_retrieve=args.k,
+        rank_end=args.k,
     )
     print(f"Reranked {len(rerank_results)} results.")
     _print_sample(rerank_results)
