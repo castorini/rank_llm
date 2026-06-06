@@ -167,7 +167,11 @@ def main() -> None:
         use_alpha=args.use_alpha,
     )
     reranker = Reranker(coordinator)
-    kwargs = {"populate_invocations_history": True, "top_k_retrieve": args.k}
+    kwargs = {
+        "populate_invocations_history": True,
+        "top_k_retrieve": args.k,
+        "rank_end": args.k,
+    }
 
     print(f"\n--- Batched reranking ({len(requests)} queries) ---")
     rerank_results = reranker.rerank_batch(requests, **kwargs)
