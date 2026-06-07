@@ -21,7 +21,7 @@ def make_file_artifact(name: str, path: str) -> dict[str, Any]:
 
 
 def serialize_data(value: Any) -> Any:
-    if dataclasses.is_dataclass(value):
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return {
             key: serialize_data(item) for key, item in dataclasses.asdict(value).items()
         }
