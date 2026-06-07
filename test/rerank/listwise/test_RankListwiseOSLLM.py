@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from dacite import from_dict
@@ -242,14 +243,27 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             [0] * (len(x) // 4 + 1)
         )
 
-        # Patch the handlers used by RankListwiseOSLLM (lazy-imported inside __init__)
-        self.patcher_vllm_handler = patch("rank_llm.rerank.vllm_handler.VllmHandler")
-        self.patcher_openai_handler = patch(
-            "rank_llm.rerank.vllm_handler_with_openai_sdk.VllmHandlerWithOpenAISDK"
+        self.patcher_auto_tokenizer = patch(
+            "rank_llm.rerank.listwise.rank_listwise_os_llm.AutoTokenizer"
         )
+        self.mock_auto_tokenizer = self.patcher_auto_tokenizer.start()
+        self.mock_auto_tokenizer.from_pretrained.return_value = self.mock_tokenizer
 
-        self.mock_vllm_handler_class = self.patcher_vllm_handler.start()
-        self.mock_openai_handler_class = self.patcher_openai_handler.start()
+        # Patch the handlers used by RankListwiseOSLLM without importing optional deps.
+        self.mock_vllm_handler_class = MagicMock()
+        self.mock_openai_handler_class = MagicMock()
+        self.patcher_handler_modules = patch.dict(
+            "sys.modules",
+            {
+                "rank_llm.rerank.vllm_handler": SimpleNamespace(
+                    VllmHandler=self.mock_vllm_handler_class
+                ),
+                "rank_llm.rerank.vllm_handler_with_openai_sdk": SimpleNamespace(
+                    VllmHandlerWithOpenAISDK=self.mock_openai_handler_class
+                ),
+            },
+        )
+        self.patcher_handler_modules.start()
 
         self.mock_vllm_handler_instance = self.mock_vllm_handler_class.return_value
         self.mock_vllm_handler_instance.get_tokenizer.return_value = self.mock_tokenizer
@@ -263,8 +277,8 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.patcher_device.stop()
         self.patcher_torch.stop()
         self.patcher_vllm_mod.stop()
-        self.patcher_vllm_handler.stop()
-        self.patcher_openai_handler.stop()
+        self.patcher_auto_tokenizer.stop()
+        self.patcher_handler_modules.stop()
 
     def test_init_with_vllm_generate(self):
         model_coordinator = RankListwiseOSLLM(

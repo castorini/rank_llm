@@ -264,34 +264,38 @@ class RankLLM(ABC):
 
     def _create_handler(self, template: dict[str, str]) -> BaseInferenceHandler:
         # TODO(issue #236 and #237): Need to modify function to select correct inference handler
-        from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
-            MultiTurnListwiseInferenceHandler,
-        )
-        from rank_llm.rerank.listwise.rankfid_inference_handler import (
-            RankFIDInferenceHandler,
-        )
-        from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
-            SingleTurnListwiseInferenceHandler,
-        )
-        from rank_llm.rerank.pairwise.pairwise_inference_handler import (
-            PairwiseInferenceHandler,
-        )
-        from rank_llm.rerank.pointwise.pointwise_inference_handler import (
-            PointwiseInferenceHandler,
-        )
-
         if "method" not in template:
             raise ValueError("Please provide a method section in the template")
 
         if template["method"] == "singleturn_listwise":
+            from rank_llm.rerank.listwise.singleturn_listwise_inference_handler import (
+                SingleTurnListwiseInferenceHandler,
+            )
+
             return SingleTurnListwiseInferenceHandler(template)
         elif template["method"] == "multiturn_listwise":
+            from rank_llm.rerank.listwise.multiturn_listwise_inference_handler import (
+                MultiTurnListwiseInferenceHandler,
+            )
+
             return MultiTurnListwiseInferenceHandler(template)
         elif template["method"] == "rankfid":
+            from rank_llm.rerank.listwise.rankfid_inference_handler import (
+                RankFIDInferenceHandler,
+            )
+
             return RankFIDInferenceHandler(template)
         elif template["method"] == "pointwise":
+            from rank_llm.rerank.pointwise.pointwise_inference_handler import (
+                PointwiseInferenceHandler,
+            )
+
             return PointwiseInferenceHandler(template)
         elif template["method"] == "pairwise":
+            from rank_llm.rerank.pairwise.pairwise_inference_handler import (
+                PairwiseInferenceHandler,
+            )
+
             return PairwiseInferenceHandler(template)
         else:
             raise ValueError(f"Invalid template method: {template['method']}")
