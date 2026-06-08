@@ -4,7 +4,7 @@ from unittest.mock import patch
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 
 
-# Anserini API must be hosted at 8081
+# Pyserini API must be hosted at 8081
 class TestRetrieveAndRerank(unittest.TestCase):
     def setUp(self):
         self.patcher_cuda = patch("torch.cuda.is_available")

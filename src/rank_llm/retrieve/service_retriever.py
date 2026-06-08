@@ -52,7 +52,7 @@ class ServiceRetriever:
             request (Request): The request containing the query and qid.
             dataset (str): The name of the dataset.
             k (int, optional): The top k hits to retrieve. Defaults to 100.
-            host (str): The Anserini API host address. Defaults to http://localhost:8081
+            host (str): The Pyserini API host address. Defaults to http://localhost:8081
 
         Returns:
             Request. Contains a query and list of candidates
@@ -60,14 +60,14 @@ class ServiceRetriever:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
 
-        url = f"{host}/api/v1.0/indexes/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
+        url = f"{host}/v1/indexes/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
         print(url)
         try:
             response = requests.get(url, timeout=timeout)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             raise type(e)(
-                f"Failed to retrieve data from Anserini server: {str(e)}"
+                f"Failed to retrieve data from Pyserini server: {str(e)}"
             ) from e
 
         data = response.json()
@@ -76,11 +76,15 @@ class ServiceRetriever:
         )
 
         for candidate in data["candidates"]:
+            # The Pyserini REST API returns "doc" as a plain content string,
+            # while downstream prompt construction expects a dict (doc["contents"]).
+            # Normalize strings into a dict to keep both shapes working.
+            doc = candidate["doc"]
             retrieved_results.candidates.append(
                 Candidate(
                     docid=candidate["docid"],
                     score=candidate["score"],
-                    doc=candidate["doc"],
+                    doc={"contents": doc} if isinstance(doc, str) else doc,
                 )
             )
 
