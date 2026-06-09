@@ -86,15 +86,28 @@ class PyseriniRetriever:
             self._searcher.set_bm25()
             if retrieval_method == RetrievalMethod.BM25_RM3:
                 self._searcher.set_rm3()
-        elif retrieval_method == RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL:
+        elif retrieval_method in [
+            RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL,
+            RetrievalMethod.SPLADE_V3,
+        ]:
             if LuceneImpactSearcher is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
 
+            # (query_encoder, encoder_type) per SPLADE variant. SPLADE++ ships an
+            # ONNX query encoder, SPLADE-v3 uses the PyTorch `naver/splade-v3` model.
+            query_encoder, encoder_type = {
+                RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL: (
+                    "SpladePlusPlusEnsembleDistil",
+                    "onnx",
+                ),
+                RetrievalMethod.SPLADE_V3: ("naver/splade-v3", "pytorch"),
+            }[retrieval_method]
+
             self._searcher = LuceneImpactSearcher.from_prebuilt_index(
                 self._get_index(),
-                query_encoder="SpladePlusPlusEnsembleDistil",
+                query_encoder=query_encoder,
                 min_idf=0,
-                encoder_type="onnx",
+                encoder_type=encoder_type,
             )
             if not self._searcher:
                 raise ValueError(

@@ -10,6 +10,7 @@ valid_inputs = [
     ("dl19", RetrievalMethod.BM25),
     ("dl19", RetrievalMethod.BM25_RM3),
     ("dl20", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),
+    ("dl20", RetrievalMethod.SPLADE_V3),
     ("dl20", RetrievalMethod.D_BERT_KD_TASB),
     ("dl20", RetrievalMethod.OPEN_AI_ADA2),
 ]
