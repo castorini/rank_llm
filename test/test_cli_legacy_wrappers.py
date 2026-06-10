@@ -1,5 +1,6 @@
 import argparse
 import unittest
+import warnings
 from unittest.mock import Mock, patch
 
 from rank_llm.scripts import (
@@ -41,6 +42,62 @@ class TestCLILegacyWrappers(unittest.TestCase):
                 "--use-azure-openai",
             ],
         )
+
+    def test_run_rank_llm_wrapper_warns_and_drops_deprecated_prompt_mode(self):
+        with patch("rank_llm.scripts.run_rank_llm.cli_main", return_value=0) as mocked:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                exit_code = run_rank_llm.main(
+                    [
+                        "--model_path",
+                        "model",
+                        "--prompt_mode",
+                        "rank_GPT",
+                        "--requests_file",
+                        "requests.jsonl",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        prompt_mode_warnings = [
+            w
+            for w in caught
+            if issubclass(w.category, DeprecationWarning)
+            and "prompt_mode" in str(w.message)
+        ]
+        self.assertEqual(len(prompt_mode_warnings), 1)
+        # The deprecated flag is still accepted but never forwarded to the CLI.
+        self.assertNotIn("--prompt-mode", mocked.call_args.args[0])
+        self.assertNotIn("rank_GPT", mocked.call_args.args[0])
+        self.assertEqual(
+            mocked.call_args.args[0],
+            [
+                "rerank",
+                "--model-path",
+                "model",
+                "--requests-file",
+                "requests.jsonl",
+            ],
+        )
+
+    def test_run_rank_llm_wrapper_warns_on_deprecated_prompt_mode_namespace(self):
+        with patch("rank_llm.scripts.run_rank_llm.cli_main", return_value=0):
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                run_rank_llm.main(
+                    argparse.Namespace(
+                        model_path="model",
+                        prompt_mode="rank_GPT",
+                    )
+                )
+
+        prompt_mode_warnings = [
+            w
+            for w in caught
+            if issubclass(w.category, DeprecationWarning)
+            and "prompt_mode" in str(w.message)
+        ]
+        self.assertEqual(len(prompt_mode_warnings), 1)
 
     def test_run_trec_eval_wrapper_delegates_to_evaluate(self):
         with patch("rank_llm.scripts.run_trec_eval.cli_main", return_value=0) as mocked:

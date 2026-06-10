@@ -48,9 +48,19 @@ class RankLLM(ABC):
         if prompt_mode:
             warnings.warn(
                 "PromptMode is deprecated and will be removed in v0.30.0. "
-                "Please use the prompt_template_path argument with a valid template file instead.",
+                "It is ignored: prompt behavior is now driven by YAML templates. "
+                "Please use the prompt_template_path argument with a valid YAML "
+                "template instead.",
                 DeprecationWarning,
                 stacklevel=2,
+            )
+
+        if not prompt_template_path:
+            raise ValueError(
+                "A YAML prompt template is required: pass prompt_template_path "
+                "(CLI: --prompt-template-path) pointing to a template under "
+                "src/rank_llm/rerank/prompt_templates/. The legacy prompt_mode "
+                "argument no longer selects a template."
             )
 
         try:

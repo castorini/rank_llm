@@ -6,7 +6,6 @@ from dacite import from_dict
 
 from rank_llm.data import Result
 from rank_llm.rerank.listwise.rank_listwise_os_llm import RankListwiseOSLLM
-from rank_llm.rerank.rankllm import PromptMode
 
 # model, context_size, prompt_template_path, num_few_shot_examples, variable_passages, window_size, system_message
 valid_inputs = [
@@ -81,99 +80,6 @@ valid_inputs = [
         True,
         10,
         "",
-    ),
-]
-
-failure_inputs = [
-    (
-        "castorini/rank_zephyr_7b_v1_full",
-        4096,
-        PromptMode.UNSPECIFIED,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_zephyr_7b_v1_full",
-        4096,
-        PromptMode.LRL,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1",
-        4096,
-        PromptMode.UNSPECIFIED,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1",
-        4096,
-        PromptMode.LRL,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda",
-        4096,
-        PromptMode.UNSPECIFIED,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda",
-        4096,
-        PromptMode.LRL,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_fp16",
-        4096,
-        PromptMode.UNSPECIFIED,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_fp16",
-        4096,
-        PromptMode.LRL,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda_fp16",
-        4096,
-        PromptMode.UNSPECIFIED,
-        0,
-        True,
-        30,
-        "Default Message",
-    ),
-    (
-        "castorini/rank_vicuna_7b_v1_noda_fp16",
-        4096,
-        PromptMode.LRL,
-        0,
-        True,
-        30,
-        "Default Message",
     ),
 ]
 
@@ -326,27 +232,6 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             self.assertEqual(model_coordinator._variable_passages, variable_passages)
             self.assertEqual(model_coordinator._window_size, window_size)
             self.assertEqual(model_coordinator._system_message, system_message)
-
-    def test_failure_inputs(self):
-        for (
-            model,
-            context_size,
-            prompt_mode,
-            num_few_shot_examples,
-            variable_passages,
-            window_size,
-            system_message,
-        ) in failure_inputs:
-            with self.assertRaises(ValueError):
-                RankListwiseOSLLM(
-                    model=model,
-                    context_size=context_size,
-                    prompt_mode=prompt_mode,
-                    num_few_shot_examples=num_few_shot_examples,
-                    variable_passages=variable_passages,
-                    window_size=window_size,
-                    system_message=system_message,
-                )
 
     @patch(
         "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens"

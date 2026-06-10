@@ -80,8 +80,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
          - context_size (int, optional): Maximum number of tokens that can be handled in a single prompt. Defaults to 4096.
-         - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
-         indicating that this class is designed primarily for listwise ranking tasks following the RANK_GPT methodology.
+         - prompt_mode (PromptMode, optional): Deprecated and ignored. Prompt behavior is driven by the YAML
+         template at prompt_template_path; passing prompt_mode only emits a deprecation warning.
          - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
          the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
          by default.
@@ -102,7 +102,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
          Raises:
          - AssertionError: If CUDA is specified as the device but is not available on the system.
-         - ValueError: If an unsupported prompt mode is provided.
+         - ValueError: If no prompt_template_path is provided and no default applies.
          - ValueError: If num_few_shot_examples > 0 but no valid file path is provided
 
          Note:
@@ -151,10 +151,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     "Open-source listwise reranking with local backends requires PyTorch.",
                 )
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
-        if prompt_mode and prompt_mode != PromptMode.RANK_GPT:
-            raise ValueError(
-                f"Unsupported prompt mode: {prompt_mode}. The only prompt mode currently supported is a slight variation of {PromptMode.RANK_GPT} prompt."
-            )
 
         if sglang_batched:
             if Engine is None:
