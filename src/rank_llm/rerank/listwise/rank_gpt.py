@@ -1,7 +1,6 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from importlib.resources import files
 from typing import Any
 
 from tqdm import tqdm
@@ -21,8 +20,6 @@ try:
     import tiktoken
 except ImportError:
     tiktoken = None
-
-TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class SafeOpenai(ListwiseRankLLM):
@@ -54,8 +51,8 @@ class SafeOpenai(ListwiseRankLLM):
         Parameters:
         - model (str): The model identifier for the LLM (model identifier information can be found via OpenAI's model lists).
         - context_size (int): The maximum number of tokens that the model can handle in a single request.
-        - prompt_mode (PromptMode, optional): Specifies the mode of prompt generation, with the default set to RANK_GPT,
-         indicating that this class is designed primarily for listwise ranking tasks following the RANK_GPT methodology.
+        - prompt_mode (PromptMode, optional): Deprecated and ignored. Prompt behavior is driven by the YAML
+         template at prompt_template_path; passing prompt_mode only emits a deprecation warning.
         - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
         the integration of example-based learning to improve model performance. Defaults to 0, indicating no few-shot examples
         by default.
@@ -70,7 +67,7 @@ class SafeOpenai(ListwiseRankLLM):
         - api_version (str, optional): The API version, necessary for Azure AI integration.
 
         Raises:
-        - ValueError: If an unsupported prompt mode is provided or if no OpenAI API keys / invalid OpenAI API keys are supplied.
+        - ValueError: If no prompt_template_path is provided or if no OpenAI API keys / invalid OpenAI API keys are supplied.
 
         Note:
         - This class supports cycling between multiple OpenAI API keys to distribute quota usage or handle rate limiting.
@@ -86,26 +83,6 @@ class SafeOpenai(ListwiseRankLLM):
         if not keys:
             raise ValueError("Please provide OpenAI Keys.")
 
-        if prompt_mode and prompt_mode not in [
-            PromptMode.RANK_GPT,
-            PromptMode.RANK_GPT_APEER,
-            PromptMode.LRL,
-        ]:
-            raise ValueError(
-                f"unsupported prompt mode for GPT models: {prompt_mode}, expected {PromptMode.RANK_GPT}, {PromptMode.RANK_GPT_APEER} or {PromptMode.LRL}."
-            )
-
-        if prompt_template_path is None:
-            if prompt_mode == PromptMode.RANK_GPT:
-                prompt_template_path = TEMPLATES / "rank_gpt_template.yaml"
-            elif prompt_mode == PromptMode.RANK_GPT_APEER:
-                prompt_template_path = TEMPLATES / "rank_gpt_apeer_template.yaml"
-            elif prompt_mode == PromptMode.LRL:
-                prompt_template_path = TEMPLATES / "rank_lrl_template.yaml"
-            else:
-                raise ValueError(
-                    "Either `prompt_mode` or `prompt_template_path` must be specified."
-                )
         super().__init__(
             model=model,
             context_size=context_size,

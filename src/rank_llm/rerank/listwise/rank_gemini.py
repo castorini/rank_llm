@@ -1,5 +1,4 @@
 import time
-from importlib.resources import files
 from typing import Any
 
 from tqdm import tqdm
@@ -32,9 +31,6 @@ def populate_generation_config(**kwargs) -> dict[str, Any]:
     return generation_config
 
 
-TEMPLATES = files("rank_llm.rerank.prompt_templates")
-
-
 class SafeGenai(ListwiseRankLLM):
     def __init__(
         self,
@@ -52,15 +48,6 @@ class SafeGenai(ListwiseRankLLM):
         max_passage_words: int = 300,
         **kwargs,
     ):
-        if not prompt_template_path:
-            if prompt_mode == PromptMode.RANK_GPT_APEER:
-                prompt_template_path = TEMPLATES / "rank_gpt_apeer_template.yaml"
-            elif prompt_mode == PromptMode.RANK_GPT:
-                prompt_template_path = TEMPLATES / "rank_zephyr_template.yaml"
-            else:
-                raise ValueError(
-                    "Either `prompt_mode` or `prompt_template_path` must be specified."
-                )
         super().__init__(
             model=model,
             context_size=context_size,
@@ -82,13 +69,6 @@ class SafeGenai(ListwiseRankLLM):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide Genai API Keys.")
-        if prompt_mode and prompt_mode not in [
-            PromptMode.RANK_GPT_APEER,
-            PromptMode.RANK_GPT,
-        ]:
-            raise ValueError(
-                f"unsupported prompt mode for GEMINI models: {prompt_mode}, expected {PromptMode.RANK_GPT_APEER} or {PromptMode.RANK_GPT}."
-            )
         self._output_token_estimate = None
         self._keys = keys
         self._cur_key_id = key_start_id or 0

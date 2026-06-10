@@ -1,6 +1,5 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from importlib.resources import files
 from typing import Any
 
 from tqdm import tqdm
@@ -15,8 +14,6 @@ try:
     import litellm
 except ImportError:
     litellm = None
-
-TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
 class SafeLiteLLM(ListwiseRankLLM):
@@ -54,28 +51,6 @@ class SafeLiteLLM(ListwiseRankLLM):
                 "litellm",
                 "The LiteLLM reranker requires the litellm package.",
             )
-
-        if prompt_mode and prompt_mode not in [
-            PromptMode.RANK_GPT,
-            PromptMode.RANK_GPT_APEER,
-            PromptMode.LRL,
-        ]:
-            raise ValueError(
-                f"unsupported prompt mode for LiteLLM: {prompt_mode}, "
-                f"expected {PromptMode.RANK_GPT}, {PromptMode.RANK_GPT_APEER} or {PromptMode.LRL}."
-            )
-
-        if prompt_template_path is None:
-            if prompt_mode == PromptMode.RANK_GPT:
-                prompt_template_path = TEMPLATES / "rank_gpt_template.yaml"
-            elif prompt_mode == PromptMode.RANK_GPT_APEER:
-                prompt_template_path = TEMPLATES / "rank_gpt_apeer_template.yaml"
-            elif prompt_mode == PromptMode.LRL:
-                prompt_template_path = TEMPLATES / "rank_lrl_template.yaml"
-            else:
-                raise ValueError(
-                    "Either `prompt_mode` or `prompt_template_path` must be specified."
-                )
 
         super().__init__(
             model=model,
