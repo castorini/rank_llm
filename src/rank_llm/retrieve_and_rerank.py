@@ -113,7 +113,6 @@ def retrieve_and_rerank(
             pass_ct=None if num_passes == 1 else pass_ct,
             window_size=kwargs.get("window_size", None),
             dataset_name=dataset,
-            sglang_batched=kwargs.get("sglang_batched", False),
             output_trec_file=kwargs.get("output_trec_file") or None,
             output_jsonl_file=kwargs.get("output_jsonl_file") or None,
             invocations_history_file=kwargs.get("invocations_history_file") or None,
