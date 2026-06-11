@@ -28,7 +28,6 @@ Add `local` when the user wants:
 Then add a batched backend only if requested:
 
 - `vllm` for vLLM
-- `sglang` for SGLang
 
 ## API and MCP Workflow
 
