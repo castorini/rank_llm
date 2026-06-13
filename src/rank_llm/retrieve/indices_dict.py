@@ -84,6 +84,42 @@ INDICES = {
         "climate-fever": "beir-v1.0.0-climate-fever.splade-pp-ed",
         "scifact": "beir-v1.0.0-scifact.splade-pp-ed",
     },
+    "splade_v3": {
+        "dl19": "msmarco-v1-passage.splade-v3",
+        "dl20": "msmarco-v1-passage.splade-v3",
+        "dl21": "",
+        "dl22": "",
+        "dl23": "",
+        "covid": "beir-v1.0.0-trec-covid.splade-v3",
+        "bioasq": "beir-v1.0.0-bioasq.splade-v3",
+        "nfc": "beir-v1.0.0-nfcorpus.splade-v3",
+        "nq": "beir-v1.0.0-nq.splade-v3",
+        "hotpotqa": "beir-v1.0.0-hotpotqa.splade-v3",
+        "fiqa": "beir-v1.0.0-fiqa.splade-v3",
+        "signal": "beir-v1.0.0-signal1m.splade-v3",
+        "news": "beir-v1.0.0-trec-news.splade-v3",
+        "robust04": "beir-v1.0.0-robust04.splade-v3",
+        "arguana": "beir-v1.0.0-arguana.splade-v3",
+        "touche": "beir-v1.0.0-webis-touche2020.splade-v3",
+        "cqadupstack-android": "beir-v1.0.0-cqadupstack-android.splade-v3",
+        "cqadupstack-english": "beir-v1.0.0-cqadupstack-english.splade-v3",
+        "cqadupstack-gaming": "beir-v1.0.0-cqadupstack-gaming.splade-v3",
+        "cqadupstack-gis": "beir-v1.0.0-cqadupstack-gis.splade-v3",
+        "cqadupstack-mathematica": "beir-v1.0.0-cqadupstack-mathematica.splade-v3",
+        "cqadupstack-physics": "beir-v1.0.0-cqadupstack-physics.splade-v3",
+        "cqadupstack-programmers": "beir-v1.0.0-cqadupstack-programmers.splade-v3",
+        "cqadupstack-stats": "beir-v1.0.0-cqadupstack-stats.splade-v3",
+        "cqadupstack-tex": "beir-v1.0.0-cqadupstack-tex.splade-v3",
+        "cqadupstack-unix": "beir-v1.0.0-cqadupstack-unix.splade-v3",
+        "cqadupstack-webmasters": "beir-v1.0.0-cqadupstack-webmasters.splade-v3",
+        "cqadupstack-wordpress": "beir-v1.0.0-cqadupstack-wordpress.splade-v3",
+        "quora": "beir-v1.0.0-quora.splade-v3",
+        "dbpedia": "beir-v1.0.0-dbpedia-entity.splade-v3",
+        "scidocs": "beir-v1.0.0-scidocs.splade-v3",
+        "fever": "beir-v1.0.0-fever.splade-v3",
+        "climate-fever": "beir-v1.0.0-climate-fever.splade-v3",
+        "scifact": "beir-v1.0.0-scifact.splade-v3",
+    },
     "distilbert_tas_b": {
         "dl19": "msmarco-v1-passage.distilbert-dot-tas_b-b256",
         "dl20": "msmarco-v1-passage.distilbert-dot-tas_b-b256",
@@ -133,3 +169,5 @@ for index_name in TF_INDEX_INFO:
 for index_name in IMPACT_INDEX_INFO:
     if "splade-pp-ed" in index_name:
         INDICES["SPLADE++_EnsembleDistil_ONNX"][index_name] = index_name
+    elif "splade-v3" in index_name:
+        INDICES["splade_v3"][index_name] = index_name

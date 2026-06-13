@@ -22,6 +22,7 @@ def generate_hits_info(base_path):
         "BD_BERT_KD_TASB": "DistilBERT KD TASB",
         "OPEN_AI_ADA2": "OpenAI ADA2",
         "SPLADE_P_P_ENSEMBLE_DISTIL": "SPLADE++ CoCondenser-EnsembleDistil",
+        "SPLADE_V3": "SPLADE-v3",
         "BM25_RM3": "BM25 + RM3",
         "REP_LLAMA": "repLLaMA",
     }
