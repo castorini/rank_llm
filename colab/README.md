@@ -81,14 +81,29 @@ uv tool install git+https://github.com/googlecolab/google-colab-cli
 # then authenticate per the CLI's prompts
 ```
 
+> GPU access depends on your Colab plan: a **free** account is usually limited to
+> **T4**; `L4`/`A100`/`H100` need Colab Pro/Pro+. "Backend rejected accelerator"
+> means you lack quota for that tier.
+
 **Reranking (cheapest smoke test, ~minutes):**
 
 ```bash
-bash colab/rerank_on_colab.sh        # dl19 + SPLADE++ + RankZephyr on an A100
+# Pro/Pro+ (≥24 GB) — the default 7B listwise reranker:
+GPU=A100 bash colab/rerank_on_colab.sh
 # -> ./colab_runs/colab_rerank_out.tar.gz  (results.jsonl + results.trec)
-tar xzf colab_runs/colab_rerank_out.tar.gz
-rank-llm evaluate --help             # then evaluate the TREC file locally
+
+# Free tier (T4) — the 7B model OOMs on 16 GB, so use a small pointwise model.
+# bm25 retrieval is the most reliable (pure Lucene, no ONNX deps):
+GPU=T4 MODEL_PATH=castorini/monot5-base-msmarco-10k RETRIEVAL_METHOD=bm25 \
+  bash colab/rerank_on_colab.sh
+
+# dataset mode auto-evaluates: nDCG@1/5/10 print in the terminal during the run.
+tar xzf colab_runs/colab_rerank_out.tar.gz -C colab_runs   # results.jsonl + results.trec
 ```
+
+(The default `SPLADE++_EnsembleDistil_ONNX` also works — the recipe auto-installs
+`onnxruntime` for it — but it downloads a learned-sparse index + ONNX encoder, so
+`bm25` is the quicker, more robust first demo.)
 
 **Fine-tuning (heavier; use A100-80GB or H100):**
 

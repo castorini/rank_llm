@@ -126,7 +126,40 @@ RERANK_MODE=requests_url \
 ```
 
 Results download to `./colab_runs/colab_rerank_out.tar.gz` (contains
-`results.jsonl` and `results.trec`). Evaluate locally with `rank-llm evaluate`.
+`results.jsonl` and `results.trec`). In **dataset mode** rank_llm already
+evaluates against the benchmark's qrels and prints **nDCG@1/5/10** during the
+run, so the metric appears in the `colab exec` output — no extra step needed.
+
+### GPU availability and sizing
+
+Which accelerators you can provision depends on your **Colab subscription** — a
+free account is typically limited to **T4** (or CPU); `L4`/`A100`/`H100` need
+Colab Pro/Pro+. If `colab new` reports *"Backend rejected accelerator"*, you lack
+quota for that tier; pick one your plan allows.
+
+The default `castorini/rank_zephyr_7b_v1_full` is a **7B listwise** reranker
+served with vLLM (fixed `gpu_memory_utilization=0.90`), so it needs roughly
+**≥24 GB** — an L4, A100, or H100. **A 16 GB T4 cannot load it** (no room left
+for the KV cache).
+
+For a **free-tier (T4) demo**, swap in a small pointwise reranker — these run via
+`transformers`, not vLLM, and fit a T4 (or even CPU):
+
+```bash
+GPU=T4 MODEL_PATH=castorini/monot5-base-msmarco-10k RETRIEVAL_METHOD=bm25 \
+  bash colab/rerank_on_colab.sh
+# also small: MODEL_PATH=castorini/monoelectra-base
+```
+
+`RETRIEVAL_METHOD=bm25` (pure Lucene, no ONNX) is the most reliable retriever for
+a quick demo. The default `SPLADE++_EnsembleDistil_ONNX` works too — the recipe
+auto-installs `onnxruntime` — but it pulls a larger learned-sparse index.
+
+| GPU         | 7B listwise (RankZephyr) | small pointwise (monoT5-base) |
+| ----------- | ------------------------ | ----------------------------- |
+| T4 (16 GB)  | ❌ OOM                   | ✅                            |
+| L4 (24 GB)  | ✅                       | ✅                            |
+| A100/H100   | ✅ recommended           | ✅                            |
 
 ### Key reranking env vars
 
@@ -160,6 +193,27 @@ KEEP_SESSION=1 RERANK_MODE=requests_url REQUESTS_URL=file:///content/cands.jsonl
 
 For a smooth one-command demo, hosting the JSONL at a URL and using
 `RERANK_MODE=requests_url` is recommended.
+
+## Troubleshooting
+
+- **`Backend rejected accelerator 'X'`** — your Colab plan lacks quota for that
+  tier. Free accounts are typically T4-only; use `GPU=T4` (and a small pointwise
+  model, see above) or upgrade to Colab Pro for `L4`/`A100`/`H100`.
+- **`RuntimeError: Connection was lost.`** — the kernel websocket dropped (common
+  right after a session becomes READY, or on long-held connections). The recipes
+  warm up the kernel first and **retry `colab exec` automatically**
+  (`EXEC_RETRIES`, default 3; `EXEC_RETRY_WAIT`, default 15s). If it still fails,
+  re-run the recipe (the bootstrap is idempotent — the clone and installs are
+  reused), bump `EXEC_RETRIES`, or run `colab update` to get the latest CLI.
+- **`openai.OpenAIError: Missing credentials` during a pyserini run** — pyserini
+  1.2.0 eagerly constructs an `openai.OpenAI()` client at import time, which
+  `openai>=2` rejects when no key is set (even for bm25, which never uses it).
+  The recipe sets a placeholder `OPENAI_API_KEY` for the reranking subprocess so
+  the import succeeds; the client is never actually called.
+- **Job outlives `EXEC_TIMEOUT`** — raise it (e.g. `EXEC_TIMEOUT=7200`).
+- **Inspect a stuck run** — pass `KEEP_SESSION=1`, then attach with
+  `colab exec -s <session>` / `colab sessions`, and `colab stop -s <session>`
+  when done.
 
 ## Using with an agent
 

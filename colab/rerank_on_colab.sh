@@ -92,8 +92,17 @@ echo "    remote artifact=$REMOTE_ARTIFACT"
 
 require_colab
 TMP_BOOTSTRAP="$(build_bootstrap "$CONFIG_JSON")"
-trap 'rm -f "$TMP_BOOTSTRAP"; stop_session "$SESSION"' EXIT
+SESSION_CREATED=0
+cleanup() {
+  rm -f "$TMP_BOOTSTRAP"
+  if [[ "$SESSION_CREATED" == "1" ]]; then
+    stop_session "$SESSION"
+  fi
+}
+trap cleanup EXIT
 
 provision_gpu "$GPU" "$SESSION"
+SESSION_CREATED=1
+warmup_kernel "$SESSION"
 exec_bootstrap "$TMP_BOOTSTRAP" "$SESSION" "$EXEC_TIMEOUT"
 download_artifact "$REMOTE_ARTIFACT" "$LOCAL_OUT" "$SESSION"

@@ -55,12 +55,46 @@ provision_gpu() {
   run_colab new --gpu "$gpu" -s "$session"
 }
 
-# Send the bootstrap to the session for execution. The default exec timeout is
-# 30s, far too short for installs + model runs, so callers pass a large value.
+# Run `colab exec -f FILE` with retries. A freshly-READY kernel often drops the
+# first websocket connection ("Connection was lost"), and long-held sockets can
+# drop mid-run; the bootstrap is idempotent (clone skips if present), so retrying
+# is safe. Tunable via EXEC_RETRIES / EXEC_RETRY_WAIT.
+colab_exec_file() {
+  local file="$1" session="$2" timeout="$3"
+  local attempts="${EXEC_RETRIES:-3}" wait="${EXEC_RETRY_WAIT:-15}" n=1
+  while true; do
+    if run_colab exec -f "$file" -s "$session" --timeout "$timeout"; then
+      return 0
+    fi
+    if ((n >= attempts)); then
+      echo "error: 'colab exec' failed after ${attempts} attempt(s)." >&2
+      return 1
+    fi
+    echo "   exec attempt ${n}/${attempts} failed; retrying in ${wait}s..." >&2
+    sleep "$wait"
+    n=$((n + 1))
+  done
+}
+
+# Poke the kernel with a trivial cell so the websocket stabilizes before the real
+# (long) exec. This absorbs the common post-READY "Connection was lost" race.
+warmup_kernel() {
+  local session="$1" tmp
+  tmp="$(mktemp "${TMPDIR:-/tmp}/rankllm_warmup.XXXXXX.py")"
+  printf 'print("kernel warmup ok")\n' >"$tmp"
+  echo "==> Warming up kernel on '$session'"
+  colab_exec_file "$tmp" "$session" 30
+  local rc=$?
+  rm -f "$tmp"
+  return $rc
+}
+
+# The default exec timeout is 30s, far too short for installs + model runs, so
+# callers pass a large value. Retries are handled by colab_exec_file.
 exec_bootstrap() {
   local tmp="$1" session="$2" timeout="$3"
   echo "==> Executing remote bootstrap on '$session' (timeout ${timeout}s)"
-  run_colab exec -f "$tmp" -s "$session" --timeout "$timeout"
+  colab_exec_file "$tmp" "$session" "$timeout"
 }
 
 # Download a single remote artifact (a .tar.gz) into a local directory.

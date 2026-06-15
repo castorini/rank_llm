@@ -61,10 +61,30 @@ CONFIG = {**DEFAULT_CONFIG, **globals().get("CONFIG", {})}
 
 
 def run(cmd, cwd=None, env=None):
-    """Run a command, echoing it first; raise on non-zero exit."""
+    """Run a command, streaming its output; raise on non-zero exit.
+
+    Colab's kernel only surfaces the Python ``sys.stdout``, not a child
+    process's OS-level stdout/stderr. So we merge the child's streams and
+    re-print them through ``print`` line by line — otherwise subprocess errors
+    (which go to stderr) are invisible in the ``colab exec`` output.
+    """
     printable = cmd if isinstance(cmd, str) else shlex.join(cmd)
     print(f"\n>>> {printable}", flush=True)
-    subprocess.run(cmd, cwd=cwd, env=env, shell=isinstance(cmd, str), check=True)
+    proc = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        env=env,
+        shell=isinstance(cmd, str),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    for line in proc.stdout:
+        print(line, end="", flush=True)
+    proc.wait()
+    if proc.returncode != 0:
+        raise SystemExit(f"Command failed (exit {proc.returncode}): {printable}")
 
 
 def clone_repo():
@@ -177,6 +197,10 @@ def do_rerank():
     if pyserini:
         install_apt_jdk21()
     pip_install(spec, editable=True)
+    # ONNX learned-sparse retrievers (e.g. SPLADE++_EnsembleDistil_ONNX) need
+    # onnxruntime for the query encoder; the pyserini extra does not pull it in.
+    if pyserini and "onnx" in str(CONFIG["retrieval_method"]).lower():
+        pip_install("onnxruntime")
 
     out_dir = os.path.join(workdir, "colab_rerank_out")
     os.makedirs(out_dir, exist_ok=True)
@@ -213,7 +237,16 @@ def do_rerank():
         ]
 
     cmd += [str(a) for a in CONFIG["extra_rerank_args"]]
-    run(cmd, cwd=workdir)
+    # Unbuffered so the child's stdout (model/retrieval progress) is interleaved
+    # with stderr in real time instead of being lost if the process crashes.
+    env = dict(os.environ)
+    env["PYTHONUNBUFFERED"] = "1"
+    # pyserini 1.2.0 eagerly builds an ``openai.OpenAI()`` client at import time
+    # (pyserini/encode/_openai.py). With openai>=2 that raises when no key is set
+    # — even for bm25 retrieval that never touches OpenAI. A placeholder lets the
+    # import succeed; the client is never actually called. A real key is kept.
+    env.setdefault("OPENAI_API_KEY", "sk-pyserini-import-placeholder")
+    run(cmd, cwd=workdir, env=env)
     return archive(out_dir)
 
 
