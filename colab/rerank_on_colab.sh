@@ -12,8 +12,8 @@
 #   RERANK_MODE=requests_url  rerank-only over a candidates JSONL fetched from
 #                             REQUESTS_URL (HF/GCS/any http). No retrieval.
 #
-# Note: the Colab CLI documents `download` but not an upload command, so local
-# candidate files must be reachable via a URL. See docs/colab.md.
+# In requests_url mode the candidates JSONL is fetched over http from inside the
+# runtime, so host it at a reachable URL. See docs/colab.md.
 #
 # Usage:
 #   bash colab/rerank_on_colab.sh                       # dl19 dataset demo
@@ -28,6 +28,8 @@ source "$SCRIPT_DIR/_colab_common.sh"
 
 # --- Configurable knobs (env vars) ------------------------------------------
 GPU="${GPU:-A100}"
+SESSION="${SESSION:-rankllm-rerank}"
+EXEC_TIMEOUT="${EXEC_TIMEOUT:-3600}"
 REPO_URL="${REPO_URL:-https://github.com/castorini/rank_llm.git}"
 REF="${REF:-main}"
 WORKDIR="${WORKDIR:-/content/rank_llm}"
@@ -80,7 +82,7 @@ PY
 REMOTE_ARTIFACT="${WORKDIR}/colab_rerank_out.tar.gz"
 
 echo "==> rank_llm Colab reranking recipe"
-echo "    GPU=$GPU model=$MODEL_PATH mode=$RERANK_MODE"
+echo "    session=$SESSION GPU=$GPU model=$MODEL_PATH mode=$RERANK_MODE"
 if [[ "$RERANK_MODE" == "dataset" ]]; then
   echo "    dataset=$DATASET retrieval=$RETRIEVAL_METHOD top_k=$TOP_K"
 else
@@ -90,8 +92,8 @@ echo "    remote artifact=$REMOTE_ARTIFACT"
 
 require_colab
 TMP_BOOTSTRAP="$(build_bootstrap "$CONFIG_JSON")"
-trap 'rm -f "$TMP_BOOTSTRAP"' EXIT
+trap 'rm -f "$TMP_BOOTSTRAP"; stop_session "$SESSION"' EXIT
 
-provision_gpu "$GPU"
-exec_bootstrap "$TMP_BOOTSTRAP"
-download_artifact "$REMOTE_ARTIFACT" "$LOCAL_OUT"
+provision_gpu "$GPU" "$SESSION"
+exec_bootstrap "$TMP_BOOTSTRAP" "$SESSION" "$EXEC_TIMEOUT"
+download_artifact "$REMOTE_ARTIFACT" "$LOCAL_OUT" "$SESSION"

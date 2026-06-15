@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Shared helpers for the rank_llm Colab CLI recipes.
 # Sourced by train_on_colab.sh and rerank_on_colab.sh.
+#
+# Real Colab CLI surface these wrap (see `colab -h`):
+#   colab new   --gpu A100 -s NAME        provision a named session
+#   colab exec  -f FILE -s NAME --timeout N   run a file in that session
+#   colab download REMOTE LOCAL -s NAME   pull an artifact back
+#   colab stop  -s NAME                    release the runtime
 
 COLAB_BIN="${COLAB_BIN:-colab}"
 COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -42,27 +48,42 @@ build_bootstrap() {
   printf '%s\n' "$tmp"
 }
 
-# Provision a runtime with the requested accelerator.
+# Create a named session with the requested accelerator.
 provision_gpu() {
-  local gpu="$1"
-  echo "==> Provisioning Colab runtime (--gpu $gpu)"
-  run_colab --gpu "$gpu"
+  local gpu="$1" session="$2"
+  echo "==> Creating Colab session '$session' (--gpu $gpu)"
+  run_colab new --gpu "$gpu" -s "$session"
 }
 
-# Send the bootstrap to the runtime for execution.
+# Send the bootstrap to the session for execution. The default exec timeout is
+# 30s, far too short for installs + model runs, so callers pass a large value.
 exec_bootstrap() {
-  local tmp="$1"
-  echo "==> Executing remote bootstrap ($tmp)"
-  run_colab exec -f "$tmp"
+  local tmp="$1" session="$2" timeout="$3"
+  echo "==> Executing remote bootstrap on '$session' (timeout ${timeout}s)"
+  run_colab exec -f "$tmp" -s "$session" --timeout "$timeout"
 }
 
 # Download a single remote artifact (a .tar.gz) into a local directory.
 download_artifact() {
-  local remote="$1" local_dir="$2"
-  echo "==> Downloading artifact $remote -> $local_dir/"
+  local remote="$1" local_dir="$2" session="$3"
+  local fname
+  fname="$(basename "$remote")"
+  echo "==> Downloading $remote -> $local_dir/$fname"
   if [[ "${DRY_RUN:-0}" != "1" ]]; then
     mkdir -p "$local_dir"
   fi
-  run_colab download "$remote" "$local_dir/"
-  echo "Done. Unpack with: tar xzf $local_dir/$(basename "$remote") -C $local_dir"
+  run_colab download "$remote" "$local_dir/$fname" -s "$session"
+  echo "Done. Unpack with: tar xzf $local_dir/$fname -C $local_dir"
+}
+
+# Release the runtime (skipped when KEEP_SESSION=1 so you can debug via
+# `colab exec -s NAME`). Tolerates a missing session.
+stop_session() {
+  local session="$1"
+  if [[ "${KEEP_SESSION:-0}" == "1" ]]; then
+    echo "==> KEEP_SESSION=1, leaving session '$session' running (stop with: colab stop -s $session)"
+    return 0
+  fi
+  echo "==> Stopping Colab session '$session'"
+  run_colab stop -s "$session" || true
 }

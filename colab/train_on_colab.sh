@@ -21,6 +21,8 @@ source "$SCRIPT_DIR/_colab_common.sh"
 
 # --- Configurable knobs (env vars) ------------------------------------------
 GPU="${GPU:-A100}"
+SESSION="${SESSION:-rankllm-train}"
+EXEC_TIMEOUT="${EXEC_TIMEOUT:-14400}"
 REPO_URL="${REPO_URL:-https://github.com/castorini/rank_llm.git}"
 REF="${REF:-main}"
 WORKDIR="${WORKDIR:-/content/rank_llm}"
@@ -72,13 +74,13 @@ PY
 REMOTE_ARTIFACT="${OUTPUT_DIR}.tar.gz"
 
 echo "==> rank_llm Colab training recipe"
-echo "    GPU=$GPU model=$BASE_MODEL objective=$OBJECTIVE epochs=$NUM_TRAIN_EPOCHS"
+echo "    session=$SESSION GPU=$GPU model=$BASE_MODEL objective=$OBJECTIVE epochs=$NUM_TRAIN_EPOCHS"
 echo "    remote output=$OUTPUT_DIR -> artifact=$REMOTE_ARTIFACT"
 
 require_colab
 TMP_BOOTSTRAP="$(build_bootstrap "$CONFIG_JSON")"
-trap 'rm -f "$TMP_BOOTSTRAP"' EXIT
+trap 'rm -f "$TMP_BOOTSTRAP"; stop_session "$SESSION"' EXIT
 
-provision_gpu "$GPU"
-exec_bootstrap "$TMP_BOOTSTRAP"
-download_artifact "$REMOTE_ARTIFACT" "$LOCAL_OUT"
+provision_gpu "$GPU" "$SESSION"
+exec_bootstrap "$TMP_BOOTSTRAP" "$SESSION" "$EXEC_TIMEOUT"
+download_artifact "$REMOTE_ARTIFACT" "$LOCAL_OUT" "$SESSION"

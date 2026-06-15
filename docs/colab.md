@@ -1,10 +1,10 @@
 # Running rank_llm on Google Colab GPUs (Colab CLI recipes)
 
 The [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) lets you
-provision remote Colab GPU/TPU runtimes from your terminal (`colab --gpu A100`),
-run code on them (`colab exec`), and pull artifacts back (`colab download`). It
-also ships an agent skill (`COLAB_SKILL.md`) so assistants like Claude Code can
-drive it.
+provision remote Colab GPU/TPU runtimes from your terminal (`colab new --gpu A100
+-s NAME`), run code on them (`colab exec -f FILE -s NAME`), and pull artifacts
+back (`colab download REMOTE LOCAL -s NAME`). It also ships an agent skill
+(`COLAB_SKILL.md`) so assistants like Claude Code can drive it.
 
 rank_llm's full-parameter reranker fine-tuning and 7B reranker inference both
 need a GPU that many users don't have locally. These two recipes wrap the Colab
@@ -29,11 +29,18 @@ extras, runs the job, tars the output, and downloads it as a single `.tar.gz`.
 
 ## How it works
 
+Each recipe runs four Colab CLI steps against one named session: `colab new
+--gpu …` to provision, `colab exec -f …` to run, `colab download …` to fetch the
+artifact, and `colab stop` to release the runtime (skipped with `KEEP_SESSION=1`).
+
 `colab exec` transmits a **single** file to the runtime and provides no way to
 pass arguments. So each recipe builds a temporary bootstrap file — an injected
 `CONFIG = {...}` line prepended to `colab/_remote_bootstrap.py` — and sends that.
 On the runtime, `_remote_bootstrap.py` clones rank_llm, `pip install`s the right
 extras, runs the requested command, and prints `ARTIFACT_PATH=<remote .tar.gz>`.
+
+`colab exec` defaults to a 30s timeout, so the recipes pass a large
+`EXEC_TIMEOUT` (1h for reranking, 4h for training). Raise it for big jobs.
 
 ## Dry run (verify without spending GPU time)
 
@@ -98,6 +105,9 @@ used for the 7B models.)
 | `EXTRA_TRAIN_ARGS` | (empty) | extra `train_rankllm.py` flags |
 | `REF` | `main` | branch/tag of rank_llm to clone |
 | `LOCAL_OUT` | `./colab_runs` | local download dir |
+| `SESSION` | `rankllm-train` | Colab session name |
+| `EXEC_TIMEOUT` | `14400` | exec timeout in seconds (raise for long runs) |
+| `KEEP_SESSION` | `0` | `1` keeps the runtime alive after the run |
 
 ## Reranking recipe
 
@@ -132,14 +142,24 @@ Results download to `./colab_runs/colab_rerank_out.tar.gz` (contains
 | `CONTEXT_SIZE` | `4096` | |
 | `NUM_GPUS` | `1` | |
 | `EXTRA_RERANK_ARGS` | (empty) | extra `rank-llm rerank` flags |
+| `SESSION` | `rankllm-rerank` | Colab session name |
+| `EXEC_TIMEOUT` | `3600` | exec timeout in seconds (raise for long runs) |
+| `KEEP_SESSION` | `0` | `1` keeps the runtime alive after the run |
 
-## Known limitation: local → remote file transfer
+## Using your own local candidates file
 
-The Colab CLI documents `download` but not an upload/copy command. So a
-**local** candidates file cannot be pushed to the runtime directly. For
-rerank-only over your own candidates, host the JSONL at a URL and use
-`RERANK_MODE=requests_url`. (If a future CLI version adds upload, the recipe can
-be extended to use it.)
+The `requests_url` mode fetches candidates over http from inside the runtime,
+which is the simplest path. If your candidates JSONL is only on your laptop, the
+CLI also has `colab upload LOCAL REMOTE -s NAME`, so you can push it onto a kept
+session and point the recipe at it:
+
+```bash
+KEEP_SESSION=1 RERANK_MODE=requests_url REQUESTS_URL=file:///content/cands.jsonl \
+  bash colab/rerank_on_colab.sh   # (then colab upload ... before exec, advanced)
+```
+
+For a smooth one-command demo, hosting the JSONL at a URL and using
+`RERANK_MODE=requests_url` is recommended.
 
 ## Using with an agent
 
