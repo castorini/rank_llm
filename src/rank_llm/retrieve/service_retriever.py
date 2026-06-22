@@ -60,7 +60,10 @@ class ServiceRetriever:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
 
-        url = f"{host}/v1/indexes/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
+        # Pyserini v2.1.0 REST API: GET /v1/{index}/search?query=&hits=
+        # The index is a path-style segment, and the endpoint accepts only
+        # "query" and "hits" (the qid is not part of the request or response).
+        url = f"{host}/v1/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}"
         print(url)
         try:
             response = requests.get(url, timeout=timeout)
@@ -71,20 +74,26 @@ class ServiceRetriever:
             ) from e
 
         data = response.json()
+        # The response echoes back only the query text, so carry the qid through
+        # from the original request to preserve it for downstream evaluation.
         retrieved_results = Request(
-            query=Query(text=data["query"]["text"], qid=data["query"]["qid"])
+            query=Query(text=data["query"]["text"], qid=request.query.qid)
         )
 
         for candidate in data["candidates"]:
-            # The Pyserini REST API returns "doc" as a plain content string,
-            # while downstream prompt construction expects a dict (doc["contents"]).
-            # Normalize strings into a dict to keep both shapes working.
+            # The Pyserini REST API returns "doc" as a plain content string (or
+            # null), while downstream prompt construction expects a dict
+            # (doc["contents"]). Normalize so both shapes keep working.
             doc = candidate["doc"]
+            if isinstance(doc, dict):
+                normalized_doc = doc
+            else:
+                normalized_doc = {"contents": doc if doc is not None else ""}
             retrieved_results.candidates.append(
                 Candidate(
                     docid=candidate["docid"],
                     score=candidate["score"],
-                    doc={"contents": doc} if isinstance(doc, str) else doc,
+                    doc=normalized_doc,
                 )
             )
 

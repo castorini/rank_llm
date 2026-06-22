@@ -2,11 +2,11 @@
 
 ## Scope
 - Repository: `rank_llm`
-- Primary stack: Python 3.11 package (`src/` layout, setuptools via `pyproject.toml`)
+- Primary stack: Python 3.12 package (`src/` layout, setuptools via `pyproject.toml`)
 - Focus areas: retrieval + LLM reranking (listwise, pointwise, pairwise), evaluation, analysis, optional training and server integrations
 
 ## Environment and Setup
-- Use Python `>=3.11` for package/runtime workflows.
+- Use Python `>=3.12` for package/runtime workflows.
 - Use JDK 21 when retrieval/`pyserini` paths are involved (Anserini dependency).
 - Typical dev install:
 ```bash
@@ -47,7 +47,7 @@ uv run pre-commit install --install-hooks --hook-type pre-commit --hook-type pre
 ```
 - If `.venv` does not exist, create only the minimal lint environment instead of installing `.[all]`:
 ```bash
-uv venv --python 3.11
+uv venv --python 3.12
 uv pip install --python .venv/bin/python pre-commit black isort
 .venv/bin/pre-commit run --all-files
 ```
