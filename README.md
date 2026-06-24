@@ -61,8 +61,8 @@ For development or the latest features, create a repo-local virtual environment:
 ```bash
 git clone https://github.com/castorini/rank_llm.git
 cd rank_llm
-uv python install 3.12
-uv venv --python 3.12
+uv python install 3.11
+uv venv --python 3.11
 source .venv/bin/activate
 uv sync --group dev
 ```
@@ -103,7 +103,7 @@ repeat `--extra` to combine stacks in one environment.
 Create an isolated virtual environment and install the published package:
 
 ```bash
-uv venv --python 3.12
+uv venv --python 3.11
 source .venv/bin/activate
 uv pip install rank-llm
 ```
@@ -113,7 +113,7 @@ uv pip install rank-llm
 If you want to keep using conda:
 
 ```bash
-conda create -n rankllm python=3.12 -c conda-forge -y
+conda create -n rankllm python=3.11 -c conda-forge -y
 conda activate rankllm
 pip install -e .
 ```

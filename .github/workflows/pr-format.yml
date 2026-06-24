@@ -21,10 +21,10 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Create lint environment
-        run: uv venv --python 3.12
+        run: uv venv --python 3.11
 
       - name: Install lint dependencies
         run: uv pip install --python .venv/bin/python pre-commit black isort
@@ -65,10 +65,10 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Create test environment
-        run: uv venv --python 3.12
+        run: uv venv --python 3.11
 
       - name: Install test environment
         run: uv pip install --python .venv/bin/python -e "${{ matrix.install-target }}"
@@ -93,10 +93,10 @@ jobs:
 
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Create CLI environment
-        run: uv venv --python 3.12
+        run: uv venv --python 3.11
 
       - name: Install CLI smoke environment
         run: |

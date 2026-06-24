@@ -21,7 +21,7 @@ classifiers = [
 ]
 keywords = ["prompt-decoder", "RankVicuna", "RankZephyr", "RankLLM", "information retrieval", "neural ranking", "LLM", "listwise", "pointwise", "FirstMistral"]
 dynamic = ["dependencies"]
-requires-python = ">= 3.12"
+requires-python = ">= 3.11"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
@@ -70,7 +70,7 @@ sglang = [
 pyserini = [
     "faiss-cpu>=1.8.0",
     "pandas>=1.4.0",
-    "pyserini==2.1.0"
+    "pyserini==1.2.0"
 ]
 api = [
     "fastapi>=0.115.0",
