@@ -406,6 +406,8 @@ The following is a table specifically for our monoT5 suite of models hosted on H
 We recommend the Med models for biomedical retrieval. We also provide both 10K (generally better OOD effectiveness) and 100K checkpoints (better in-domain).
 # Training
 Please check the `training` directory for finetuning open-source listwise rerankers.
+
+No local GPU? You can run both training and reranking on remote Google Colab GPUs (A100/H100) straight from your terminal — see the [Google Colab CLI recipes](docs/colab.md).
 # External Integrations
 RankLLM is implemented in many popular toolkits such as LlamaIndex, rerankers, and LangChain. For usage of RankLLM in those toolkits and examples, please check this external integrations [README](docs/external-integrations.md)
 # Community Contribution
