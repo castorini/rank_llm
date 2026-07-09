@@ -40,7 +40,7 @@ On the runtime, `_remote_bootstrap.py` clones rank_llm, `pip install`s the right
 extras, runs the requested command, and prints `ARTIFACT_PATH=<remote .tar.gz>`.
 
 `colab exec` defaults to a 30s timeout, so the recipes pass a large
-`EXEC_TIMEOUT` (1h for reranking, 4h for training). Raise it for big jobs.
+`EXEC_TIMEOUT` (1h for reranking, 5h for training). Raise it for big jobs.
 
 ## Dry run (verify without spending GPU time)
 
@@ -90,6 +90,12 @@ The recipe uses the single-GPU config `training/configs/accel_config_single_gpu.
 via env vars. (This repo does not provide a LoRA path, so smaller GPUs cannot be
 used for the 7B models.)
 
+The training code loads models with `attn_implementation="flash_attention_2"`,
+so **flash-attn is required**, and it has no prebuilt PyPI wheel. The recipe
+therefore builds it on the runtime by default (`INSTALL_FLASH_ATTN=1`), which
+adds roughly **30–60 minutes** before training starts. Set
+`INSTALL_FLASH_ATTN=0` only if your runtime image already ships flash-attn.
+
 ### Key training env vars
 
 | Var | Default | Notes |
@@ -101,12 +107,12 @@ used for the 7B models.)
 | `NUM_TRAIN_EPOCHS` | `1` | |
 | `PER_DEVICE_TRAIN_BATCH_SIZE` | `1` | |
 | `GRADIENT_ACCUMULATION_STEPS` | `16` | |
-| `INSTALL_FLASH_ATTN` | `0` | set `1` to build flash-attn (slow) |
+| `INSTALL_FLASH_ATTN` | `1` | required by the training code; builds from source (~30–60 min). Set `0` only if the runtime already has flash-attn |
 | `EXTRA_TRAIN_ARGS` | (empty) | extra `train_rankllm.py` flags |
 | `REF` | `main` | branch/tag of rank_llm to clone |
 | `LOCAL_OUT` | `./colab_runs` | local download dir |
 | `SESSION` | `rankllm-train` | Colab session name |
-| `EXEC_TIMEOUT` | `14400` | exec timeout in seconds (raise for long runs) |
+| `EXEC_TIMEOUT` | `18000` | exec timeout in seconds (raise for long runs) |
 | `KEEP_SESSION` | `0` | `1` keeps the runtime alive after the run |
 
 ## Reranking recipe

@@ -115,12 +115,16 @@ NUM_TRAIN_EPOCHS=1 bash colab/train_on_colab.sh
 > ⚠️ Single-GPU **full-parameter** 7B fine-tuning needs A100-80GB / H100.
 > T4/L4 do not have enough memory (there is no LoRA path). See the GPU sizing
 > table in [`../docs/colab.md`](../docs/colab.md).
+>
+> The training code requires **flash-attn**, which has no prebuilt PyPI wheel,
+> so the recipe builds it on the runtime by default (`INSTALL_FLASH_ATTN=1`) —
+> expect ~30–60 min of build time before training starts.
 
 Each recipe creates a named session (`rankllm-rerank` / `rankllm-train`), runs,
 downloads the artifact, and **stops the runtime automatically**. Set
 `KEEP_SESSION=1` to leave it running for debugging (`colab exec -s NAME`,
 `colab sessions`, then `colab stop -s NAME`). `colab exec` has a 30s default
-timeout, so the recipes raise it via `EXEC_TIMEOUT` (1h rerank / 4h train) —
+timeout, so the recipes raise it via `EXEC_TIMEOUT` (1h rerank / 5h train) —
 bump it for larger jobs.
 
 ## Using with an agent

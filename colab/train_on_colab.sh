@@ -8,6 +8,12 @@
 # Full-parameter 7B fine-tuning on a single GPU is heavy: T4/L4 are NOT enough.
 # Use A100-80GB or H100. See docs/colab.md for details.
 #
+# The training code (training/utils/model_utils.py) loads models with
+# attn_implementation="flash_attention_2", so flash-attn is required. It has no
+# prebuilt PyPI wheel, so the recipe builds it on the runtime by default
+# (INSTALL_FLASH_ATTN=1, ~30-60 min before training starts). Set
+# INSTALL_FLASH_ATTN=0 only if your runtime image already ships flash-attn.
+#
 # Usage:
 #   bash colab/train_on_colab.sh
 #   GPU=H100 OBJECTIVE=combined EXTRA_TRAIN_ARGS="--ranking_loss ranknet --weighted" \
@@ -22,7 +28,7 @@ source "$SCRIPT_DIR/_colab_common.sh"
 # --- Configurable knobs (env vars) ------------------------------------------
 GPU="${GPU:-A100}"
 SESSION="${SESSION:-rankllm-train}"
-EXEC_TIMEOUT="${EXEC_TIMEOUT:-14400}"
+EXEC_TIMEOUT="${EXEC_TIMEOUT:-18000}"
 REPO_URL="${REPO_URL:-https://github.com/castorini/rank_llm.git}"
 REF="${REF:-main}"
 WORKDIR="${WORKDIR:-/content/rank_llm}"
@@ -34,7 +40,7 @@ NUM_TRAIN_EPOCHS="${NUM_TRAIN_EPOCHS:-1}"
 PER_DEVICE_TRAIN_BATCH_SIZE="${PER_DEVICE_TRAIN_BATCH_SIZE:-1}"
 GRADIENT_ACCUMULATION_STEPS="${GRADIENT_ACCUMULATION_STEPS:-16}"
 NUM_WARMUP_STEPS="${NUM_WARMUP_STEPS:-10}"
-INSTALL_FLASH_ATTN="${INSTALL_FLASH_ATTN:-0}"
+INSTALL_FLASH_ATTN="${INSTALL_FLASH_ATTN:-1}"
 EXTRA_TRAIN_ARGS="${EXTRA_TRAIN_ARGS:-}"
 LOCAL_OUT="${LOCAL_OUT:-./colab_runs}"
 
