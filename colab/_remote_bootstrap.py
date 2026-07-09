@@ -19,6 +19,7 @@ the last line so the caller knows what to ``colab download``.
 
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -89,21 +90,27 @@ def run(cmd, cwd=None, env=None):
 
 def clone_repo():
     workdir = CONFIG["workdir"]
+    repo_url = CONFIG["repo_url"]
+    ref = str(CONFIG["ref"])
     if os.path.isdir(os.path.join(workdir, ".git")):
-        print(f"Repo already present at {workdir}, skipping clone.", flush=True)
-        return
-    run(
-        [
-            "git",
-            "clone",
-            "--depth",
-            "1",
-            "-b",
-            str(CONFIG["ref"]),
-            CONFIG["repo_url"],
-            workdir,
-        ]
-    )
+        # A kept/reused runtime may hold a checkout of an older ref or another
+        # repo; sync to the requested source instead of silently running it.
+        current_url = subprocess.run(
+            ["git", "-C", workdir, "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if current_url == repo_url:
+            print(f"Repo already present at {workdir}, syncing to {ref!r}.", flush=True)
+            run(["git", "-C", workdir, "fetch", "--depth", "1", "origin", ref])
+            run(["git", "-C", workdir, "checkout", "--force", "--detach", "FETCH_HEAD"])
+            return
+        print(
+            f"Repo at {workdir} tracks {current_url!r}, not {repo_url!r}; recloning.",
+            flush=True,
+        )
+        shutil.rmtree(workdir)
+    run(["git", "clone", "--depth", "1", "-b", ref, repo_url, workdir])
 
 
 def pip_install(spec, editable=False):
