@@ -136,9 +136,13 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._system_message = system_message
         self._is_thinking = is_thinking
         self._reasoning_token_budget = reasoning_token_budget
-        self._sampling_kwargs: dict[str, Any] | None = (
-            dict(sampling_kwargs) if sampling_kwargs else None
-        )
+        # Greedy decoding by default: without an explicit temperature the
+        # backends fall back to temperature=1.0 sampling, which scrambles
+        # generated permutations and costs ~0.02 nDCG@10 on listwise rerankers.
+        self._sampling_kwargs: dict[str, Any] = {
+            "temperature": 0.0,
+            **(sampling_kwargs or {}),
+        }
         self._output_token_estimate = None
         self._use_logits = use_logits
         self._num_gpus = num_gpus
