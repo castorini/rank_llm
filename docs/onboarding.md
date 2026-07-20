@@ -169,6 +169,16 @@ This above performs first-stage retrieval with SPLADE to get the initial 100 can
 
 If you wish to compare FIRST's speed with traditional listwise reranking, omit the `--use_logits` and `--use_alpha` flags to perform traditional listwise reranking.
 
+## Notes on using the Colab CLI (`colab/rerank_on_colab.sh`)
+
+This script comes from PR #408, which hasn't merged into `main` yet, so it won't be in your checkout unless you also grab that branch. Once it lands, here's what tripped me up going this route:
+
+- The packaged `rank-llm rerank` CLI wants hyphenated flags (`--variable-passages`, `--use-logits`, `--use-alpha`) instead of the underscored ones used in the commands above.
+- Got `libcudart.so.13: cannot open shared object file` from vLLM. The lib was actually there, just not on `LD_LIBRARY_PATH` (it's under a pip package path like `nvidia/cu13/lib/`, not a normal system dir).
+- Also hit `Cannot re-initialize CUDA in forked subprocess` when vLLM's engine tried to spawn its worker. Setting `VLLM_WORKER_MULTIPROC_METHOD=spawn` fixed it.
+- Pyserini segfaulted loading the SPLADE index -- seems to be Java 21's new memory-mapped I/O not getting along with the Colab container filesystem. `JAVA_TOOL_OPTIONS=-Dorg.apache.lucene.store.MMapDirectory.enableMemorySegments=false` works around it.
+- The free T4 (15GB) isn't enough for RankZephyr with vLLM -- the weights alone eat most of the memory budget, so KV cache allocation fails no matter what `--context-size` you set. Needed a paid A100 to actually get this to run.
+
 That is all for this guide!
 A reminder that this is just a gentle introduction, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
 
@@ -189,6 +199,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.8144          | 0.7892            | 1         |
 | 0.8151          | 0.7889            | 1         |
 | 0.8144          | 0.7870            | 1         |
+| 0.7961          | 0.7897            | 1         |
 
 
 If your result is present in the table above, please increase its frequency by 1.
@@ -211,3 +222,4 @@ After editing the table above, add a log entry here as well like the previous gu
 + Results reproduced by [@aaryanshroff](https://github.com/aaryanshroff) on 2025-11-01 (commit [`c4d06fe`](https://github.com/castorini/rank_llm/commit/c4d06fea82763ceb5223570eb5084f480d429003))
 + Results reproduced by [@nli33](https://github.com/nli33) on 2026-03-10 (commit [`5df3ebe`](https://github.com/castorini/rank_llm/commit/5df3ebed56c9628acfc85e724bde7884f150790c))
 + Results reproduced by [@raghav-ai](https://github.com/raghav-ai) on 2026-04-03 (commit [`c1e1c84`](https://github.com/castorini/rank_llm/commit/c1e1c84d9eaad408ebfbd4b8534a29bbb9415e6a))
++ Results reproduced by [@k22mitta](https://github.com/k22mitta) on 2026-07-16 (commit [`54fb0c0`](https://github.com/castorini/rank_llm/commit/54fb0c055cd1692ac75ae44cd48e1933155f99dd))
