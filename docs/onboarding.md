@@ -9,6 +9,9 @@ In general, don't try to rush through this guide by just blindly copying and pas
 that's what I call [cargo culting](https://en.wikipedia.org/wiki/Cargo_cult_programming).
 Instead, really try to understand what's going on.
 
+The experiments in this guide require a GPU.
+Before starting, work through [install-colab-cli.md](install-colab-cli.md), which sets up the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) and has you reproduce the RankZephyr experiment from this guide on a Colab GPU, driven entirely from your terminal.
+
 **Learning outcomes** for this guide:
 
 - Understand the motivation and architecture of multi-stage retrieval.
