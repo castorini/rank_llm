@@ -72,7 +72,14 @@ class DuoT5(PairwiseRankLLM):
         ).to(self._device)
         input_ids = tokenized["input_ids"]
 
-        outputs = self._llm.generate(input_ids, generation_config=gen_cfg)
+        # transformers>=5 only infers a missing attention mask for decoder-only
+        # models, so pass it explicitly; otherwise the encoder attends to the
+        # padding of shorter prompts in the batch and their scores degrade.
+        outputs = self._llm.generate(
+            input_ids,
+            attention_mask=tokenized["attention_mask"],
+            generation_config=gen_cfg,
+        )
         output_ids = outputs.sequences
         logits = outputs.scores
 
