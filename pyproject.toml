@@ -57,16 +57,6 @@ vllm = [
     "rank-llm[local]",
     "vllm>=0.19.1",
 ]
-
-sglang = [
-    "rank-llm[local]",
-    "sglang[all]>=0.5.10"
-]
-# sglang is excluded from [all] because sglang[all] pins exact dependency
-# versions (transformers, opencv-python-headless) and pre-release packages
-# (flash-attn-4) that conflict with vllm.  Install via:
-#   pip install 'rank-llm[sglang]'
-
 pyserini = [
     "faiss-cpu>=1.8.0",
     "pandas>=1.4.0",
@@ -110,15 +100,6 @@ all = [
 
 [tool.uv]
 prerelease = "allow"
-conflicts = [
-    [{ extra = "sglang" }, { extra = "vllm" }],
-    [{ extra = "sglang" }, { extra = "mcp" }],
-    [{ extra = "sglang" }, { extra = "server" }],
-    [{ extra = "sglang" }, { extra = "all" }],
-    [{ extra = "sglang" }, { extra = "cloud" }],
-    [{ extra = "sglang" }, { extra = "genai" }],
-    [{ extra = "sglang" }, { extra = "gemini" }],
-]
 
 [dependency-groups]
 dev = [

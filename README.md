@@ -13,7 +13,7 @@
 - **[2025.05.25]** Our [RankLLM](https://dl.acm.org/doi/pdf/10.1145/3726302.3730331) resource paper is accepted to SIGIR 2025! 🎉🎉🎉
 
 ## Overview
-We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://https://github.com/vllm-project/vllm), [SGLang](https://github.com/sgl-project/sglang). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
+We offer a suite of rerankers - pointwise models like MonoT5, pairwise models like DuoT5 and listwise models with a focus on open source LLMs compatible with [vLLM](https://github.com/vllm-project/vllm). We also support RankGPT and RankGemini variants, which are proprietary listwise rerankers. Addtionally, we support reranking with the first-token logits only to improve inference efficiency.  Some of the code in this repository is borrowed from [RankGPT](https://github.com/sunnweiwei/RankGPT), [PyGaggle](https://github.com/castorini/pygaggle), and [LiT5](https://github.com/castorini/LiT5)!
 
 <p align="center">
 <img src="docs/images/rankllm_overview.png" alt="RankLLM Overview" style="width:95%;">
@@ -93,7 +93,6 @@ repeat `--extra` to combine stacks in one environment.
 | Lightweight HTTP API dependencies | `api` | Installs FastAPI, Flask, and Uvicorn without the heavier retrieval or inference stacks |
 | MCP server dependencies | `mcp` | Pulls the packaged `serve mcp` dependency set, including Pyserini and model-serving backends |
 | Listwise reranking with open-source models via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
-| Batched SGLang inference | `sglang` | Install `flashinfer` separately when needed |
 | Full HTTP and MCP server bundle | `server` | Aggregate of the `api` and `mcp` extras |
 | Finetuning and training scripts | `training` | Keeps training-only deps out of base installs |
 | Everything | `all` | Aggregate of all extras |
@@ -127,11 +126,10 @@ pip install -e ".[<extra>]"
 Replace `<extra>` with one of the extras in the feature matrix below. You can
 combine extras as needed, for example `pip install -e ".[openai,api]"`.
 
-Remember to install `flashinfer` for the `sglang` backend and `flash-attn` for
-optimized training workflows when those stacks require them.
+Remember to install `flash-attn` separately for optimized training workflows
+when those stacks require it.
 
 ```bash
-pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
 pip install flash-attn --no-build-isolation
 ```
 
@@ -247,8 +245,6 @@ rank-llm rerank --model-path castorini/rank_zephyr_7b_v1_full --top-k-candidates
 --retrieval-method SPLADE++_EnsembleDistil_ONNX --prompt-template-path src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context-size 4096 --variable-passages
 ```
 
-Including the `--sglang_batched` flag will allow you to run the model in batched mode using the `SGLang` library.
-
 If you want to run multiple passes of the model, you can use the `--num_passes` flag.
 
 ## RankGPT4-o
@@ -356,7 +352,7 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-3-flash-preview
 
 The following is a table of the listwise models our repository was primarily built to handle (with the models hosted on HuggingFace):
 
-`vLLM` and `SGLang` backends are only supported for `RankZephyr` and `RankVicuna` models.
+The `vLLM` backend is only supported for `RankZephyr` and `RankVicuna` models.
 
 | Model Name        | Hugging Face Identifier/Link                            |
 |-------------------|---------------------------------------------|

@@ -25,7 +25,6 @@ This covers:
 | Retrieval or trec_eval-based evaluation | `uv sync --group dev --extra pyserini` | `pip install -e ".[pyserini]"` |
 | Local Hugging Face and PyTorch rerankers | `uv sync --group dev --extra local` | `pip install -e ".[local]"` |
 | vLLM batched inference | `uv sync --group dev --extra vllm` | `pip install -e ".[vllm]"` |
-| SGLang batched inference | `uv sync --group dev --extra sglang` | `pip install -e ".[sglang]"` |
 
 | MCP server bundle | `uv sync --group dev --extra mcp` | `pip install -e ".[mcp]"` |
 | Full HTTP and MCP server bundle | `uv sync --group dev --extra server` | `pip install -e ".[server]"` |
@@ -38,4 +37,4 @@ This covers:
 - `cloud` aggregates the hosted-provider stacks.
 - `api` is intentionally lighter than `server`.
 - `mcp` currently pulls a larger bundle because it includes model-serving and `pyserini`-dependent pieces.
-- Install `flashinfer` separately for some `sglang` setups and `flash-attn` separately for training workflows when needed.
+- Install `flash-attn` separately for training workflows when needed.

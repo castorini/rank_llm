@@ -124,7 +124,6 @@ class Reranker:
         dataset_name: str = None,
         rerank_results_dirname: str = "rerank_results",
         inference_invocations_history_dirname: str = "inference_invocations_history",
-        sglang_batched: bool = False,
         output_trec_file: str | None = None,
         output_jsonl_file: str | None = None,
         invocations_history_file: str | None = None,
@@ -144,7 +143,6 @@ class Reranker:
             pass_ct (int, optional): Pass count, if applicable. Defaults to None.
             window_size (int, optional): The window size used in reranking. Defaults to None.
             dataset_name (str, optional): The name of the dataset used. Defaults to None.
-            sglang_batched (bool, optional): Indicates if SGLang inference backend used. Defaults to False.
             output_trec_file (str, optional): If provided, write TREC output to this path; else use computed name.
             output_jsonl_file (str, optional): If provided, write JSONL output to this path; else use computed name.
             invocations_history_file (str, optional): If provided, write invocations history to this path; else use computed name.
@@ -168,12 +166,7 @@ class Reranker:
         if pass_ct is not None:
             name += f"_pass_{pass_ct}"
 
-        # Add vllm or sglang to rerank result file name if they are used
-        if sglang_batched:
-            name += "_sglang"
-        else:
-            # VLLM is the fallback right now
-            name += "_vllm"
+        name += "_vllm"
 
         writer = DataWriter(results)
         # Ensure default dirs exist when using any computed path
@@ -682,7 +675,7 @@ class Reranker:
             # NULL reranker
             model_coordinator = None
         else:
-            # supports loading models from huggingface (local vLLM / SGLang when base_url is unset)
+            # supports loading models from huggingface (local vLLM when base_url is unset)
             coordinator_base_url: str | None = kwargs.get("base_url")
             rest = {k: v for k, v in kwargs.items() if k != "base_url"}
             model_coordinator = _create_rank_listwise_os_llm_coordinator(
