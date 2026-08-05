@@ -117,7 +117,7 @@ the `pyserini` extra. Fetch it and send it to the session with an explicit
 timeout — installation takes a few minutes:
 
 ```bash
-curl -sO https://raw.githubusercontent.com/castorini/rank_llm/main/colab/colab_setup.py
+curl -fsSO https://raw.githubusercontent.com/castorini/rank_llm/main/colab/colab_setup.py
 colab exec -s rankllm -f colab_setup.py --timeout 3600
 ```
 
