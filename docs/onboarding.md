@@ -10,7 +10,7 @@ that's what I call [cargo culting](https://en.wikipedia.org/wiki/Cargo_cult_prog
 Instead, really try to understand what's going on.
 
 The experiments in this guide require a GPU.
-Before starting, work through [install-colab-cli.md](install-colab-cli.md), which sets up the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) and has you reproduce the RankZephyr experiment from this guide on a Colab GPU, driven entirely from your terminal.
+Before starting, work through [install-colab-cli.md](install-colab-cli.md), which sets up the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) and has you run a BM25 + monoT5 reranking pipeline on a free Colab GPU, driven entirely from your terminal.
 
 **Learning outcomes** for this guide:
 

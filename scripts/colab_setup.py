@@ -2,7 +2,7 @@
 
 Sent to a Colab runtime with:
 
-    colab exec -s rankllm -f colab_setup.py --timeout 3600
+    colab exec -s rankllm -f scripts/colab_setup.py --timeout 3600
 
 Installs JDK 21 (needed by Pyserini/Anserini for first-stage retrieval and
 trec_eval), clones rank_llm, and installs it with the pyserini extra.
