@@ -110,6 +110,13 @@ all = [
 
 [tool.uv]
 prerelease = "allow"
+# `prerelease = "allow"` above is needed for sglang's flash-attn-4, but it also
+# lets uv pick pre-release builds of transitive dependencies. cuda-tile (pulled
+# in by vllm -> flashinfer-python) publishes release candidates whose wheel
+# matrix is incomplete: 1.6.0rc4 has no cp311 manylinux x86_64 wheel, which
+# breaks installs on Python 3.11 / Linux. Hold it to the stable line; drop this
+# once a stable 1.6.x with complete wheels is published.
+constraint-dependencies = ["cuda-tile<1.6.0rc1"]
 conflicts = [
     [{ extra = "sglang" }, { extra = "vllm" }],
     [{ extra = "sglang" }, { extra = "mcp" }],

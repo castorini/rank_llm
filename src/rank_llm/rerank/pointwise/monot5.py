@@ -60,9 +60,17 @@ class MonoT5(PointwiseRankLLM):
             prompts, padding=True, truncation=True, return_tensors="pt"
         ).to(self._device)
 
-        token_prompts = token_prompts["input_ids"]
+        # transformers>=5 only infers a missing attention mask for decoder-only
+        # models, so pass it explicitly; otherwise the encoder attends to the
+        # padding of shorter prompts in the batch and their scores degrade.
+        token_prompts, attention_mask = (
+            token_prompts["input_ids"],
+            token_prompts["attention_mask"],
+        )
 
-        batch_outputs = self._llm.generate(token_prompts, generation_config=gen_cfg)
+        batch_outputs = self._llm.generate(
+            token_prompts, attention_mask=attention_mask, generation_config=gen_cfg
+        )
 
         batch_output_ids = batch_outputs.sequences
         batch_logits = batch_outputs.scores
