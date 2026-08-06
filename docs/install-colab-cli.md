@@ -1,4 +1,4 @@
-# Install the Colab CLI and Rerank on a Free Colab GPU
+# RankLLM: Pointwise Reranking with monoT5 on Colab
 
 The rank_llm step of the onboarding path requires a GPU, and the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) is the easiest way to get one if you don't have suitable hardware locally.
 It lets you provision Colab GPU runtimes, run code on them, and pull results back — all from your own terminal, no browser notebook involved.
@@ -21,7 +21,7 @@ As with the previous guides in the onboarding path, don't just copy-paste your w
 - Understand the quirks of driving a remote Jupyter kernel from a terminal (execution timeouts, streaming subprocess output).
 - Run an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) on TREC DL20 and evaluate it with nDCG@10.
 
-## Part 1: Install and sanity-check the Colab CLI
+## Install and Sanity-Check the Colab CLI
 
 The CLI supports **Linux and macOS only** (no Windows).
 Install it with `uv` (or `pip install google-colab-cli` into any Python environment):
@@ -73,7 +73,30 @@ That's the whole sanity check — release the VM:
 colab stop -s sanity
 ```
 
-## Part 2: Retrieve and rerank on a free Colab GPU
+## What's Pointwise Reranking?
+
+As a recap from [here](https://github.com/castorini/pyserini/blob/master/docs/conceptual-framework.md), this is the "core retrieval" problem that we're trying to solve:
+
+> Given an information need expressed as a query _q_, the text retrieval task is to return a ranked list of _k_ texts {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} from an arbitrarily large but finite collection
+of texts _C_ = {_d<sub>i</sub>_} that maximizes a metric of interest, for example, nDCG, AP, etc.
+
+**Multi-Stage Retrieval.**
+At this point of the onboarding path, we are already fairly familiar with the "core retrieval" problem above, and implemented sparse and dense retrieval in Pyserini that obtains such a ranked list {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} given a query $q$.
+However, what if we want to further improve the quality of the retrieved list?
+Intuitively, to achieve a better ranking, the algorithms we run will also be more computationally expensive, which quickly becomes impractical as the number of documents scale (e.g. 8,841,823 documents in the MS MARCO passage ranking corpus).
+
+To mitigate this, we can still proceed with the "cheaper" methods we've used before to get an "initial" ranked list, narrowing down the number of documents to a manageable number, say from 8,841,823 to 1000.
+On top of this initial list, we can then apply more computationally expensive algorithms on just these 1000 documents to further improve the quality of the retrieved list.
+
+This is the idea of **multi-stage retrieval**.
+Obtaining the initial list is referred to as the **first-stage retrieval**, often done with a computationally efficient method, followed by a **reranking** step that further refines the results of first-stage retrieval, often with a more expensive approach.
+
+**Reranking with Large Language Models.**
+There are many ways we can leverage LLMs to perform reranking.
+Generally, the approaches can be divided into three categories: pointwise (scoring documents individually), pairwise (comparing documents in pairs), and listwise (considering multiple documents together).
+In this lesson, you'll run a pointwise reranker; the next lesson, you'll run a listwise reranker.
+
+## Reranking with monoT5
 
 You will now run a complete multi-stage retrieval pipeline on TREC DL20: first-stage retrieval with BM25 — the ranking function you know from the anserini and pyserini guides — followed by reranking the top 100 candidates per query with [monoT5](https://arxiv.org/abs/2003.06713), a pointwise T5 reranker from our group.
 BM25 alone scores **0.4796** nDCG@10 on DL20; watch what the reranker does to that number.
@@ -171,6 +194,8 @@ colab stop -s rankllm
 colab sessions
 ```
 
+TODO: I think this should be moved to later sections?
+
 ### Running the onboarding experiments on Colab
 
 Once you have Colab Pro (see the note in [onboarding.md](onboarding.md)), the RankZephyr and FirstMistral experiments run the exact same way — provision a bigger GPU, same setup file, then the onboarding commands in the console:
@@ -188,6 +213,8 @@ python -m pip install -q -e '/content/rank_llm[vllm]' onnxruntime
 ```
 
 and then the `run_rank_llm.py` commands exactly as [onboarding.md](onboarding.md) gives them.
+
+Go to [the RankZephyr guide](onboarding-rz.md) next.
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
 
