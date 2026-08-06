@@ -24,7 +24,7 @@ As with the previous guides in the onboarding path, don't just copy-paste your w
 ## Install and Sanity-Check the Colab CLI
 
 The CLI supports **Linux and macOS only** (no Windows).
-Install it with `uv` (or `pip install google-colab-cli` into any Python environment):
+Install it with `uv` (or `pip install "google-colab-cli" "jupyter-kernel-client<1.0.0"` into any Python environment):
 
 ```bash
 # jupyter-kernel-client 1.0.0 renamed KernelClient, which google-colab-cli 0.6.0
