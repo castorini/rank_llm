@@ -41,6 +41,8 @@ Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with Firs
 
 Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following command to run FirstMistral:
 
+TODO(#416): Here and everywhere else we should switch to new clis instead of running the old `run_rank_llm.py`
+
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/first_mistral \
