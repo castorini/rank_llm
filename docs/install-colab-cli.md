@@ -27,7 +27,10 @@ The CLI supports **Linux and macOS only** (no Windows).
 Install it with `uv` (or `pip install google-colab-cli` into any Python environment):
 
 ```bash
-uv tool install google-colab-cli
+# jupyter-kernel-client 1.0.0 renamed KernelClient, which google-colab-cli 0.6.0
+# still imports, so a default install crashes on the first `colab exec`. Pin
+# below 1.0.0 until the CLI is updated upstream.
+uv tool install google-colab-cli --with "jupyter-kernel-client<1.0.0"
 ```
 
 The first command that contacts Colab will walk you through authenticating with your Google account.
@@ -219,3 +222,5 @@ Go to [the RankZephyr guide](onboarding-rz.md) next.
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
 
 After completing this guide, add an entry below following the convention from the previous onboarding guides, and include the `ndcg_cut_10` you obtained and the GPU you used.
+
+Results reproduced by [@dawoodkhandev](https://github.com/dawoodkhandev) on 2026-08-06 (commit [`e2ceebe`](https://github.com/castorini/rank_llm/commit/e2ceebe68126430c0960f7282e14c709865d66cb)), ndcg_cut_10 = 0.6771 on a Colab free-tier T4.
