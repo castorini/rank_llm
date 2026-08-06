@@ -221,6 +221,15 @@ Go to [the RankZephyr guide](onboarding-rz.md) next.
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
 
-After completing this guide, add an entry below following the convention from the previous onboarding guides, and include the `ndcg_cut_10` you obtained and the GPU you used.
+After completing this guide, add your `ndcg_cut_10` to the table below, then add a log entry beneath it following the convention from the previous onboarding guides.
 
-Results reproduced by [@dawoodkhandev](https://github.com/dawoodkhandev) on 2026-08-06 (commit [`e2ceebe`](https://github.com/castorini/rank_llm/commit/e2ceebe68126430c0960f7282e14c709865d66cb)), ndcg_cut_10 = 0.6771 on a Colab free-tier T4.
+| monoT5 DL20 | Frequency |
+|-------------|-----------|
+| 0.6771      | 1         |
+
+If your result is present in the table above, please increase its frequency by 1.
+If your result is not present, add a new row (in sorted order) to the table with frequency 1.
+
+After editing the table above, add a log entry here as well like the previous guides:
+
++ Results reproduced by [@dawoodkhandev](https://github.com/dawoodkhandev) on 2026-08-06 (commit [`e2ceebe`](https://github.com/castorini/rank_llm/commit/e2ceebe68126430c0960f7282e14c709865d66cb)) on a free-tier T4
