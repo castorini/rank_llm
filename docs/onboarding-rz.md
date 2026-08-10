@@ -115,7 +115,7 @@ If you don't have a local GPU, run this step on a Colab Pro **A100** runtime, dr
 First, install the Colab CLI (Linux/macOS only). The first command that contacts Colab walks you through a one-time Google sign-in:
 
 ```bash
-uv tool install google-colab-cli
+uv tool install google-colab-cli --with "jupyter-kernel-client<1.0.0"
 ```
 
 Then provision an A100 and open a shell on it:
