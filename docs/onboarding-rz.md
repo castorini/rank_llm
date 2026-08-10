@@ -108,6 +108,50 @@ This investment not only enables you to complete the onboarding but also positio
 
 Please refer to the [instructions here](https://github.com/castorini/rank_llm?tab=readme-ov-file#-instructions) to install rank_llm.
 
+#### Running RankZephyr on a Colab GPU
+
+If you don't have a local GPU, run this step on a Colab Pro **A100** runtime, driven from your own terminal with the [Colab CLI](https://github.com/googlecolab/google-colab-cli). Work through the steps in order.
+
+First, install the Colab CLI (Linux/macOS only). The first command that contacts Colab walks you through a one-time Google sign-in:
+
+```bash
+uv tool install google-colab-cli --with "jupyter-kernel-client<1.0.0"
+```
+
+Then provision an A100 and open a shell on it:
+
+```bash
+colab new -s rankllm --gpu A100
+colab console -s rankllm
+```
+
+Inside that shell, clone rank_llm and install it with the vLLM and Pyserini extras:
+
+```bash
+git clone https://github.com/castorini/rank_llm.git && cd rank_llm
+pip install -e '.[vllm,pyserini]' onnxruntime
+```
+
+Next, pin a CUDA 12.8-matched vLLM. The current Colab image ships CUDA 12.8, but a default vLLM is built for CUDA 13 and crashes on import with `libcudart.so.13`. Pinning vllm 0.11.0 + torch 2.8.0 from the cu128 index fixes it, and `transformers` must stay on the 4.55.x line that this vLLM targets:
+
+```bash
+pip install --force-reinstall "vllm==0.11.0" "torch==2.8.0" --extra-index-url https://download.pytorch.org/whl/cu128
+pip install "transformers==4.55.4"
+```
+
+Install JDK 21, which the Anserini/Pyserini first-stage retrieval needs:
+
+```bash
+apt-get install -y openjdk-21-jdk-headless
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+```
+
+Now run the same command shown below. When it finishes, stop the runtime so you stop spending compute units:
+
+```bash
+colab stop -s rankllm
+```
+
 #### Running the RankZephyr Model
 
 We can run the RankZephyr model with the command:
