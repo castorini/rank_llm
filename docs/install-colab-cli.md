@@ -9,9 +9,9 @@ This guide has two parts:
 2. Run your first multi-stage retrieval pipeline on a Colab GPU: BM25 retrieval over TREC DL20, reranked with [monoT5](https://arxiv.org/abs/2003.06713).
 
 Everything in this guide runs on Colab's **free tier**.
-The 7B listwise rerankers you'll meet in [onboarding.md](onboarding.md) (RankZephyr, FirstMistral) don't fit on the free T4 GPU — that's what the Colab Pro subscription discussed there is for — but the workflow you learn here is exactly the workflow you'll use to run them.
+The 7B listwise rerankers you'll meet in the [RankZephyr](onboarding-rz.md) and [FirstMistral](onboarding-first.md) lessons don't fit on the free T4 GPU — that's what the Colab Pro subscription discussed there is for — but the workflow you learn here is exactly the workflow you'll use to run them.
 
-Work through this guide first, then continue with [onboarding.md](onboarding.md).
+Work through this guide first, then continue with [onboarding-rz.md](onboarding-rz.md).
 As with the previous guides in the onboarding path, don't just copy-paste your way through — each command below is one step of a remote-execution workflow, and the point is to understand what each step does.
 
 **Learning outcomes** for this guide:
@@ -106,7 +106,7 @@ BM25 alone scores **0.4796** nDCG@10 on DL20; watch what the reranker does to th
 
 (Why not RankZephyr here?
 Its 7B weights alone are ~14 GB in fp16 — they barely fit on the free T4's 16 GB before you even allocate a KV cache.
-The listwise experiments in [onboarding.md](onboarding.md) therefore run on bigger GPUs via Colab Pro; monoT5-base is a couple hundred million parameters and runs comfortably, and the point of this guide is the workflow.)
+The listwise experiments in the [RankZephyr](onboarding-rz.md) and [FirstMistral](onboarding-first.md) lessons therefore run on bigger GPUs via Colab Pro; monoT5-base is a couple hundred million parameters and runs comfortably, and the point of this guide is the workflow.)
 
 Provision a fresh session:
 
@@ -160,7 +160,7 @@ Three things happen, and you'll see each in the output:
 
 1. **Retrieve** — Pyserini downloads a prebuilt Lucene index of MS MARCO v1 passages (~2 GB; Colab's datacenter network makes quick work of it) and runs BM25 to get the top 100 passages for each DL20 query.
 2. **Rerank** — monoT5 scores every (query, passage) pair independently by asking the T5 model `Query: ... Document: ... Relevant:` and reading the probability of `true` vs `false` from the first generated token.
-   This is *pointwise* reranking — one passage at a time — in contrast to the *listwise* rerankers in [onboarding.md](onboarding.md), which see many passages at once.
+   This is *pointwise* reranking — one passage at a time — in contrast to the *listwise* rerankers in [the next lesson](onboarding-rz.md), which see many passages at once.
 3. **Evaluate** — `trec_eval` scores the reranked run against the DL20 relevance judgments.
 
 The whole pipeline takes under five minutes on a T4.
@@ -172,7 +172,7 @@ ndcg_cut_10           	all	0.6771
 ```
 
 Compare that against the 0.4796 of BM25 alone: the reranker just bought ~0.20 nDCG@10 without touching the index or the query.
-That gap — a cheap first stage to narrow the field, a smarter second stage to fix the order — is the whole idea of multi-stage retrieval, and everything in [onboarding.md](onboarding.md) builds on it.
+That gap — a cheap first stage to narrow the field, a smarter second stage to fix the order — is the whole idea of multi-stage retrieval, and everything in [the lessons that follow](onboarding-rz.md) builds on it.
 
 Before leaving the VM, pack up the run artifacts (the TREC run file plus a JSONL with every prompt and model response), then exit the console:
 
@@ -196,26 +196,6 @@ Then release the VM and confirm nothing is left running:
 colab stop -s rankllm
 colab sessions
 ```
-
-TODO: I think this should be moved to later sections?
-
-### Running the onboarding experiments on Colab
-
-Once you have Colab Pro (see the note in [onboarding.md](onboarding.md)), the RankZephyr and FirstMistral experiments run the exact same way — provision a bigger GPU, same setup file, then the onboarding commands in the console:
-
-```bash
-colab new -s rankllm --gpu A100
-colab exec -s rankllm -f colab_setup.py --timeout 3600
-colab console -s rankllm
-```
-
-The listwise rerankers additionally need vLLM and the ONNX runtime (for the SPLADE++ first stage used there), so inside the console run
-
-```bash
-python -m pip install -q -e '/content/rank_llm[vllm]' onnxruntime
-```
-
-and then the `run_rank_llm.py` commands exactly as [onboarding.md](onboarding.md) gives them.
 
 Go to [the RankZephyr guide](onboarding-rz.md) next.
 
