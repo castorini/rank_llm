@@ -206,7 +206,7 @@ class Retriever:
                 with open(cached_file) as f:
                     results = [
                         from_dict(data_class=Request, data=json.loads(line))
-                        for line in enumerate(f)
+                        for line in f
                     ]
                     for result in results:
                         result.candidates = result.candidates[:k]
