@@ -35,7 +35,7 @@ def retrieve_and_rerank(
     default_model_coordinator: RankLLM = None,
     **kwargs: Any,
 ):
-    """Retrieve candidates using Anserini API and rerank them
+    """Retrieve candidates using Pyserini API and rerank them
 
     Returns:
         - List of top_k_rerank candidates
@@ -246,7 +246,7 @@ def retrieve(
 
             requests = []
             for ds in dataset:
-                # Calls Anserini API
+                # Calls Pyserini API
                 requests.append(
                     service_retriever.retrieve(
                         dataset=ds,
