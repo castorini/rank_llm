@@ -27,10 +27,12 @@ jobs:
         run: uv venv --python 3.11
 
       - name: Install lint dependencies
-        run: uv pip install --python .venv/bin/python pre-commit black isort
+        run: uv pip install --python .venv/bin/python ruff
 
       - name: Run lint
-        run: .venv/bin/pre-commit run --all-files
+        run: |
+          .venv/bin/python -m ruff check .
+          .venv/bin/python -m ruff format --check .
 
   unit_tests:
     needs: lint
@@ -47,6 +49,7 @@ jobs:
             install-target: ".[cloud,vllm]"
     env:
       TMPDIR: /mnt/tmp
+      JAVA_TOOL_OPTIONS: --add-modules=jdk.incubator.vector
     steps:
       - uses: actions/checkout@v4
 
@@ -81,6 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TMPDIR: /mnt/tmp
+      JAVA_TOOL_OPTIONS: --add-modules=jdk.incubator.vector
     steps:
       - uses: actions/checkout@v4
 
@@ -118,3 +122,35 @@ jobs:
             test.test_cli_http \
             test.test_cli_mcp \
             test.test_cli_legacy_wrappers
+
+  mypy:
+    needs:
+      - unit_tests
+      - cli_smoke
+    runs-on: ubuntu-latest
+    env:
+      TMPDIR: /mnt/tmp
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare temp directory on /mnt
+        run: |
+          sudo mkdir -p "$TMPDIR"
+          sudo chown "$USER":"$USER" "$TMPDIR"
+          df -h /
+          df -h /mnt
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+
+      - name: Create mypy environment
+        run: uv venv --python 3.11
+
+      - name: Install mypy environment
+        run: |
+          uv pip install --python .venv/bin/python -e ".[server,cloud]"
+          uv pip install --python .venv/bin/python mypy types-PyYAML
+
+      - name: Run mypy
+        run: .venv/bin/python -m mypy
