@@ -49,8 +49,10 @@ sh(f"{sys.executable} -m pip install -q -e '/content/rank_llm[pyserini]'")
 # applied to the RankZephyr/FirstMistral onboarding docs.
 sh(
     "mkdir -p ~/.cache/pyserini/topics-and-qrels && "
-    "curl -sSL -o ~/.cache/pyserini/topics-and-qrels/qrels.dl20-passage.txt "
-    "https://raw.githubusercontent.com/castorini/anserini-tools/master/qrels/qrels.dl20-passage.txt"
+    "curl -fsSL -o ~/.cache/pyserini/topics-and-qrels/qrels.dl20-passage.txt.tmp "
+    "https://raw.githubusercontent.com/castorini/anserini-tools/master/qrels/qrels.dl20-passage.txt && "
+    "mv ~/.cache/pyserini/topics-and-qrels/qrels.dl20-passage.txt.tmp "
+    "~/.cache/pyserini/topics-and-qrels/qrels.dl20-passage.txt"
 )
 
 print("\nsetup ok")
