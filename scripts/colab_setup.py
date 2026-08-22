@@ -5,7 +5,9 @@ Sent to a Colab runtime with:
     colab exec -s rankllm -f scripts/colab_setup.py --timeout 3600
 
 Installs JDK 21 (needed by Pyserini/Anserini for first-stage retrieval and
-trec_eval), clones rank_llm, and installs it with the pyserini extra.
+trec_eval), clones rank_llm, installs it with the pyserini extra, and
+pre-seeds the DL20 qrels the eval step needs (Anserini's own qrels download
+currently 404s -- see the pre-seed step below for why).
 """
 
 import subprocess
@@ -38,5 +40,17 @@ sh(
 )
 
 sh(f"{sys.executable} -m pip install -q -e '/content/rank_llm[pyserini]'")
+
+# Anserini's own qrels download (io.anserini.eval.RelevanceJudgments) hits a
+# hardcoded anserini-tools URL that no longer resolves -- the file moved to
+# a different path upstream. Pre-seed it into Pyserini's cache here so the
+# eval step at the end of the pipeline finds it already there instead of
+# trying (and failing) to download it. See rank_llm#422 for the same fix
+# applied to the RankZephyr/FirstMistral onboarding docs.
+sh(
+    "mkdir -p ~/.cache/pyserini/topics-and-qrels && "
+    "curl -sSL -o ~/.cache/pyserini/topics-and-qrels/qrels.dl20-passage.txt "
+    "https://raw.githubusercontent.com/castorini/anserini-tools/master/qrels/qrels.dl20-passage.txt"
+)
 
 print("\nsetup ok")

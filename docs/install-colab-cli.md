@@ -117,8 +117,10 @@ colab new -s rankllm --gpu T4
 ### Set up the environment on the VM
 
 Environment setup is boilerplate, so it's prepackaged.
-[`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, and pip-installs it with the `pyserini` extra.
-Fetch it and send it to the session with an explicit timeout — installation takes a few minutes:
+[`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, pip-installs it with the `pyserini` extra, and pre-seeds the DL20 relevance judgments (qrels) that the eval step below needs.
+That last part works around a real bug: Anserini's own qrels download is a hardcoded URL that no longer resolves (the file moved to a different path upstream), so without this the pipeline gets all the way through retrieval and reranking and then fails at the very last step, evaluation.
+The script fetches the file itself and drops it where Anserini's evaluator expects to find it already cached, so it never has to make that broken request.
+Fetch the script and send it to the session with an explicit timeout — installation takes a few minutes:
 
 ```bash
 curl -fsSO https://raw.githubusercontent.com/castorini/rank_llm/main/scripts/colab_setup.py
@@ -126,7 +128,7 @@ colab exec -s rankllm -f colab_setup.py --timeout 3600
 ```
 
 Do skim [the file](../scripts/colab_setup.py) — it's ~40 lines.
-Beyond the three setup commands, the one thing it has to work around is that the Colab kernel only forwards *Python-level* stdout: the OS-level output of child processes (`apt`, `git`, `pip`) is invisible unless the script captures and re-prints it, which is what its small `sh()` helper does.
+Beyond the four setup commands, the one thing it has to work around is that the Colab kernel only forwards *Python-level* stdout: the OS-level output of child processes (`apt`, `git`, `pip`, `curl`) is invisible unless the script captures and re-prints it, which is what its small `sh()` helper does.
 Without that, a failing install would die silently and you'd have nothing to debug with.
 
 Wait for the final `setup ok`.
