@@ -125,6 +125,12 @@ colab new -s rankllm --gpu A100
 colab console -s rankllm
 ```
 
+This session stays open through several long steps — installs, then loading and compiling a 7B model — so it's worth knowing what a dropped connection means before you hit one:
+
+- `Connection closed` on its own just means the client disconnected; the VM and your work are still there. Re-run `colab console -s rankllm` to reattach — it's tmux-backed.
+- `Session 'rankllm' appears to be lost (404/401)` means the VM itself is gone. There's nothing to reattach to; reprovision with `colab new` and start over.
+- To cut down on drops, keep your laptop from sleeping for the duration — on macOS: `caffeinate -i colab console -s rankllm` (this only holds sleep off while `colab console` is running; it exits, and normal sleep resumes, the moment that does — whether that's `exit`, Ctrl-C, or a dropped connection — so there's nothing to remember to turn off).
+
 Inside that shell, clone rank_llm and install it with the vLLM and Pyserini extras:
 
 ```bash
@@ -146,11 +152,7 @@ apt-get install -y openjdk-21-jdk-headless
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 ```
 
-Now run the same command shown below. When it finishes, stop the runtime so you stop spending compute units:
-
-```bash
-colab stop -s rankllm
-```
+Setup is done. Stay in this console session for the actual run below — don't stop the runtime yet.
 
 #### Running the RankZephyr Model
 
@@ -185,6 +187,18 @@ Note that the result you get may vary slightly with the number above.
 _Where is the first-stage retrieval?_
 It is hidden in the `--retrieval_method=SPLADE++_EnsembleDistil_ONNX` flag.
 We are using the [SPLADE](https://www.pinecone.io/learn/splade/) model as our sparse first-stage retriever, retrieving the top 100 candidates, followed by the RankZephyr model to rerank these 100 candidates.
+
+Before leaving the VM, exit the console:
+
+```bash
+exit
+```
+
+Back on your machine, stop the runtime so you stop spending compute units:
+
+```bash
+colab stop -s rankllm
+```
 
 That is all for this guide!
 A reminder that this is just a gentle introduction, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
