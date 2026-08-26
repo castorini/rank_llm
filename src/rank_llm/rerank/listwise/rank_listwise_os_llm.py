@@ -185,7 +185,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 self._tokenizer = self._vllm_handler.get_tokenizer()
             else:
-                # Use the AutoTokenizer from the transformers library to load the tokenizer, since the initialization of the VllmHandler needs max_model_len which is calculated using the tokenizer.
+                # Preload the tokenizer before initializing the vLLM handler. The
+                # handler's tokenizer replaces it once the engine is ready.
                 if AutoTokenizer is None:
                     raise missing_extra_error(
                         "local",
@@ -194,7 +195,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 self._tokenizer = AutoTokenizer.from_pretrained(
                     model, trust_remote_code=True
                 )
-                max_output = self._get_max_output_tokens(self._window_size)
                 self._vllm_handler = VllmHandler(
                     model=model,
                     download_dir=os.getenv("HF_HOME"),
@@ -203,7 +203,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     tensor_parallel_size=num_gpus,
                     gpu_memory_utilization=0.90,
                     trust_remote_code=True,
-                    max_model_len=context_size + max_output,
+                    max_model_len=context_size,
                 )
             # Now that the VllmHandler is initialized, we can get the tokenizer from it.
             self._tokenizer = self._vllm_handler.get_tokenizer()
