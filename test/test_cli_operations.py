@@ -48,7 +48,6 @@ class TestCLIOperations(unittest.TestCase):
             reasoning_token_budget=200,
             use_logits=True,
             use_alpha=True,
-            sglang_batched=False,
             pointwise_vllm=False,
             listwise_vllm_with_openai_sdk=False,
             reasoning_effort="medium",
