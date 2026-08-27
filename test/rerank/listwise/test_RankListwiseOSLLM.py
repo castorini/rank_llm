@@ -195,22 +195,26 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertTrue(hasattr(model_coordinator, "_vllm_handler"))
         self.assertIsNone(model_coordinator._base_url)
 
-    def test_vllm_max_model_len_matches_context_size(self):
-        for model in (
-            "castorini/rank_zephyr_7b_v1_full",
-            "castorini/rank_vicuna_7b_v1",
-        ):
-            with self.subTest(model=model):
+    def test_vllm_max_model_len_covers_prompt_and_output_budgets(self):
+        cases = (
+            ("castorini/rank_zephyr_7b_v1_full", False, 10000, 4096),
+            ("castorini/rank_vicuna_7b_v1", False, 10000, 4096),
+            ("deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", True, 30000, 34096),
+        )
+        for model, is_thinking, reasoning_token_budget, expected in cases:
+            with self.subTest(model=model, is_thinking=is_thinking):
                 self.mock_vllm_handler_class.reset_mock()
                 RankListwiseOSLLM(
                     model=model,
                     context_size=4096,
                     window_size=20,
+                    is_thinking=is_thinking,
+                    reasoning_token_budget=reasoning_token_budget,
                 )
 
                 self.assertEqual(
                     self.mock_vllm_handler_class.call_args.kwargs["max_model_len"],
-                    4096,
+                    expected,
                 )
 
     def test_init_with_openai_sdk(self):
