@@ -79,7 +79,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
-         - context_size (int, optional): Maximum number of tokens that can be handled in a single prompt. Defaults to 4096.
+         - context_size (int, optional): Total token budget for the prompt and ranking output, excluding any optional
+         reasoning token budget. Defaults to 4096.
          - prompt_mode (PromptMode, optional): Deprecated and ignored. Prompt behavior is driven by the YAML
          template at prompt_template_path; passing prompt_mode only emits a deprecation warning.
          - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
@@ -94,6 +95,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - stride (int, optional): The stride size for moving the window. Defaults to 10.
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
+         - is_thinking (bool, optional): Whether to reserve additional output capacity for model reasoning. Defaults to False.
+         - reasoning_token_budget (int, optional): Additional output-token capacity reserved when thinking is enabled.
+         Defaults to 10000.
          - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
          - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
@@ -185,7 +189,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 self._tokenizer = self._vllm_handler.get_tokenizer()
             else:
-                # Use the AutoTokenizer from the transformers library to load the tokenizer, since the initialization of the VllmHandler needs max_model_len which is calculated using the tokenizer.
+                # Preload the tokenizer because the engine capacity calculation
+                # needs the ranking output-token estimate.
                 if AutoTokenizer is None:
                     raise missing_extra_error(
                         "local",
@@ -194,7 +199,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 self._tokenizer = AutoTokenizer.from_pretrained(
                     model, trust_remote_code=True
                 )
-                max_output = self._get_max_output_tokens(self._window_size)
                 self._vllm_handler = VllmHandler(
                     model=model,
                     download_dir=os.getenv("HF_HOME"),
@@ -203,7 +207,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     tensor_parallel_size=num_gpus,
                     gpu_memory_utilization=0.90,
                     trust_remote_code=True,
-                    max_model_len=context_size + max_output,
+                    max_model_len=self._get_max_model_len(self._window_size),
                 )
             # Now that the VllmHandler is initialized, we can get the tokenizer from it.
             self._tokenizer = self._vllm_handler.get_tokenizer()
@@ -281,6 +285,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def _get_max_output_tokens(self, window_size: int) -> int:
         min_tok = self.num_output_tokens(window_size)
         return self._reasoning_token_budget + min_tok if self._is_thinking else min_tok
+
+    def _get_max_model_len(self, window_size: int) -> int:
+        """Return the engine capacity needed by the prompt and output budgets."""
+        ranking_output_tokens = self.num_output_tokens(window_size)
+        max_prompt_tokens = self.max_tokens() - ranking_output_tokens
+        return max_prompt_tokens + self._get_max_output_tokens(window_size)
 
     async def run_llm_async(
         self,
