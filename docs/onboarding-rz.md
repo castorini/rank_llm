@@ -158,14 +158,6 @@ Setup is done. Stay in this console session for the actual run below — don't s
 
 We can run the RankZephyr model with the command:
 
-> **Before running:** the evaluation step downloads relevance judgments (qrels) that Anserini currently fetches from a hardcoded URL that no longer resolves (the qrels were moved to a `qrels/` folder upstream). Pre-seed the qrels into Pyserini's cache first so evaluation doesn't fail:
->
-> ```bash
-> mkdir -p ~/.cache/pyserini/topics-and-qrels
-> curl -sSL -o ~/.cache/pyserini/topics-and-qrels/qrels.dl20-passage.txt \
->   https://raw.githubusercontent.com/castorini/anserini-tools/master/qrels/qrels.dl20-passage.txt
-> ```
-
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py  \
   --model_path=castorini/rank_zephyr_7b_v1_full \

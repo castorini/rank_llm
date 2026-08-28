@@ -9,7 +9,7 @@ Development environment setup for [rank_llm](https://github.com/castorini/rank_l
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Git
 - Java 21 only for retrieval or evaluation workflows that use `pyserini`
 
@@ -35,8 +35,8 @@ git clone git@github.com:castorini/rank_llm.git && cd rank_llm
 ### uv path
 
 ```bash
-uv python install 3.11
-uv venv --python 3.11
+uv python install 3.12
+uv venv --python 3.12
 source .venv/bin/activate
 uv sync --group dev --extra cloud --extra api
 ```
@@ -53,7 +53,7 @@ pip install pre-commit
 ### conda fallback
 
 ```bash
-conda create -n rankllm python=3.11 -c conda-forge -y
+conda create -n rankllm python=3.12 -c conda-forge -y
 conda activate rankllm
 pip install -e ".[cloud,api]"
 ```
