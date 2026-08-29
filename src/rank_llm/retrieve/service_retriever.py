@@ -52,7 +52,7 @@ class ServiceRetriever:
             request (Request): The request containing the query and qid.
             dataset (str): The name of the dataset.
             k (int, optional): The top k hits to retrieve. Defaults to 100.
-            host (str): The Anserini API host address. Defaults to http://localhost:8081
+            host (str): The Pyserini API host address. Defaults to http://localhost:8081
 
         Returns:
             Request. Contains a query and list of candidates
@@ -60,27 +60,36 @@ class ServiceRetriever:
             ValueError: If the retrieval mode is invalid or the result format is not as expected.
         """
 
-        url = f"{host}/api/v1.0/indexes/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}&qid={request.query.qid}"
+        # Pyserini's REST API takes the index as a path segment and accepts
+        # only "query" and "hits".
+        url = f"{host}/v1/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}"
         print(url)
         try:
             response = requests.get(url, timeout=timeout)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             raise type(e)(
-                f"Failed to retrieve data from Anserini server: {str(e)}"
+                f"Failed to retrieve data from Pyserini server: {str(e)}"
             ) from e
 
         data = response.json()
+        # The response carries only the query text, so the qid comes from the
+        # original request.
         retrieved_results = Request(
-            query=Query(text=data["query"]["text"], qid=data["query"]["qid"])
+            query=Query(text=data["query"]["text"], qid=request.query.qid)
         )
 
         for candidate in data["candidates"]:
+            # A single-field document comes back as a plain string (or null),
+            # while downstream prompt construction expects doc["contents"].
+            doc = candidate["doc"]
+            if not isinstance(doc, dict):
+                doc = {"contents": doc if doc is not None else ""}
             retrieved_results.candidates.append(
                 Candidate(
                     docid=candidate["docid"],
                     score=candidate["score"],
-                    doc=candidate["doc"],
+                    doc=doc,
                 )
             )
 

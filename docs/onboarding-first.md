@@ -47,8 +47,6 @@ If you are running on Colab, follow the same setup steps from the [RankZephyr le
 
 TODO(#416): Here and everywhere else we should switch to new clis instead of running the old `run_rank_llm.py`
 
-> **Before running:** pre-seed the qrels as shown in the [RankZephyr lesson](./onboarding-rz.md) so evaluation doesn't hit Anserini's dead qrels download URL.
-
 ```bash
 python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/first_mistral \
