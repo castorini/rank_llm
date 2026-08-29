@@ -195,6 +195,17 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertTrue(hasattr(model_coordinator, "_vllm_handler"))
         self.assertIsNone(model_coordinator._base_url)
 
+    def test_close_delegates_to_vllm_handler(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/rank_zephyr_7b_v1_full",
+            context_size=4096,
+            window_size=10,
+        )
+
+        model_coordinator.close()
+
+        self.mock_vllm_handler_instance.close.assert_called_once_with()
+
     def test_vllm_max_model_len_covers_prompt_and_output_budgets(self):
         cases = (
             ("castorini/rank_zephyr_7b_v1_full", False, 10000, 4096),

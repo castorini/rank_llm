@@ -212,6 +212,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             # Now that the VllmHandler is initialized, we can get the tokenizer from it.
             self._tokenizer = self._vllm_handler.get_tokenizer()
 
+    def close(self) -> None:
+        """Release resources owned by the active inference backend."""
+        close = getattr(getattr(self, "_vllm_handler", None), "close", None)
+        if close is not None:
+            close()
+
     def rerank_batch(
         self,
         requests: list[Request],

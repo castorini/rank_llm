@@ -75,15 +75,19 @@ request_dict = {
 }
 request = from_dict(data_class=Request, data=request_dict)
 
-reranker = ZephyrReranker()
 kwargs = {"populate_invocations_history": True}
-rerank_results = reranker.rerank(request=request, **kwargs)
-
-# Explicitly free up before creating another reranker.
-del reranker
+reranker = ZephyrReranker()
+try:
+    rerank_results = reranker.rerank(request=request, **kwargs)
+finally:
+    # vLLM runs the engine in a subprocess; close it before loading another model.
+    reranker.close()
 
 reranker = VicunaReranker()
-rerank_results = reranker.rerank(request=request, **kwargs)
+try:
+    rerank_results = reranker.rerank(request=request, **kwargs)
+finally:
+    reranker.close()
 print(rerank_results)
 
 # write rerank results
