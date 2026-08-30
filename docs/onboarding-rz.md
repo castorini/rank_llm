@@ -159,12 +159,12 @@ Setup is done. Stay in this console session for the actual run below — don't s
 We can run the RankZephyr model with the command:
 
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py  \
-  --model_path=castorini/rank_zephyr_7b_v1_full \
-  --top_k_candidates=100 \
+rank-llm rerank \
+  --model-path=castorini/rank_zephyr_7b_v1_full \
+  --top-k-candidates=100 \
   --dataset=dl20 \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
-  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context_size=4096 --variable_passages
+  --retrieval-method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt-template-path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context-size=4096 --variable-passages
 ```
 
 The results should be something like:
@@ -177,7 +177,7 @@ ndcg_cut_10             all     0.8201
 Note that the result you get may vary slightly with the number above.
 
 _Where is the first-stage retrieval?_
-It is hidden in the `--retrieval_method=SPLADE++_EnsembleDistil_ONNX` flag.
+It is hidden in the `--retrieval-method=SPLADE++_EnsembleDistil_ONNX` flag.
 We are using the [SPLADE](https://www.pinecone.io/learn/splade/) model as our sparse first-stage retriever, retrieving the top 100 candidates, followed by the RankZephyr model to rerank these 100 candidates.
 
 Before leaving the VM, exit the console:

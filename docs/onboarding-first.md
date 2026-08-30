@@ -45,20 +45,20 @@ If you are running on Colab, follow the same setup steps from the [RankZephyr le
 
 
 
-TODO(#416): Here and everywhere else we should switch to new clis instead of running the old `run_rank_llm.py`
+**Before running:** pre-seed the qrels as shown in the [RankZephyr lesson](./onboarding-rz.md) so evaluation doesn't hit Anserini's dead qrels download URL.
 
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/first_mistral \
-  --top_k_candidates=100 \
+rank-llm rerank \
+  --model-path=castorini/first_mistral \
+  --top-k-candidates=100 \
   --dataset=dl20 \
-  --retrieval_method=SPLADE++_EnsembleDistil_ONNX \
-  --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml \
-  --context_size=4096 \
-  --variable_passages \
-  --use_logits \
-  --use_alpha \
-  --num_gpus 1
+  --retrieval-method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt-template-path=src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml \
+  --context-size=4096 \
+  --variable-passages \
+  --use-logits \
+  --use-alpha \
+  --num-gpus 1
 ```
 
 The results should be something like:
@@ -70,7 +70,7 @@ ndcg_cut_10             all     0.7851
 
 This above performs first-stage retrieval with SPLADE to get the initial 100 candidates, followed by listwise reranking using FIRST with FirstMistral.
 
-If you wish to compare FIRST's speed with traditional listwise reranking, omit the `--use_logits` and `--use_alpha` flags to perform traditional listwise reranking.
+If you wish to compare FIRST's speed with traditional listwise reranking, omit the `--use-logits` and `--use-alpha` flags to perform traditional listwise reranking.
 
 That is all for this guide!
 A reminder that this is just a gentle introduction, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
