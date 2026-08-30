@@ -152,10 +152,10 @@ cd /content/rank_llm
 # satisfies the import; it is never actually used.
 export OPENAI_API_KEY=sk-not-a-real-key
 
-python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/monot5-base-msmarco \
-  --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --context_size=512
+rank-llm rerank \
+  --model-path=castorini/monot5-base-msmarco \
+  --top-k-candidates=100 --dataset=dl20 \
+  --retrieval-method=bm25 --context-size=512
 ```
 
 Three things happen, and you'll see each in the output:
@@ -207,7 +207,7 @@ After completing this guide, add your `ndcg_cut_10` to the table below, then add
 
 | monoT5 DL20 | Frequency |
 |-------------|-----------|
-| 0.6771      | 1         |
+| 0.6771      | 2         |
 
 If your result is present in the table above, please increase its frequency by 1.
 If your result is not present, add a new row (in sorted order) to the table with frequency 1.
@@ -215,3 +215,4 @@ If your result is not present, add a new row (in sorted order) to the table with
 After editing the table above, add a log entry here as well like the previous guides:
 
 + Results reproduced by [@dawoodkhandev](https://github.com/dawoodkhandev) on 2026-08-06 (commit [`e2ceebe`](https://github.com/castorini/rank_llm/commit/e2ceebe68126430c0960f7282e14c709865d66cb))
++ Results reproduced by [@Evan-Lowry](https://github.com/Evan-Lowry) on 2026-08-27 (commit [`8ad18be`](https://github.com/castorini/rank_llm/commit/8ad18be76c90aa97ffae50b84dbc326bedc724fd))
