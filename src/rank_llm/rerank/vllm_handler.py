@@ -1,6 +1,6 @@
 import asyncio
-import atexit
 import uuid
+import weakref
 from typing import TYPE_CHECKING, Any
 
 try:
@@ -54,13 +54,32 @@ class VllmHandler:
         self._engine = vllm.AsyncLLMEngine.from_engine_args(engine_args)
         self._model = model
         self._tokenizer: PreTrainedTokenizerBase | None = None
-        atexit.register(self._shutdown)
+        self._closed = False
+        # Do not register a bound method with atexit: that keeps this handler
+        # alive and prevents `del reranker` from releasing the engine process.
+        self._finalizer = weakref.finalize(
+            self, self._shutdown_engine_safely, self._engine
+        )
 
-    def _shutdown(self) -> None:
+    @staticmethod
+    def _shutdown_engine_safely(engine: Any) -> None:
         try:
-            self._engine.shutdown()
+            engine.shutdown()
         except Exception:
             pass
+
+    def close(self) -> None:
+        """Synchronously release the vLLM engine and its GPU resources."""
+        if self._closed:
+            return
+        engine = self._engine
+        engine.shutdown()
+        self._closed = True
+        self._finalizer.detach()
+        # Drop the last handler-owned reference now, while vLLM and pyzmq
+        # module globals are still intact. Otherwise their __del__ methods run
+        # during interpreter teardown and can call globals that are already None.
+        self._engine = None
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
         if self._tokenizer is None:

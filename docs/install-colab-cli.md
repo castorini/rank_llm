@@ -117,9 +117,8 @@ colab new -s rankllm --gpu T4
 ### Set up the environment on the VM
 
 Environment setup is boilerplate, so it's prepackaged.
-[`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, pip-installs it with the `pyserini` extra, and pre-seeds the DL20 relevance judgments (qrels) that the eval step below needs.
-That last part works around a real bug: Anserini's own qrels download is a hardcoded URL that no longer resolves (the file moved to a different path upstream), so without this the pipeline gets all the way through retrieval and reranking and then fails at the very last step, evaluation.
-The script fetches the file itself and drops it where Anserini's evaluator expects to find it already cached, so it never has to make that broken request.
+[`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, and pip-installs it with the `pyserini` extra.
+Everything else the pipeline needs — the prebuilt index, the DL20 relevance judgments (qrels), `trec_eval` — Pyserini downloads and caches on first use.
 Fetch the script and send it to the session with an explicit timeout — installation takes a few minutes:
 
 ```bash
@@ -147,15 +146,10 @@ Inside that shell, run the pipeline:
 ```bash
 cd /content/rank_llm
 
-# pyserini 1.2.0 constructs an OpenAI client at import time and raises if no
-# key is set -- even though BM25 retrieval never calls OpenAI. Any placeholder
-# satisfies the import; it is never actually used.
-export OPENAI_API_KEY=sk-not-a-real-key
-
-rank-llm rerank \
-  --model-path=castorini/monot5-base-msmarco \
-  --top-k-candidates=100 --dataset=dl20 \
-  --retrieval-method=bm25 --context-size=512
+python src/rank_llm/scripts/run_rank_llm.py \
+  --model_path=castorini/monot5-base-msmarco \
+  --top_k_candidates=100 --dataset=dl20 \
+  --retrieval_method=bm25 --context_size=512
 ```
 
 Three things happen, and you'll see each in the output:

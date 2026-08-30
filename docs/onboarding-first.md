@@ -45,7 +45,7 @@ If you are running on Colab, follow the same setup steps from the [RankZephyr le
 
 
 
-> **Before running:** pre-seed the qrels as shown in the [RankZephyr lesson](./onboarding-rz.md) so evaluation doesn't hit Anserini's dead qrels download URL.
+**Before running:** pre-seed the qrels as shown in the [RankZephyr lesson](./onboarding-rz.md) so evaluation doesn't hit Anserini's dead qrels download URL.
 
 ```bash
 rank-llm rerank \

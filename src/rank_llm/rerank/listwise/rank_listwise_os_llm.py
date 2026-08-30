@@ -1,6 +1,5 @@
 import logging
 import os
-import random
 import unicodedata
 from importlib.resources import files
 from typing import Any
@@ -31,15 +30,6 @@ try:
 except (ImportError, RuntimeError, TypeError):
     AutoTokenizer = None
 
-try:
-    import sglang
-    from sglang import Engine
-    from sglang.srt.entrypoints.engine import Engine as SGLangEngineType
-except ImportError:
-    sglang = None
-    Engine = None
-    SGLangEngineType = None
-
 logger = logging.getLogger(__name__)
 
 ALPH_START_IDX = ord("A") - 1
@@ -68,7 +58,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         sampling_kwargs: dict[str, Any] | None = None,
         use_logits: bool = False,
         use_alpha: bool = False,
-        sglang_batched: bool = False,
         batch_size: int = 32,
         base_url: str | None = None,
         max_passage_words: int = 300,
@@ -79,7 +68,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
          Parameters:
          - model (str): Identifier for the language model to be used for ranking tasks.
-         - context_size (int, optional): Maximum number of tokens that can be handled in a single prompt. Defaults to 4096.
+         - context_size (int, optional): Total token budget for the prompt and ranking output, excluding any optional
+         reasoning token budget. Defaults to 4096.
          - prompt_mode (PromptMode, optional): Deprecated and ignored. Prompt behavior is driven by the YAML
          template at prompt_template_path; passing prompt_mode only emits a deprecation warning.
          - num_few_shot_examples (int, optional): Number of few-shot learning examples to include in the prompt, allowing for
@@ -94,9 +84,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
          - stride (int, optional): The stride size for moving the window. Defaults to 10.
          - system_message (Optional[str], optional): Custom system message to be included in the prompt for additional
          instructions or context. Defaults to None.
+         - is_thinking (bool, optional): Whether to reserve additional output capacity for model reasoning. Defaults to False.
+         - reasoning_token_budget (int, optional): Additional output-token capacity reserved when thinking is enabled.
+         Defaults to 10000.
          - use_logits (bool, optional): Indicates whether to use logits or not. Defaults to False.
          - use_alpha (bool, optional): Indicates whether to use alphabet ordering the prompts. Defaults to False.
-         - sglang_batched (bool, optional): Indicates whether batched inference using SGLang is leveraged. Defaults to False.
          - batch_size (int, optional): The size of the batch for processing requests. Defaults to 32.
          - base_url (str, optional): When specified the Open AI API compatiable vllm handler is used.
 
@@ -130,7 +122,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             batch_size=batch_size,
             max_passage_words=max_passage_words,
         )
-        self._sglang_batched = sglang_batched
         self._name = name
         self._variable_passages = variable_passages
         self._system_message = system_message
@@ -156,57 +147,51 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
 
-        if sglang_batched:
-            if Engine is None:
-                raise missing_extra_error(
-                    "sglang",
-                    "SGLang batch inference requires sglang.",
-                )
-            # Add assert here to ensure
-            assert Engine is not None
-            port = random.randint(30000, 35000)
-            self._llm = Engine(model, port=port)
-            self._tokenizer = self._llm.get_tokenizer()
-        else:
-            if vllm is None:
-                raise missing_extra_error(
-                    "vllm",
-                    "Open-source listwise reranking requires vLLM.",
-                )
-            from rank_llm.rerank.vllm_handler import VllmHandler
+        if vllm is None:
+            raise missing_extra_error(
+                "vllm",
+                "Open-source listwise reranking requires vLLM.",
+            )
+        from rank_llm.rerank.vllm_handler import VllmHandler
 
-            if self._base_url:
-                from rank_llm.rerank.vllm_handler_with_openai_sdk import (
-                    VllmHandlerWithOpenAISDK,
-                )
+        if self._base_url:
+            from rank_llm.rerank.vllm_handler_with_openai_sdk import (
+                VllmHandlerWithOpenAISDK,
+            )
 
-                self._vllm_handler = VllmHandlerWithOpenAISDK(
-                    model=model, base_url=base_url
-                )
-                self._tokenizer = self._vllm_handler.get_tokenizer()
-            else:
-                # Use the AutoTokenizer from the transformers library to load the tokenizer, since the initialization of the VllmHandler needs max_model_len which is calculated using the tokenizer.
-                if AutoTokenizer is None:
-                    raise missing_extra_error(
-                        "local",
-                        "Open-source listwise reranking requires transformers.",
-                    )
-                self._tokenizer = AutoTokenizer.from_pretrained(
-                    model, trust_remote_code=True
-                )
-                max_output = self._get_max_output_tokens(self._window_size)
-                self._vllm_handler = VllmHandler(
-                    model=model,
-                    download_dir=os.getenv("HF_HOME"),
-                    enforce_eager=False,
-                    max_logprobs=30,
-                    tensor_parallel_size=num_gpus,
-                    gpu_memory_utilization=0.90,
-                    trust_remote_code=True,
-                    max_model_len=context_size + max_output,
-                )
-            # Now that the VllmHandler is initialized, we can get the tokenizer from it.
+            self._vllm_handler = VllmHandlerWithOpenAISDK(
+                model=model, base_url=base_url
+            )
             self._tokenizer = self._vllm_handler.get_tokenizer()
+        else:
+            # Preload the tokenizer because the engine capacity calculation
+            # needs the ranking output-token estimate.
+            if AutoTokenizer is None:
+                raise missing_extra_error(
+                    "local",
+                    "Open-source listwise reranking requires transformers.",
+                )
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                model, trust_remote_code=True
+            )
+            self._vllm_handler = VllmHandler(
+                model=model,
+                download_dir=os.getenv("HF_HOME"),
+                enforce_eager=False,
+                max_logprobs=30,
+                tensor_parallel_size=num_gpus,
+                gpu_memory_utilization=0.90,
+                trust_remote_code=True,
+                max_model_len=self._get_max_model_len(self._window_size),
+            )
+        # Now that the VllmHandler is initialized, we can get the tokenizer from it.
+        self._tokenizer = self._vllm_handler.get_tokenizer()
+
+    def close(self) -> None:
+        """Release resources owned by the active inference backend."""
+        close = getattr(getattr(self, "_vllm_handler", None), "close", None)
+        if close is not None:
+            close()
 
     def rerank_batch(
         self,
@@ -282,6 +267,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         min_tok = self.num_output_tokens(window_size)
         return self._reasoning_token_budget + min_tok if self._is_thinking else min_tok
 
+    def _get_max_model_len(self, window_size: int) -> int:
+        """Return the engine capacity needed by the prompt and output budgets."""
+        ranking_output_tokens = self.num_output_tokens(window_size)
+        max_prompt_tokens = self.max_tokens() - ranking_output_tokens
+        return max_prompt_tokens + self._get_max_output_tokens(window_size)
+
     async def run_llm_async(
         self,
         prompt: str | list[dict[str, str]],
@@ -293,7 +284,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         For the vLLM generate path uses AsyncLLMEngine; for the OpenAI-compatible
         path uses AsyncOpenAI. Both allow all concurrently submitted coroutines
         to be in-flight simultaneously.
-        SGLang falls back to running synchronously in an executor.
         """
         if current_window_size is None:
             current_window_size = self._window_size
@@ -301,88 +291,40 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         min_tok = self.num_output_tokens(current_window_size)
         max_tok = self._get_max_output_tokens(current_window_size)
 
-        if hasattr(self, "_vllm_handler"):
-            if self._base_url:
-                logger.info("Async OpenAI SDK Generating!")
-                sanitized = sanitize_sampling_kwargs(self._sampling_kwargs)
-                direct_kw, eb_extra = split_openai_chat_sampling(sanitized)
-                extra_body: dict[str, Any] = {
-                    "chat_template_kwargs": {"enable_thinking": self._is_thinking},
-                }
-                extra_body.update(eb_extra)
-                return await self._vllm_handler.chat_completion_async(
-                    messages=prompt,
-                    max_tokens=max_tok,
-                    extra_body=extra_body,
-                    **direct_kw,
-                )
-            else:
-                logger.info("Async VLLM Generating!")
-                (
-                    text,
-                    prompt_tokens,
-                    completion_tokens,
-                ) = await self._vllm_handler.generate_output_async(
-                    prompt=prompt,
-                    min_tokens=min_tok,
-                    max_tokens=max_tok,
-                    sampling_extra=sanitize_sampling_kwargs(self._sampling_kwargs),
-                )
-                return (
-                    text,
-                    "",
-                    {
-                        "prompt_tokens": prompt_tokens,
-                        "completion_tokens": completion_tokens,
-                        "total_tokens": prompt_tokens + completion_tokens,
-                    },
-                )
-        else:
-            # SGLang: no async API, offload to thread executor.
-            import asyncio
-
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, lambda: self._run_llm_sync(prompt, current_window_size)
-            )
-
-    def _run_llm_sync(
-        self,
-        prompt: str | list[dict[str, str]],
-        current_window_size: int | None = None,
-    ) -> tuple[str, str, dict[str, Any]]:
-        """Synchronous fallback for SGLang backend."""
-        if current_window_size is None:
-            current_window_size = self._window_size
-        n_out = self.num_output_tokens(current_window_size)
-
-        sanitized = sanitize_sampling_kwargs(self._sampling_kwargs)
-
-        if (
-            sglang is not None
-            and SGLangEngineType is not None
-            and isinstance(self._llm, SGLangEngineType)
-        ):
-            logger.info("SGLang Generating!")
-            sgl_opts: dict[str, Any] = {
-                **sanitized,
-                "max_new_tokens": n_out,
-                "min_new_tokens": n_out,
+        if self._base_url:
+            logger.info("Async OpenAI SDK Generating!")
+            sanitized = sanitize_sampling_kwargs(self._sampling_kwargs)
+            direct_kw, eb_extra = split_openai_chat_sampling(sanitized)
+            extra_body: dict[str, Any] = {
+                "chat_template_kwargs": {"enable_thinking": self._is_thinking},
             }
-            output = self._llm.generate([prompt], sgl_opts)[0]
-            return (
-                output["text"],
-                "",
-                {
-                    "prompt_tokens": output["meta_info"]["prompt_tokens"],
-                    "completion_tokens": output["meta_info"]["completion_tokens"] - 1,
-                    "total_tokens": output["meta_info"]["prompt_tokens"]
-                    + output["meta_info"]["completion_tokens"]
-                    - 1,
-                },
+            extra_body.update(eb_extra)
+            return await self._vllm_handler.chat_completion_async(
+                messages=prompt,
+                max_tokens=max_tok,
+                extra_body=extra_body,
+                **direct_kw,
             )
-        raise ValueError(
-            "Only support SGLang and VLLM inference backend for inferencing."
+
+        logger.info("Async VLLM Generating!")
+        (
+            text,
+            prompt_tokens,
+            completion_tokens,
+        ) = await self._vllm_handler.generate_output_async(
+            prompt=prompt,
+            min_tokens=min_tok,
+            max_tokens=max_tok,
+            sampling_extra=sanitize_sampling_kwargs(self._sampling_kwargs),
+        )
+        return (
+            text,
+            "",
+            {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            },
         )
 
     def run_llm_batched(

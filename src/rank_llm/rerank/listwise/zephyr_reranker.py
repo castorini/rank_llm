@@ -148,3 +148,7 @@ class ZephyrReranker:
             logging=logging,
             **kwargs,
         )
+
+    def close(self) -> None:
+        """Release resources owned by the underlying reranker."""
+        self._reranker.close()

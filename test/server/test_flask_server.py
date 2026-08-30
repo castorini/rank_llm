@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from rank_llm.api.server import create_app
 
-# Needs Anserini API to be active at 8081
+# Needs Pyserini API to be active at 8081
 
 # - name: Run API tests
 #   run: |

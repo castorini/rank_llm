@@ -7,8 +7,8 @@ from rank_llm.cli.main import main as cli_main
 def build_mcp_server():
     try:
         from fastmcp import FastMCP
+        from pyserini.server.backend import get_backend
         from pyserini.server.mcp.tools import register_tools
-        from pyserini.server.search_controller import get_controller
 
         from rank_llm.server.mcp.tools import register_rankllm_tools
     except ImportError as exc:
@@ -18,7 +18,7 @@ def build_mcp_server():
         ) from exc
 
     mcp = FastMCP("rankllm")
-    register_tools(mcp, get_controller())
+    register_tools(mcp, get_backend())
     register_rankllm_tools(mcp)
     return mcp
 

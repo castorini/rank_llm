@@ -21,7 +21,7 @@ classifiers = [
 ]
 keywords = ["prompt-decoder", "RankVicuna", "RankZephyr", "RankLLM", "information retrieval", "neural ranking", "LLM", "listwise", "pointwise", "FirstMistral"]
 dynamic = ["dependencies"]
-requires-python = ">= 3.11"
+requires-python = ">= 3.12"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
@@ -57,20 +57,10 @@ vllm = [
     "rank-llm[local]",
     "vllm>=0.19.1",
 ]
-
-sglang = [
-    "rank-llm[local]",
-    "sglang[all]>=0.5.10"
-]
-# sglang is excluded from [all] because sglang[all] pins exact dependency
-# versions (transformers, opencv-python-headless) and pre-release packages
-# (flash-attn-4) that conflict with vllm.  Install via:
-#   pip install 'rank-llm[sglang]'
-
 pyserini = [
     "faiss-cpu>=1.8.0",
     "pandas>=1.4.0",
-    "pyserini==1.2.0"
+    "pyserini==2.4.0"
 ]
 api = [
     "fastapi>=0.115.0",
@@ -108,25 +98,6 @@ all = [
     "rank-llm[vllm]",
 ]
 
-[tool.uv]
-prerelease = "allow"
-# `prerelease = "allow"` above is needed for sglang's flash-attn-4, but it also
-# lets uv pick pre-release builds of transitive dependencies. cuda-tile (pulled
-# in by vllm -> flashinfer-python) publishes release candidates whose wheel
-# matrix is incomplete: 1.6.0rc4 has no cp311 manylinux x86_64 wheel, which
-# breaks installs on Python 3.11 / Linux. Hold it to the stable line; drop this
-# once a stable 1.6.x with complete wheels is published.
-constraint-dependencies = ["cuda-tile<1.6.0rc1"]
-conflicts = [
-    [{ extra = "sglang" }, { extra = "vllm" }],
-    [{ extra = "sglang" }, { extra = "mcp" }],
-    [{ extra = "sglang" }, { extra = "server" }],
-    [{ extra = "sglang" }, { extra = "all" }],
-    [{ extra = "sglang" }, { extra = "cloud" }],
-    [{ extra = "sglang" }, { extra = "genai" }],
-    [{ extra = "sglang" }, { extra = "gemini" }],
-]
-
 [dependency-groups]
 dev = [
     "pre-commit>=3.8.0",
@@ -158,7 +129,7 @@ push = false
 ]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

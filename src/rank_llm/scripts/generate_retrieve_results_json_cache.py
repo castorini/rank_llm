@@ -55,7 +55,8 @@ from collections.abc import Sequence
 from rank_llm._optional import missing_extra_error
 
 try:
-    from pyserini.search import LuceneSearcher, get_qrels, get_topics
+    from pyserini.search import get_qrels, get_topics
+    from pyserini.search.lucene import LuceneSearcher
 except ImportError:
     LuceneSearcher = None
     get_qrels = None
