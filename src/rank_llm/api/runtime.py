@@ -179,12 +179,15 @@ def _merge_config_with_payload(
     payload: dict[str, Any], *, config: ServerConfig
 ) -> ServerConfig:
     overrides = _extract_override_payload(payload)
-    if not overrides:
-        return config
-    effective_config = replace(config, **overrides)
-    if effective_config.use_azure_openai and effective_config.use_openrouter:
+    effective_config = replace(config, **overrides) if overrides else config
+    enabled_backends = [
+        field_name
+        for field_name in ("use_azure_openai", "use_openrouter", "use_litellm")
+        if getattr(effective_config, field_name)
+    ]
+    if len(enabled_backends) > 1:
         raise ValueError(
-            "use_azure_openai and use_openrouter cannot both be true in overrides"
+            "backend selectors cannot be combined: " + ", ".join(enabled_backends)
         )
     return effective_config
 

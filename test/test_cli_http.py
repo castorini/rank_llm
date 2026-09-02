@@ -203,6 +203,50 @@ class TestCLIHTTP(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
 
+    def test_rerank_route_rejects_conflicting_litellm_backends(self):
+        cases = [
+            (
+                ServerConfig(model_path="model"),
+                {"use_openrouter": True, "use_litellm": True},
+            ),
+            (
+                ServerConfig(model_path="model"),
+                {"use_azure_openai": True, "use_litellm": True},
+            ),
+            (
+                ServerConfig(model_path="model", use_openrouter=True),
+                {"use_litellm": True},
+            ),
+            (
+                ServerConfig(model_path="model", use_litellm=True),
+                {"use_azure_openai": True},
+            ),
+            (
+                ServerConfig(model_path="model", use_openrouter=True, use_litellm=True),
+                {},
+            ),
+        ]
+
+        for config, overrides in cases:
+            with self.subTest(config=config, overrides=overrides):
+                client = TestClient(create_app(config))
+                response = client.post(
+                    "/v1/rerank",
+                    json={
+                        "query": "cats",
+                        "candidates": ["doc one"],
+                        "overrides": overrides,
+                    },
+                )
+
+                self.assertEqual(response.status_code, 400)
+                payload = response.json()
+                self.assertEqual(payload["status"], "validation_error")
+                self.assertIn(
+                    "backend selectors cannot be combined",
+                    payload["errors"][0]["message"],
+                )
+
     def test_rerank_route_returns_400_for_invalid_override_types(self):
         client = TestClient(create_app(ServerConfig(model_path="model")))
         response = client.post(
