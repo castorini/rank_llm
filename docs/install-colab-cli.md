@@ -146,10 +146,10 @@ Inside that shell, run the pipeline:
 ```bash
 cd /content/rank_llm
 
-python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/monot5-base-msmarco \
-  --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --context_size=512
+rank-llm rerank \
+  --model-path=castorini/monot5-base-msmarco \
+  --top-k-candidates=100 --dataset=dl20 \
+  --retrieval-method=bm25 --context-size=512
 ```
 
 Three things happen, and you'll see each in the output:
