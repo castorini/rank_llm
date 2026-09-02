@@ -201,7 +201,7 @@ After completing this guide, add your `ndcg_cut_10` to the table below, then add
 
 | monoT5 DL20 | Frequency |
 |-------------|-----------|
-| 0.6771      | 2         |
+| 0.6771      | 3         |
 
 If your result is present in the table above, please increase its frequency by 1.
 If your result is not present, add a new row (in sorted order) to the table with frequency 1.
@@ -210,3 +210,4 @@ After editing the table above, add a log entry here as well like the previous gu
 
 + Results reproduced by [@dawoodkhandev](https://github.com/dawoodkhandev) on 2026-08-06 (commit [`e2ceebe`](https://github.com/castorini/rank_llm/commit/e2ceebe68126430c0960f7282e14c709865d66cb))
 + Results reproduced by [@Evan-Lowry](https://github.com/Evan-Lowry) on 2026-08-27 (commit [`8ad18be`](https://github.com/castorini/rank_llm/commit/8ad18be76c90aa97ffae50b84dbc326bedc724fd))
++ Results reproduced by [@iwis19](https://github.com/iwis19) on 2026-09-02 (commit [`a0f85a9`](https://github.com/castorini/rank_llm/commit/a0f85a9632bed3de9f7f151ed4206dce73417b86))

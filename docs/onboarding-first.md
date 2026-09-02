@@ -87,8 +87,9 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.7892            | 1         |
 | 0.7889            | 1         |
 | 0.7885            | 2         |
-| 0.7865            | 1         |
+| 0.7877            | 1         |
 | 0.7870            | 1         |
+| 0.7865            | 1         |
 | 0.7851            | 2         |
 | 0.7843            | 5         |
 | 0.7842            | 1         |
@@ -116,3 +117,4 @@ After editing the table above, add a log entry here as well like the previous gu
 + Results reproduced by [@nli33](https://github.com/nli33) on 2026-03-10 (commit [`5df3ebe`](https://github.com/castorini/rank_llm/commit/5df3ebed56c9628acfc85e724bde7884f150790c))
 + Results reproduced by [@raghav-ai](https://github.com/raghav-ai) on 2026-04-03 (commit [`c1e1c84`](https://github.com/castorini/rank_llm/commit/c1e1c84d9eaad408ebfbd4b8534a29bbb9415e6a))
 + Results reproduced by [@Quaden2307](https://github.com/Quaden2307) on 2026-07-19 (commit [`83ae542`](https://github.com/castorini/rank_llm/commit/83ae5423357136bf6a554db50bec9d564363851a))
++ Results reproduced by [@iwis19](https://github.com/iwis19) on 2026-09-02 (commit [`a0f85a9`](https://github.com/castorini/rank_llm/commit/a0f85a9632bed3de9f7f151ed4206dce73417b86))
