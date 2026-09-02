@@ -6,7 +6,7 @@ It lets you provision Colab GPU runtimes, run code on them, and pull results bac
 This guide has two parts:
 
 1. Install the Colab CLI and sanity-check it.
-2. Run your first multi-stage retrieval pipeline on a Colab GPU: BM25 retrieval over TREC DL20, reranked with [monoT5](https://arxiv.org/abs/2003.06713).
+2. Run your first multi-stage retrieval pipeline on a Colab GPU: BM25 retrieval over TREC DL19, reranked with [monoT5](https://arxiv.org/abs/2003.06713), then reproduce it on TREC DL20.
 
 Everything in this guide runs on Colab's **free tier**.
 The 7B listwise rerankers you'll meet in the [RankZephyr](onboarding-rz.md) and [FirstMistral](onboarding-first.md) lessons don't fit on the free T4 GPU — that's what the Colab Pro subscription discussed there is for — but the workflow you learn here is exactly the workflow you'll use to run them.
@@ -19,7 +19,7 @@ As with the previous guides in the onboarding path, don't just copy-paste your w
 - Install and authenticate the Colab CLI.
 - Understand the session lifecycle: `colab new` → `colab exec` / `colab console` → `colab download` → `colab stop`.
 - Understand the quirks of driving a remote Jupyter kernel from a terminal (execution timeouts, streaming subprocess output).
-- Run an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) on TREC DL20 and evaluate it with nDCG@10.
+- Run an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) on TREC DL19 and DL20, and evaluate results with nDCG@10.
 
 ## Install and Sanity-Check the Colab CLI
 
@@ -101,8 +101,10 @@ In this lesson, you'll run a pointwise reranker; the next lesson, you'll run a l
 
 ## Reranking with monoT5
 
-You will now run a complete multi-stage retrieval pipeline on TREC DL20: first-stage retrieval with BM25 — the ranking function you know from the anserini and pyserini guides — followed by reranking the top 100 candidates per query with [monoT5](https://arxiv.org/abs/2003.06713), a pointwise T5 reranker from our group.
-BM25 alone scores **0.4796** nDCG@10 on DL20; watch what the reranker does to that number.
+You will reproduce the monoT5 results for TREC DL19 and DL20 reported in Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331).
+
+First, you'll run a complete multi-stage retrieval pipeline on TREC DL19: first-stage retrieval with BM25 — the ranking function you know from the anserini and pyserini guides — followed by reranking the top 100 candidates per query with [monoT5](https://arxiv.org/abs/2003.06713), a pointwise T5 reranker from our group.
+BM25 alone scores **0.5058** nDCG@10 on DL19; watch what the reranker does to that number.
 
 (Why not RankZephyr here?
 Its 7B weights alone are ~14 GB in fp16 — they barely fit on the free T4's 16 GB before you even allocate a KV cache.
@@ -118,7 +120,7 @@ colab new -s rankllm --gpu T4
 
 Environment setup is boilerplate, so it's prepackaged.
 [`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, and pip-installs it with the `pyserini` extra.
-Everything else the pipeline needs — the prebuilt index, the DL20 relevance judgments (qrels), `trec_eval` — Pyserini downloads and caches on first use.
+Everything else the pipeline needs — the prebuilt index, the relevance judgments (qrels), `trec_eval` — Pyserini downloads and caches on first use.
 Fetch the script and send it to the session with an explicit timeout — installation takes a few minutes:
 
 ```bash
@@ -139,38 +141,66 @@ The actual experiment you should run interactively, not through a wrapper.
 
 ```bash
 colab console -s rankllm
+
+cd /content/rank_llm
 ```
+
+---
+
+**TREC DL19**
 
 Inside that shell, run the pipeline:
 
 ```bash
-cd /content/rank_llm
-
 python src/rank_llm/scripts/run_rank_llm.py \
   --model_path=castorini/monot5-base-msmarco \
-  --top_k_candidates=100 --dataset=dl20 \
+  --top_k_candidates=100 --dataset=dl19 \
   --retrieval_method=bm25 --context_size=512
 ```
 
 Three things happen, and you'll see each in the output:
 
-1. **Retrieve** — Pyserini downloads a prebuilt Lucene index of MS MARCO v1 passages (~2 GB; Colab's datacenter network makes quick work of it) and runs BM25 to get the top 100 passages for each DL20 query.
+1. **Retrieve** — Pyserini downloads a prebuilt Lucene index of MS MARCO v1 passages (~2 GB; Colab's datacenter network makes quick work of it) and runs BM25 to get the top 100 passages for each DL19 query.
 2. **Rerank** — monoT5 scores every (query, passage) pair independently by asking the T5 model `Query: ... Document: ... Relevant:` and reading the probability of `true` vs `false` from the first generated token.
    This is *pointwise* reranking — one passage at a time — in contrast to the *listwise* rerankers in [the next lesson](onboarding-rz.md), which see many passages at once.
-3. **Evaluate** — `trec_eval` scores the reranked run against the DL20 relevance judgments.
+3. **Evaluate** — `trec_eval` scores the reranked run against the DL19 relevance judgments.
 
 The whole pipeline takes under five minutes on a T4.
 The tail of the output should look like:
 
 ```
 Results:
-ndcg_cut_10           	all	0.6771
+ndcg_cut_10           	all	0.7043
 ```
 
-Compare that against the 0.4796 of BM25 alone: the reranker just bought ~0.20 nDCG@10 without touching the index or the query.
+Compare that against the 0.5058 of BM25 alone: the reranker just bought ~0.20 nDCG@10 without touching the index or the query.
 That gap — a cheap first stage to narrow the field, a smarter second stage to fix the order — is the whole idea of multi-stage retrieval, and everything in [the lessons that follow](onboarding-rz.md) builds on it.
 
-Before leaving the VM, pack up the run artifacts (the TREC run file plus a JSONL with every prompt and model response), then exit the console:
+---
+
+**TREC DL20**
+
+Staying inside the same shell, now run the same pipeline on TREC DL20:
+
+```bash
+python src/rank_llm/scripts/run_rank_llm.py \
+  --model_path=castorini/monot5-base-msmarco \
+  --top_k_candidates=100 --dataset=dl20 \
+  --retrieval_method=bm25 --context_size=512
+```
+
+The whole pipeline again takes under five minutes on a T4. The tail of the output should look like:
+
+```
+Results:
+ndcg_cut_10            all 0.6771
+```
+
+Compare that against the 0.4796 of BM25 alone on DL20: monoT5 improves nDCG@10 by roughly 0.20 here as well.
+
+---
+
+Now that we have run the pipeline for both datasets, before leaving the VM, pack up the run artifacts (the TREC run files plus JSONLs with every prompt and model response), then exit the console:
 
 ```bash
 tar czf /content/rerank_results.tar.gz -C /content/rank_llm rerank_results
@@ -197,16 +227,20 @@ Go to [the RankZephyr guide](onboarding-rz.md) next.
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
 
-After completing this guide, add your `ndcg_cut_10` to the table below, then add a log entry beneath it following the convention from the previous onboarding guides.
+After completing this guide, add your `ndcg_cut_10` for runs on both DL19 and DL20 to the tables below, then add a log entry beneath them following the convention from the previous onboarding guides.
+
+| monoT5 DL19 | Frequency |
+|-------------|-----------|
+| 0.7043      | 1         |
 
 | monoT5 DL20 | Frequency |
 |-------------|-----------|
 | 0.6771      | 3         |
 
-If your result is present in the table above, please increase its frequency by 1.
-If your result is not present, add a new row (in sorted order) to the table with frequency 1.
+For each result, if it is present in the corresponding table above, please increase its frequency by 1.
+If a result is not present, add a new row (in sorted order) to the corresponding table with frequency 1.
 
-After editing the table above, add a log entry here as well like the previous guides:
+After editing the tables above, add a log entry here as well like the previous guides:
 
 + Results reproduced by [@dawoodkhandev](https://github.com/dawoodkhandev) on 2026-08-06 (commit [`e2ceebe`](https://github.com/castorini/rank_llm/commit/e2ceebe68126430c0960f7282e14c709865d66cb))
 + Results reproduced by [@Evan-Lowry](https://github.com/Evan-Lowry) on 2026-08-27 (commit [`8ad18be`](https://github.com/castorini/rank_llm/commit/8ad18be76c90aa97ffae50b84dbc326bedc724fd))
