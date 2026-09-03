@@ -28,6 +28,7 @@ class ServerConfig:
     print_prompts_responses: bool = False
     use_azure_openai: bool = False
     use_openrouter: bool = False
+    use_litellm: bool = False
     base_url: str = ""
     variable_passages: bool = False
     num_passes: int = 1
@@ -61,6 +62,7 @@ _OVERRIDABLE_FIELDS = {
     "print_prompts_responses",
     "use_azure_openai",
     "use_openrouter",
+    "use_litellm",
     "base_url",
     "variable_passages",
     "num_passes",
@@ -90,6 +92,7 @@ _RERANKER_CACHE_FIELDS = (
     "print_prompts_responses",
     "use_azure_openai",
     "use_openrouter",
+    "use_litellm",
     "base_url",
     "variable_passages",
     "num_passes",
@@ -120,6 +123,7 @@ _OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
     "print_prompts_responses": bool,
     "use_azure_openai": bool,
     "use_openrouter": bool,
+    "use_litellm": bool,
     "base_url": str,
     "variable_passages": bool,
     "num_passes": int,
@@ -175,12 +179,15 @@ def _merge_config_with_payload(
     payload: dict[str, Any], *, config: ServerConfig
 ) -> ServerConfig:
     overrides = _extract_override_payload(payload)
-    if not overrides:
-        return config
-    effective_config = replace(config, **overrides)
-    if effective_config.use_azure_openai and effective_config.use_openrouter:
+    effective_config = replace(config, **overrides) if overrides else config
+    enabled_backends = [
+        field_name
+        for field_name in ("use_azure_openai", "use_openrouter", "use_litellm")
+        if getattr(effective_config, field_name)
+    ]
+    if len(enabled_backends) > 1:
         raise ValueError(
-            "use_azure_openai and use_openrouter cannot both be true in overrides"
+            "backend selectors cannot be combined: " + ", ".join(enabled_backends)
         )
     return effective_config
 
@@ -215,6 +222,7 @@ def initialize_reranker(
             print_prompts_responses=effective_config.print_prompts_responses,
             use_azure_openai=effective_config.use_azure_openai,
             use_openrouter=effective_config.use_openrouter,
+            use_litellm=effective_config.use_litellm,
             base_url=effective_config.base_url or None,
             variable_passages=effective_config.variable_passages,
             num_passes=effective_config.num_passes,
@@ -262,6 +270,7 @@ def run_rerank_request(
         print_prompts_responses=effective_config.print_prompts_responses,
         use_azure_openai=effective_config.use_azure_openai,
         use_openrouter=effective_config.use_openrouter,
+        use_litellm=effective_config.use_litellm,
         base_url=effective_config.base_url,
         variable_passages=effective_config.variable_passages,
         num_passes=effective_config.num_passes,

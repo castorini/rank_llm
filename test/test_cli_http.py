@@ -1,3 +1,6 @@
+import contextlib
+import io
+import json
 import subprocess
 import unittest
 from importlib.util import find_spec
@@ -75,6 +78,7 @@ class TestCLIHTTP(unittest.TestCase):
                         "model_path": "other-model",
                         "top_k_rerank": 5,
                         "reasoning_effort": "medium",
+                        "use_litellm": True,
                     },
                 },
             )
@@ -84,10 +88,70 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(effective_config.model_path, "other-model")
         self.assertEqual(effective_config.top_k_rerank, 5)
         self.assertEqual(effective_config.reasoning_effort, "medium")
+        self.assertTrue(effective_config.use_litellm)
         self.assertEqual(mocked.call_args.kwargs["model_path"], "other-model")
         self.assertEqual(mocked.call_args.kwargs["top_k_rerank"], 5)
         self.assertEqual(mocked.call_args.kwargs["reasoning_effort"], "medium")
+        self.assertTrue(mocked.call_args.kwargs["use_litellm"])
         self.assertIs(mocked.call_args.kwargs["reranker"], reranker)
+
+    def test_initialize_reranker_forwards_litellm_config(self):
+        from rank_llm.api.runtime import initialize_reranker
+
+        config = ServerConfig(model_path="openai/gpt-4o-mini", use_litellm=True)
+
+        with patch("rank_llm.api.runtime.Reranker") as reranker_class:
+            reranker_class.create_model_coordinator.return_value = object()
+            initialize_reranker(config)
+
+        kwargs = reranker_class.create_model_coordinator.call_args.kwargs
+        self.assertTrue(kwargs["use_litellm"])
+
+    def test_serve_http_with_litellm_reaches_app_creation(self):
+        from rank_llm.cli.main import main
+
+        with (
+            patch("rank_llm.api.app.create_app", return_value=object()) as create_app,
+            patch("uvicorn.run") as uvicorn_run,
+        ):
+            return_code = main(
+                ["serve", "http", "--model-path", "model", "--use-litellm"]
+            )
+
+        self.assertEqual(return_code, 0)
+        self.assertTrue(create_app.call_args.args[0].use_litellm)
+        uvicorn_run.assert_called_once()
+
+    def test_serve_http_rejects_conflicting_backend_flags_at_startup(self):
+        from rank_llm.cli.main import main
+
+        stdout = io.StringIO()
+        with (
+            patch("rank_llm.api.app.create_app") as create_app,
+            patch("uvicorn.run") as uvicorn_run,
+            contextlib.redirect_stdout(stdout),
+        ):
+            return_code = main(
+                [
+                    "--output",
+                    "json",
+                    "serve",
+                    "http",
+                    "--model-path",
+                    "model",
+                    "--use-litellm",
+                    "--use-openrouter",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        create_app.assert_not_called()
+        uvicorn_run.assert_not_called()
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertIn(
+            "backend selectors cannot be combined", payload["errors"][0]["message"]
+        )
 
     def test_rerank_route_reuses_initialized_reranker(self):
         reranker = Mock()
@@ -172,6 +236,50 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
+
+    def test_rerank_route_rejects_conflicting_litellm_backends(self):
+        cases = [
+            (
+                ServerConfig(model_path="model"),
+                {"use_openrouter": True, "use_litellm": True},
+            ),
+            (
+                ServerConfig(model_path="model"),
+                {"use_azure_openai": True, "use_litellm": True},
+            ),
+            (
+                ServerConfig(model_path="model", use_openrouter=True),
+                {"use_litellm": True},
+            ),
+            (
+                ServerConfig(model_path="model", use_litellm=True),
+                {"use_azure_openai": True},
+            ),
+            (
+                ServerConfig(model_path="model", use_openrouter=True, use_litellm=True),
+                {},
+            ),
+        ]
+
+        for config, overrides in cases:
+            with self.subTest(config=config, overrides=overrides):
+                client = TestClient(create_app(config))
+                response = client.post(
+                    "/v1/rerank",
+                    json={
+                        "query": "cats",
+                        "candidates": ["doc one"],
+                        "overrides": overrides,
+                    },
+                )
+
+                self.assertEqual(response.status_code, 400)
+                payload = response.json()
+                self.assertEqual(payload["status"], "validation_error")
+                self.assertIn(
+                    "backend selectors cannot be combined",
+                    payload["errors"][0]["message"],
+                )
 
     def test_rerank_route_returns_400_for_invalid_override_types(self):
         client = TestClient(create_app(ServerConfig(model_path="model")))
