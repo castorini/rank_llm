@@ -103,6 +103,8 @@ In this lesson, you'll run a pointwise reranker; the next lesson, you'll run a l
 
 The target of this reproduction is Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331), which reports monoT5 results for TREC DL19 and DL20.
 
+**Model choice.** Note that this guide uses the smaller `monot5-base-msmarco` model for efficiency, while Table 1 reports results using `monot5-3b-msmarco-10k`. This exercise is meant to familiarize you with the workflow before moving on to [RankZephyr](https://github.com/castorini/rank_llm/blob/main/docs/onboarding-rz.md) and [FirstMistral](https://github.com/castorini/rank_llm/blob/main/docs/onboarding-first.md), so we use the smaller model here to keep the setup lightweight. The 3B model used in the paper does not fit on Colab's free T4 runtime, therefore the nDCG@10 scores you obtain here will be slightly lower than in the paper.
+
 First, you'll run a complete multi-stage retrieval pipeline on TREC DL19: first-stage retrieval with BM25 — the ranking function you know from the anserini and pyserini guides — followed by reranking the top 100 candidates per query with [monoT5](https://arxiv.org/abs/2003.06713), a pointwise T5 reranker from our group.
 BM25 alone scores **0.5058** nDCG@10 on DL19; watch what the reranker does to that number.
 
@@ -173,7 +175,7 @@ Results:
 ndcg_cut_10           	all	0.7043
 ```
 
-Compare this result with the corresponding BM25 + monoT5 result in Table 1, row (1).
+Compare this result with the corresponding BM25 + monoT5 result in Table 1, row (1). With the smaller model used here, the result here is expected to be slightly lower.
 
 Compare that against the 0.5058 of BM25 alone: the reranker just bought ~0.20 nDCG@10 without touching the index or the query.
 That gap — a cheap first stage to narrow the field, a smarter second stage to fix the order — is the whole idea of multi-stage retrieval, and everything in [the lessons that follow](onboarding-rz.md) builds on it.
@@ -197,7 +199,8 @@ The whole pipeline again takes under five minutes on a T4. The tail of the outpu
 Results:
 ndcg_cut_10            all 0.6771
 ```
-Compare this result with the corresponding BM25 + monoT5 result in Table 1, row (1).
+
+The same pattern holds for DL20: compared with the corresponding BM25 + monoT5 result in Table 1, row (1), the result here is also expected to be slightly lower.
 
 Against the 0.4796 BM25 baseline on DL20, monoT5 improves nDCG@10 by roughly 0.20 here as well.
 
