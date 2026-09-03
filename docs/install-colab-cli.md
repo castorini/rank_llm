@@ -6,7 +6,7 @@ It lets you provision Colab GPU runtimes, run code on them, and pull results bac
 This guide has two parts:
 
 1. Install the Colab CLI and sanity-check it.
-2. Run your first multi-stage retrieval pipeline on a Colab GPU: BM25 retrieval over TREC DL19, reranked with [monoT5](https://arxiv.org/abs/2003.06713), then reproduce it on TREC DL20.
+2. Run your first multi-stage retrieval pipeline on a Colab GPU and reproduce the [monoT5](https://arxiv.org/abs/2003.06713) results for TREC DL19 and DL20 from Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331).
 
 Everything in this guide runs on Colab's **free tier**.
 The 7B listwise rerankers you'll meet in the [RankZephyr](onboarding-rz.md) and [FirstMistral](onboarding-first.md) lessons don't fit on the free T4 GPU — that's what the Colab Pro subscription discussed there is for — but the workflow you learn here is exactly the workflow you'll use to run them.
@@ -19,7 +19,7 @@ As with the previous guides in the onboarding path, don't just copy-paste your w
 - Install and authenticate the Colab CLI.
 - Understand the session lifecycle: `colab new` → `colab exec` / `colab console` → `colab download` → `colab stop`.
 - Understand the quirks of driving a remote Jupyter kernel from a terminal (execution timeouts, streaming subprocess output).
-- Run an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) on TREC DL19 and DL20, and evaluate results with nDCG@10.
+- Reproduce the TREC DL19 and DL20 monoT5 results from Table 1, row (1) by running an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) and evaluating with nDCG@10.
 
 ## Install and Sanity-Check the Colab CLI
 
@@ -101,7 +101,7 @@ In this lesson, you'll run a pointwise reranker; the next lesson, you'll run a l
 
 ## Reranking with monoT5
 
-You will reproduce the monoT5 results for TREC DL19 and DL20 reported in Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331).
+The target of this reproduction is Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331), which reports monoT5 results for TREC DL19 and DL20.
 
 First, you'll run a complete multi-stage retrieval pipeline on TREC DL19: first-stage retrieval with BM25 — the ranking function you know from the anserini and pyserini guides — followed by reranking the top 100 candidates per query with [monoT5](https://arxiv.org/abs/2003.06713), a pointwise T5 reranker from our group.
 BM25 alone scores **0.5058** nDCG@10 on DL19; watch what the reranker does to that number.
@@ -173,6 +173,8 @@ Results:
 ndcg_cut_10           	all	0.7043
 ```
 
+Compare this result with the corresponding BM25 + monoT5 result in Table 1, row (1).
+
 Compare that against the 0.5058 of BM25 alone: the reranker just bought ~0.20 nDCG@10 without touching the index or the query.
 That gap — a cheap first stage to narrow the field, a smarter second stage to fix the order — is the whole idea of multi-stage retrieval, and everything in [the lessons that follow](onboarding-rz.md) builds on it.
 
@@ -195,8 +197,9 @@ The whole pipeline again takes under five minutes on a T4. The tail of the outpu
 Results:
 ndcg_cut_10            all 0.6771
 ```
+Compare this result with the corresponding BM25 + monoT5 result in Table 1, row (1).
 
-Compare that against the 0.4796 of BM25 alone on DL20: monoT5 improves nDCG@10 by roughly 0.20 here as well.
+Against the 0.4796 BM25 baseline on DL20, monoT5 improves nDCG@10 by roughly 0.20 here as well.
 
 ---
 
