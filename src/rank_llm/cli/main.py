@@ -623,6 +623,20 @@ def _validate_rerank_backend_flags(args: argparse.Namespace, *, command: str) ->
             command=command,
         )
 
+    enabled_backends = [
+        field_name
+        for field_name in ("use_azure_openai", "use_openrouter", "use_litellm")
+        if getattr(args, field_name, False)
+    ]
+    if len(enabled_backends) > 1:
+        raise CLIError(
+            "backend selectors cannot be combined: " + ", ".join(enabled_backends),
+            exit_code=EXIT_CODES["invalid_arguments"],
+            status="validation_error",
+            error_code="invalid_arguments",
+            command=command,
+        )
+
 
 def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
     query = payload["query"]

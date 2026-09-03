@@ -1,3 +1,6 @@
+import contextlib
+import io
+import json
 import subprocess
 import unittest
 from importlib.util import find_spec
@@ -118,6 +121,37 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(return_code, 0)
         self.assertTrue(create_app.call_args.args[0].use_litellm)
         uvicorn_run.assert_called_once()
+
+    def test_serve_http_rejects_conflicting_backend_flags_at_startup(self):
+        from rank_llm.cli.main import main
+
+        stdout = io.StringIO()
+        with (
+            patch("rank_llm.api.app.create_app") as create_app,
+            patch("uvicorn.run") as uvicorn_run,
+            contextlib.redirect_stdout(stdout),
+        ):
+            return_code = main(
+                [
+                    "--output",
+                    "json",
+                    "serve",
+                    "http",
+                    "--model-path",
+                    "model",
+                    "--use-litellm",
+                    "--use-openrouter",
+                ]
+            )
+
+        self.assertEqual(return_code, 2)
+        create_app.assert_not_called()
+        uvicorn_run.assert_not_called()
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "validation_error")
+        self.assertIn(
+            "backend selectors cannot be combined", payload["errors"][0]["message"]
+        )
 
     def test_rerank_route_reuses_initialized_reranker(self):
         reranker = Mock()
