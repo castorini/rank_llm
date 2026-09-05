@@ -17,7 +17,7 @@ Before starting, work through [install-colab-cli.md](install-colab-cli.md), whic
 - Understand the motivation and architecture of multi-stage retrieval.
 - Understand listwise reranking with LLMs, using sliding windows.
 - Understand how FIRST speeds up the reranking process by leveraging logits.
-- Be able to run end-to-end multi-stage retrieval pipeline with RankZephyr and FirstMistral.
+- Be able to run end-to-end multi-stage retrieval pipelines with RankZephyr and FirstMistral.
 
 In this guide, we will focus on the listwise approach.
 For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
@@ -90,7 +90,7 @@ In practice, we often use a window size of 20 and a stride of 10.
 ## Reranking with RankZephyr
 
 [RankZephyr](https://huggingface.co/castorini/rank_zephyr_7b_v1_full) is an LLM specifically fine-tuned for listwise reranking, led by [Pradeep et. al (2023)](https://arxiv.org/abs/2312.02724) at the University of Waterloo.
-We will run end-to-end multi-stage retrieval pipeline with RankZephyr, realizing the listwise reranking with sliding window mechanism as described above.
+We will run end-to-end multi-stage retrieval pipeline with RankZephyr on both TREC DL19 and DL20 datasets, realizing the listwise reranking with sliding window mechanism as described above.
 Note that this will require a GPU with **at least 16GB of VRAM**.
 
 If you are short of GPUs, we recommend purchasing a [Google Colab Pro](https://colab.research.google.com/) for $13.99 CAD.
@@ -154,7 +154,37 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 
 Setup is done. Stay in this console session for the actual run below — don't stop the runtime yet.
 
-#### Running the RankZephyr Model
+---
+
+#### Running the RankZephyr Model on DL19
+
+We can run the RankZephyr model with the command:
+
+```bash
+rank-llm rerank \
+  --model-path=castorini/rank_zephyr_7b_v1_full \
+  --top-k-candidates=100 \
+  --dataset=dl19 \
+  --retrieval-method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt-template-path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context-size=4096 --variable-passages
+```
+
+The results should be something like:
+
+```text
+Results:
+ndcg_cut_10             all     0.7798
+```
+
+Note that the result you get may vary slightly from the number above.
+
+_Where is the first-stage retrieval?_
+It is hidden in the `--retrieval-method=SPLADE++_EnsembleDistil_ONNX` flag.
+We are using the [SPLADE](https://www.pinecone.io/learn/splade/) model as our sparse first-stage retriever, retrieving the top 100 candidates, followed by the RankZephyr model to rerank these 100 candidates.
+
+---
+
+#### Running the RankZephyr Model on DL20
 
 We can run the RankZephyr model with the command:
 
@@ -174,11 +204,9 @@ Results:
 ndcg_cut_10             all     0.8201
 ```
 
-Note that the result you get may vary slightly with the number above.
+Your result should again be close to the number above, although it may vary slightly between runs.
 
-_Where is the first-stage retrieval?_
-It is hidden in the `--retrieval-method=SPLADE++_EnsembleDistil_ONNX` flag.
-We are using the [SPLADE](https://www.pinecone.io/learn/splade/) model as our sparse first-stage retriever, retrieving the top 100 candidates, followed by the RankZephyr model to rerank these 100 candidates.
+---
 
 Before leaving the VM, exit the console:
 
@@ -200,8 +228,12 @@ Go to [the lesson on the FIRST model](./onboarding-first.md) next.
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
 
 The experiments in this guide could slightly vary in results due to the intrinsic randomness of LLMs, and particularly the `vLLM` library.
-Thus, in addition to a log entry like the previous steps of the onboarding path, we also request that you add an entry to the table below indicating the precise numbers you obtained from running the experiments; we would like to keep track of these to better understand the variance from `vLLM`.
-More specifically, we are interested in the `ndcg_cut_10` score for the RankZephyr and FirstMistral models on the DL20 dataset–the two experiments you have just completed.
+Thus, in addition to a log entry like the previous steps of the onboarding path, we also request that you add an entry to each table below indicating the precise numbers you obtained from running the experiments; we would like to keep track of these to better understand the variance from `vLLM`.
+More specifically, we are interested in the `ndcg_cut_10` score for RankZephyr on both the TREC DL19 and DL20 datasets—the two experiments you have just completed.
+
+| RankZephyr DL19 | Frequency |
+|-----------------|-----------|
+| 0.7798          | 1         |
 
 | RankZephyr DL20 | Frequency |
 |-----------------|-----------|
@@ -215,10 +247,10 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.8151          | 1         |
 | 0.8144          | 2         |
 
-If your result is present in the table above, please increase its frequency by 1.
-If your result is not present, add a new row (in sorted order) to the table with frequency 1.
+For each result, if it is present in the corresponding table above, please increase its frequency by 1. 
+If a result is not present, add a new row (in sorted order) to the corresponding table with frequency 1.
 
-After editing the table above, add a log entry here as well like the previous guides:
+After editing the tables above, add a log entry here as well like the previous guides:
 
 + Results reproduced by [@wu-ming233](https://github.com/wu-ming233) on 2025-01-08 (commit [`dac99f7`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
 + Results reproduced by [@b8zhong](https://github.com/b8zhong) on 2025-02-03 (commit [`c908de0`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
