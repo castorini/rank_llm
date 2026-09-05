@@ -17,14 +17,14 @@ Before starting, work through [install-colab-cli.md](install-colab-cli.md), whic
 - Understand the motivation and architecture of multi-stage retrieval.
 - Understand listwise reranking with LLMs, using sliding windows.
 - Understand how FIRST speeds up the reranking process by leveraging logits.
-- Be able to run end-to-end multi-stage retrieval pipeline with RankZephyr and FirstMistral.
+- Be able to run end-to-end multi-stage retrieval pipelines with RankZephyr and FirstMistral.
 
 In this guide, we will focus on the listwise approach.
 For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
 
 > Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed, this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025.
 
-## Understanding FIRST: First-Roken Reranking
+## Understanding FIRST: First-Token Reranking
 
 FIRST (Faster Improved Listwise Reranking with Single Token Decoding) is a novel approach to reranking with LLMs that is up to 42% faster to inference than the "traditional" approach we have presented above for RankZephyr.
 
@@ -39,13 +39,46 @@ For more information about FIRST, refer to [Reddy et al. (2024)](https://arxiv.o
 [FirstMistral](https://arxiv.org/abs/2411.05508) is an LLM fine-tuned for listwise reranking using the FIRST approach.
 Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with FirstMistral.
 
-Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following command to run FirstMistral:
-
-If you are running on Colab, follow the same setup steps from the [RankZephyr lesson](./onboarding-rz.md#running-rankzephyr-on-a-colab-gpu) (Colab CLI, A100, the vLLM/CUDA 12.8 pins, and JDK 21). The environment is identical; only the run command below changes.
-
-
+If you are running on Colab, follow the same setup steps from the [RankZephyr lesson](./onboarding-rz.md#running-rankzephyr-on-a-colab-gpu) (Colab CLI, A100, the vLLM/CUDA 12.8 pins, and JDK 21). The environment is identical; only the run commands below change.
 
 **Before running:** pre-seed the qrels as shown in the [RankZephyr lesson](./onboarding-rz.md) so evaluation doesn't hit Anserini's dead qrels download URL.
+
+Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following commands to run FirstMistral on TREC DL19 and DL20:
+
+---
+
+#### DL19
+
+```bash
+rank-llm rerank \
+  --model-path=castorini/first_mistral \
+  --top-k-candidates=100 \
+  --dataset=dl19 \
+  --retrieval-method=SPLADE++_EnsembleDistil_ONNX \
+  --prompt-template-path=src/rank_llm/rerank/prompt_templates/rank_zephyr_alpha_template.yaml \
+  --context-size=4096 \
+  --variable-passages \
+  --use-logits \
+  --use-alpha \
+  --num-gpus 1
+```
+
+The results should be something like:
+
+```text
+Results:
+ndcg_cut_10             all     0.7880
+```
+
+The command above performs first-stage retrieval with SPLADE to get the initial 100 candidates, followed by listwise reranking using FIRST with FirstMistral.
+
+If you wish to compare FIRST's speed with traditional listwise reranking, omit the `--use-logits` and `--use-alpha` flags to perform traditional listwise reranking.
+
+---
+
+#### DL20
+
+Now run the same pipeline on DL20:
 
 ```bash
 rank-llm rerank \
@@ -68,9 +101,9 @@ Results:
 ndcg_cut_10             all     0.7851
 ```
 
-This above performs first-stage retrieval with SPLADE to get the initial 100 candidates, followed by listwise reranking using FIRST with FirstMistral.
+Running the same pipeline on DL20 gives a nDCG@10 score in a similar range, and now we have completed the FirstMistral experiments on both datasets.
 
-If you wish to compare FIRST's speed with traditional listwise reranking, omit the `--use-logits` and `--use-alpha` flags to perform traditional listwise reranking.
+---
 
 That is all for this guide!
 A reminder that this is just a gentle introduction, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
@@ -79,7 +112,11 @@ A reminder that this is just a gentle introduction, and the field is still large
 
 The experiments in this guide could slightly vary in results due to the intrinsic randomness of LLMs, and particularly the `vLLM` library.
 Thus, in addition to a log entry like the previous steps of the onboarding path, we also request that you add an entry to the table below indicating the precise numbers you obtained from running the experiments; we would like to keep track of these to better understand the variance from `vLLM`.
-More specifically, we are interested in the `ndcg_cut_10` score for the RankZephyr and FirstMistral models on the DL20 dataset–the two experiments you have just completed.
+More specifically, we are interested in the `ndcg_cut_10` score for FirstMistral on both the TREC DL19 and DL20 datasets—the two experiments you have just completed.
+
+| FirstMistral DL19 | Frequency |
+|-------------------|-----------|
+| 0.7880            | 1         |
 
 | FirstMistral DL20 | Frequency |
 |-------------------|-----------|
@@ -95,10 +132,10 @@ More specifically, we are interested in the `ndcg_cut_10` score for the RankZeph
 | 0.7842            | 1         |
 | 0.7829            | 1         |
 
-If your result is present in the table above, please increase its frequency by 1.
-If your result is not present, add a new row to the table with frequency 1.
+For each result, if it is present in the corresponding table above, please increase its frequency by 1.
+If a result is not present, add a new row (in sorted order) to the corresponding table with frequency 1.
 
-After editing the table above, add a log entry here as well like the previous guides:
+After editing the tables above, add a log entry here as well like the previous guides:
 
 + Results reproduced by [@wu-ming233](https://github.com/wu-ming233) on 2025-01-08 (commit [`dac99f7`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
 + Results reproduced by [@b8zhong](https://github.com/b8zhong) on 2025-02-03 (commit [`c908de0`](https://github.com/castorini/rank_llm/commit/c908de0423747a3863ca288b072e4580b3a3adef))
