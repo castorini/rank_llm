@@ -230,6 +230,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             evaluations: dict[int, float] = {}
             for logit in logits.values():
                 token = logit.decoded_token
+                if not token:
+                    continue
                 if (
                     len(token) == 1
                     and token.isalpha()
@@ -247,6 +249,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             evaluations: dict[int, float] = {}
             for logit in logits.values():
                 token = logit.decoded_token
+                if not token:
+                    continue
                 if token.isascii() and token.isdecimal():
                     val = int(token)
                 elif (
