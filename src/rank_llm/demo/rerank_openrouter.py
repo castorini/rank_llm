@@ -153,7 +153,6 @@ def main() -> None:
         batch_size=args.batch_size,
         keys=get_openrouter_api_key(),
         base_url=args.base_url,
-        api_type="openai",
         reasoning_effort=args.reasoning_effort,
         max_passage_words=args.max_passage_words,
     )
