@@ -24,8 +24,7 @@ from rank_llm.data import DataWriter, Result
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker
 from rank_llm.rerank.listwise import RankListwiseOSLLM
-from rank_llm.retrieve.retriever import Retriever
-from rank_llm.retrieve.topics_dict import TOPICS
+from rank_llm.retrieve import TOPICS, Retriever
 
 EVAL_METRICS: list[tuple[str, list[str]]] = [
     ("nDCG@10", ["-c", "-m", "ndcg_cut.10"]),
