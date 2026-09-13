@@ -119,6 +119,52 @@ class VllmHandler:
         Submit a single prompt and await its completion.
         Returns (output_text, prompt_token_count, completion_token_count).
         """
+        request_output = await self._generate_request_output_async(
+            prompt=prompt,
+            min_tokens=min_tokens,
+            max_tokens=max_tokens,
+            logprobs=logprobs,
+            sampling_extra=sampling_extra,
+        )
+        output = request_output.outputs[0]
+        return (
+            output.text,
+            len(request_output.prompt_token_ids),
+            len(output.token_ids),
+        )
+
+    async def generate_logprobs_async(
+        self,
+        prompt: str | list[dict[str, str]],
+        min_tokens: int,
+        max_tokens: int,
+        logprobs: int,
+        sampling_extra: dict[str, Any] | None = None,
+    ) -> tuple[list[dict[int, Any] | None] | None, int, int]:
+        """Generate text and return per-token logprobs with token counts."""
+        request_output = await self._generate_request_output_async(
+            prompt=prompt,
+            min_tokens=min_tokens,
+            max_tokens=max_tokens,
+            logprobs=logprobs,
+            sampling_extra=sampling_extra,
+        )
+        output = request_output.outputs[0]
+        return (
+            output.logprobs,
+            len(request_output.prompt_token_ids),
+            len(output.token_ids),
+        )
+
+    async def _generate_request_output_async(
+        self,
+        prompt: str | list[dict[str, str]],
+        min_tokens: int,
+        max_tokens: int,
+        logprobs: int | None = None,
+        sampling_extra: dict[str, Any] | None = None,
+    ) -> Any:
+        """Submit one request and return the finished vLLM request output."""
         extras = sanitize_sampling_kwargs(sampling_extra)
         sp_kwargs: dict[str, Any] = {
             **extras,
@@ -128,15 +174,9 @@ class VllmHandler:
         }
         sampling_params = vllm.SamplingParams(**sp_kwargs)
         request_id = str(uuid.uuid4())
-        output_text = ""
-        prompt_tokens = 0
-        completion_tokens = 0
         async for request_output in self._engine.generate(
             prompt, sampling_params, request_id
         ):
             if request_output.finished:
-                output = request_output.outputs[0]
-                output_text = output.text
-                prompt_tokens = len(request_output.prompt_token_ids)
-                completion_tokens = len(output.token_ids)
-        return output_text, prompt_tokens, completion_tokens
+                return request_output
+        raise RuntimeError("vLLM generation ended without a finished output.")
