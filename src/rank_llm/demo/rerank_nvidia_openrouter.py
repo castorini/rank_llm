@@ -192,7 +192,7 @@ def main() -> None:
     if args.output_dir:
         out_path = Path(args.output_dir) / model_tag / args.dataset
     else:
-        out_path = Path("demo_outputs")
+        out_path = Path("demo_outputs") / model_tag / args.dataset
     out_path.mkdir(parents=True, exist_ok=True)
 
     writer = DataWriter(rerank_results)
