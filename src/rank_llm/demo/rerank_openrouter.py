@@ -107,11 +107,6 @@ def main() -> None:
         ),
     )
     parser.add_argument(
-        "--reasoning-effort",
-        default=None,
-        help="Optional reasoning effort passed to models that support it.",
-    )
-    parser.add_argument(
         "--output-dir",
         default=None,
         help="Output directory. When set, outputs go to "
@@ -153,7 +148,6 @@ def main() -> None:
         batch_size=args.batch_size,
         keys=get_openrouter_api_key(),
         base_url=args.base_url,
-        reasoning_effort=args.reasoning_effort,
         max_passage_words=args.max_passage_words,
     )
     reranker = Reranker(coordinator)
