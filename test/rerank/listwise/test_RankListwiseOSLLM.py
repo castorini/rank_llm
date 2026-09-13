@@ -381,6 +381,28 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertEqual(permutation, "[2] > [1]")
         self.assertEqual(evaluations, {1: -0.5, 2: -0.1})
 
+    def test_use_logits_accepts_multi_digit_ascii_ids(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/first_mistral",
+            window_size=20,
+            use_logits=True,
+            use_alpha=False,
+        )
+
+        permutation, evaluations = model_coordinator._evaluate_logits(
+            {
+                1: SimpleNamespace(decoded_token="10", logprob=-0.1),
+                2: SimpleNamespace(decoded_token="2", logprob=-0.5),
+                3: SimpleNamespace(decoded_token="１２", logprob=0.0),
+                4: SimpleNamespace(decoded_token="²", logprob=0.0),
+                5: SimpleNamespace(decoded_token="Ⅻ", logprob=0.0),
+            },
+            (1, 20),
+        )
+
+        self.assertEqual(permutation, "[10] > [2]")
+        self.assertEqual(evaluations, {10: -0.1, 2: -0.5})
+
     def test_use_logits_requires_local_vllm(self):
         with self.assertRaisesRegex(
             ValueError, "only supported by the in-process vLLM backend"

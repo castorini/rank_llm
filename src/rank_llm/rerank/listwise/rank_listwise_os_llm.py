@@ -247,14 +247,30 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             evaluations: dict[int, float] = {}
             for logit in logits.values():
                 token = logit.decoded_token
-                if token.isnumeric() and not unicodedata.name(token).startswith(
-                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT", "CJK UNIFIED")
-                ):
+                if token.isascii() and token.isdecimal():
                     val = int(token)
-                    if total[0] <= val <= total[1]:
-                        prev = evaluations.get(val, float("-inf"))
-                        if logit.logprob > prev:
-                            evaluations[val] = logit.logprob
+                elif (
+                    len(token) == 1
+                    and token.isnumeric()
+                    and not unicodedata.name(token).startswith(
+                        (
+                            "SUPERSCRIPT",
+                            "VULGAR FRACTION",
+                            "SUBSCRIPT",
+                            "CJK UNIFIED",
+                        )
+                    )
+                ):
+                    try:
+                        val = int(token)
+                    except ValueError:
+                        continue
+                else:
+                    continue
+                if total[0] <= val <= total[1]:
+                    prev = evaluations.get(val, float("-inf"))
+                    if logit.logprob > prev:
+                        evaluations[val] = logit.logprob
             sorted_evaluations = sorted(evaluations.items(), key=lambda x: -x[1])
             result_string = " > ".join([f"[{x}]" for x, _ in sorted_evaluations])
 
