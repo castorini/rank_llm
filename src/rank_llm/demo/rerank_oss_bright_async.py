@@ -217,8 +217,8 @@ def main() -> None:
         "--prompt-template-path",
         default=None,
         help=(
-            "Path to a custom prompt-template YAML file. Defaults to the packaged "
-            "RankZephyr template."
+            "Path to a custom prompt-template YAML file. By default, selects the "
+            "packaged alpha or numeric RankZephyr template to match --use-alpha."
         ),
     )
     p.add_argument(
@@ -256,7 +256,10 @@ def main() -> None:
     TEMPLATES = files("rank_llm.rerank.prompt_templates")
     prompt_template_path = args.prompt_template_path
     if prompt_template_path is None:
-        prompt_template_path = TEMPLATES / "rank_zephyr_template.yaml"
+        if args.use_alpha:
+            prompt_template_path = TEMPLATES / "rank_zephyr_alpha_template.yaml"
+        else:
+            prompt_template_path = TEMPLATES / "rank_zephyr_template.yaml"
 
     coordinator = RankListwiseOSLLM(
         model=args.model,
