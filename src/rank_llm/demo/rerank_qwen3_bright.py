@@ -219,6 +219,12 @@ def main() -> None:
     )
     args = p.parse_args()
 
+    if args.use_alpha and args.window_size > 26:
+        p.error(
+            "--window-size must be <= 26 with --use-alpha; "
+            "use --no-use-alpha for larger windows."
+        )
+
     bright_dir = Path(args.bright_dir)
     file_name = (
         bright_dir
