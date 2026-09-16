@@ -1,8 +1,7 @@
 """
 BRIGHT reranking demo using an OpenAI-compatible vLLM server running gpt-oss.
 
-Start the default model server before running this script:
-
+Note: You need to run the vllm server with the following command:
 ```bash
 RANK_MODEL_ID="openai/gpt-oss-20b"
 RANK_PORT=48003

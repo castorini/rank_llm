@@ -1,8 +1,5 @@
 """
-BRIGHT reranking demo using an OpenAI-compatible vLLM server running Qwen3.
-
-Start the default model server before running this script:
-
+Note: You need to run the vllm server with the following command:
 ```bash
 RANK_MODEL_ID="Qwen/Qwen3-8B"
 RANK_PORT=38003
@@ -31,6 +28,15 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
+
+# Set spawn before importing libraries that might touch CUDA/vLLM.
+os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")
+import multiprocessing as mp
+
+try:
+    mp.set_start_method("spawn")
+except RuntimeError:
+    pass  # The multiprocessing start method is already set.
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.data import DataWriter, Result, read_requests_from_file

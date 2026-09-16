@@ -4,8 +4,7 @@ BRIGHT reranking demo using OpenAI-compatible vLLM (gpt-oss-20b) with **async** 
 Same inputs and outputs as ``rerank_oss_bright.py``, but requests are reranked
 concurrently with ``await reranker.rerank_async(...)``.
 
-Start the default model server before running this script:
-
+Note: You need to run the vllm server with the following command:
 ```bash
 RANK_MODEL_ID="openai/gpt-oss-20b"
 RANK_PORT=48003
