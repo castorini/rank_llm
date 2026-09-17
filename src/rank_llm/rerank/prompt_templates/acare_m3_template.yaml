@@ -1,0 +1,19 @@
+# ACARe mode M3: global query + reasoning trace + sub-query (full context).
+#
+# The mode ACARe is evaluated in when both context fields are observable. See
+# acare_m1_template.yaml for the mode map.
+#
+# Supply `global_query` and `reasoning` through Query.fields. Either one left
+# empty drops its own line from the query block, but the instruction stays M3's,
+# so switch templates rather than relying on that when a field is always absent.
+method: "pointwise"
+message_roles: "reranker"
+query_fields: ["global_query", "reasoning"]
+instruction: >-
+  Given a user generated query, the original question (global query), and the user's reasoning
+  trace (when available) that motivated the query, retrieve relevant passages that answer the
+  query in light of the original question and reasoning context
+query_block: |-
+  #Original Question (global query): {global_query}
+  #Reasoning Trace: {reasoning}
+  #Query: {query}

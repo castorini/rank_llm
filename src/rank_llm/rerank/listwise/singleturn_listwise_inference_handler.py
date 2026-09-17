@@ -47,6 +47,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             ),
         }
 
+
         # Validate the method value
         if template["method"] != "singleturn_listwise":
             raise ValueError(
@@ -69,7 +70,9 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             if name is not None
         ]
 
-        prefix_fmt_values = suffix_fmt_values = {"num": num, "query": query}
+        query_field_values = kwargs.get("query_field_values", {})
+        prefix_fmt_values = {"num": num, "query": query, **query_field_values}
+        suffix_fmt_values = {"num": num, "query": query, **query_field_values}
 
         if "psg_ids" in suffix_placeholders:  # Used in RankLRL prompt mode
             rank_start = kwargs["rank_start"]
@@ -144,7 +147,11 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             prompt_messages.extend(examples)
 
         prefix_text, suffix_text = self._generate_prefix_suffix(
-            num=num, query=query, rank_start=rank_start, rank_end=rank_end
+            num=num,
+            query=query,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            query_field_values=self._query_field_values(result),
         )
         body_text = self._generate_body(
             result=result,
