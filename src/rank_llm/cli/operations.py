@@ -25,6 +25,20 @@ def normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
     query = payload["query"]
     query_text = query["text"] if isinstance(query, dict) else query
     query_id = query.get("qid", "") if isinstance(query, dict) else ""
+    # Anything else on a dict query is named context a prompt template may
+    # reference (see `query_fields`), so carry it through rather than drop it.
+    if isinstance(query, dict):
+        query_fields = query.get("fields")
+        if query_fields is None:
+            query_fields = {
+                key: value
+                for key, value in query.items()
+                if key not in ("text", "qid")
+            }
+        if not isinstance(query_fields, dict):
+            raise ValueError("query.fields must be an object of named context values")
+    else:
+        query_fields = {}
     candidates = []
     for index, candidate in enumerate(payload["candidates"], start=1):
         if isinstance(candidate, str):
@@ -46,7 +60,12 @@ def normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
                 "doc": candidate["doc"],
             }
         )
-    return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
+    return {
+        "query_text": query_text,
+        "query_id": query_id,
+        "query_fields": query_fields,
+        "candidates": candidates,
+    }
 
 
 def _default_retrieve_and_rerank(*args: Any, **kwargs: Any) -> Any:
@@ -138,6 +157,7 @@ def run_mcp_rerank(
     query_text: str,
     candidates: list[dict[str, Any]],
     query_id: str | int = "",
+    query_fields: dict[str, Any] | None = None,
     batch_size: int = 32,
     top_k_rerank: int = -1,
     context_size: int = 4096,
@@ -170,6 +190,7 @@ def run_mcp_rerank(
     kwargs = locals().copy()
     del kwargs["model_path"]
     del kwargs["reranker"]
+    del kwargs["query_fields"]  # request data, not model-coordinator config
     kwargs["prompt_template_path"] = prompt_template_path or None
     kwargs["few_shot_file"] = few_shot_file or None
     kwargs["base_url"] = base_url or None
@@ -189,7 +210,7 @@ def run_mcp_rerank(
     del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
     requests = [
         Request(
-            query=Query(text=query_text, qid=query_id),
+            query=Query(text=query_text, qid=query_id, fields=query_fields or {}),
             candidates=[
                 Candidate(
                     docid=c["docid"],

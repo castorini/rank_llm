@@ -9,6 +9,10 @@ from dacite import from_dict
 class Query:
     text: str
     qid: str | int
+    # Optional named context fields carried alongside the query text. Prompt
+    # templates reference them by name after declaring them in `query_fields`
+    # (e.g. an agent's reasoning trace, or the originating global query).
+    fields: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
