@@ -746,6 +746,7 @@ def _create_rank_listwise_os_llm_coordinator(
         ("batch_size", 32),
         ("base_url", None),
         ("max_passage_words", 300),
+        ("sampling_kwargs", None),
     ]
     [
         context_size,
@@ -765,6 +766,7 @@ def _create_rank_listwise_os_llm_coordinator(
         batch_size,
         _ignored_base_url,
         max_passage_words,
+        sampling_kwargs,
     ] = extract_kwargs(keys_and_defaults, **kwargs)
 
     return RankListwiseOSLLM(
@@ -791,6 +793,7 @@ def _create_rank_listwise_os_llm_coordinator(
         batch_size=batch_size,
         base_url=base_url,
         max_passage_words=max_passage_words,
+        sampling_kwargs=sampling_kwargs,
     )
 
 
