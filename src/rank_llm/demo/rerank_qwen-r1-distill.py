@@ -230,6 +230,8 @@ def main():
         _print_eval(rerank_results, qrels)
 
     model_tag = args.model.split("/")[-1].lower()
+    if args.thinking:
+        model_tag += "-thinking"
     if args.output_dir:
         out_path = Path(args.output_dir) / model_tag / args.dataset
     else:
