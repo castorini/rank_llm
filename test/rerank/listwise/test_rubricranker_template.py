@@ -20,8 +20,8 @@ INTENT = "Looking for the Santa Monica hospital named in the obituary."
 DOCS = ["First passage.", "Second passage.", "Third passage."]
 
 
-def load_template():
-    with (TEMPLATES / "rubricranker_template.yaml").open("r", encoding="utf-8") as fh:
+def load_template(name="rubricranker_template.yaml"):
+    with (TEMPLATES / name).open("r", encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
 
@@ -90,6 +90,34 @@ class _Permuter:
     _use_alpha = False
     _remove_duplicate = ListwiseRankLLM._remove_duplicate
     receive_permutation = ListwiseRankLLM.receive_permutation
+
+
+class TestRubricRankerRagVariant(unittest.TestCase):
+    """The rag variant drops the intent block and frames the query as a question."""
+
+    def setUp(self):
+        self.template = load_template("rubricranker_rag_template.yaml")
+        handler = SingleTurnListwiseInferenceHandler(self.template)
+        self.messages = handler.generate_prompt(
+            make_result(), rank_start=0, rank_end=len(DOCS), max_length=100
+        )
+
+    def test_user_message_matches_upstream_verbatim(self):
+        context = "\n\n".join(f"[{i + 1}] {d}" for i, d in enumerate(DOCS))
+        expected = (
+            f"I will provide you with {len(DOCS)} passages, each indicated by a numerical "
+            f"identifier []. Select and rank the passages based on their joint usefulness "
+            f"for the user question: {QUERY}.\n\n"
+            f"[PASSAGES]\n{context}\n\n"
+            f"{self.template['suffix'].format(num=len(DOCS), query=QUERY)}"
+        )
+        self.assertEqual(self.messages[-1]["content"], expected)
+
+    def test_no_query_intent_block(self):
+        self.assertNotIn("[QUERY INTENT]", self.messages[-1]["content"])
+
+    def test_needs_no_query_fields(self):
+        self.assertNotIn("query_fields", self.template)
 
 
 class TestSetwiseSelectionParsing(unittest.TestCase):
