@@ -139,6 +139,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._num_gpus = num_gpus
         self._base_url = base_url
 
+        if self._stride <= 0 or self._stride > self._window_size:
+            raise ValueError(
+                f"stride must satisfy 0 < stride <= window_size "
+                f"(got stride={stride}, window_size={window_size})"
+            )
+
         if self._device == "cuda":
             if torch is None:
                 raise missing_extra_error(
