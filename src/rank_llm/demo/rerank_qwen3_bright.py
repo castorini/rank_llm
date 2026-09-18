@@ -219,6 +219,9 @@ def main() -> None:
     )
     args = p.parse_args()
 
+    if args.num_queries is not None and args.num_queries <= 0:
+        p.error("--num-queries must be a positive integer")
+
     if args.use_alpha and args.window_size > 26:
         p.error(
             "--window-size must be <= 26 with --use-alpha; "
