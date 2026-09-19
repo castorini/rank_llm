@@ -1,6 +1,8 @@
+import asyncio
+import copy
 import unittest
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from dacite import from_dict
 
@@ -265,6 +267,166 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             self.assertEqual(model_coordinator._variable_passages, variable_passages)
             self.assertEqual(model_coordinator._window_size, window_size)
             self.assertEqual(model_coordinator._system_message, system_message)
+
+    def test_use_logits_ranks_first_token_logprobs(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/first_mistral",
+            window_size=20,
+            use_logits=True,
+            use_alpha=True,
+            sampling_kwargs={"temperature": 0.7, "top_p": 0.9},
+        )
+        first_token_logprobs = {
+            1: SimpleNamespace(decoded_token="A", logprob=-1.0),
+            2: SimpleNamespace(decoded_token="B", logprob=-0.1),
+            3: SimpleNamespace(decoded_token="A", logprob=-0.2),
+            4: SimpleNamespace(decoded_token="C", logprob=0.0),
+            5: SimpleNamespace(decoded_token="not-an-id", logprob=1.0),
+        }
+        self.mock_vllm_handler_instance.generate_logprobs_async = AsyncMock(
+            return_value=([first_token_logprobs], 17, 1)
+        )
+
+        llm_output = asyncio.run(
+            model_coordinator.run_llm_async("rendered prompt", current_window_size=2)
+        )
+
+        self.assertEqual(
+            llm_output,
+            (
+                "[B] > [A]",
+                "",
+                {
+                    "prompt_tokens": 17,
+                    "completion_tokens": 1,
+                    "total_tokens": 18,
+                },
+            ),
+        )
+        self.mock_vllm_handler_instance.generate_logprobs_async.assert_awaited_once_with(
+            prompt="rendered prompt[",
+            min_tokens=1,
+            max_tokens=1,
+            logprobs=30,
+            sampling_extra={"temperature": 0.0, "top_p": 0.9},
+        )
+
+        rerank_input = copy.copy(r)
+        rerank_input.candidates = list(r.candidates)
+        rerank_input.invocations_history = []
+        reranked = model_coordinator._apply_llm_output_to_result(
+            rerank_input,
+            llm_output,
+            "rendered prompt",
+            16,
+            0,
+            2,
+            populate_invocations_history=True,
+        )
+        self.assertEqual(
+            [candidate.docid for candidate in reranked.candidates[:2]], ["d2", "d1"]
+        )
+        self.assertEqual(len(reranked.invocations_history), 1)
+        invocation = reranked.invocations_history[0]
+        self.assertEqual(invocation.input_token_count, 17)
+        self.assertEqual(invocation.output_token_count, 1)
+        self.assertEqual(invocation.token_usage, llm_output[2])
+
+    def test_run_llm_async_without_logits_uses_text_generation(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/rank_zephyr_7b_v1_full",
+            window_size=20,
+            sampling_kwargs={"top_p": 0.9},
+        )
+        self.mock_vllm_handler_instance.generate_output_async = AsyncMock(
+            return_value=("[1] > [2]", 12, 5)
+        )
+        self.mock_vllm_handler_instance.generate_logprobs_async = AsyncMock()
+
+        llm_output = asyncio.run(
+            model_coordinator.run_llm_async("rendered prompt", current_window_size=2)
+        )
+
+        self.assertEqual(
+            llm_output,
+            (
+                "[1] > [2]",
+                "",
+                {
+                    "prompt_tokens": 12,
+                    "completion_tokens": 5,
+                    "total_tokens": 17,
+                },
+            ),
+        )
+        self.mock_vllm_handler_instance.generate_output_async.assert_awaited_once()
+        self.mock_vllm_handler_instance.generate_logprobs_async.assert_not_awaited()
+
+    def test_use_logits_numeric_ids_respect_current_window(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/first_mistral",
+            window_size=20,
+            use_logits=True,
+            use_alpha=False,
+        )
+        permutation, evaluations = model_coordinator._evaluate_logits(
+            {
+                1: SimpleNamespace(decoded_token="1", logprob=-0.5),
+                2: SimpleNamespace(decoded_token="2", logprob=-0.1),
+                3: SimpleNamespace(decoded_token="3", logprob=0.0),
+            },
+            (1, 2),
+        )
+
+        self.assertEqual(permutation, "[2] > [1]")
+        self.assertEqual(evaluations, {1: -0.5, 2: -0.1})
+
+    def test_use_logits_accepts_multi_digit_ascii_ids(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/first_mistral",
+            window_size=20,
+            use_logits=True,
+            use_alpha=False,
+        )
+
+        permutation, evaluations = model_coordinator._evaluate_logits(
+            {
+                1: SimpleNamespace(decoded_token="10", logprob=-0.1),
+                2: SimpleNamespace(decoded_token="2", logprob=-0.5),
+                3: SimpleNamespace(decoded_token="１２", logprob=0.0),
+                4: SimpleNamespace(decoded_token="²", logprob=0.0),
+                5: SimpleNamespace(decoded_token="Ⅻ", logprob=0.0),
+            },
+            (1, 20),
+        )
+
+        self.assertEqual(permutation, "[10] > [2]")
+        self.assertEqual(evaluations, {10: -0.1, 2: -0.5})
+
+    def test_use_logits_requires_local_vllm(self):
+        with self.assertRaisesRegex(
+            ValueError, "only supported by the in-process vLLM backend"
+        ):
+            RankListwiseOSLLM(
+                model="castorini/first_mistral",
+                use_logits=True,
+                base_url="http://localhost:8000/v1",
+            )
+
+    def test_use_logits_requires_first_token_logprobs(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/first_mistral",
+            use_logits=True,
+            use_alpha=True,
+        )
+        self.mock_vllm_handler_instance.generate_logprobs_async = AsyncMock(
+            return_value=(None, 10, 1)
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError, "did not return first-token logprobs"
+        ):
+            asyncio.run(model_coordinator.run_llm_async("rendered prompt"))
 
     @patch(
         "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens"
