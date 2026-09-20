@@ -1,7 +1,7 @@
 import argparse
 
 from rank_llm._optional import missing_extra_error
-from rank_llm.cli.main import main as cli_main
+from rank_llm.api.cli.main import main as cli_main
 
 
 def build_mcp_server():
@@ -10,7 +10,7 @@ def build_mcp_server():
         from pyserini.server.backend import get_backend
         from pyserini.server.mcp.tools import register_tools
 
-        from rank_llm.server.mcp.tools import register_rankllm_tools
+        from rank_llm.api.mcp.tools import register_rankllm_tools
     except ImportError as exc:
         raise missing_extra_error(
             "server",

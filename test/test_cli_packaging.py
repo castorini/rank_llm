@@ -9,11 +9,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 class TestCLIPackaging(unittest.TestCase):
     def test_cli_module_imports(self):
-        module = importlib.import_module("rank_llm.cli.main")
+        module = importlib.import_module("rank_llm.api.cli.main")
         self.assertTrue(callable(module.main))
 
     def test_server_mcp_module_imports(self):
-        module = importlib.import_module("rank_llm.server.mcp")
+        module = importlib.import_module("rank_llm.api.mcp")
         self.assertIsNotNone(module)
 
     def test_console_entrypoint_help_resolves(self):

@@ -21,8 +21,8 @@ ProviderError.__module__ = "openai"
 if FASTAPI_AVAILABLE:
     from fastapi.testclient import TestClient
 
-    from rank_llm.api.app import create_app
-    from rank_llm.api.runtime import ServerConfig
+    from rank_llm.api.rest.app import create_app
+    from rank_llm.api.rest.runtime import ServerConfig
 
 
 @unittest.skipUnless(FASTAPI_AVAILABLE, "fastapi is required for HTTP route tests")
@@ -37,9 +37,9 @@ class TestCLIHTTP(unittest.TestCase):
 
     def test_rerank_route_returns_envelope(self):
         with (
-            patch("rank_llm.api.runtime.initialize_reranker"),
+            patch("rank_llm.api.rest.runtime.initialize_reranker"),
             patch(
-                "rank_llm.api.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_mcp_rerank",
                 return_value=[{"query": {"text": "cats"}, "candidates": []}],
             ) as mocked,
         ):
@@ -60,11 +60,11 @@ class TestCLIHTTP(unittest.TestCase):
 
         with (
             patch(
-                "rank_llm.api.runtime.initialize_reranker",
+                "rank_llm.api.rest.runtime.initialize_reranker",
                 return_value=reranker,
             ) as initialize_reranker,
             patch(
-                "rank_llm.api.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_mcp_rerank",
                 return_value=[{"query": {"text": "cats"}, "candidates": []}],
             ) as mocked,
         ):
@@ -96,11 +96,11 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertIs(mocked.call_args.kwargs["reranker"], reranker)
 
     def test_initialize_reranker_forwards_litellm_config(self):
-        from rank_llm.api.runtime import initialize_reranker
+        from rank_llm.api.rest.runtime import initialize_reranker
 
         config = ServerConfig(model_path="openai/gpt-4o-mini", use_litellm=True)
 
-        with patch("rank_llm.api.runtime.Reranker") as reranker_class:
+        with patch("rank_llm.api.rest.runtime.Reranker") as reranker_class:
             reranker_class.create_model_coordinator.return_value = object()
             initialize_reranker(config)
 
@@ -108,10 +108,12 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertTrue(kwargs["use_litellm"])
 
     def test_serve_http_with_litellm_reaches_app_creation(self):
-        from rank_llm.cli.main import main
+        from rank_llm.api.cli.main import main
 
         with (
-            patch("rank_llm.api.app.create_app", return_value=object()) as create_app,
+            patch(
+                "rank_llm.api.rest.app.create_app", return_value=object()
+            ) as create_app,
             patch("uvicorn.run") as uvicorn_run,
         ):
             return_code = main(
@@ -123,11 +125,11 @@ class TestCLIHTTP(unittest.TestCase):
         uvicorn_run.assert_called_once()
 
     def test_serve_http_rejects_conflicting_backend_flags_at_startup(self):
-        from rank_llm.cli.main import main
+        from rank_llm.api.cli.main import main
 
         stdout = io.StringIO()
         with (
-            patch("rank_llm.api.app.create_app") as create_app,
+            patch("rank_llm.api.rest.app.create_app") as create_app,
             patch("uvicorn.run") as uvicorn_run,
             contextlib.redirect_stdout(stdout),
         ):
@@ -158,7 +160,7 @@ class TestCLIHTTP(unittest.TestCase):
         reranker.get_model_coordinator.return_value = object()
         reranker.rerank_batch.return_value = []
 
-        with patch("rank_llm.api.runtime.Reranker") as reranker_class:
+        with patch("rank_llm.api.rest.runtime.Reranker") as reranker_class:
             reranker_class.create_model_coordinator.return_value = object()
             reranker_class.return_value = reranker
             client = TestClient(create_app(ServerConfig(model_path="model")))
@@ -183,7 +185,7 @@ class TestCLIHTTP(unittest.TestCase):
         alternate_reranker.get_model_coordinator.return_value = object()
         alternate_reranker.rerank_batch.return_value = []
 
-        with patch("rank_llm.api.runtime.Reranker") as reranker_class:
+        with patch("rank_llm.api.rest.runtime.Reranker") as reranker_class:
             reranker_class.create_model_coordinator.side_effect = [object(), object()]
             reranker_class.side_effect = [reranker, alternate_reranker]
             client = TestClient(create_app(ServerConfig(model_path="model")))
@@ -211,7 +213,7 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(alternate_reranker.rerank_batch.call_count, 1)
 
     def test_rerank_route_returns_400_for_invalid_payload(self):
-        with patch("rank_llm.api.runtime.initialize_reranker"):
+        with patch("rank_llm.api.rest.runtime.initialize_reranker"):
             client = TestClient(create_app(ServerConfig(model_path="model")))
             response = client.post("/v1/rerank", json={"query": "cats"})
 
@@ -325,9 +327,9 @@ class TestCLIHTTP(unittest.TestCase):
 
     def test_rerank_route_returns_500_for_runtime_error(self):
         with (
-            patch("rank_llm.api.runtime.initialize_reranker"),
+            patch("rank_llm.api.rest.runtime.initialize_reranker"),
             patch(
-                "rank_llm.api.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_mcp_rerank",
                 side_effect=RuntimeError("boom"),
             ),
         ):
@@ -343,9 +345,9 @@ class TestCLIHTTP(unittest.TestCase):
 
     def test_rerank_route_returns_502_for_provider_error(self):
         with (
-            patch("rank_llm.api.runtime.initialize_reranker"),
+            patch("rank_llm.api.rest.runtime.initialize_reranker"),
             patch(
-                "rank_llm.api.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_mcp_rerank",
                 side_effect=ProviderError("Rate limit exceeded"),
             ),
         ):

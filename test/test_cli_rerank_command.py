@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from rank_llm.cli.main import main
+from rank_llm.api.cli.main import main
 
 
 class TestCLIRerankCommand(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestCLIRerankCommand(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main.run_mcp_retrieve_and_rerank",
+                "rank_llm.api.cli.main.run_mcp_retrieve_and_rerank",
                 return_value=[{"dataset": True}],
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -51,7 +51,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 encoding="utf-8",
             )
             with patch(
-                "rank_llm.cli.main.run_mcp_retrieve_and_rerank",
+                "rank_llm.api.cli.main.run_mcp_retrieve_and_rerank",
                 return_value=[{"requests_file": True}],
             ) as mocked:
                 exit_code = main(
@@ -74,7 +74,7 @@ class TestCLIRerankCommand(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main.run_mcp_rerank",
+                "rank_llm.api.cli.main.run_mcp_rerank",
                 return_value=[{"direct": True}],
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -110,7 +110,7 @@ class TestCLIRerankCommand(unittest.TestCase):
             with self.subTest(first_flag=first_flag, second_flag=second_flag):
                 stdout = io.StringIO()
                 with (
-                    patch("rank_llm.cli.main.run_mcp_rerank") as mocked,
+                    patch("rank_llm.api.cli.main.run_mcp_rerank") as mocked,
                     contextlib.redirect_stdout(stdout),
                 ):
                     exit_code = main(
@@ -138,7 +138,7 @@ class TestCLIRerankCommand(unittest.TestCase):
 
     def test_rerank_accepts_single_backend_flag(self):
         payload = '{"query":"cats","candidates":["doc one"]}'
-        with patch("rank_llm.cli.main.run_mcp_rerank", return_value=[]) as mocked:
+        with patch("rank_llm.api.cli.main.run_mcp_rerank", return_value=[]) as mocked:
             exit_code = main(
                 [
                     "rerank",
@@ -160,7 +160,7 @@ class TestCLIRerankCommand(unittest.TestCase):
         )
         with (
             patch(
-                "rank_llm.cli.main.run_mcp_rerank",
+                "rank_llm.api.cli.main.run_mcp_rerank",
                 return_value=[{"stdin": True}],
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -213,11 +213,11 @@ class TestCLIRerankCommand(unittest.TestCase):
         payload = '{"query":"cats","candidates":["doc one"]}'
         with (
             patch(
-                "rank_llm.cli.main.run_mcp_rerank",
+                "rank_llm.api.cli.main.run_mcp_rerank",
                 return_value=[{"direct": True}],
             ) as direct_mock,
             patch(
-                "rank_llm.cli.main.run_mcp_retrieve_and_rerank",
+                "rank_llm.api.cli.main.run_mcp_retrieve_and_rerank",
                 return_value=[{"dataset": True}],
             ) as dataset_mock,
         ):
@@ -270,7 +270,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 os.chdir(root)
                 with (
                     patch(
-                        "rank_llm.cli.main.run_mcp_rerank",
+                        "rank_llm.api.cli.main.run_mcp_rerank",
                         return_value=[{"direct": True}],
                     ) as mocked,
                     contextlib.redirect_stdout(stdout),
@@ -304,7 +304,7 @@ class TestCLIRerankCommand(unittest.TestCase):
             try:
                 os.chdir(root)
                 with patch(
-                    "rank_llm.cli.main.run_mcp_rerank",
+                    "rank_llm.api.cli.main.run_mcp_rerank",
                     return_value=[{"direct": True}],
                 ) as mocked:
                     exit_code = main(
@@ -342,7 +342,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 os.chdir(root)
                 os.environ["XDG_CONFIG_HOME"] = str(xdg_home)
                 with patch(
-                    "rank_llm.cli.main.run_mcp_rerank",
+                    "rank_llm.api.cli.main.run_mcp_rerank",
                     return_value=[{"direct": True}],
                 ) as mocked:
                     exit_code = main(

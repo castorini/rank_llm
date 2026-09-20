@@ -6,25 +6,16 @@ import sys
 from collections.abc import Sequence
 from typing import Any, NoReturn
 
-from rank_llm.cli.adapters import make_data_artifact, serialize_data
-from rank_llm.cli.config import load_config
-from rank_llm.cli.error_utils import classify_exception, has_partial_success_metrics
-from rank_llm.cli.introspection import (
+from rank_llm.api.adapters import make_data_artifact, serialize_data
+from rank_llm.api.capabilities import (
     COMMAND_DESCRIPTIONS,
     SCHEMAS,
     doctor_report,
     validate_rerank_batch_file,
     validate_rerank_payload,
 )
-from rank_llm.cli.operations import (
-    normalize_direct_rerank_input,
-    run_evaluate_aggregate,
-    run_mcp_rerank,
-    run_mcp_retrieve_and_rerank,
-    run_response_analysis_files,
-    run_retrieve_cache_generation,
-)
-from rank_llm.cli.prompt_view import (
+from rank_llm.api.cli.config import load_config
+from rank_llm.api.cli.prompt_view import (
     PromptTemplateError,
     build_prompt_template_view,
     build_rendered_prompt_view,
@@ -33,9 +24,18 @@ from rank_llm.cli.prompt_view import (
     render_prompt_template_text,
     render_rendered_prompt_text,
 )
-from rank_llm.cli.responses import CommandResponse
-from rank_llm.cli.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
-from rank_llm.cli.view import ViewError, build_view_summary, render_view_summary
+from rank_llm.api.cli.view import ViewError, build_view_summary, render_view_summary
+from rank_llm.api.error_utils import classify_exception, has_partial_success_metrics
+from rank_llm.api.operations import (
+    normalize_direct_rerank_input,
+    run_evaluate_aggregate,
+    run_mcp_rerank,
+    run_mcp_retrieve_and_rerank,
+    run_response_analysis_files,
+    run_retrieve_cache_generation,
+)
+from rank_llm.api.responses import CommandResponse
+from rank_llm.api.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 
 
@@ -998,7 +998,7 @@ def _run_retrieve_cache_command(args: argparse.Namespace) -> CommandResponse:
 def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
     if args.serve_target == "mcp":
         try:
-            from rank_llm.server.mcp.mcp_rankllm import run_mcp_server
+            from rank_llm.api.mcp.mcp_rankllm import run_mcp_server
 
             run_mcp_server(transport=args.transport, port=args.port)
         except ImportError as error:
@@ -1019,8 +1019,8 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
     try:
         import uvicorn
 
-        from rank_llm.api.app import create_app
-        from rank_llm.api.runtime import ServerConfig
+        from rank_llm.api.rest.app import create_app
+        from rank_llm.api.rest.runtime import ServerConfig
     except ModuleNotFoundError as error:
         raise CLIError(
             "serve http requires FastAPI dependencies; install the `api` extra",

@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from rank_llm.cli.main import main
+from rank_llm.api.cli.main import main
 
 
 class TestCLIIntrospection(unittest.TestCase):
@@ -58,7 +58,7 @@ class TestCLIIntrospection(unittest.TestCase):
     def test_doctor_can_be_mocked_for_dependency_states(self):
         stdout = io.StringIO()
         with patch(
-            "rank_llm.cli.main.doctor_report",
+            "rank_llm.api.cli.main.doctor_report",
             return_value={
                 "python_version": "3.11.0",
                 "python_ok": True,

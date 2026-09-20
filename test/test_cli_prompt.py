@@ -3,7 +3,7 @@ import io
 import json
 import unittest
 
-from rank_llm.cli.main import main
+from rank_llm.api.cli.main import main
 
 
 class TestCLIPrompt(unittest.TestCase):

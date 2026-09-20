@@ -4,8 +4,8 @@ import json
 import unittest
 from unittest.mock import patch
 
-from rank_llm.cli import operations
-from rank_llm.cli.main import main
+from rank_llm.api import operations
+from rank_llm.api.cli.main import main
 
 
 class TestCLIUtilities(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestCLIUtilities(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main.run_evaluate_aggregate",
+                "rank_llm.api.cli.main.run_evaluate_aggregate",
                 return_value={
                     "output_file": "trec_eval_aggregated_results_model.jsonl"
                 },
@@ -47,7 +47,7 @@ class TestCLIUtilities(unittest.TestCase):
 
         with (
             patch(
-                "rank_llm.cli.main.run_evaluate_aggregate",
+                "rank_llm.api.cli.main.run_evaluate_aggregate",
                 side_effect=lambda **kwargs: operations.run_evaluate_aggregate(
                     runner=noisy_runner, **kwargs
                 ),
@@ -64,7 +64,7 @@ class TestCLIUtilities(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main.run_response_analysis_files",
+                "rank_llm.api.cli.main.run_response_analysis_files",
                 return_value={"files": ["one.json"], "metrics": {"errors": 0}},
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -96,7 +96,7 @@ class TestCLIUtilities(unittest.TestCase):
 
         with (
             patch(
-                "rank_llm.cli.main.run_response_analysis_files",
+                "rank_llm.api.cli.main.run_response_analysis_files",
                 side_effect=lambda **kwargs: operations.run_response_analysis_files(
                     runner=noisy_runner, **kwargs
                 ),
@@ -122,7 +122,7 @@ class TestCLIUtilities(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main.run_retrieve_cache_generation",
+                "rank_llm.api.cli.main.run_retrieve_cache_generation",
                 return_value={"output_file": "cache.json", "record_count": 2},
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -163,7 +163,7 @@ class TestCLIUtilities(unittest.TestCase):
 
         with (
             patch(
-                "rank_llm.cli.main.run_retrieve_cache_generation",
+                "rank_llm.api.cli.main.run_retrieve_cache_generation",
                 side_effect=lambda **kwargs: operations.run_retrieve_cache_generation(
                     generator=noisy_generator,
                     writer=noisy_writer,

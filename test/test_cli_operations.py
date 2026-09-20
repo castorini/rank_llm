@@ -2,7 +2,7 @@ import argparse
 import unittest
 from unittest.mock import Mock
 
-from rank_llm.cli.operations import (
+from rank_llm.api.operations import (
     run_evaluate_aggregate,
     run_mcp_retrieve_and_rerank,
     run_response_analysis_files,

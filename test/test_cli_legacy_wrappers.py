@@ -3,6 +3,7 @@ import unittest
 import warnings
 from unittest.mock import Mock, patch
 
+from rank_llm.api.mcp import mcp_rankllm
 from rank_llm.scripts import (
     generate_retrieve_results_json_cache,
     run_rank_llm,
@@ -10,7 +11,6 @@ from rank_llm.scripts import (
     run_trec_eval,
 )
 from rank_llm.server.flask import api as flask_api
-from rank_llm.server.mcp import mcp_rankllm
 
 
 class TestCLILegacyWrappers(unittest.TestCase):
@@ -189,9 +189,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
         )
 
     def test_mcp_legacy_entrypoint_delegates_to_serve_mcp(self):
-        with patch(
-            "rank_llm.server.mcp.mcp_rankllm.cli_main", return_value=0
-        ) as mocked:
+        with patch("rank_llm.api.mcp.mcp_rankllm.cli_main", return_value=0) as mocked:
             exit_code = mcp_rankllm.main(["--transport", "http", "--port", "9000"])
 
         self.assertEqual(exit_code, 0)

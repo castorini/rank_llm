@@ -109,7 +109,7 @@ dev = [
 Homepage = "https://github.com/castorini/rank_llm"
 
 [project.scripts]
-rank-llm = "rank_llm.cli.main:main"
+rank-llm = "rank_llm.api.cli.main:main"
 
 [tool.bumpver]
 current_version = "0.25.7"
@@ -146,7 +146,7 @@ include = [
     "rank_llm",
     "rank_llm.analysis",
     "rank_llm.api",
-    "rank_llm.cli",
+    "rank_llm.api.*",
     "rank_llm.evaluation",
     "rank_llm.rerank",
     "rank_llm.rerank.*",

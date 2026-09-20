@@ -4,7 +4,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
+from rank_llm.api.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
 from rank_llm.data import Result
 from rank_llm.retrieve import RetrievalMethod
 

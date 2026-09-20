@@ -9,8 +9,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FASTMCP_AVAILABLE = find_spec("fastmcp") is not None
 
 if FASTMCP_AVAILABLE:
-    from rank_llm.server.mcp.mcp_rankllm import run_mcp_server
-    from rank_llm.server.mcp.tools import register_rankllm_tools
+    from rank_llm.api.mcp.mcp_rankllm import run_mcp_server
+    from rank_llm.api.mcp.tools import register_rankllm_tools
 
 
 class FakeMCP:
@@ -32,7 +32,7 @@ class TestCLIMCP(unittest.TestCase):
     def test_register_rankllm_tools_uses_shared_rerank_handler(self):
         mcp = FakeMCP()
         with patch(
-            "rank_llm.server.mcp.tools.run_mcp_rerank",
+            "rank_llm.api.mcp.tools.run_mcp_rerank",
             return_value=[{"ok": True}],
         ) as mocked:
             register_rankllm_tools(mcp)
@@ -49,7 +49,7 @@ class TestCLIMCP(unittest.TestCase):
     def test_register_rankllm_tools_uses_shared_retrieve_handler(self):
         mcp = FakeMCP()
         with patch(
-            "rank_llm.server.mcp.tools.run_mcp_retrieve_and_rerank",
+            "rank_llm.api.mcp.tools.run_mcp_retrieve_and_rerank",
             return_value=[{"ok": True}],
         ) as mocked:
             register_rankllm_tools(mcp)
@@ -65,7 +65,7 @@ class TestCLIMCP(unittest.TestCase):
     def test_run_mcp_server_uses_built_server(self):
         server = Mock()
         with patch(
-            "rank_llm.server.mcp.mcp_rankllm.build_mcp_server",
+            "rank_llm.api.mcp.mcp_rankllm.build_mcp_server",
             return_value=server,
         ) as mocked:
             run_mcp_server(transport="http", port=9000)

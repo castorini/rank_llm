@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from rank_llm.cli.main import main
+from rank_llm.api.cli.main import main
 
 
 class TestCLIView(unittest.TestCase):

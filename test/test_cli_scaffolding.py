@@ -4,8 +4,8 @@ import json
 import unittest
 from unittest.mock import patch
 
-from rank_llm.cli.main import main
-from rank_llm.cli.responses import CommandResponse
+from rank_llm.api.cli.main import main
+from rank_llm.api.responses import CommandResponse
 
 
 class ProviderError(Exception):
@@ -91,7 +91,9 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("rank_llm.cli.main._run_command", side_effect=RuntimeError("boom")),
+            patch(
+                "rank_llm.api.cli.main._run_command", side_effect=RuntimeError("boom")
+            ),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
         ):
@@ -107,7 +109,7 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stderr = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main._run_command",
+                "rank_llm.api.cli.main._run_command",
                 side_effect=ProviderError("Rate limit exceeded"),
             ),
             contextlib.redirect_stdout(stdout),
@@ -125,7 +127,9 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("rank_llm.cli.main._run_command", side_effect=ImportError("fastapi")),
+            patch(
+                "rank_llm.api.cli.main._run_command", side_effect=ImportError("fastapi")
+            ),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
         ):
@@ -141,7 +145,7 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stderr = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main._run_command",
+                "rank_llm.api.cli.main._run_command",
                 side_effect=AssertionError("tuple shape mismatch"),
             ),
             contextlib.redirect_stdout(stdout),
@@ -159,7 +163,7 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stderr = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main._run_command",
+                "rank_llm.api.cli.main._run_command",
                 side_effect=AssertionError(
                     "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
                 ),
@@ -184,7 +188,8 @@ class TestCLIParserAndOutput(unittest.TestCase):
         }
         with (
             patch(
-                "rank_llm.cli.main.run_response_analysis_files", return_value=summary
+                "rank_llm.api.cli.main.run_response_analysis_files",
+                return_value=summary,
             ),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
