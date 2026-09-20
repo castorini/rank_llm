@@ -209,7 +209,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve_mcp_parser.add_argument(
         "--transport",
         choices=("stdio", "http"),
-        default="stdio",
+        default="http",
+        help="MCP transport (default: http).",
     )
     serve_mcp_parser.add_argument("--port", type=int, default=8000)
     evaluate_parser = subparsers.add_parser(

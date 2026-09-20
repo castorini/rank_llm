@@ -13,7 +13,7 @@ def build_mcp_server():
         from rank_llm.api.mcp.tools import register_rankllm_tools
     except ImportError as exc:
         raise missing_extra_error(
-            "server",
+            "mcp",
             "The MCP server requires FastMCP and Pyserini.",
         ) from exc
 
@@ -23,7 +23,7 @@ def build_mcp_server():
     return mcp
 
 
-def run_mcp_server(*, transport: str = "stdio", port: int = 8000):
+def run_mcp_server(*, transport: str = "http", port: int = 8000):
     mcp = build_mcp_server()
     kwargs = {"port": port} if transport == "http" else {}
     mcp.run(transport=transport, **kwargs)
