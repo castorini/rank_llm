@@ -27,15 +27,24 @@ from rank_llm.api.cli.prompt_view import (
 from rank_llm.api.cli.view import ViewError, build_view_summary, render_view_summary
 from rank_llm.api.error_utils import classify_exception, has_partial_success_metrics
 from rank_llm.api.operations import (
-    normalize_direct_rerank_input,
     run_evaluate_aggregate,
-    run_mcp_rerank,
-    run_mcp_retrieve_and_rerank,
+    run_rerank,
     run_response_analysis_files,
+    run_retrieve_and_rerank,
     run_retrieve_cache_generation,
+)
+from rank_llm.api.options import (
+    RerankOptions,
+    RerankValidationError,
+    RetrievalOptions,
+    add_option_arguments,
+    option_values,
+    validate_rerank_options,
+    validate_retrieval_options,
 )
 from rank_llm.api.responses import CommandResponse
 from rank_llm.api.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
+from rank_llm.data import normalize_rerank_input
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 
 
@@ -107,119 +116,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     rerank_parser = subparsers.add_parser("rerank", help="Run RankLLM reranking.")
-    rerank_parser.add_argument("--model-path", required=True, dest="model_path")
-    rerank_parser.add_argument("--query", default="")
-    rerank_parser.add_argument("--dataset")
-    rerank_parser.add_argument("--requests-file", dest="requests_file")
+    add_option_arguments(rerank_parser)
+    add_option_arguments(rerank_parser, RetrievalOptions)
     rerank_parser.add_argument("--input-json", dest="input_json")
     rerank_parser.add_argument("--stdin", action="store_true")
     rerank_parser.add_argument("--dry-run", dest="dry_run", action="store_true")
     rerank_parser.add_argument(
-        "--validate-only",
-        dest="validate_only",
-        action="store_true",
-    )
-    rerank_parser.add_argument(
-        "--retrieval-method",
-        dest="retrieval_method",
-        type=RetrievalMethod,
-        choices=list(RetrievalMethod),
-    )
-    rerank_parser.add_argument("--batch-size", dest="batch_size", type=int, default=32)
-    rerank_parser.add_argument(
-        "--top-k-candidates", dest="top_k_candidates", type=int, default=100
-    )
-    rerank_parser.add_argument(
-        "--top-k-rerank", dest="top_k_rerank", type=int, default=-1
-    )
-    rerank_parser.add_argument(
-        "--max-queries", dest="max_queries", type=int, default=-1
-    )
-    rerank_parser.add_argument(
-        "--context-size", dest="context_size", type=int, default=4096
-    )
-    rerank_parser.add_argument("--num-gpus", dest="num_gpus", type=int, default=1)
-    rerank_parser.add_argument(
-        "--prompt-template-path", dest="prompt_template_path", default=""
-    )
-    rerank_parser.add_argument(
-        "--num-few-shot-examples", dest="num_few_shot_examples", type=int, default=0
-    )
-    rerank_parser.add_argument("--few-shot-file", dest="few_shot_file", default="")
-    rerank_parser.add_argument("--qrels-file", dest="qrels_file", default="")
-    rerank_parser.add_argument(
-        "--output-jsonl-file", dest="output_jsonl_file", default=""
-    )
-    rerank_parser.add_argument(
-        "--output-trec-file", dest="output_trec_file", default=""
-    )
-    rerank_parser.add_argument(
-        "--invocations-history-file", dest="invocations_history_file", default=""
-    )
-    rerank_parser.add_argument(
-        "--shuffle-candidates", dest="shuffle_candidates", action="store_true"
-    )
-    rerank_parser.add_argument(
-        "--print-prompts-responses", dest="print_prompts_responses", action="store_true"
-    )
-    rerank_parser.add_argument(
-        "--use-azure-openai", dest="use_azure_openai", action="store_true"
-    )
-    rerank_parser.add_argument(
-        "--use-openrouter", dest="use_openrouter", action="store_true"
-    )
-    rerank_parser.add_argument("--use-litellm", dest="use_litellm", action="store_true")
-    rerank_parser.add_argument("--base-url", dest="base_url", default="")
-    rerank_parser.add_argument(
-        "--variable-passages", dest="variable_passages", action="store_true"
-    )
-    rerank_parser.add_argument("--num-passes", dest="num_passes", type=int, default=1)
-    rerank_parser.add_argument(
-        "--window-size", dest="window_size", type=int, default=20
-    )
-    rerank_parser.add_argument("--stride", dest="stride", type=int, default=10)
-    rerank_parser.add_argument(
-        "--system-message",
-        dest="system_message",
-        default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-    )
-    rerank_parser.add_argument(
-        "--populate-invocations-history",
-        dest="populate_invocations_history",
-        action="store_true",
-    )
-    rerank_parser.add_argument("--is-thinking", dest="is_thinking", action="store_true")
-    rerank_parser.add_argument(
-        "--reasoning-token-budget",
-        dest="reasoning_token_budget",
-        type=int,
-        default=10000,
-    )
-    rerank_parser.add_argument("--use-logits", dest="use_logits", action="store_true")
-    rerank_parser.add_argument("--use-alpha", dest="use_alpha", action="store_true")
-    rerank_parser.add_argument(
-        "--pointwise-vllm", dest="pointwise_vllm", action="store_true"
-    )
-    rerank_parser.add_argument(
-        "--listwise-vllm-with-openai-sdk",
-        dest="listwise_vllm_with_openai_sdk",
-        action="store_true",
-        help=(
-            "Use open-source listwise RankListwiseOSLLM against --base-url "
-            "(OpenAI-compatible remote vLLM via the OpenAI SDK) instead of SafeOpenai."
-        ),
-    )
-    rerank_parser.add_argument(
-        "--reasoning-effort",
-        dest="reasoning_effort",
-        choices=("none", "minimal", "low", "medium", "high", "xhigh"),
-        default=None,
-    )
-    rerank_parser.add_argument(
-        "--max-passage-words",
-        dest="max_passage_words",
-        type=int,
-        default=300,
+        "--validate-only", dest="validate_only", action="store_true"
     )
     validate_parser = subparsers.add_parser(
         "validate",
@@ -298,130 +201,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve_http_parser.add_argument("--host", default="0.0.0.0")
     serve_http_parser.add_argument("--port", type=int, default=8082)
-    serve_http_parser.add_argument("--model-path", required=True, dest="model_path")
-    serve_http_parser.add_argument(
-        "--batch-size", dest="batch_size", type=int, default=32
-    )
-    serve_http_parser.add_argument(
-        "--top-k-rerank",
-        dest="top_k_rerank",
-        type=int,
-        default=-1,
-    )
-    serve_http_parser.add_argument(
-        "--context-size",
-        dest="context_size",
-        type=int,
-        default=4096,
-    )
-    serve_http_parser.add_argument("--num-gpus", dest="num_gpus", type=int, default=1)
-    serve_http_parser.add_argument(
-        "--prompt-template-path",
-        dest="prompt_template_path",
-        default="",
-    )
-    serve_http_parser.add_argument(
-        "--num-few-shot-examples",
-        dest="num_few_shot_examples",
-        type=int,
-        default=0,
-    )
-    serve_http_parser.add_argument("--few-shot-file", dest="few_shot_file", default="")
-    serve_http_parser.add_argument(
-        "--shuffle-candidates",
-        dest="shuffle_candidates",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--print-prompts-responses",
-        dest="print_prompts_responses",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--use-azure-openai",
-        dest="use_azure_openai",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--use-openrouter",
-        dest="use_openrouter",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--use-litellm",
-        dest="use_litellm",
-        action="store_true",
-    )
-    serve_http_parser.add_argument("--base-url", dest="base_url", default="")
-    serve_http_parser.add_argument(
-        "--variable-passages",
-        dest="variable_passages",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--num-passes", dest="num_passes", type=int, default=1
-    )
-    serve_http_parser.add_argument(
-        "--window-size", dest="window_size", type=int, default=20
-    )
-    serve_http_parser.add_argument("--stride", dest="stride", type=int, default=10)
-    serve_http_parser.add_argument(
-        "--system-message",
-        dest="system_message",
-        default="You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-    )
-    serve_http_parser.add_argument(
-        "--populate-invocations-history",
-        dest="populate_invocations_history",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--is-thinking",
-        dest="is_thinking",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--reasoning-token-budget",
-        dest="reasoning_token_budget",
-        type=int,
-        default=10000,
-    )
-    serve_http_parser.add_argument(
-        "--reasoning-effort",
-        dest="reasoning_effort",
-        choices=("none", "minimal", "low", "medium", "high", "xhigh"),
-        default=None,
-    )
-    serve_http_parser.add_argument(
-        "--use-logits",
-        dest="use_logits",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--use-alpha",
-        dest="use_alpha",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--pointwise-vllm",
-        dest="pointwise_vllm",
-        action="store_true",
-    )
-    serve_http_parser.add_argument(
-        "--listwise-vllm-with-openai-sdk",
-        dest="listwise_vllm_with_openai_sdk",
-        action="store_true",
-        help=(
-            "Use RankListwiseOSLLM against --base-url (remote vLLM via OpenAI SDK) "
-            "instead of SafeOpenai."
-        ),
-    )
-    serve_http_parser.add_argument(
-        "--max-passage-words",
-        dest="max_passage_words",
-        type=int,
-        default=300,
-    )
+    add_option_arguments(serve_http_parser)
     serve_mcp_parser = serve_subparsers.add_parser(
         "mcp",
         help="Start the RankLLM MCP server.",
@@ -570,100 +350,65 @@ def _read_direct_payload(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _validate_rerank_sources(args: argparse.Namespace) -> None:
-    if args.dataset or args.requests_file or args.input_json is not None or args.stdin:
+    sources = [
+        bool(args.dataset),
+        bool(args.requests_file),
+        args.input_json is not None,
+        args.stdin,
+    ]
+    if sum(sources) == 1:
+        if (args.input_json is not None or args.stdin) and args.retriever_host:
+            raise CLIError(
+                "direct candidates cannot be combined with retriever_host",
+                exit_code=2,
+                status="validation_error",
+                error_code="invalid_arguments",
+                command="rerank",
+            )
         return
     raise CLIError(
-        "Rerank requires one input source: --dataset, --requests-file, --input-json, or --stdin",
+        "Rerank requires exactly one input source: --dataset, --requests-file, --input-json, or --stdin",
         exit_code=EXIT_CODES["invalid_arguments"],
         status="validation_error",
-        error_code="missing_input_source",
+        error_code="missing_input_source" if not any(sources) else "invalid_arguments",
         command="rerank",
     )
 
 
 def _validate_rerank_execution_args(args: argparse.Namespace) -> None:
-    if args.requests_file and args.retrieval_method:
+    try:
+        validate_retrieval_options(
+            RetrievalOptions(**option_values(args, RetrievalOptions)), check_file=False
+        )
+        if (
+            args.requests_file
+            and args.populate_invocations_history
+            and not args.invocations_history_file
+        ):
+            raise RerankValidationError(
+                "invocations_history_file is required when populating request-file history"
+            )
+    except RerankValidationError as error:
         raise CLIError(
-            "--retrieval-method must not be used with --requests-file",
-            exit_code=EXIT_CODES["invalid_arguments"],
+            str(error),
+            exit_code=2,
             status="validation_error",
             error_code="invalid_arguments",
             command="rerank",
-        )
-    if args.dataset and not args.retrieval_method:
-        raise CLIError(
-            "--retrieval-method is required when --dataset is provided",
-            exit_code=EXIT_CODES["invalid_arguments"],
-            status="validation_error",
-            error_code="invalid_arguments",
-            command="rerank",
-        )
+        ) from error
 
 
 def _validate_rerank_backend_flags(args: argparse.Namespace, *, command: str) -> None:
-    if getattr(args, "pointwise_vllm", False) and getattr(
-        args, "listwise_vllm_with_openai_sdk", False
-    ):
+    try:
+        validate_rerank_options(RerankOptions(**option_values(args)))
+    except RerankValidationError as error:
         raise CLIError(
-            "--pointwise-vllm cannot be combined with --listwise-vllm-with-openai-sdk",
-            exit_code=EXIT_CODES["invalid_arguments"],
+            str(error),
+            exit_code=2,
             status="validation_error",
             error_code="invalid_arguments",
             command=command,
-        )
-    if (
-        getattr(args, "listwise_vllm_with_openai_sdk", False)
-        and not (getattr(args, "base_url", None) or "").strip()
-    ):
-        raise CLIError(
-            "--base-url is required when --listwise-vllm-with-openai-sdk is set",
-            exit_code=EXIT_CODES["invalid_arguments"],
-            status="validation_error",
-            error_code="invalid_arguments",
-            command=command,
-        )
-
-    enabled_backends = [
-        field_name
-        for field_name in ("use_azure_openai", "use_openrouter", "use_litellm")
-        if getattr(args, field_name, False)
-    ]
-    if len(enabled_backends) > 1:
-        raise CLIError(
-            "backend selectors cannot be combined: " + ", ".join(enabled_backends),
-            exit_code=EXIT_CODES["invalid_arguments"],
-            status="validation_error",
-            error_code="invalid_arguments",
-            command=command,
-        )
-
-
-def _normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
-    query = payload["query"]
-    query_text = query["text"] if isinstance(query, dict) else query
-    query_id = query.get("qid", "") if isinstance(query, dict) else ""
-    candidates = []
-    for index, candidate in enumerate(payload["candidates"], start=1):
-        if isinstance(candidate, str):
-            candidates.append({"docid": str(index), "score": 0.0, "doc": candidate})
-            continue
-        if "text" in candidate:
-            candidates.append(
-                {
-                    "docid": candidate.get("docid", str(index)),
-                    "score": candidate.get("score", 0.0),
-                    "doc": candidate["text"],
-                }
-            )
-            continue
-        candidates.append(
-            {
-                "docid": candidate.get("docid", str(index)),
-                "score": candidate.get("score", 0.0),
-                "doc": candidate["doc"],
-            }
-        )
-    return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
+        ) from error
 
 
 def _validation_error_response(
@@ -703,40 +448,8 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
                 inputs={"mode": "direct"},
                 resolved={"model_path": args.model_path, "input_mode": "direct"},
             )
-        normalized = normalize_direct_rerank_input(payload)
-        results = run_mcp_rerank(
-            model_path=args.model_path,
-            query_text=normalized["query_text"],
-            query_id=normalized["query_id"],
-            candidates=normalized["candidates"],
-            batch_size=args.batch_size,
-            top_k_rerank=args.top_k_rerank,
-            context_size=args.context_size,
-            num_gpus=args.num_gpus,
-            prompt_template_path=args.prompt_template_path,
-            num_few_shot_examples=args.num_few_shot_examples,
-            few_shot_file=args.few_shot_file,
-            shuffle_candidates=args.shuffle_candidates,
-            print_prompts_responses=args.print_prompts_responses,
-            use_azure_openai=args.use_azure_openai,
-            use_openrouter=args.use_openrouter,
-            use_litellm=getattr(args, "use_litellm", False),
-            base_url=args.base_url,
-            variable_passages=args.variable_passages,
-            num_passes=args.num_passes,
-            window_size=args.window_size,
-            stride=args.stride,
-            system_message=args.system_message,
-            populate_invocations_history=args.populate_invocations_history,
-            is_thinking=args.is_thinking,
-            reasoning_token_budget=args.reasoning_token_budget,
-            use_logits=args.use_logits,
-            use_alpha=args.use_alpha,
-            pointwise_vllm=args.pointwise_vllm,
-            listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
-            reasoning_effort=args.reasoning_effort,
-            max_passage_words=args.max_passage_words,
-        )
+        normalized = normalize_rerank_input(payload)
+        results = run_rerank(options=RerankOptions(**option_values(args)), **normalized)
         input_mode = "direct"
     else:
         validation = {"valid": True, "record_count": 0, "errors": []}
@@ -746,7 +459,13 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             if not validation["valid"]:
                 return _validation_error_response("rerank", validation)
         if args.validate_only or args.dry_run:
-            input_mode = "requests-file" if args.requests_file else "dataset"
+            input_mode = (
+                "service"
+                if args.retriever_host
+                else "requests-file"
+                if args.requests_file
+                else "dataset"
+            )
             return CommandResponse(
                 command="rerank",
                 mode="validate" if args.validate_only else "dry_run",
@@ -754,51 +473,25 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
                 inputs={"mode": input_mode},
                 resolved={"model_path": args.model_path, "input_mode": input_mode},
             )
-        results = run_mcp_retrieve_and_rerank(
-            model_path=args.model_path,
-            query=args.query,
-            batch_size=args.batch_size,
-            dataset=args.dataset or "",
-            requests_file=args.requests_file or "",
-            qrels_file=args.qrels_file,
-            output_jsonl_file=args.output_jsonl_file,
-            output_trec_file=args.output_trec_file,
-            invocations_history_file=args.invocations_history_file,
-            retrieval_method=args.retrieval_method or RetrievalMethod.UNSPECIFIED,
-            top_k_candidates=args.top_k_candidates,
-            top_k_rerank=args.top_k_rerank,
-            max_queries=args.max_queries,
-            context_size=args.context_size,
-            num_gpus=args.num_gpus,
-            prompt_template_path=args.prompt_template_path,
-            num_few_shot_examples=args.num_few_shot_examples,
-            few_shot_file=args.few_shot_file,
-            shuffle_candidates=args.shuffle_candidates,
-            print_prompts_responses=args.print_prompts_responses,
-            use_azure_openai=args.use_azure_openai,
-            use_openrouter=args.use_openrouter,
-            use_litellm=getattr(args, "use_litellm", False),
-            base_url=args.base_url,
-            variable_passages=args.variable_passages,
-            num_passes=args.num_passes,
-            window_size=args.window_size,
-            stride=args.stride,
-            system_message=args.system_message,
-            populate_invocations_history=args.populate_invocations_history,
-            is_thinking=args.is_thinking,
-            reasoning_token_budget=args.reasoning_token_budget,
-            use_logits=args.use_logits,
-            use_alpha=args.use_alpha,
-            pointwise_vllm=args.pointwise_vllm,
-            listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
-            reasoning_effort=args.reasoning_effort,
-            max_passage_words=args.max_passage_words,
+        workflow = option_values(args, RetrievalOptions)
+        workflow["retrieval_method"] = (
+            args.retrieval_method or RetrievalMethod.UNSPECIFIED
         )
-        input_mode = "requests-file" if args.requests_file else "dataset"
+        results = run_retrieve_and_rerank(
+            options=RerankOptions(**option_values(args)),
+            retrieval=RetrievalOptions(**workflow),
+        )
+        input_mode = (
+            "service"
+            if args.retriever_host
+            else "requests-file"
+            if args.requests_file
+            else "dataset"
+        )
 
     return CommandResponse(
         command="rerank",
-        validation={"valid": True, "record_count": 1 if direct_mode else 0},
+        validation=validation,
         inputs={"mode": input_mode},
         resolved={"model_path": args.model_path, "input_mode": input_mode},
         artifacts=[make_data_artifact("rerank-results", serialize_data(results))],
@@ -844,7 +537,18 @@ def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
             )
         if args.prompt_command == "render":
             payload = _read_direct_payload(args)
-            validation = validate_rerank_payload(payload)
+            valid = (
+                isinstance(payload, dict)
+                and "query" in payload
+                and "candidates" in payload
+            )
+            validation = {
+                "valid": valid,
+                "record_count": 1 if valid else 0,
+                "errors": []
+                if valid
+                else ["payload must contain query and candidates"],
+            }
             if not validation["valid"]:
                 return _validation_error_response("prompt", validation)
             view = build_rendered_prompt_view(args.name, payload)
@@ -1034,38 +738,7 @@ def _run_serve_command(args: argparse.Namespace) -> CommandResponse:
     _validate_rerank_backend_flags(args, command="serve")
 
     app = create_app(
-        ServerConfig(
-            host=args.host,
-            port=args.port,
-            model_path=args.model_path,
-            batch_size=args.batch_size,
-            top_k_rerank=args.top_k_rerank,
-            context_size=args.context_size,
-            num_gpus=args.num_gpus,
-            prompt_template_path=args.prompt_template_path,
-            num_few_shot_examples=args.num_few_shot_examples,
-            few_shot_file=args.few_shot_file,
-            shuffle_candidates=args.shuffle_candidates,
-            print_prompts_responses=args.print_prompts_responses,
-            use_azure_openai=args.use_azure_openai,
-            use_openrouter=args.use_openrouter,
-            use_litellm=getattr(args, "use_litellm", False),
-            base_url=args.base_url,
-            variable_passages=args.variable_passages,
-            num_passes=args.num_passes,
-            window_size=args.window_size,
-            stride=args.stride,
-            system_message=args.system_message,
-            populate_invocations_history=args.populate_invocations_history,
-            is_thinking=args.is_thinking,
-            reasoning_token_budget=args.reasoning_token_budget,
-            reasoning_effort=args.reasoning_effort,
-            use_logits=args.use_logits,
-            use_alpha=args.use_alpha,
-            pointwise_vllm=args.pointwise_vllm,
-            listwise_vllm_with_openai_sdk=args.listwise_vllm_with_openai_sdk,
-            max_passage_words=args.max_passage_words,
-        )
+        ServerConfig(host=args.host, port=args.port, **option_values(args))
     )
     uvicorn.run(app, host=args.host, port=args.port)
     return CommandResponse(

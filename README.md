@@ -90,7 +90,7 @@ repeat `--extra` to combine stacks in one environment.
 | All hosted-provider rerankers | `cloud` | Installs `openai` and `genai` |
 | Local Hugging Face and PyTorch rerankers | `local` | Installs `torch` and `transformers` for MonoT5, DuoT5, MonoELECTRA, and related local paths |
 | Pyserini retrieval and evaluation | `pyserini` | Requires Java 21 |
-| Lightweight HTTP API dependencies | `api` | Installs FastAPI, Flask, and Uvicorn without the heavier retrieval or inference stacks |
+| Lightweight HTTP API dependencies | `api` | Installs FastAPI and Uvicorn without the heavier retrieval or inference stacks |
 | MCP server dependencies | `mcp` | Pulls the packaged `serve mcp` dependency set, including Pyserini and model-serving backends |
 | Listwise reranking with open-source models via vLLM | `vllm` | Builds on `local` and adds the vLLM backend |
 | Full HTTP and MCP server bundle | `server` | Aggregate of the `api` and `mcp` extras |
@@ -149,6 +149,11 @@ rank-llm evaluate --model-name castorini/rank_zephyr_7b_v1_full
 rank-llm serve http --model-path castorini/rank_zephyr_7b_v1_full --port 8082
 rank-llm serve mcp --transport stdio
 ```
+
+The HTTP API and MCP tools support direct reranking, dataset and request-file
+workflows, and retrieval through a Pyserini HTTP service. See the
+[server guide](docs/servers.md) for matching CLI/HTTP/MCP examples and migration
+from the removed Flask server.
 
 The following code snippet is a minimal walk through of retrieval, reranking, evalaution, and invocations analysis of top 100 retrieved documents for queries from `DL19`. In this example `BM25` is used as the retriever and `RankZephyr` as the reranker. Additional sample snippets are available to run under the `src/rank_llm/demo` directory.
 ```python

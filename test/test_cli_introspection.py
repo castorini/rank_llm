@@ -41,7 +41,7 @@ class TestCLIIntrospection(unittest.TestCase):
         self.assertIn("overrides", schema["properties"])
         self.assertEqual(
             schema["properties"]["overrides"]["properties"]["reasoning_effort"]["enum"],
-            ["none", "minimal", "low", "medium", "high", "xhigh"],
+            ["none", "minimal", "low", "medium", "high", "xhigh", None],
         )
 
     def test_doctor_returns_readiness(self):

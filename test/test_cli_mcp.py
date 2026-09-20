@@ -32,7 +32,7 @@ class TestCLIMCP(unittest.TestCase):
     def test_register_rankllm_tools_uses_shared_rerank_handler(self):
         mcp = FakeMCP()
         with patch(
-            "rank_llm.api.mcp.tools.run_mcp_rerank",
+            "rank_llm.api.mcp.tools.run_rerank",
             return_value=[{"ok": True}],
         ) as mocked:
             register_rankllm_tools(mcp)
@@ -43,13 +43,13 @@ class TestCLIMCP(unittest.TestCase):
             )
 
         self.assertEqual(result, [{"ok": True}])
-        self.assertEqual(mocked.call_args.kwargs["model_path"], "model")
+        self.assertEqual(mocked.call_args.kwargs["options"].model_path, "model")
         self.assertEqual(mocked.call_args.kwargs["query_text"], "cats")
 
     def test_register_rankllm_tools_uses_shared_retrieve_handler(self):
         mcp = FakeMCP()
         with patch(
-            "rank_llm.api.mcp.tools.run_mcp_retrieve_and_rerank",
+            "rank_llm.api.mcp.tools.run_retrieve_and_rerank",
             return_value=[{"ok": True}],
         ) as mocked:
             register_rankllm_tools(mcp)
@@ -59,8 +59,8 @@ class TestCLIMCP(unittest.TestCase):
             )
 
         self.assertEqual(result, [{"ok": True}])
-        self.assertEqual(mocked.call_args.kwargs["model_path"], "model")
-        self.assertEqual(mocked.call_args.kwargs["dataset"], "dl19")
+        self.assertEqual(mocked.call_args.kwargs["options"].model_path, "model")
+        self.assertEqual(mocked.call_args.kwargs["retrieval"].dataset, "dl19")
 
     def test_run_mcp_server_uses_built_server(self):
         server = Mock()

@@ -1,1 +1,1 @@
-"""FastAPI app package for RankLLM HTTP serving."""
+"""FastAPI REST interface for RankLLM."""

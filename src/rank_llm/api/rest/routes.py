@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
+
+from rank_llm.api.options import RerankValidationError, request_schema
 
 from .runtime import (
     ServerConfig,
@@ -20,17 +22,33 @@ def build_router(config: ServerConfig) -> APIRouter:
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
-    @router.post("/v1/rerank")
-    def rerank(payload: dict[str, Any]) -> JSONResponse:
+    def execute(payload: dict[str, Any], *, retrieval: bool = False) -> JSONResponse:
         try:
-            response = run_rerank_request(payload, config=config)
+            response = run_rerank_request(payload, config=config, retrieval=retrieval)
             return JSONResponse(response.to_envelope())
-        except (TypeError, ValueError, KeyError) as error:
-            response = validation_error_response(str(error))
-            return JSONResponse(response.to_envelope(), status_code=400)
+        except RerankValidationError as error:
+            return JSONResponse(
+                validation_error_response(str(error)).to_envelope(), status_code=400
+            )
         except Exception as error:  # noqa: BLE001
             response = runtime_error_response(error)
-            status_code = 502 if response.status == "provider_error" else 500
-            return JSONResponse(response.to_envelope(), status_code=status_code)
+            return JSONResponse(
+                response.to_envelope(),
+                status_code=502 if response.status == "provider_error" else 500,
+            )
+
+    @router.post("/v1/rerank")
+    def rerank(
+        payload: Annotated[dict[str, Any], Body(json_schema_extra=request_schema())],
+    ) -> JSONResponse:
+        return execute(payload)
+
+    @router.post("/v1/retrieve-and-rerank")
+    def retrieve_and_rerank(
+        payload: Annotated[
+            dict[str, Any], Body(json_schema_extra=request_schema(retrieval=True))
+        ],
+    ) -> JSONResponse:
+        return execute(payload, retrieval=True)
 
     return router

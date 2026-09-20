@@ -15,7 +15,7 @@ class TestCLIRerankCommand(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "rank_llm.api.cli.main.run_mcp_retrieve_and_rerank",
+                "rank_llm.api.cli.main.run_retrieve_and_rerank",
                 return_value=[{"dataset": True}],
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -36,12 +36,12 @@ class TestCLIRerankCommand(unittest.TestCase):
                 ]
             )
         self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["query"], "cats")
+        self.assertEqual(mocked.call_args.kwargs["retrieval"].query, "cats")
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["command"], "rerank")
         self.assertEqual(payload["inputs"]["mode"], "dataset")
-        self.assertEqual(mocked.call_args.kwargs["reasoning_effort"], None)
-        self.assertEqual(mocked.call_args.kwargs["max_passage_words"], 300)
+        self.assertEqual(mocked.call_args.kwargs["options"].reasoning_effort, None)
+        self.assertEqual(mocked.call_args.kwargs["options"].max_passage_words, 300)
 
     def test_rerank_requests_file_mode_uses_retrieve_handler(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -51,7 +51,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 encoding="utf-8",
             )
             with patch(
-                "rank_llm.api.cli.main.run_mcp_retrieve_and_rerank",
+                "rank_llm.api.cli.main.run_retrieve_and_rerank",
                 return_value=[{"requests_file": True}],
             ) as mocked:
                 exit_code = main(
@@ -65,7 +65,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 )
         self.assertEqual(exit_code, 0)
         self.assertEqual(
-            mocked.call_args.kwargs["requests_file"],
+            mocked.call_args.kwargs["retrieval"].requests_file,
             str(requests_file),
         )
 
@@ -74,7 +74,7 @@ class TestCLIRerankCommand(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "rank_llm.api.cli.main.run_mcp_rerank",
+                "rank_llm.api.cli.main.run_rerank",
                 return_value=[{"direct": True}],
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -93,8 +93,8 @@ class TestCLIRerankCommand(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(mocked.call_args.kwargs["query_text"], "cats")
         self.assertEqual(mocked.call_args.kwargs["candidates"][0]["doc"], "doc one")
-        self.assertEqual(mocked.call_args.kwargs["reasoning_effort"], None)
-        self.assertEqual(mocked.call_args.kwargs["max_passage_words"], 300)
+        self.assertEqual(mocked.call_args.kwargs["options"].reasoning_effort, None)
+        self.assertEqual(mocked.call_args.kwargs["options"].max_passage_words, 300)
         envelope = json.loads(stdout.getvalue())
         self.assertEqual(envelope["artifacts"][0]["value"], [{"direct": True}])
 
@@ -110,7 +110,7 @@ class TestCLIRerankCommand(unittest.TestCase):
             with self.subTest(first_flag=first_flag, second_flag=second_flag):
                 stdout = io.StringIO()
                 with (
-                    patch("rank_llm.api.cli.main.run_mcp_rerank") as mocked,
+                    patch("rank_llm.api.cli.main.run_rerank") as mocked,
                     contextlib.redirect_stdout(stdout),
                 ):
                     exit_code = main(
@@ -138,7 +138,7 @@ class TestCLIRerankCommand(unittest.TestCase):
 
     def test_rerank_accepts_single_backend_flag(self):
         payload = '{"query":"cats","candidates":["doc one"]}'
-        with patch("rank_llm.api.cli.main.run_mcp_rerank", return_value=[]) as mocked:
+        with patch("rank_llm.api.cli.main.run_rerank", return_value=[]) as mocked:
             exit_code = main(
                 [
                     "rerank",
@@ -160,7 +160,7 @@ class TestCLIRerankCommand(unittest.TestCase):
         )
         with (
             patch(
-                "rank_llm.api.cli.main.run_mcp_rerank",
+                "rank_llm.api.cli.main.run_rerank",
                 return_value=[{"stdin": True}],
             ) as mocked,
             contextlib.redirect_stdout(stdout),
@@ -213,11 +213,11 @@ class TestCLIRerankCommand(unittest.TestCase):
         payload = '{"query":"cats","candidates":["doc one"]}'
         with (
             patch(
-                "rank_llm.api.cli.main.run_mcp_rerank",
+                "rank_llm.api.cli.main.run_rerank",
                 return_value=[{"direct": True}],
             ) as direct_mock,
             patch(
-                "rank_llm.api.cli.main.run_mcp_retrieve_and_rerank",
+                "rank_llm.api.cli.main.run_retrieve_and_rerank",
                 return_value=[{"dataset": True}],
             ) as dataset_mock,
         ):
@@ -251,10 +251,16 @@ class TestCLIRerankCommand(unittest.TestCase):
             )
         self.assertEqual(direct_exit, 0)
         self.assertEqual(dataset_exit, 0)
-        self.assertEqual(direct_mock.call_args.kwargs["reasoning_effort"], "high")
-        self.assertEqual(direct_mock.call_args.kwargs["max_passage_words"], 111)
-        self.assertEqual(dataset_mock.call_args.kwargs["reasoning_effort"], "medium")
-        self.assertEqual(dataset_mock.call_args.kwargs["max_passage_words"], 222)
+        self.assertEqual(
+            direct_mock.call_args.kwargs["options"].reasoning_effort, "high"
+        )
+        self.assertEqual(direct_mock.call_args.kwargs["options"].max_passage_words, 111)
+        self.assertEqual(
+            dataset_mock.call_args.kwargs["options"].reasoning_effort, "medium"
+        )
+        self.assertEqual(
+            dataset_mock.call_args.kwargs["options"].max_passage_words, 222
+        )
 
     def test_rerank_applies_repo_local_config_defaults(self):
         payload = '{"query":"cats","candidates":["doc one"]}'
@@ -270,7 +276,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 os.chdir(root)
                 with (
                     patch(
-                        "rank_llm.api.cli.main.run_mcp_rerank",
+                        "rank_llm.api.cli.main.run_rerank",
                         return_value=[{"direct": True}],
                     ) as mocked,
                     contextlib.redirect_stdout(stdout),
@@ -289,8 +295,10 @@ class TestCLIRerankCommand(unittest.TestCase):
             finally:
                 os.chdir(old_cwd)
         self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["base_url"], "http://localhost:9000")
-        self.assertEqual(mocked.call_args.kwargs["max_passage_words"], 444)
+        self.assertEqual(
+            mocked.call_args.kwargs["options"].base_url, "http://localhost:9000"
+        )
+        self.assertEqual(mocked.call_args.kwargs["options"].max_passage_words, 444)
 
     def test_rerank_explicit_cli_flags_override_config_defaults(self):
         payload = '{"query":"cats","candidates":["doc one"]}'
@@ -304,7 +312,7 @@ class TestCLIRerankCommand(unittest.TestCase):
             try:
                 os.chdir(root)
                 with patch(
-                    "rank_llm.api.cli.main.run_mcp_rerank",
+                    "rank_llm.api.cli.main.run_rerank",
                     return_value=[{"direct": True}],
                 ) as mocked:
                     exit_code = main(
@@ -322,8 +330,10 @@ class TestCLIRerankCommand(unittest.TestCase):
             finally:
                 os.chdir(old_cwd)
         self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["base_url"], "http://localhost:9001")
-        self.assertEqual(mocked.call_args.kwargs["max_passage_words"], 555)
+        self.assertEqual(
+            mocked.call_args.kwargs["options"].base_url, "http://localhost:9001"
+        )
+        self.assertEqual(mocked.call_args.kwargs["options"].max_passage_words, 555)
 
     def test_rerank_uses_xdg_config_when_repo_local_file_absent(self):
         payload = '{"query":"cats","candidates":["doc one"]}'
@@ -342,7 +352,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 os.chdir(root)
                 os.environ["XDG_CONFIG_HOME"] = str(xdg_home)
                 with patch(
-                    "rank_llm.api.cli.main.run_mcp_rerank",
+                    "rank_llm.api.cli.main.run_rerank",
                     return_value=[{"direct": True}],
                 ) as mocked:
                     exit_code = main(
@@ -361,7 +371,9 @@ class TestCLIRerankCommand(unittest.TestCase):
                 else:
                     os.environ["XDG_CONFIG_HOME"] = old_xdg
         self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["base_url"], "http://localhost:9010")
+        self.assertEqual(
+            mocked.call_args.kwargs["options"].base_url, "http://localhost:9010"
+        )
 
 
 if __name__ == "__main__":

@@ -1,52 +1,46 @@
+"""Execution helpers used by RankLLM's public interfaces.
+
+Operation-to-interface map:
+
+* ``run_rerank``: CLI ``rerank --input-json/--stdin``, REST
+  ``POST /v1/rerank``, and MCP ``rerank``. Reranks supplied candidates.
+* ``run_retrieve_and_rerank``: CLI ``rerank --dataset/--requests-file``, REST
+  ``POST /v1/retrieve-and-rerank``, and MCP ``retrieve_and_rerank``. Supports
+  local datasets, request files, and Pyserini HTTP retrieval via retriever_host.
+* ``run_evaluate_aggregate``: CLI ``evaluate`` only.
+* ``run_response_analysis_files``: CLI ``analyze`` only.
+* ``run_retrieve_cache_generation``: CLI ``retrieve-cache`` only.
+
+The reranking helpers accept RerankOptions and RetrievalOptions objects, built
+by each interface. Input checks run before execution. Existing CLI validation
+and dry-run commands stop before these helpers; REST and MCP expose execution
+only.
+
+These helpers return results or summaries. Interfaces handle their own response
+envelopes: CLI JSON and REST use CommandResponse; MCP execution returns results.
+"""
+
 from __future__ import annotations
 
 import contextlib
 import copy
 import io
 from collections.abc import Callable
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import asdict
 from typing import Any
 
-from rank_llm.data import Candidate, Query, Request, Result
+from rank_llm.api.options import (
+    RerankOptions,
+    RerankValidationError,
+    RetrievalOptions,
+    validate_rerank_options,
+    validate_retrieval_options,
+)
+from rank_llm.data import Candidate, Query, Request, Result, normalize_rerank_input
 from rank_llm.rerank import IdentityReranker, Reranker
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode
 from rank_llm.utils import default_device
-
-
-@dataclass
-class ScriptRerankResult:
-    args: dict[str, Any]
-    results: list[Result] | Any
-
-
-def normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
-    query = payload["query"]
-    query_text = query["text"] if isinstance(query, dict) else query
-    query_id = query.get("qid", "") if isinstance(query, dict) else ""
-    candidates = []
-    for index, candidate in enumerate(payload["candidates"], start=1):
-        if isinstance(candidate, str):
-            candidates.append({"docid": str(index), "score": 0.0, "doc": candidate})
-            continue
-        if "text" in candidate:
-            candidates.append(
-                {
-                    "docid": candidate.get("docid", str(index)),
-                    "score": candidate.get("score", 0.0),
-                    "doc": candidate["text"],
-                }
-            )
-            continue
-        candidates.append(
-            {
-                "docid": candidate.get("docid", str(index)),
-                "score": candidate.get("score", 0.0),
-                "doc": candidate["doc"],
-            }
-        )
-    return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
 
 
 def _default_retrieve_and_rerank(*args: Any, **kwargs: Any) -> Any:
@@ -67,117 +61,34 @@ def _run_with_captured_stdout(
         return runner(*args, **kwargs)
 
 
-def run_script_rerank(
-    args: Any,
+def run_rerank(
     *,
-    parser_error: Callable[[str], None],
-    runner: Callable[..., Any] = _default_retrieve_and_rerank,
-    device_resolver: Callable[[], str] = default_device,
-) -> ScriptRerankResult:
-    if args.requests_file and args.retrieval_method:
-        parser_error("--retrieval_method must not be used with --requests_file")
-
-    if args.dataset and not args.retrieval_method:
-        parser_error("--retrieval_method is required when --dataset is provided")
-
-    top_k_rerank = (
-        args.top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
-    )
-    retrieval_mode = (
-        RetrievalMode.DATASET if args.dataset else RetrievalMode.CACHED_FILE
-    )
-    options = {
-        "model_path": args.model_path,
-        "query": "",
-        "batch_size": args.batch_size,
-        "dataset": args.dataset,
-        "retrieval_mode": retrieval_mode,
-        "requests_file": args.requests_file,
-        "qrels_file": args.qrels_file,
-        "output_jsonl_file": args.output_jsonl_file,
-        "output_trec_file": args.output_trec_file,
-        "invocations_history_file": args.invocations_history_file,
-        "retrieval_method": args.retrieval_method,
-        "top_k_retrieve": args.top_k_candidates,
-        "top_k_rerank": top_k_rerank,
-        "max_queries": args.max_queries,
-        "context_size": args.context_size,
-        "device": device_resolver(),
-        "num_gpus": args.num_gpus,
-        "prompt_template_path": (
-            Path(args.prompt_template_path) if args.prompt_template_path else None
-        ),
-        "num_few_shot_examples": args.num_few_shot_examples,
-        "few_shot_file": args.few_shot_file,
-        "shuffle_candidates": args.shuffle_candidates,
-        "print_prompts_responses": args.print_prompts_responses,
-        "use_azure_openai": args.use_azure_openai,
-        "use_openrouter": args.use_openrouter,
-        "base_url": args.base_url,
-        "variable_passages": args.variable_passages,
-        "num_passes": args.num_passes,
-        "window_size": args.window_size,
-        "stride": args.stride,
-        "system_message": args.system_message,
-        "populate_invocations_history": args.populate_invocations_history,
-        "is_thinking": args.is_thinking,
-        "reasoning_token_budget": args.reasoning_token_budget,
-        "use_logits": args.use_logits,
-        "use_alpha": args.use_alpha,
-        "pointwise_vllm": args.pointwise_vllm,
-        "listwise_vllm_with_openai_sdk": args.listwise_vllm_with_openai_sdk,
-        "reasoning_effort": args.reasoning_effort,
-        "max_passage_words": args.max_passage_words,
-    }
-    return ScriptRerankResult(args=options, results=runner(**options))
-
-
-def run_mcp_rerank(
-    *,
-    model_path: str,
+    options: RerankOptions,
     query_text: str,
-    candidates: list[dict[str, Any]],
+    candidates: list[str | dict[str, Any]],
     query_id: str | int = "",
-    batch_size: int = 32,
-    top_k_rerank: int = -1,
-    context_size: int = 4096,
-    num_gpus: int = 1,
-    prompt_template_path: str = "",
-    num_few_shot_examples: int = 0,
-    few_shot_file: str = "",
-    shuffle_candidates: bool = False,
-    print_prompts_responses: bool = False,
-    use_azure_openai: bool = False,
-    use_openrouter: bool = False,
-    use_litellm: bool = False,
-    base_url: str = "",
-    variable_passages: bool = False,
-    num_passes: int = 1,
-    window_size: int = 20,
-    stride: int = 10,
-    system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-    populate_invocations_history: bool = False,
-    is_thinking: bool = False,
-    reasoning_token_budget: int = 10000,
-    use_logits: bool = False,
-    use_alpha: bool = False,
-    pointwise_vllm: bool = False,
-    listwise_vllm_with_openai_sdk: bool = False,
-    reasoning_effort: str | None = None,
-    max_passage_words: int = 300,
     reranker: Reranker | None = None,
 ) -> list[Result]:
-    kwargs = locals().copy()
+    """Rerank supplied candidates for CLI, REST, and MCP; return ranked records.
+
+    An injected reranker lets REST reuse its model cache. Otherwise this helper
+    initializes the model, runs the requested passes, and truncates the results.
+    """
+    validate_rerank_options(options)
+    kwargs = asdict(options)
+    normalized = normalize_rerank_input(
+        {"query": {"text": query_text, "qid": query_id}, "candidates": candidates}
+    )
+    candidates = normalized["candidates"]
     del kwargs["model_path"]
-    del kwargs["reranker"]
-    kwargs["prompt_template_path"] = prompt_template_path or None
-    kwargs["few_shot_file"] = few_shot_file or None
-    kwargs["base_url"] = base_url or None
+    for name in ("prompt_template_path", "few_shot_file", "base_url"):
+        kwargs[name] = kwargs[name] or None
+    shuffle_candidates = options.shuffle_candidates
 
     if reranker is None:
         reranker = Reranker(
             Reranker.create_model_coordinator(
-                model_path,
+                options.model_path,
                 None,
                 False,
                 **kwargs,
@@ -185,7 +96,9 @@ def run_mcp_rerank(
         )
 
     top_k_retrieve = len(candidates)
-    top_k_rerank_effective = top_k_retrieve if top_k_rerank == -1 else top_k_rerank
+    top_k_rerank_effective = (
+        top_k_retrieve if options.top_k_rerank == -1 else options.top_k_rerank
+    )
     del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
     requests = [
         Request(
@@ -203,24 +116,24 @@ def run_mcp_rerank(
         )
     ]
     if reranker.get_model_coordinator() is None:
-        shuffle_candidates = model_path == "rank_random"
+        shuffle_candidates = options.model_path == "rank_random"
         rerank_results = IdentityReranker().rerank_batch(
             requests,
             rank_end=top_k_retrieve,
             shuffle_candidates=shuffle_candidates,
         )
     else:
-        for _ in range(num_passes):
+        for _ in range(options.num_passes):
             rerank_results = reranker.rerank_batch(
                 requests,
                 rank_end=top_k_retrieve,
                 rank_start=0,
                 shuffle_candidates=shuffle_candidates,
-                logging=print_prompts_responses,
+                logging=options.print_prompts_responses,
                 top_k_retrieve=top_k_retrieve,
                 **kwargs,
             )
-            if num_passes > 1:
+            if options.num_passes > 1:
                 requests = [
                     Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
                     for r in rerank_results
@@ -231,104 +144,52 @@ def run_mcp_rerank(
     return rerank_results
 
 
-def run_mcp_retrieve_and_rerank(
+def run_retrieve_and_rerank(
     *,
-    model_path: str,
-    query: str = "",
-    batch_size: int = 32,
-    dataset: str = "",
-    requests_file: str = "",
-    qrels_file: str = "",
-    output_jsonl_file: str = "",
-    output_trec_file: str = "",
-    invocations_history_file: str = "",
-    retrieval_method: RetrievalMethod = RetrievalMethod.UNSPECIFIED,
-    top_k_candidates: int = 100,
-    top_k_rerank: int = -1,
-    max_queries: int = -1,
-    context_size: int = 4096,
-    num_gpus: int = 1,
-    prompt_template_path: str = "",
-    num_few_shot_examples: int = 0,
-    few_shot_file: str = "",
-    shuffle_candidates: bool = False,
-    print_prompts_responses: bool = False,
-    use_azure_openai: bool = False,
-    use_openrouter: bool = False,
-    use_litellm: bool = False,
-    base_url: str = "",
-    variable_passages: bool = False,
-    num_passes: int = 1,
-    window_size: int = 20,
-    stride: int = 10,
-    system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query.",
-    populate_invocations_history: bool = False,
-    is_thinking: bool = False,
-    reasoning_token_budget: int = 10000,
-    use_logits: bool = False,
-    use_alpha: bool = False,
-    pointwise_vllm: bool = False,
-    listwise_vllm_with_openai_sdk: bool = False,
-    reasoning_effort: str | None = None,
-    max_passage_words: int = 300,
+    options: RerankOptions,
+    retrieval: RetrievalOptions,
+    reranker: Reranker | None = None,
     runner: Callable[..., Any] = _default_retrieve_and_rerank,
     device_resolver: Callable[[], str] = default_device,
 ) -> list[Result] | Any:
-    top_k_rerank = top_k_candidates if top_k_rerank == -1 else top_k_rerank
-    retrieval_mode = RetrievalMode.DATASET if dataset else RetrievalMode.CACHED_FILE
-    dataset_or_none = dataset or None
-    retrieval_method_or_none = (
-        retrieval_method if retrieval_method != RetrievalMethod.UNSPECIFIED else None
-    )
-    max_queries_or_none = max_queries if max_queries >= 0 else None
+    """Run dataset, file, or HTTP-service retrieval and reranking for all interfaces.
 
-    if requests_file and retrieval_method != RetrievalMethod.UNSPECIFIED:
-        raise ValueError("retrieval_method must not be used with requests_file")
-    if dataset_or_none and not retrieval_method_or_none:
-        raise ValueError("retrieval_method is required when dataset is provided")
-
-    return runner(
-        model_path=model_path,
-        query=query,
-        batch_size=batch_size,
-        dataset=dataset_or_none,
-        retrieval_mode=retrieval_mode,
-        requests_file=requests_file,
-        qrels_file=qrels_file,
-        output_jsonl_file=output_jsonl_file,
-        output_trec_file=output_trec_file,
-        invocations_history_file=invocations_history_file,
-        retrieval_method=retrieval_method_or_none,
-        top_k_retrieve=top_k_candidates,
-        top_k_rerank=top_k_rerank,
-        max_queries=max_queries_or_none,
-        context_size=context_size,
-        device=device_resolver(),
-        num_gpus=num_gpus,
-        prompt_template_path=prompt_template_path or None,
-        num_few_shot_examples=num_few_shot_examples,
-        few_shot_file=few_shot_file or None,
-        shuffle_candidates=shuffle_candidates,
-        print_prompts_responses=print_prompts_responses,
-        use_azure_openai=use_azure_openai,
-        use_openrouter=use_openrouter,
-        use_litellm=use_litellm,
-        base_url=base_url or None,
-        variable_passages=variable_passages,
-        num_passes=num_passes,
-        window_size=window_size,
-        stride=stride,
-        system_message=system_message,
-        populate_invocations_history=populate_invocations_history,
-        is_thinking=is_thinking,
-        reasoning_token_budget=reasoning_token_budget,
-        use_logits=use_logits,
-        use_alpha=use_alpha,
-        pointwise_vllm=pointwise_vllm,
-        listwise_vllm_with_openai_sdk=listwise_vllm_with_openai_sdk,
-        reasoning_effort=reasoning_effort,
-        max_passage_words=max_passage_words,
+    Translate the option objects to pipeline arguments. The existing retrieval
+    pipeline owns output files and history writes. An injected reranker supports
+    REST's model cache.
+    """
+    validate_rerank_options(options)
+    validate_retrieval_options(retrieval)
+    if (
+        retrieval.requests_file
+        and options.populate_invocations_history
+        and not retrieval.invocations_history_file
+    ):
+        raise RerankValidationError(
+            "invocations_history_file is required when populating request-file history"
+        )
+    method = RetrievalMethod(retrieval.retrieval_method or "unspecified")
+    kwargs = {**asdict(options), **asdict(retrieval)}
+    kwargs["qid"] = kwargs.pop("query_id")
+    kwargs["top_k_retrieve"] = kwargs.pop("top_k_candidates")
+    kwargs["top_k_rerank"] = (
+        retrieval.top_k_candidates
+        if options.top_k_rerank == -1
+        else options.top_k_rerank
     )
+    kwargs["retrieval_mode"] = (
+        RetrievalMode.DATASET if retrieval.dataset else RetrievalMode.CACHED_FILE
+    )
+    kwargs["dataset"] = retrieval.dataset or None
+    kwargs["retrieval_method"] = (
+        method if method != RetrievalMethod.UNSPECIFIED else None
+    )
+    kwargs["max_queries"] = (
+        retrieval.max_queries if retrieval.max_queries >= 0 else None
+    )
+    for name in ("prompt_template_path", "few_shot_file", "base_url"):
+        kwargs[name] = kwargs[name] or None
+    return runner(**kwargs, reranker=reranker, device=device_resolver())
 
 
 def run_evaluate_aggregate(
@@ -339,6 +200,7 @@ def run_evaluate_aggregate(
     runner: Callable[[Any], Any] | None = None,
     capture_stdout: bool = False,
 ) -> dict[str, Any]:
+    """Support CLI ``evaluate``; no REST route or RankLLM MCP tool exposes this."""
     if runner is None:
         from argparse import Namespace
 
@@ -371,6 +233,7 @@ def run_response_analysis_files(
     runner: Callable[..., Any] | None = None,
     capture_stdout: bool = False,
 ) -> dict[str, Any]:
+    """Support CLI ``analyze``; no REST route or RankLLM MCP tool exposes this."""
     if runner is None:
         from rank_llm.analysis.response_analysis import ResponseAnalyzer
 
@@ -398,6 +261,7 @@ def run_retrieve_cache_generation(
     writer: Callable[[str, Any], None] | None = None,
     capture_stdout: bool = False,
 ) -> dict[str, Any]:
+    """Support CLI ``retrieve-cache``; no REST route or RankLLM MCP tool exposes this."""
     if generator is None or writer is None:
         from rank_llm.scripts.generate_retrieve_results_json_cache import (
             generate_retrieve_results,

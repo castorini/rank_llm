@@ -1,7 +1,7 @@
 import argparse
 import unittest
 import warnings
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from rank_llm.api.mcp import mcp_rankllm
 from rank_llm.scripts import (
@@ -10,7 +10,6 @@ from rank_llm.scripts import (
     run_response_analysis,
     run_trec_eval,
 )
-from rank_llm.server.flask import api as flask_api
 
 
 class TestCLILegacyWrappers(unittest.TestCase):
@@ -170,22 +169,6 @@ class TestCLILegacyWrappers(unittest.TestCase):
                 "--output-file",
                 "cache.json",
             ],
-        )
-
-    def test_flask_legacy_entrypoint_runs_flask_app(self):
-        app = Mock()
-        with patch(
-            "rank_llm.server.flask.api.create_app",
-            return_value=(app, 8082),
-        ) as mocked:
-            exit_code = flask_api.main(["--model", "rank_zephyr", "--port", "8082"])
-
-        self.assertEqual(exit_code, 0)
-        mocked.assert_called_once_with("rank_zephyr", 8082, False)
-        app.run.assert_called_once_with(
-            host="0.0.0.0",
-            port=8082,
-            debug=False,
         )
 
     def test_mcp_legacy_entrypoint_delegates_to_serve_mcp(self):

@@ -1,8 +1,8 @@
 import json
+import math
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
-
-from dacite import from_dict
 
 
 @dataclass
@@ -40,7 +40,7 @@ class InferenceInvocation:
 class Result:
     query: Query
     candidates: list[Candidate] = field(default_factory=list)
-    invocations_history: list[InferenceInvocation] = (field(default_factory=list),)
+    invocations_history: list[InferenceInvocation] = field(default_factory=list)
 
 
 @dataclass
@@ -50,25 +50,115 @@ class TemplateSectionConfig:
     allowed_placeholders: set[str]
 
 
+class RerankValidationError(ValueError):
+    """Invalid user input, as distinct from an execution failure."""
+
+
+def normalize_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate query/candidate forms and supply missing IDs and scores."""
+    if (
+        not isinstance(payload, dict)
+        or "query" not in payload
+        or "candidates" not in payload
+    ):
+        raise RerankValidationError("payload must contain query and candidates")
+    if any(payload.get(key) for key in ("dataset", "requests_file", "retriever_host")):
+        raise RerankValidationError(
+            "direct candidates cannot be combined with retrieval sources"
+        )
+    query = payload["query"]
+    if isinstance(query, str):
+        query_text, query_id = query, ""
+    elif isinstance(query, dict) and isinstance(query.get("text"), str):
+        query_text, query_id = query["text"], query.get("qid", "")
+    else:
+        raise RerankValidationError(
+            "query must be a string or an object containing text"
+        )
+    if type(query_id) not in (str, int):
+        raise RerankValidationError("query ID must be a string or integer")
+    if not isinstance(payload["candidates"], list):
+        raise RerankValidationError("candidates must be an array")
+    candidates = []
+    for index, candidate in enumerate(payload["candidates"], start=1):
+        if isinstance(candidate, str):
+            candidate = {"doc": candidate}
+        if not isinstance(candidate, dict) or not (
+            "text" in candidate or "doc" in candidate
+        ):
+            raise RerankValidationError(f"candidate {index} must contain text or doc")
+        if "text" in candidate and not isinstance(candidate["text"], str):
+            raise RerankValidationError(f"candidate {index} text must be a string")
+        doc = candidate.get("text", candidate.get("doc"))
+        if not isinstance(doc, str | dict):
+            raise RerankValidationError(
+                f"candidate {index} document must be a string or object"
+            )
+        docid = candidate.get("docid", str(index))
+        score = candidate.get("score", 0.0)
+        if type(docid) not in (str, int):
+            raise RerankValidationError(
+                f"candidate {index} docid must be a string or integer"
+            )
+        if type(score) not in (int, float) or not math.isfinite(score):
+            raise RerankValidationError(
+                f"candidate {index} score must be a finite number"
+            )
+        candidates.append({"docid": docid, "score": score, "doc": doc})
+    return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
+
+
 def read_requests_from_file(file_path: str) -> list[Request]:
-    extension = file_path.split(".")[-1]
-    if extension == "jsonl":
-        requests = []
-        with open(file_path) as f:
-            for line in f:
+    """Read JSON/JSONL requests, accepting structured documents or text candidates."""
+    path = Path(file_path)
+    if not path.is_file():
+        raise RerankValidationError(f"missing file: {file_path}")
+
+    def parse_record(payload: Any) -> Request:
+        if isinstance(payload, dict) and isinstance(payload.get("query"), dict):
+            # Request.candidates has always defaulted to an empty list in files.
+            payload = {"candidates": [], **payload}
+        record = normalize_rerank_input(payload)
+        return Request(
+            query=Query(text=record["query_text"], qid=record["query_id"]),
+            candidates=[
+                Candidate(
+                    docid=c["docid"],
+                    score=c["score"],
+                    doc={"contents": c["doc"]}
+                    if isinstance(c["doc"], str)
+                    else c["doc"],
+                )
+                for c in record["candidates"]
+            ],
+        )
+
+    with path.open(encoding="utf-8") as handle:
+        if path.suffix == ".json":
+            try:
+                payloads = json.load(handle)
+            except json.JSONDecodeError as exc:
+                raise RerankValidationError(f"invalid JSON: {exc.msg}") from exc
+            if not isinstance(payloads, list):
+                raise RerankValidationError("request JSON file must contain an array")
+            return [parse_record(payload) for payload in payloads]
+        if path.suffix == ".jsonl":
+            requests = []
+            for line_number, line in enumerate(handle, 1):
                 if not line.strip():
                     continue
-                requests.append(from_dict(data_class=Request, data=json.loads(line)))
-        return requests
-    elif extension == "json":
-        with open(file_path) as f:
-            request_dicts = json.load(f)
-        return [
-            from_dict(data_class=Request, data=request_dict)
-            for request_dict in request_dicts
-        ]
-    else:
-        raise ValueError(f"Expected json or jsonl file format, got {extension}")
+                try:
+                    requests.append(parse_record(json.loads(line)))
+                except json.JSONDecodeError as exc:
+                    raise RerankValidationError(
+                        f"invalid JSON on line {line_number}: {exc.msg}"
+                    ) from exc
+                except RerankValidationError as exc:
+                    raise RerankValidationError(
+                        f"invalid request on line {line_number}: {exc}"
+                    ) from exc
+            return requests
+        raise RerankValidationError("request file must use .json or .jsonl")
 
 
 class DataWriter:

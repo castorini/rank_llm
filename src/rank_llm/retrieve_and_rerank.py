@@ -10,7 +10,6 @@ from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
     TOPICS,
-    PyseriniRetriever,
     RetrievalMethod,
     RetrievalMode,
     Retriever,
@@ -33,6 +32,7 @@ def retrieve_and_rerank(
     num_passes: int = 1,
     interactive: bool = False,
     default_model_coordinator: RankLLM = None,
+    reranker: Reranker | None = None,
     **kwargs: Any,
 ):
     """Retrieve candidates using Pyserini API and rerank them
@@ -42,12 +42,16 @@ def retrieve_and_rerank(
     """
 
     # Get reranking model_coordinator
-    reranker = Reranker(
-        Reranker.create_model_coordinator(
-            model_path,
-            default_model_coordinator,
-            interactive,
-            **kwargs,
+    reranker = (
+        reranker
+        if reranker is not None
+        else Reranker(
+            Reranker.create_model_coordinator(
+                model_path,
+                default_model_coordinator,
+                interactive,
+                **kwargs,
+            )
         )
     )
 
@@ -229,8 +233,10 @@ def retrieve(
         if dataset is None:
             raise ValueError("Must provide a dataset")
 
-        if interactive:
-            host: str = kwargs.get("host", "http://localhost:8081")
+        if interactive or kwargs.get("retriever_host"):
+            host: str = kwargs.get("retriever_host") or kwargs.get(
+                "host", "http://localhost:8081"
+            )
             service_retriever = ServiceRetriever(
                 retrieval_method=retrieval_method, retrieval_mode=retrieval_mode
             )
@@ -260,6 +266,8 @@ def retrieve(
                 raise ValueError(
                     "When providing a query, dataset must be a single dataset name."
                 )
+            from rank_llm.retrieve import PyseriniRetriever
+
             pyserini = PyseriniRetriever(dataset, retrieval_method)
             requests = pyserini.retrieve_for_query_text(
                 query, k=top_k_retrieve, qid=qid

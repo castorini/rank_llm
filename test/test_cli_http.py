@@ -39,7 +39,7 @@ class TestCLIHTTP(unittest.TestCase):
         with (
             patch("rank_llm.api.rest.runtime.initialize_reranker"),
             patch(
-                "rank_llm.api.rest.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_rerank",
                 return_value=[{"query": {"text": "cats"}, "candidates": []}],
             ) as mocked,
         ):
@@ -50,7 +50,7 @@ class TestCLIHTTP(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(mocked.call_args.kwargs["model_path"], "model")
+        self.assertEqual(mocked.call_args.kwargs["options"].model_path, "model")
         payload = response.json()
         self.assertEqual(payload["command"], "rerank")
         self.assertEqual(payload["artifacts"][0]["name"], "rerank-results")
@@ -64,7 +64,7 @@ class TestCLIHTTP(unittest.TestCase):
                 return_value=reranker,
             ) as initialize_reranker,
             patch(
-                "rank_llm.api.rest.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_rerank",
                 return_value=[{"query": {"text": "cats"}, "candidates": []}],
             ) as mocked,
         ):
@@ -89,10 +89,10 @@ class TestCLIHTTP(unittest.TestCase):
         self.assertEqual(effective_config.top_k_rerank, 5)
         self.assertEqual(effective_config.reasoning_effort, "medium")
         self.assertTrue(effective_config.use_litellm)
-        self.assertEqual(mocked.call_args.kwargs["model_path"], "other-model")
-        self.assertEqual(mocked.call_args.kwargs["top_k_rerank"], 5)
-        self.assertEqual(mocked.call_args.kwargs["reasoning_effort"], "medium")
-        self.assertTrue(mocked.call_args.kwargs["use_litellm"])
+        self.assertEqual(mocked.call_args.kwargs["options"].model_path, "other-model")
+        self.assertEqual(mocked.call_args.kwargs["options"].top_k_rerank, 5)
+        self.assertEqual(mocked.call_args.kwargs["options"].reasoning_effort, "medium")
+        self.assertTrue(mocked.call_args.kwargs["options"].use_litellm)
         self.assertIs(mocked.call_args.kwargs["reranker"], reranker)
 
     def test_initialize_reranker_forwards_litellm_config(self):
@@ -329,7 +329,7 @@ class TestCLIHTTP(unittest.TestCase):
         with (
             patch("rank_llm.api.rest.runtime.initialize_reranker"),
             patch(
-                "rank_llm.api.rest.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_rerank",
                 side_effect=RuntimeError("boom"),
             ),
         ):
@@ -347,7 +347,7 @@ class TestCLIHTTP(unittest.TestCase):
         with (
             patch("rank_llm.api.rest.runtime.initialize_reranker"),
             patch(
-                "rank_llm.api.rest.runtime.run_mcp_rerank",
+                "rank_llm.api.rest.runtime.run_rerank",
                 side_effect=ProviderError("Rate limit exceeded"),
             ),
         ):

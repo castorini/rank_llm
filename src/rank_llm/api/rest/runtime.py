@@ -1,304 +1,90 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Any
 
 from rank_llm.api.adapters import make_data_artifact, serialize_data
-from rank_llm.api.capabilities import validate_rerank_payload
 from rank_llm.api.error_utils import classify_exception
-from rank_llm.api.operations import normalize_direct_rerank_input, run_mcp_rerank
+from rank_llm.api.operations import run_rerank, run_retrieve_and_rerank
+from rank_llm.api.options import (
+    RerankOptions,
+    RetrievalOptions,
+    normalize_rerank_input,
+    option_values,
+    prepare_rerank_request,
+)
 from rank_llm.api.responses import CommandResponse
 from rank_llm.api.spec import EXIT_CODES
 from rank_llm.rerank import Reranker
 
 
 @dataclass
-class ServerConfig:
+class ServerConfig(RerankOptions):
     host: str = "0.0.0.0"
     port: int = 8082
-    model_path: str = ""
-    batch_size: int = 32
-    top_k_rerank: int = -1
-    context_size: int = 4096
-    num_gpus: int = 1
-    prompt_template_path: str = ""
-    num_few_shot_examples: int = 0
-    few_shot_file: str = ""
-    shuffle_candidates: bool = False
-    print_prompts_responses: bool = False
-    use_azure_openai: bool = False
-    use_openrouter: bool = False
-    use_litellm: bool = False
-    base_url: str = ""
-    variable_passages: bool = False
-    num_passes: int = 1
-    window_size: int = 20
-    stride: int = 10
-    system_message: str = "You are RankLLM, an intelligent assistant that can rank passages based on their relevancy to the query."
-    populate_invocations_history: bool = False
-    is_thinking: bool = False
-    reasoning_token_budget: int = 10000
-    reasoning_effort: str | None = None
-    use_logits: bool = False
-    use_alpha: bool = False
-    pointwise_vllm: bool = False
-    listwise_vllm_with_openai_sdk: bool = False
-    max_passage_words: int = 300
     _reranker_cache: dict[tuple[tuple[str, Any], ...], Reranker] = field(
         default_factory=dict, init=False, repr=False
     )
 
 
-_OVERRIDABLE_FIELDS = {
-    "model_path",
-    "batch_size",
-    "top_k_rerank",
-    "context_size",
-    "num_gpus",
-    "prompt_template_path",
-    "num_few_shot_examples",
-    "few_shot_file",
-    "shuffle_candidates",
-    "print_prompts_responses",
-    "use_azure_openai",
-    "use_openrouter",
-    "use_litellm",
-    "base_url",
-    "variable_passages",
-    "num_passes",
-    "window_size",
-    "stride",
-    "system_message",
-    "populate_invocations_history",
-    "is_thinking",
-    "reasoning_token_budget",
-    "reasoning_effort",
-    "use_logits",
-    "use_alpha",
-    "pointwise_vllm",
-    "listwise_vllm_with_openai_sdk",
-    "max_passage_words",
-}
-
-_RERANKER_CACHE_FIELDS = (
-    "model_path",
-    "batch_size",
-    "context_size",
-    "num_gpus",
-    "prompt_template_path",
-    "num_few_shot_examples",
-    "few_shot_file",
-    "shuffle_candidates",
-    "print_prompts_responses",
-    "use_azure_openai",
-    "use_openrouter",
-    "use_litellm",
-    "base_url",
-    "variable_passages",
-    "num_passes",
-    "window_size",
-    "stride",
-    "system_message",
-    "populate_invocations_history",
-    "is_thinking",
-    "reasoning_token_budget",
-    "reasoning_effort",
-    "use_logits",
-    "use_alpha",
-    "pointwise_vllm",
-    "listwise_vllm_with_openai_sdk",
-    "max_passage_words",
-)
-
-_OVERRIDE_FIELD_TYPES: dict[str, type[Any]] = {
-    "model_path": str,
-    "batch_size": int,
-    "top_k_rerank": int,
-    "context_size": int,
-    "num_gpus": int,
-    "prompt_template_path": str,
-    "num_few_shot_examples": int,
-    "few_shot_file": str,
-    "shuffle_candidates": bool,
-    "print_prompts_responses": bool,
-    "use_azure_openai": bool,
-    "use_openrouter": bool,
-    "use_litellm": bool,
-    "base_url": str,
-    "variable_passages": bool,
-    "num_passes": int,
-    "window_size": int,
-    "stride": int,
-    "system_message": str,
-    "populate_invocations_history": bool,
-    "is_thinking": bool,
-    "reasoning_token_budget": int,
-    "reasoning_effort": str,
-    "use_logits": bool,
-    "use_alpha": bool,
-    "pointwise_vllm": bool,
-    "listwise_vllm_with_openai_sdk": bool,
-    "max_passage_words": int,
-}
-
-_OVERRIDE_FIELD_CHOICES: dict[str, set[str]] = {
-    "reasoning_effort": {"none", "minimal", "low", "medium", "high", "xhigh"},
-}
-
-
-def _validate_override_types(overrides: dict[str, Any]) -> None:
-    for key, value in overrides.items():
-        expected_type = _OVERRIDE_FIELD_TYPES[key]
-        if expected_type is bool and not isinstance(value, bool):
-            raise TypeError(f"override '{key}' must be a boolean")
-        if expected_type is int and (
-            not isinstance(value, int) or isinstance(value, bool)
-        ):
-            raise TypeError(f"override '{key}' must be an integer")
-        if expected_type is str and not isinstance(value, str):
-            raise TypeError(f"override '{key}' must be a string")
-        if key in _OVERRIDE_FIELD_CHOICES and value not in _OVERRIDE_FIELD_CHOICES[key]:
-            valid_values = ", ".join(sorted(_OVERRIDE_FIELD_CHOICES[key]))
-            raise ValueError(f"override '{key}' must be one of: {valid_values}")
-
-
-def _extract_override_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    overrides = payload.get("overrides", {})
-    if not isinstance(overrides, dict):
-        raise ValueError("overrides must be an object when provided")
-    unknown_keys = sorted(set(overrides) - _OVERRIDABLE_FIELDS)
-    if unknown_keys:
-        raise ValueError(
-            "unsupported rerank override field(s): " + ", ".join(unknown_keys)
-        )
-    _validate_override_types(overrides)
-    return overrides
-
-
-def _merge_config_with_payload(
-    payload: dict[str, Any], *, config: ServerConfig
-) -> ServerConfig:
-    overrides = _extract_override_payload(payload)
-    effective_config = replace(config, **overrides) if overrides else config
-    enabled_backends = [
-        field_name
-        for field_name in ("use_azure_openai", "use_openrouter", "use_litellm")
-        if getattr(effective_config, field_name)
-    ]
-    if len(enabled_backends) > 1:
-        raise ValueError(
-            "backend selectors cannot be combined: " + ", ".join(enabled_backends)
-        )
-    return effective_config
-
-
-def _cache_key(config: ServerConfig) -> tuple[tuple[str, Any], ...]:
-    return tuple(
-        (field_name, getattr(config, field_name))
-        for field_name in _RERANKER_CACHE_FIELDS
-    )
-
-
 def initialize_reranker(
-    config: ServerConfig, effective_config: ServerConfig | None = None
+    config: ServerConfig, effective_config: RerankOptions | None = None
 ) -> Reranker:
     effective_config = effective_config or config
-    cache_key = _cache_key(effective_config)
-    cached = config._reranker_cache.get(cache_key)
-    if cached is not None:
-        return cached
-    reranker = Reranker(
-        Reranker.create_model_coordinator(
-            effective_config.model_path,
-            None,
-            False,
-            batch_size=effective_config.batch_size,
-            context_size=effective_config.context_size,
-            num_gpus=effective_config.num_gpus,
-            prompt_template_path=effective_config.prompt_template_path or None,
-            num_few_shot_examples=effective_config.num_few_shot_examples,
-            few_shot_file=effective_config.few_shot_file or None,
-            shuffle_candidates=effective_config.shuffle_candidates,
-            print_prompts_responses=effective_config.print_prompts_responses,
-            use_azure_openai=effective_config.use_azure_openai,
-            use_openrouter=effective_config.use_openrouter,
-            use_litellm=effective_config.use_litellm,
-            base_url=effective_config.base_url or None,
-            variable_passages=effective_config.variable_passages,
-            num_passes=effective_config.num_passes,
-            window_size=effective_config.window_size,
-            stride=effective_config.stride,
-            system_message=effective_config.system_message,
-            populate_invocations_history=effective_config.populate_invocations_history,
-            is_thinking=effective_config.is_thinking,
-            reasoning_token_budget=effective_config.reasoning_token_budget,
-            reasoning_effort=effective_config.reasoning_effort,
-            use_logits=effective_config.use_logits,
-            use_alpha=effective_config.use_alpha,
-            pointwise_vllm=effective_config.pointwise_vllm,
-            listwise_vllm_with_openai_sdk=effective_config.listwise_vllm_with_openai_sdk,
-            max_passage_words=effective_config.max_passage_words,
+    options = option_values(effective_config)
+    # Output truncation does not change the initialized model.
+    options.pop("top_k_rerank")
+    cache_key = tuple(options.items())
+    if cache_key not in config._reranker_cache:
+        model_path = options.pop("model_path")
+        for name in ("prompt_template_path", "few_shot_file", "base_url"):
+            options[name] = options[name] or None
+        config._reranker_cache[cache_key] = Reranker(
+            Reranker.create_model_coordinator(model_path, None, False, **options)
         )
-    )
-    config._reranker_cache[cache_key] = reranker
-    return reranker
+    return config._reranker_cache[cache_key]
 
 
 def run_rerank_request(
-    payload: dict[str, Any], *, config: ServerConfig
+    payload: dict[str, Any], *, config: ServerConfig, retrieval: bool = False
 ) -> CommandResponse:
-    validation = validate_rerank_payload(payload)
-    if not validation["valid"]:
-        raise ValueError("; ".join(validation["errors"]))
-
-    normalized = normalize_direct_rerank_input(payload)
-    effective_config = _merge_config_with_payload(payload, config=config)
-    reranker = initialize_reranker(config, effective_config)
-    results = run_mcp_rerank(
-        model_path=effective_config.model_path,
-        query_text=normalized["query_text"],
-        query_id=normalized["query_id"],
-        candidates=normalized["candidates"],
-        batch_size=effective_config.batch_size,
-        top_k_rerank=effective_config.top_k_rerank,
-        context_size=effective_config.context_size,
-        num_gpus=effective_config.num_gpus,
-        prompt_template_path=effective_config.prompt_template_path,
-        num_few_shot_examples=effective_config.num_few_shot_examples,
-        few_shot_file=effective_config.few_shot_file,
-        shuffle_candidates=effective_config.shuffle_candidates,
-        print_prompts_responses=effective_config.print_prompts_responses,
-        use_azure_openai=effective_config.use_azure_openai,
-        use_openrouter=effective_config.use_openrouter,
-        use_litellm=effective_config.use_litellm,
-        base_url=effective_config.base_url,
-        variable_passages=effective_config.variable_passages,
-        num_passes=effective_config.num_passes,
-        window_size=effective_config.window_size,
-        stride=effective_config.stride,
-        system_message=effective_config.system_message,
-        populate_invocations_history=effective_config.populate_invocations_history,
-        is_thinking=effective_config.is_thinking,
-        reasoning_token_budget=effective_config.reasoning_token_budget,
-        reasoning_effort=effective_config.reasoning_effort,
-        use_logits=effective_config.use_logits,
-        use_alpha=effective_config.use_alpha,
-        pointwise_vllm=effective_config.pointwise_vllm,
-        listwise_vllm_with_openai_sdk=effective_config.listwise_vllm_with_openai_sdk,
-        max_passage_words=effective_config.max_passage_words,
-        reranker=reranker,
+    options, validation = prepare_rerank_request(
+        payload, defaults=config, retrieval=retrieval
     )
-    return CommandResponse(
+    input_mode = (
+        (
+            "service"
+            if payload.get("retriever_host")
+            else "requests-file"
+            if payload.get("requests_file")
+            else "dataset"
+        )
+        if retrieval
+        else "direct"
+    )
+    response = CommandResponse(
         command="rerank",
         validation=validation,
-        inputs={"mode": "direct", "transport": "http"},
+        inputs={"mode": input_mode, "transport": "http"},
         resolved={
-            "model_path": effective_config.model_path,
-            "input_mode": "direct",
+            "model_path": options.model_path,
+            "input_mode": input_mode,
             "transport": "http",
         },
-        artifacts=[make_data_artifact("rerank-results", serialize_data(results))],
     )
+    reranker = initialize_reranker(config, options)
+    if retrieval:
+        results = run_retrieve_and_rerank(
+            options=options,
+            retrieval=RetrievalOptions(**option_values(payload, RetrievalOptions)),
+            reranker=reranker,
+        )
+    else:
+        results = run_rerank(
+            options=options, **normalize_rerank_input(payload), reranker=reranker
+        )
+    response.artifacts = [make_data_artifact("rerank-results", serialize_data(results))]
+    return response
 
 
 def validation_error_response(message: str) -> CommandResponse:

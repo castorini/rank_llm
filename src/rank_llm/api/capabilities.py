@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-import json
 import platform
 from importlib.util import find_spec
-from pathlib import Path
 from typing import Any
+
+from rank_llm.api.options import request_schema
+from rank_llm.data import (
+    RerankValidationError,
+    normalize_rerank_input,
+    read_requests_from_file,
+)
 
 COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
     "rerank": {
@@ -61,53 +66,8 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
 }
 
 SCHEMAS: dict[str, dict[str, Any]] = {
-    "rerank-direct-input": {
-        "type": "object",
-        "required": ["query", "candidates"],
-        "properties": {
-            "query": {"oneOf": [{"type": "string"}, {"type": "object"}]},
-            "candidates": {"type": "array"},
-            "overrides": {
-                "type": "object",
-                "properties": {
-                    "model_path": {"type": "string"},
-                    "batch_size": {"type": "integer"},
-                    "top_k_rerank": {"type": "integer"},
-                    "context_size": {"type": "integer"},
-                    "num_gpus": {"type": "integer"},
-                    "prompt_template_path": {"type": "string"},
-                    "num_few_shot_examples": {"type": "integer"},
-                    "few_shot_file": {"type": "string"},
-                    "shuffle_candidates": {"type": "boolean"},
-                    "print_prompts_responses": {"type": "boolean"},
-                    "use_azure_openai": {"type": "boolean"},
-                    "use_openrouter": {"type": "boolean"},
-                    "base_url": {"type": "string"},
-                    "variable_passages": {"type": "boolean"},
-                    "num_passes": {"type": "integer"},
-                    "window_size": {"type": "integer"},
-                    "stride": {"type": "integer"},
-                    "system_message": {"type": "string"},
-                    "populate_invocations_history": {"type": "boolean"},
-                    "is_thinking": {"type": "boolean"},
-                    "reasoning_token_budget": {"type": "integer"},
-                    "reasoning_effort": {
-                        "type": "string",
-                        "enum": [
-                            "none",
-                            "minimal",
-                            "low",
-                            "medium",
-                            "high",
-                            "xhigh",
-                        ],
-                    },
-                    "use_logits": {"type": "boolean"},
-                    "use_alpha": {"type": "boolean"},
-                },
-            },
-        },
-    },
+    "rerank-direct-input": request_schema(),
+    "rerank-retrieval-input": request_schema(retrieval=True),
     "rerank-output-record": {
         "type": "object",
         "required": ["query", "candidates"],
@@ -160,44 +120,19 @@ SCHEMAS: dict[str, dict[str, Any]] = {
 
 
 def validate_rerank_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    valid = isinstance(payload, dict) and "query" in payload and "candidates" in payload
-    return {
-        "valid": valid,
-        "record_count": 1 if valid else 0,
-        "errors": [] if valid else ["payload must contain query and candidates"],
-    }
+    try:
+        normalize_rerank_input(payload)
+        return {"valid": True, "record_count": 1, "errors": []}
+    except RerankValidationError as error:
+        return {"valid": False, "record_count": 0, "errors": [str(error)]}
 
 
 def validate_rerank_batch_file(path: str) -> dict[str, Any]:
-    file_path = Path(path)
-    if not file_path.exists():
-        return {
-            "valid": False,
-            "record_count": 0,
-            "errors": [f"missing file: {path}"],
-        }
-
-    record_count = 0
-    with file_path.open("r", encoding="utf-8") as handle:
-        for line_number, line in enumerate(handle, start=1):
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                payload = json.loads(stripped)
-            except json.JSONDecodeError as exc:
-                return {
-                    "valid": False,
-                    "record_count": record_count,
-                    "errors": [
-                        f"invalid JSON on line {line_number}: {exc.msg}",
-                    ],
-                }
-            validation = validate_rerank_payload(payload)
-            if not validation["valid"]:
-                return validation
-            record_count += 1
-    return {"valid": True, "record_count": record_count, "errors": []}
+    try:
+        records = read_requests_from_file(path)
+        return {"valid": True, "record_count": len(records), "errors": []}
+    except (RerankValidationError, OSError) as error:
+        return {"valid": False, "record_count": 0, "errors": [str(error)]}
 
 
 def doctor_report() -> dict[str, Any]:
