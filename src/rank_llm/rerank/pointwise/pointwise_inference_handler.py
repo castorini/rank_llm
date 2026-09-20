@@ -204,7 +204,8 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                     num_examples=num_fewshot_examples, examples=fewshot_examples
                 )
             )
-        fmt_values = {"query": query, "doc_content": doc}
+        template_values = kwargs.get("template_values", {})
+        fmt_values = {"query": query, "doc_content": doc, **template_values}
         body_text = self._format_template(template_key="body", fmt_values=fmt_values)
         user_parts.append(body_text)
         user_content = "".join(user_parts).replace("<unk>", "")
