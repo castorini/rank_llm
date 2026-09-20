@@ -47,18 +47,22 @@ invocation history requires both `populate_invocations_history` and
 `invocations_history_file`. Optional `qrels_file` controls pipeline evaluation;
 single supplied queries skip dataset-topic evaluation.
 
-
 ### Installation
+
+Use a Python 3.12 virtual environment. Run the `pip install -e` commands below
+from the repository root; with uv, use `uv pip install -e` instead.
 
 The base package (`pip install -e .`) includes the CLI and Python library.
 Neither requires server extras. The `api` extra is for the REST server, `mcp`
 is for the MCP server (including HTTP transport), and `server` installs both.
 
-Install `.[vllm]` for the RankZephyr examples and run them on a machine with a
-compatible GPU. Other models may require a different inference extra, such as
-`.[openai]` for hosted OpenAI models.
-Local dataset retrieval requires `.[pyserini]` and JDK 21. Server-side file paths
-refer to the server's filesystem.
+Install `.[vllm]` for RankZephyr and use a supported GPU environment; see the
+[vLLM installation guide](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/)
+for platform and driver requirements. To also run the local dataset and evaluation
+examples, install `.[vllm,pyserini]` and set up JDK 21 separately. Other models may
+require a different inference extra, such as `.[openai]` for hosted OpenAI models.
+See [Pyserini's installation guide](https://github.com/castorini/pyserini/blob/master/docs/installation.md)
+for Java setup. Server-side file paths refer to the server's filesystem.
 
 ## CLI
 
@@ -201,6 +205,10 @@ Install `api` for FastAPI and Uvicorn, together with `vllm` to run RankZephyr:
 pip install -e '.[api,vllm]'
 rank-llm serve http --model-path castorini/rank_zephyr_7b_v1_full --port 8082
 ```
+
+This covers direct reranking and retrieval through an existing Pyserini HTTP
+service. For the local dataset example below, install `.[api,vllm,pyserini]`
+instead and set up JDK 21.
 
 The REST API exposes the two shared operations. Model/reranking options in
 `overrides` replace the startup defaults for that request. Execution is
