@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import math
 from collections.abc import Mapping, Sequence
@@ -197,7 +198,9 @@ class VllmHandlerWithOpenAISDK:
         if any(dep is None for dep in (OpenAI, AsyncOpenAI, AutoTokenizer)):
             raise ImportError("OpenAI-compatible vLLM support requires rank-llm[vllm].")
         sync_client = OpenAI(api_key="EMPTY", base_url=base_url)
+        self._base_url = base_url
         self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=base_url)
+        self._async_client_loop: asyncio.AbstractEventLoop | None = None
 
         if model is None:
             models = sync_client.models.list()
@@ -212,6 +215,23 @@ class VllmHandlerWithOpenAISDK:
         """Return the tokenizer loaded in ``__init__`` (always sync, loop-safe)."""
         return self._tokenizer
 
+    def _async_client_for_current_loop(self) -> Any:
+        """The async client bound to the running event loop.
+
+        Callers drive each batch with ``asyncio.run``, which closes its loop on
+        return. The client's pooled HTTP connections belong to the loop they
+        were opened on, so reusing the client from the next loop fails with
+        "Event loop is closed" whenever a connection is still alive in the
+        pool, i.e. whenever batches arrive faster than the keep-alive expiry.
+        """
+        loop = asyncio.get_running_loop()
+        if self._async_client_loop is None:
+            self._async_client_loop = loop
+        elif self._async_client_loop is not loop:
+            self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
+            self._async_client_loop = loop
+        return self._async_client
+
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
     ) -> tuple[str, str, dict[str, Any]]:
@@ -223,7 +243,7 @@ class VllmHandlerWithOpenAISDK:
         for callers that pass no extras.
         """
         try:
-            response = await self._async_client.chat.completions.create(
+            response = await self._async_client_for_current_loop().chat.completions.create(
                 model=self._model,
                 messages=messages,
                 **kwargs,
@@ -296,7 +316,7 @@ class VllmHandlerWithOpenAISDK:
             }
 
         try:
-            response = await self._async_client.chat.completions.create(
+            response = await self._async_client_for_current_loop().chat.completions.create(
                 model=self._model,
                 messages=messages,
                 **body,

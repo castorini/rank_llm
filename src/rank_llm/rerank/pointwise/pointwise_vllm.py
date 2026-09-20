@@ -167,6 +167,10 @@ class PointwiseVLLM(PointwiseRankLLM):
             add_generation_prompt=True,
             tokenize=True,
         )
+        # transformers>=5 returns a BatchEncoding here by default, whose len()
+        # is its number of keys, not the number of tokens.
+        if not isinstance(ids, list):
+            ids = ids["input_ids"]
         return len(ids)
 
     def _probe_messages(self, result: Result) -> list[dict[str, str]]:
