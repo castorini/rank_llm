@@ -201,6 +201,10 @@ class VllmHandlerWithOpenAISDK:
         self._base_url = base_url
         self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=base_url)
         self._async_client_loop: asyncio.AbstractEventLoop | None = None
+        # Clients retired by a loop change are kept, not dropped: garbage
+        # collection would schedule their aclose() on the closed loop, which
+        # only produces "Task exception was never retrieved" noise.
+        self._retired_async_clients: list[Any] = []
 
         if model is None:
             models = sync_client.models.list()
@@ -228,6 +232,7 @@ class VllmHandlerWithOpenAISDK:
         if self._async_client_loop is None:
             self._async_client_loop = loop
         elif self._async_client_loop is not loop:
+            self._retired_async_clients.append(self._async_client)
             self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
             self._async_client_loop = loop
         return self._async_client
