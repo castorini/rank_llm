@@ -235,6 +235,10 @@ curl -s http://localhost:8082/v1/retrieve-and-rerank \
   }'
 ```
 
+Computed output filenames use each request's dataset, candidate count, shuffle
+setting, and timestamp, including when the server reuses a cached model. Explicit
+output paths are used as provided.
+
 For retrieval through a separate Pyserini HTTP service, supply `retriever_host`.
 See the [Pyserini REST guide](https://github.com/castorini/pyserini/blob/master/docs/usage-rest.md)
 for starting and configuring that service. This mode does not require Pyserini

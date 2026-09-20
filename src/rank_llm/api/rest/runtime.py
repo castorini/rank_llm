@@ -100,6 +100,11 @@ def run_rerank_request(
 
     reranker = initialize_reranker(config, options)
     if retrieval:
+        # Pointwise/pairwise coordinators retain the previous run's output name.
+        # Clear it for each HTTP retrieval request while keeping the model cached.
+        coordinator = reranker.get_model_coordinator()
+        if hasattr(coordinator, "_filename"):
+            coordinator._filename = ""
         results = run_retrieve_and_rerank(
             options=options, retrieval=workflow, reranker=reranker
         )
