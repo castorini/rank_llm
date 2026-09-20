@@ -29,34 +29,7 @@ def run_mcp_server(*, transport: str = "stdio", port: int = 8000):
 
 
 def main(argv=None):
-    if argv is not None:
-        parser = argparse.ArgumentParser(description="MCPyserini Server")
-        parser.add_argument(
-            "--transport",
-            choices=["stdio", "http"],
-            default="stdio",
-            help="Transport mode for the MCP server (default: stdio)",
-        )
-        parser.add_argument(
-            "--port",
-            type=int,
-            default=8000,
-            help="Port number for HTTP transport (default: 8000)",
-        )
-        args = parser.parse_args(argv)
-        return cli_main(
-            [
-                "serve",
-                "mcp",
-                "--transport",
-                args.transport,
-                "--port",
-                str(args.port),
-            ]
-        )
-
-    """Main entry point for the server."""
-
+    """Start the MCP server from explicit arguments or the process command line."""
     parser = argparse.ArgumentParser(description="MCPyserini Server")
     parser.add_argument(
         "--transport",
@@ -72,7 +45,7 @@ def main(argv=None):
         help="Port number for HTTP transport (default: 8000)",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     return cli_main(
         [
