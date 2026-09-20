@@ -4,7 +4,7 @@ import platform
 from importlib.util import find_spec
 from typing import Any
 
-from rank_llm.api.options import request_schema
+from rank_llm.api.options import RetrievalOptions, option_schema
 from rank_llm.data import (
     RerankValidationError,
     normalize_rerank_input,
@@ -64,6 +64,73 @@ COMMAND_DESCRIPTIONS: dict[str, dict[str, Any]] = {
         "inspection_safe": True,
     },
 }
+
+
+def request_schema(*, retrieval: bool = False) -> dict[str, Any]:
+    properties = (
+        option_schema(RetrievalOptions)["properties"]
+        if retrieval
+        else {
+            "query": {
+                "oneOf": [
+                    {"type": "string"},
+                    {
+                        "type": "object",
+                        "required": ["text"],
+                        "properties": {
+                            "text": {"type": "string"},
+                            "qid": {"type": ["string", "integer"]},
+                        },
+                    },
+                ]
+            },
+            "candidates": {
+                "type": "array",
+                "items": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "anyOf": [{"required": ["text"]}, {"required": ["doc"]}],
+                            "properties": {
+                                "text": {"type": "string"},
+                                "doc": {"type": ["string", "object"]},
+                                "docid": {"type": ["string", "integer"]},
+                                "score": {"type": "number"},
+                            },
+                        },
+                    ]
+                },
+            },
+        }
+    )
+    properties["overrides"] = option_schema()
+    schema: dict[str, Any] = {
+        "type": "object",
+        "properties": properties,
+        "additionalProperties": False,
+    }
+    if retrieval:
+        schema["oneOf"] = [
+            {
+                "required": ["dataset"],
+                "properties": {
+                    "dataset": {"minLength": 1},
+                    "requests_file": {"maxLength": 0},
+                },
+            },
+            {
+                "required": ["requests_file"],
+                "properties": {
+                    "requests_file": {"minLength": 1},
+                    "dataset": {"maxLength": 0},
+                },
+            },
+        ]
+    else:
+        schema["required"] = ["query", "candidates"]
+    return schema
+
 
 SCHEMAS: dict[str, dict[str, Any]] = {
     "rerank-direct-input": request_schema(),

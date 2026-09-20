@@ -104,7 +104,13 @@ def normalize_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
             raise RerankValidationError(
                 f"candidate {index} score must be a finite number"
             )
-        candidates.append({"docid": docid, "score": score, "doc": doc})
+        candidates.append(
+            {
+                "docid": docid,
+                "score": score,
+                "doc": {"contents": doc} if isinstance(doc, str) else doc,
+            }
+        )
     return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
 
 
@@ -121,16 +127,7 @@ def read_requests_from_file(file_path: str) -> list[Request]:
         record = normalize_rerank_input(payload)
         return Request(
             query=Query(text=record["query_text"], qid=record["query_id"]),
-            candidates=[
-                Candidate(
-                    docid=c["docid"],
-                    score=c["score"],
-                    doc={"contents": c["doc"]}
-                    if isinstance(c["doc"], str)
-                    else c["doc"],
-                )
-                for c in record["candidates"]
-            ],
+            candidates=[Candidate(**c) for c in record["candidates"]],
         )
 
     with path.open(encoding="utf-8") as handle:

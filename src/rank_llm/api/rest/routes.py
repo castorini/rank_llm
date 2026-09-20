@@ -5,7 +5,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Body
 from fastapi.responses import JSONResponse
 
-from rank_llm.api.options import RerankValidationError, request_schema
+from rank_llm.api.introspection import request_schema
+from rank_llm.data import RerankValidationError
 
 from .runtime import (
     ServerConfig,

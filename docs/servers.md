@@ -157,8 +157,12 @@ HTTP inference settings go in `overrides`; they override the defaults supplied
 at server startup. Retrieval source/workflow fields stay at the top level.
 MCP execution tools accept these same settings as flat arguments. All interfaces
 support LiteLLM, pointwise vLLM, remote listwise vLLM, reasoning effort, and passage
-word limits. Backend selectors cannot be combined. Remote listwise vLLM requires
-`base_url` and cannot be combined with pointwise vLLM.
+word limits. Backend selectors cannot be combined. Pointwise vLLM and remote
+listwise vLLM require `base_url`.
+
+HTTP caches models by their construction settings; changing pass counts, output
+limits, or invocation-history flags reuses the model. CLI JSON mode sends
+pipeline diagnostics to stderr so stdout remains a single JSON response.
 
 All execution requests are validated before retrieval or model initialization.
 HTTP invalid inputs return 400, upstream failures return 502, and unexpected
@@ -177,11 +181,11 @@ The three interfaces live under `rank_llm.api`:
 ```text
 api/
   cli/               # Command parsing and terminal presentation
-  rest/              # FastAPI routes and HTTP model cache
+  rest/              # HTTP request parsing, FastAPI routes, and model cache
   mcp/               # MCP tools and server
   operations.py      # Shared execution accepting option objects
-  options.py         # Option definitions, schemas, and validation
-  capabilities.py    # Published schemas and inspection helpers
+  options.py         # Shared option definitions, argument conversion, and validation
+  introspection.py   # Published schemas and inspection helpers
 ```
 
 Serialization, responses, and error classification also live in `api/` and are

@@ -1,4 +1,3 @@
-import importlib
 import subprocess
 import sys
 import unittest
@@ -9,14 +8,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class TestCLIPackaging(unittest.TestCase):
-    def test_cli_module_imports(self):
-        module = importlib.import_module("rank_llm.api.cli.main")
-        self.assertTrue(callable(module.main))
-
-    def test_server_mcp_module_imports(self):
-        module = importlib.import_module("rank_llm.api.mcp")
-        self.assertIsNotNone(module)
-
     def test_shared_api_and_cli_do_not_import_server_dependencies(self):
         result = subprocess.run(
             [
@@ -33,7 +24,8 @@ builtins.__import__ = without_servers
 import rank_llm.api.cli.main
 import rank_llm.api.operations
 import rank_llm.api.options
-import rank_llm.api.capabilities
+import rank_llm.api.introspection
+import rank_llm.api.mcp.mcp_rankllm
 """,
             ],
             check=False,
@@ -55,6 +47,7 @@ import rank_llm.api.capabilities
         )
         self.assertEqual(help_result.returncode, 0, msg=help_result.stderr)
         self.assertIn("Packaged CLI entrypoint for RankLLM", help_result.stdout)
+        self.assertNotIn("==SUPPRESS==", help_result.stdout)
 
 
 if __name__ == "__main__":

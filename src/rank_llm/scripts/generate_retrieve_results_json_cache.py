@@ -75,7 +75,7 @@ def load_trec_file(file_path, topk=100, qrels=None):
     with open(file_path) as file:
         for line in file:
             qid, _, docid, rank, score, _ = line.strip().split()
-            if type(list(qrels.items())[0][0]) is int:
+            if qrels and type(next(iter(qrels))) is int:
                 qid = int(qid)
             if qrels is not None and qid not in qrels:
                 continue

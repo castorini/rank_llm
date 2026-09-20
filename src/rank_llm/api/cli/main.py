@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from collections.abc import Sequence
 from typing import Any, NoReturn
 
 from rank_llm.api.adapters import make_data_artifact, serialize_data
-from rank_llm.api.capabilities import (
-    COMMAND_DESCRIPTIONS,
-    SCHEMAS,
-    doctor_report,
-    validate_rerank_batch_file,
-    validate_rerank_payload,
-)
 from rank_llm.api.cli.config import load_config
 from rank_llm.api.cli.prompt_view import (
     PromptTemplateError,
@@ -26,6 +20,13 @@ from rank_llm.api.cli.prompt_view import (
 )
 from rank_llm.api.cli.view import ViewError, build_view_summary, render_view_summary
 from rank_llm.api.error_utils import classify_exception, has_partial_success_metrics
+from rank_llm.api.introspection import (
+    COMMAND_DESCRIPTIONS,
+    SCHEMAS,
+    doctor_report,
+    validate_rerank_batch_file,
+    validate_rerank_payload,
+)
 from rank_llm.api.operations import (
     run_evaluate_aggregate,
     run_rerank,
@@ -35,7 +36,6 @@ from rank_llm.api.operations import (
 )
 from rank_llm.api.options import (
     RerankOptions,
-    RerankValidationError,
     RetrievalOptions,
     add_option_arguments,
     option_values,
@@ -44,8 +44,7 @@ from rank_llm.api.options import (
 )
 from rank_llm.api.responses import CommandResponse
 from rank_llm.api.spec import EXIT_CODES, KNOWN_COMMANDS, TOP_LEVEL_EXAMPLES
-from rank_llm.data import normalize_rerank_input
-from rank_llm.retrieve.retrieval_method import RetrievalMethod
+from rank_llm.data import RerankValidationError, normalize_rerank_input
 
 
 class CLIError(Exception):
@@ -255,24 +254,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     retrieve_cache_parser.add_argument("--topk", type=int, default=20)
 
-    for command in KNOWN_COMMANDS:
-        if command == "rerank":
-            continue
-        if command == "validate":
-            continue
-        if command == "prompt":
-            continue
-        if command == "view":
-            continue
-        if command == "describe":
-            continue
-        if command == "schema":
-            continue
-        if command == "doctor":
-            continue
-        if command in {"evaluate", "analyze", "retrieve-cache", "serve"}:
-            continue
-        subparsers.add_parser(command, help=argparse.SUPPRESS)
     return parser
 
 
@@ -378,16 +359,10 @@ def _validate_rerank_sources(args: argparse.Namespace) -> None:
 def _validate_rerank_execution_args(args: argparse.Namespace) -> None:
     try:
         validate_retrieval_options(
-            RetrievalOptions(**option_values(args, RetrievalOptions)), check_file=False
+            RetrievalOptions(**option_values(args, RetrievalOptions)),
+            rerank_options=RerankOptions(**option_values(args)),
+            check_file=False,
         )
-        if (
-            args.requests_file
-            and args.populate_invocations_history
-            and not args.invocations_history_file
-        ):
-            raise RerankValidationError(
-                "invocations_history_file is required when populating request-file history"
-            )
     except RerankValidationError as error:
         raise CLIError(
             str(error),
@@ -474,9 +449,6 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
                 resolved={"model_path": args.model_path, "input_mode": input_mode},
             )
         workflow = option_values(args, RetrievalOptions)
-        workflow["retrieval_method"] = (
-            args.retrieval_method or RetrievalMethod.UNSPECIFIED
-        )
         results = run_retrieve_and_rerank(
             options=RerankOptions(**option_values(args)),
             retrieval=RetrievalOptions(**workflow),
@@ -637,7 +609,6 @@ def _run_evaluate_command(args: argparse.Namespace) -> CommandResponse:
         model_name=args.model_name,
         context_size=args.context_size,
         rerank_results_dirname=args.rerank_results_dirname,
-        capture_stdout=args.output == "json",
     )
     return CommandResponse(
         command="evaluate",
@@ -654,7 +625,6 @@ def _run_analyze_command(args: argparse.Namespace) -> CommandResponse:
     summary = run_response_analysis_files(
         files=args.files,
         verbose=args.verbose,
-        capture_stdout=args.output == "json",
     )
     status = "success"
     exit_code = EXIT_CODES["success"]
@@ -683,7 +653,6 @@ def _run_retrieve_cache_command(args: argparse.Namespace) -> CommandResponse:
         output_file=args.output_file,
         output_trec_file=args.output_trec_file,
         topk=args.topk,
-        capture_stdout=args.output == "json",
     )
     return CommandResponse(
         command="retrieve-cache",
@@ -789,7 +758,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             flag = f"--{key.replace('_', '-')}"
             if not any(arg == flag or arg.startswith(f"{flag}=") for arg in argv):
                 setattr(args, key, value)
-        response = _run_command(args)
+        # Keep diagnostics out of the machine-readable response, including
+        # prints from retrieval and model initialization.
+        output_context = (
+            contextlib.redirect_stdout(sys.stderr)
+            if args.output == "json" and args.command != "serve"
+            else contextlib.nullcontext()
+        )
+        with output_context:
+            response = _run_command(args)
     except CLIError as error:
         response = _build_error_response(error)
         if _wants_json(argv):

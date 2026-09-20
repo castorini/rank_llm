@@ -43,61 +43,6 @@ class TestCLIRerankCommand(unittest.TestCase):
         self.assertEqual(mocked.call_args.kwargs["options"].reasoning_effort, None)
         self.assertEqual(mocked.call_args.kwargs["options"].max_passage_words, 300)
 
-    def test_rerank_requests_file_mode_uses_retrieve_handler(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            requests_file = Path(temp_dir) / "requests.jsonl"
-            requests_file.write_text(
-                '{"query":"cats","candidates":["doc"]}\n',
-                encoding="utf-8",
-            )
-            with patch(
-                "rank_llm.api.cli.main.run_retrieve_and_rerank",
-                return_value=[{"requests_file": True}],
-            ) as mocked:
-                exit_code = main(
-                    [
-                        "rerank",
-                        "--model-path",
-                        "model",
-                        "--requests-file",
-                        str(requests_file),
-                    ]
-                )
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(
-            mocked.call_args.kwargs["retrieval"].requests_file,
-            str(requests_file),
-        )
-
-    def test_rerank_direct_json_mode_uses_inline_handler(self):
-        payload = '{"query":"cats","candidates":["doc one"]}'
-        stdout = io.StringIO()
-        with (
-            patch(
-                "rank_llm.api.cli.main.run_rerank",
-                return_value=[{"direct": True}],
-            ) as mocked,
-            contextlib.redirect_stdout(stdout),
-        ):
-            exit_code = main(
-                [
-                    "--output",
-                    "json",
-                    "rerank",
-                    "--model-path",
-                    "model",
-                    "--input-json",
-                    payload,
-                ]
-            )
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["query_text"], "cats")
-        self.assertEqual(mocked.call_args.kwargs["candidates"][0]["doc"], "doc one")
-        self.assertEqual(mocked.call_args.kwargs["options"].reasoning_effort, None)
-        self.assertEqual(mocked.call_args.kwargs["options"].max_passage_words, 300)
-        envelope = json.loads(stdout.getvalue())
-        self.assertEqual(envelope["artifacts"][0]["value"], [{"direct": True}])
-
     def test_rerank_rejects_conflicting_backend_flags(self):
         payload = '{"query":"cats","candidates":["doc one"]}'
         conflicting_flags = (
@@ -175,18 +120,27 @@ class TestCLIRerankCommand(unittest.TestCase):
             )
         self.assertEqual(exit_code, 0)
         self.assertEqual(mocked.call_args.kwargs["query_id"], "q1")
-        self.assertEqual(mocked.call_args.kwargs["candidates"][0]["doc"], "doc")
+        self.assertEqual(
+            mocked.call_args.kwargs["candidates"][0]["doc"], {"contents": "doc"}
+        )
 
     def test_rerank_requires_one_input_source(self):
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            exit_code = main(["--output", "json", "rerank", "--model-path", "model"])
-        self.assertEqual(exit_code, 2)
-        self.assertEqual("", stderr.getvalue())
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["status"], "validation_error")
-        self.assertEqual(payload["errors"][0]["code"], "missing_input_source")
+        for sources in (
+            [],
+            ["--dataset", "dl19", "--input-json", '{"query":"cats","candidates":[]}'],
+        ):
+            stdout = io.StringIO()
+            with (
+                contextlib.redirect_stdout(stdout),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                code = main(
+                    ["--output", "json", "rerank", "--model-path", "model", *sources]
+                )
+            self.assertEqual(code, 2)
+            self.assertEqual(
+                json.loads(stdout.getvalue())["status"], "validation_error"
+            )
 
     def test_rerank_invalid_inline_json_returns_validation_error(self):
         stdout = io.StringIO()

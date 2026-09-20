@@ -172,14 +172,23 @@ class TestCLILegacyWrappers(unittest.TestCase):
         )
 
     def test_mcp_legacy_entrypoint_delegates_to_serve_mcp(self):
-        with patch("rank_llm.api.mcp.mcp_rankllm.cli_main", return_value=0) as mocked:
-            exit_code = mcp_rankllm.main(["--transport", "http", "--port", "9000"])
-
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(
-            mocked.call_args.args[0],
-            ["serve", "mcp", "--transport", "http", "--port", "9000"],
-        )
+        for argv, expected in (
+            (None, ["--transport", "http", "--port", "9000"]),
+            (
+                ["--transport", "http", "--port", "9000"],
+                ["--transport", "http", "--port", "9000"],
+            ),
+            ([], []),
+        ):
+            with (
+                self.subTest(argv=argv),
+                patch(
+                    "sys.argv", ["rankllm-mcp", "--transport", "http", "--port", "9000"]
+                ),
+                patch.object(mcp_rankllm, "cli_main", return_value=0) as cli,
+            ):
+                self.assertEqual(mcp_rankllm.main(argv), 0)
+                cli.assert_called_once_with(["serve", "mcp", *expected])
 
 
 if __name__ == "__main__":

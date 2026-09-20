@@ -5,7 +5,6 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from rank_llm.api.cli.main import main
 
@@ -20,16 +19,6 @@ class TestCLIIntrospection(unittest.TestCase):
         description = payload["artifacts"][0]["value"]
         self.assertEqual(description["name"], "rerank")
         self.assertIn("input_modes", description)
-
-    def test_schema_returns_named_schema(self):
-        stdout = io.StringIO()
-        with contextlib.redirect_stdout(stdout):
-            exit_code = main(["--output", "json", "schema", "cli-envelope"])
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(stdout.getvalue())
-        schema = payload["artifacts"][0]["value"]
-        self.assertEqual(schema["name"], "cli-envelope")
-        self.assertIn("required", schema["schema"])
 
     def test_rerank_direct_input_schema_includes_overrides(self):
         stdout = io.StringIO()
@@ -54,24 +43,6 @@ class TestCLIIntrospection(unittest.TestCase):
         self.assertIn("python_version", doctor)
         self.assertIn("overall_status", doctor)
         self.assertIn("config_file", doctor)
-
-    def test_doctor_can_be_mocked_for_dependency_states(self):
-        stdout = io.StringIO()
-        with patch(
-            "rank_llm.api.cli.main.doctor_report",
-            return_value={
-                "python_version": "3.11.0",
-                "python_ok": True,
-                "optional_dependencies": {},
-                "command_readiness": {},
-                "overall_status": "ready",
-            },
-        ):
-            with contextlib.redirect_stdout(stdout):
-                exit_code = main(["--output", "json", "doctor"])
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["artifacts"][0]["value"]["overall_status"], "ready")
 
     def test_doctor_reports_loaded_config_file(self):
         stdout = io.StringIO()

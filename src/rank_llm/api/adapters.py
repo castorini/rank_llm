@@ -12,19 +12,9 @@ def make_data_artifact(name: str, value: Any) -> dict[str, Any]:
     }
 
 
-def make_file_artifact(name: str, path: str) -> dict[str, Any]:
-    return {
-        "name": name,
-        "kind": "file",
-        "path": path,
-    }
-
-
 def serialize_data(value: Any) -> Any:
     if dataclasses.is_dataclass(value):
-        return {
-            key: serialize_data(item) for key, item in dataclasses.asdict(value).items()
-        }
+        return dataclasses.asdict(value)
     if isinstance(value, list):
         return [serialize_data(item) for item in value]
     if isinstance(value, dict):

@@ -22,43 +22,21 @@ envelopes: CLI JSON and REST use CommandResponse; MCP execution returns results.
 
 from __future__ import annotations
 
-import contextlib
-import copy
-import io
 from collections.abc import Callable
 from dataclasses import asdict
 from typing import Any
 
 from rank_llm.api.options import (
     RerankOptions,
-    RerankValidationError,
     RetrievalOptions,
     validate_rerank_options,
     validate_retrieval_options,
 )
 from rank_llm.data import Candidate, Query, Request, Result, normalize_rerank_input
-from rank_llm.rerank import IdentityReranker, Reranker
+from rank_llm.rerank import Reranker
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode
 from rank_llm.utils import default_device
-
-
-def _default_retrieve_and_rerank(*args: Any, **kwargs: Any) -> Any:
-    from rank_llm.retrieve_and_rerank import retrieve_and_rerank
-
-    return retrieve_and_rerank(*args, **kwargs)
-
-
-def _run_with_captured_stdout(
-    capture_stdout: bool,
-    runner: Callable[..., Any],
-    *args: Any,
-    **kwargs: Any,
-) -> Any:
-    if not capture_stdout:
-        return runner(*args, **kwargs)
-    with contextlib.redirect_stdout(io.StringIO()):
-        return runner(*args, **kwargs)
 
 
 def run_rerank(
@@ -75,15 +53,12 @@ def run_rerank(
     initializes the model, runs the requested passes, and truncates the results.
     """
     validate_rerank_options(options)
-    kwargs = asdict(options)
+    kwargs = options.to_kwargs()
     normalized = normalize_rerank_input(
         {"query": {"text": query_text, "qid": query_id}, "candidates": candidates}
     )
     candidates = normalized["candidates"]
     del kwargs["model_path"]
-    for name in ("prompt_template_path", "few_shot_file", "base_url"):
-        kwargs[name] = kwargs[name] or None
-    shuffle_candidates = options.shuffle_candidates
 
     if reranker is None:
         reranker = Reranker(
@@ -91,6 +66,7 @@ def run_rerank(
                 options.model_path,
                 None,
                 False,
+                device=default_device(),
                 **kwargs,
             )
         )
@@ -99,49 +75,16 @@ def run_rerank(
     top_k_rerank_effective = (
         top_k_retrieve if options.top_k_rerank == -1 else options.top_k_rerank
     )
-    del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
+    kwargs["top_k_rerank"] = top_k_rerank_effective
     requests = [
         Request(
             query=Query(text=query_text, qid=query_id),
-            candidates=[
-                Candidate(
-                    docid=c["docid"],
-                    score=c["score"],
-                    doc={"contents": c["doc"]}
-                    if isinstance(c["doc"], str)
-                    else c["doc"],
-                )
-                for c in candidates
-            ],
+            candidates=[Candidate(**c) for c in candidates],
         )
     ]
-    if reranker.get_model_coordinator() is None:
-        shuffle_candidates = options.model_path == "rank_random"
-        rerank_results = IdentityReranker().rerank_batch(
-            requests,
-            rank_end=top_k_retrieve,
-            shuffle_candidates=shuffle_candidates,
-        )
-    else:
-        for _ in range(options.num_passes):
-            rerank_results = reranker.rerank_batch(
-                requests,
-                rank_end=top_k_retrieve,
-                rank_start=0,
-                shuffle_candidates=shuffle_candidates,
-                logging=options.print_prompts_responses,
-                top_k_retrieve=top_k_retrieve,
-                **kwargs,
-            )
-            if options.num_passes > 1:
-                requests = [
-                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                    for r in rerank_results
-                ]
-
-    for rerank_result in rerank_results:
-        rerank_result.candidates = rerank_result.candidates[:top_k_rerank_effective]
-    return rerank_results
+    return reranker.rerank_passes(
+        requests, model_path=options.model_path, top_k_retrieve=top_k_retrieve, **kwargs
+    )
 
 
 def run_retrieve_and_rerank(
@@ -149,9 +92,9 @@ def run_retrieve_and_rerank(
     options: RerankOptions,
     retrieval: RetrievalOptions,
     reranker: Reranker | None = None,
-    runner: Callable[..., Any] = _default_retrieve_and_rerank,
+    runner: Callable[..., Any] | None = None,
     device_resolver: Callable[[], str] = default_device,
-) -> list[Result] | Any:
+) -> list[Result]:
     """Run dataset, file, or HTTP-service retrieval and reranking for all interfaces.
 
     Translate the option objects to pipeline arguments. The existing retrieval
@@ -159,17 +102,9 @@ def run_retrieve_and_rerank(
     REST's model cache.
     """
     validate_rerank_options(options)
-    validate_retrieval_options(retrieval)
-    if (
-        retrieval.requests_file
-        and options.populate_invocations_history
-        and not retrieval.invocations_history_file
-    ):
-        raise RerankValidationError(
-            "invocations_history_file is required when populating request-file history"
-        )
+    validate_retrieval_options(retrieval, rerank_options=options)
     method = RetrievalMethod(retrieval.retrieval_method or "unspecified")
-    kwargs = {**asdict(options), **asdict(retrieval)}
+    kwargs = {**options.to_kwargs(), **asdict(retrieval)}
     kwargs["qid"] = kwargs.pop("query_id")
     kwargs["top_k_retrieve"] = kwargs.pop("top_k_candidates")
     kwargs["top_k_rerank"] = (
@@ -187,8 +122,10 @@ def run_retrieve_and_rerank(
     kwargs["max_queries"] = (
         retrieval.max_queries if retrieval.max_queries >= 0 else None
     )
-    for name in ("prompt_template_path", "few_shot_file", "base_url"):
-        kwargs[name] = kwargs[name] or None
+    if runner is None:
+        from rank_llm.retrieve_and_rerank import retrieve_and_rerank
+
+        runner = retrieve_and_rerank
     return runner(**kwargs, reranker=reranker, device=device_resolver())
 
 
@@ -197,27 +134,22 @@ def run_evaluate_aggregate(
     model_name: str,
     context_size: int = 4096,
     rerank_results_dirname: str = "rerank_results",
-    runner: Callable[[Any], Any] | None = None,
-    capture_stdout: bool = False,
+    runner: Callable[[str, int, str], Any] | None = None,
 ) -> dict[str, Any]:
     """Support CLI ``evaluate``; no REST route or RankLLM MCP tool exposes this."""
     if runner is None:
         from argparse import Namespace
+
+        from rank_llm.scripts.run_trec_eval import evaluate_aggregate
 
         args = Namespace(
             model_name=model_name,
             context_size=context_size,
             rerank_results_dirname=rerank_results_dirname,
         )
-        _run_with_captured_stdout(capture_stdout, runner, args)
+        evaluate_aggregate(args)
     else:
-        _run_with_captured_stdout(
-            capture_stdout,
-            runner,
-            model_name,
-            context_size,
-            rerank_results_dirname,
-        )
+        runner(model_name, context_size, rerank_results_dirname)
     return {
         "model_name": model_name,
         "context_size": context_size,
@@ -231,22 +163,19 @@ def run_response_analysis_files(
     files: list[str],
     verbose: bool = False,
     runner: Callable[..., Any] | None = None,
-    capture_stdout: bool = False,
 ) -> dict[str, Any]:
     """Support CLI ``analyze``; no REST route or RankLLM MCP tool exposes this."""
     if runner is None:
         from rank_llm.analysis.response_analysis import ResponseAnalyzer
 
         runner = ResponseAnalyzer.from_stored_files
-        analyzer = _run_with_captured_stdout(capture_stdout, runner, files)
+        analyzer = runner(files)
         return {
             "files": files,
             "verbose": verbose,
-            "metrics": _run_with_captured_stdout(
-                capture_stdout, analyzer.count_errors, verbose
-            ),
+            "metrics": analyzer.count_errors(verbose),
         }
-    return _run_with_captured_stdout(capture_stdout, runner, files, verbose)
+    return runner(files, verbose)
 
 
 def run_retrieve_cache_generation(
@@ -259,7 +188,6 @@ def run_retrieve_cache_generation(
     topk: int = 20,
     generator: Callable[..., Any] | None = None,
     writer: Callable[[str, Any], None] | None = None,
-    capture_stdout: bool = False,
 ) -> dict[str, Any]:
     """Support CLI ``retrieve-cache``; no REST route or RankLLM MCP tool exposes this."""
     if generator is None or writer is None:
@@ -268,18 +196,16 @@ def run_retrieve_cache_generation(
             write_output_file,
         )
 
-        generator = generate_retrieve_results
-        writer = write_output_file
-    results = _run_with_captured_stdout(
-        capture_stdout,
-        generator,
+        generator = generator or generate_retrieve_results
+        writer = writer or write_output_file
+    results = generator(
         trec_file,
         collection_file,
         query_file,
         topk,
         output_trec_file,
     )
-    _run_with_captured_stdout(capture_stdout, writer, output_file, results)
+    writer(output_file, results)
     return {
         "trec_file": trec_file,
         "collection_file": collection_file,

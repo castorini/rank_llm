@@ -1,4 +1,3 @@
-import copy
 import os
 from pathlib import Path
 from typing import Any
@@ -6,7 +5,7 @@ from typing import Any
 from huggingface_hub import hf_hub_download
 
 from rank_llm.data import DataWriter, Query, Request, read_requests_from_file
-from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
+from rank_llm.rerank import RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
     TOPICS,
@@ -76,36 +75,16 @@ def retrieve_and_rerank(
 
     # Reranking stages
     print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
-    if reranker.get_model_coordinator() is None:
-        # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
-        shuffle_candidates = True if model_path == "rank_random" else False
-        rerank_results = IdentityReranker().rerank_batch(
-            requests,
-            rank_end=top_k_retrieve,
-            shuffle_candidates=shuffle_candidates,
-        )
-    else:
-        # Reranker is of type RankLLM
-        for pass_ct in range(num_passes):
-            print(f"Pass {pass_ct + 1} of {num_passes}:")
-            rerank_results = reranker.rerank_batch(
-                requests,
-                rank_end=top_k_retrieve,
-                rank_start=0,
-                shuffle_candidates=shuffle_candidates,
-                logging=print_prompts_responses,
-                top_k_retrieve=top_k_retrieve,
-                **kwargs,
-            )
-
-            if num_passes > 1:
-                requests = [
-                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                    for r in rerank_results
-                ]
-
-    for rr in rerank_results:
-        rr.candidates = rr.candidates[:top_k_rerank]
+    rerank_results = reranker.rerank_passes(
+        requests,
+        model_path=model_path,
+        top_k_retrieve=top_k_retrieve,
+        top_k_rerank=top_k_rerank,
+        num_passes=num_passes,
+        shuffle_candidates=shuffle_candidates,
+        print_prompts_responses=print_prompts_responses,
+        **kwargs,
+    )
 
     # generate trec_eval file & evaluate for named datasets only
     if isinstance(dataset, str) and reranker.get_model_coordinator() is not None:
@@ -114,7 +93,7 @@ def retrieve_and_rerank(
             rerank_results,
             shuffle_candidates,
             top_k_candidates=top_k_retrieve,
-            pass_ct=None if num_passes == 1 else pass_ct,
+            pass_ct=None if num_passes == 1 else num_passes - 1,
             window_size=kwargs.get("window_size", None),
             dataset_name=dataset,
             output_trec_file=kwargs.get("output_trec_file") or None,

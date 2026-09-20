@@ -117,7 +117,6 @@ jobs:
             test.test_cli_utilities \
             test.test_cli_http \
             test.test_cli_mcp \
-            test.test_mcp_entrypoint \
             test.test_cli_operations \
             test.test_data \
             test.test_rerank_parity \

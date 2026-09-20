@@ -1,197 +1,103 @@
 import contextlib
 import io
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from rank_llm.api import operations
 from rank_llm.api.cli.main import main
 
 
 class TestCLIUtilities(unittest.TestCase):
-    def test_evaluate_command_emits_summary_envelope(self):
-        stdout = io.StringIO()
-        with (
-            patch(
-                "rank_llm.api.cli.main.run_evaluate_aggregate",
-                return_value={
-                    "output_file": "trec_eval_aggregated_results_model.jsonl"
-                },
-            ) as mocked,
-            contextlib.redirect_stdout(stdout),
-        ):
-            exit_code = main(
-                [
-                    "--output",
-                    "json",
-                    "evaluate",
-                    "--model-name",
-                    "model",
-                ]
-            )
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["model_name"], "model")
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["command"], "evaluate")
-        self.assertEqual(
-            payload["artifacts"][0]["value"]["output_file"],
-            "trec_eval_aggregated_results_model.jsonl",
+    def setUp(self):
+        directory = self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(contextlib.chdir(directory))
+        self.enterContext(
+            patch("rank_llm.api.cli.main.load_config", return_value=({}, None))
         )
 
-    def test_evaluate_json_output_suppresses_runner_stdout(self):
+    def run_cli(self, *args):
         stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = main(["--output", "json", *args])
+        self.assertEqual(code, 0, stdout.getvalue() + stderr.getvalue())
+        return json.loads(stdout.getvalue())["artifacts"][0]["value"]
 
-        def noisy_runner(model_name, context_size, rerank_results_dirname):
-            print("diagnostic output")
-            return None
+    def test_evaluate_aggregates_run_files(self):
+        directory = Path("runs/BM25")
+        directory.mkdir(parents=True)
+        run = directory / "model_2048_20_dl19.trec"
+        run.write_text("q1 Q0 d1 1 1.0 rank_llm\n")
+        # Only the external trec_eval invocation is mocked.
+        with patch(
+            "rank_llm.scripts.run_trec_eval.EvalFunction.eval",
+            return_value="metric 1.0",
+        ) as evaluate:
+            summary = self.run_cli(
+                "evaluate",
+                "--model-name",
+                "model",
+                "--context-size",
+                "2048",
+                "--rerank-results-dirname",
+                "runs",
+            )
+        result = json.loads(Path(summary["output_file"]).read_text())
+        self.assertEqual(result["file"], str(run))
+        self.assertEqual(len(result["result"]), 4)
+        self.assertEqual(evaluate.call_args.args[0][-1], str(run))
 
-        with (
-            patch(
-                "rank_llm.api.cli.main.run_evaluate_aggregate",
-                side_effect=lambda **kwargs: operations.run_evaluate_aggregate(
-                    runner=noisy_runner, **kwargs
-                ),
-            ),
-            contextlib.redirect_stdout(stdout),
-        ):
-            exit_code = main(["--output", "json", "evaluate", "--model-name", "model"])
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["command"], "evaluate")
-        self.assertNotIn("diagnostic output", stdout.getvalue())
-
-    def test_analyze_command_emits_summary_envelope(self):
-        stdout = io.StringIO()
-        with (
-            patch(
-                "rank_llm.api.cli.main.run_response_analysis_files",
-                return_value={"files": ["one.json"], "metrics": {"errors": 0}},
-            ) as mocked,
-            contextlib.redirect_stdout(stdout),
-        ):
-            exit_code = main(
+    def test_analyze_reads_invocation_history(self):
+        Path("history.json").write_text(
+            json.dumps(
                 [
-                    "--output",
-                    "json",
-                    "analyze",
-                    "--files",
-                    "one.json",
-                    "two.json",
-                    "--verbose",
+                    {
+                        "invocations_history": [
+                            {
+                                "prompt": "[1] passage",
+                                "response": "[1]",
+                                "output_validation_regex": repr(r"\[\d+\]"),
+                                "output_extraction_regex": repr(r"\[(\d+)\]"),
+                            }
+                        ]
+                    }
                 ]
             )
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["files"], ["one.json", "two.json"])
-        self.assertTrue(mocked.call_args.kwargs["verbose"])
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["command"], "analyze")
-        self.assertEqual(payload["artifacts"][0]["value"]["metrics"]["errors"], 0)
+        )
+        summary = self.run_cli("analyze", "--files", "history.json", "--verbose")
+        self.assertEqual(
+            summary["metrics"],
+            {"ok": 1, "wrong_format": 0, "repetition": 0, "missing_documents": 0},
+        )
 
-    def test_analyze_json_output_suppresses_verbose_stdout(self):
-        stdout = io.StringIO()
-
-        def noisy_runner(files, verbose):
-            print("bad record")
-            return {"files": files, "metrics": {"errors": 1}}
-
-        with (
-            patch(
-                "rank_llm.api.cli.main.run_response_analysis_files",
-                side_effect=lambda **kwargs: operations.run_response_analysis_files(
-                    runner=noisy_runner, **kwargs
-                ),
-            ),
-            contextlib.redirect_stdout(stdout),
-        ):
-            exit_code = main(
-                [
-                    "--output",
-                    "json",
-                    "analyze",
-                    "--files",
-                    "one.json",
-                    "--verbose",
-                ]
-            )
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["command"], "analyze")
-        self.assertNotIn("bad record", stdout.getvalue())
-
-    def test_retrieve_cache_command_emits_summary_envelope(self):
-        stdout = io.StringIO()
-        with (
-            patch(
-                "rank_llm.api.cli.main.run_retrieve_cache_generation",
-                return_value={"output_file": "cache.json", "record_count": 2},
-            ) as mocked,
-            contextlib.redirect_stdout(stdout),
-        ):
-            exit_code = main(
-                [
-                    "--output",
-                    "json",
-                    "retrieve-cache",
-                    "--trec-file",
-                    "run.trec",
-                    "--collection-file",
-                    "collection.tsv",
-                    "--query-file",
-                    "queries.tsv",
-                    "--output-file",
-                    "cache.json",
-                    "--topk",
-                    "10",
-                ]
-            )
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(mocked.call_args.kwargs["trec_file"], "run.trec")
-        self.assertEqual(mocked.call_args.kwargs["topk"], 10)
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["command"], "retrieve-cache")
-        self.assertEqual(payload["artifacts"][0]["value"]["record_count"], 2)
-
-    def test_retrieve_cache_json_output_suppresses_generator_stdout(self):
-        stdout = io.StringIO()
-
-        def noisy_generator(*args):
-            print("loaded queries")
-            return [{"query": "cats"}]
-
-        def noisy_writer(output_file, results):
-            print(f"wrote {output_file}")
-
-        with (
-            patch(
-                "rank_llm.api.cli.main.run_retrieve_cache_generation",
-                side_effect=lambda **kwargs: operations.run_retrieve_cache_generation(
-                    generator=noisy_generator,
-                    writer=noisy_writer,
-                    **kwargs,
-                ),
-            ),
-            contextlib.redirect_stdout(stdout),
-        ):
-            exit_code = main(
-                [
-                    "--output",
-                    "json",
-                    "retrieve-cache",
-                    "--trec-file",
-                    "run.trec",
-                    "--collection-file",
-                    "collection.tsv",
-                    "--query-file",
-                    "queries.tsv",
-                    "--output-file",
-                    "cache.json",
-                ]
-            )
-        self.assertEqual(exit_code, 0)
-        payload = json.loads(stdout.getvalue())
-        self.assertEqual(payload["command"], "retrieve-cache")
-        self.assertNotIn("loaded queries", stdout.getvalue())
-        self.assertNotIn("wrote cache.json", stdout.getvalue())
+    def test_retrieve_cache_reads_local_files_and_writes_outputs(self):
+        Path("queries.tsv").write_text("q1\tcats\n")
+        Path("collection.tsv").write_text("d1\tfirst passage\nd2\tsecond passage\n")
+        Path("run.trec").write_text(
+            "q1 Q0 d1 1 2.0 rank_llm\nq1 Q0 d2 2 1.0 rank_llm\n"
+        )
+        summary = self.run_cli(
+            "retrieve-cache",
+            "--trec-file",
+            "run.trec",
+            "--collection-file",
+            "collection.tsv",
+            "--query-file",
+            "queries.tsv",
+            "--output-file",
+            "cache.json",
+            "--output-trec-file",
+            "cache.trec",
+            "--topk",
+            "1",
+        )
+        results = json.loads(Path("cache.json").read_text())
+        self.assertEqual(summary["record_count"], 1)
+        self.assertEqual(results[0]["query"], "cats")
+        self.assertEqual([h["content"] for h in results[0]["hits"]], ["first passage"])
+        self.assertEqual(Path("cache.trec").read_text(), "q1 Q0 d1 1 2.0 run_id\n")
 
 
 if __name__ == "__main__":

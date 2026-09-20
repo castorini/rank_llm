@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
+from threading import Lock
 from typing import Any
 
 from rank_llm.api.adapters import make_data_artifact, serialize_data
@@ -9,13 +10,16 @@ from rank_llm.api.operations import run_rerank, run_retrieve_and_rerank
 from rank_llm.api.options import (
     RerankOptions,
     RetrievalOptions,
-    normalize_rerank_input,
     option_values,
-    prepare_rerank_request,
+    validate_option_values,
+    validate_rerank_options,
+    validate_retrieval_options,
 )
 from rank_llm.api.responses import CommandResponse
 from rank_llm.api.spec import EXIT_CODES
+from rank_llm.data import RerankValidationError, normalize_rerank_input
 from rank_llm.rerank import Reranker
+from rank_llm.utils import default_device
 
 
 @dataclass
@@ -26,43 +30,82 @@ class ServerConfig(RerankOptions):
         default_factory=dict, init=False, repr=False
     )
 
+    _cache_lock: Any = field(default_factory=Lock, init=False, repr=False)
+
 
 def initialize_reranker(
     config: ServerConfig, effective_config: RerankOptions | None = None
 ) -> Reranker:
     effective_config = effective_config or config
-    options = option_values(effective_config)
-    # Output truncation does not change the initialized model.
-    options.pop("top_k_rerank")
+    options = effective_config.to_kwargs()
+    # These settings affect execution/output, not model construction.
+    for name in (
+        "top_k_rerank",
+        "num_passes",
+        "shuffle_candidates",
+        "print_prompts_responses",
+        "populate_invocations_history",
+    ):
+        options.pop(name)
     cache_key = tuple(options.items())
-    if cache_key not in config._reranker_cache:
-        model_path = options.pop("model_path")
-        for name in ("prompt_template_path", "few_shot_file", "base_url"):
-            options[name] = options[name] or None
-        config._reranker_cache[cache_key] = Reranker(
-            Reranker.create_model_coordinator(model_path, None, False, **options)
-        )
-    return config._reranker_cache[cache_key]
+    with config._cache_lock:
+        if cache_key not in config._reranker_cache:
+            model_path = options.pop("model_path")
+            config._reranker_cache[cache_key] = Reranker(
+                Reranker.create_model_coordinator(
+                    model_path, None, False, device=default_device(), **options
+                )
+            )
+        return config._reranker_cache[cache_key]
 
 
 def run_rerank_request(
     payload: dict[str, Any], *, config: ServerConfig, retrieval: bool = False
 ) -> CommandResponse:
-    options, validation = prepare_rerank_request(
-        payload, defaults=config, retrieval=retrieval
+    if not isinstance(payload, dict):
+        raise RerankValidationError("payload must be an object")
+    allowed = (
+        {f.name for f in fields(RetrievalOptions)}
+        if retrieval
+        else {"query", "candidates"}
     )
-    input_mode = (
-        (
+    unknown = sorted(set(payload) - allowed - {"overrides"})
+    if unknown:
+        raise RerankValidationError(
+            "unsupported request field(s): " + ", ".join(unknown)
+        )
+    overrides = payload.get("overrides", {})
+    if not isinstance(overrides, dict):
+        raise RerankValidationError("overrides must be an object when provided")
+    try:
+        validate_option_values(overrides)
+    except RerankValidationError as error:
+        raise RerankValidationError(f"override {error}") from error
+    options = RerankOptions(**{**option_values(config), **overrides})
+    validate_rerank_options(options)
+    if retrieval:
+        workflow = RetrievalOptions(**option_values(payload, RetrievalOptions))
+        validation = validate_retrieval_options(workflow, rerank_options=options)
+        input_mode = (
             "service"
-            if payload.get("retriever_host")
+            if workflow.retriever_host
             else "requests-file"
-            if payload.get("requests_file")
+            if workflow.requests_file
             else "dataset"
         )
-        if retrieval
-        else "direct"
-    )
-    response = CommandResponse(
+    else:
+        normalized = normalize_rerank_input(payload)
+        validation = {"valid": True, "record_count": 1, "errors": []}
+        input_mode = "direct"
+
+    reranker = initialize_reranker(config, options)
+    if retrieval:
+        results = run_retrieve_and_rerank(
+            options=options, retrieval=workflow, reranker=reranker
+        )
+    else:
+        results = run_rerank(options=options, **normalized, reranker=reranker)
+    return CommandResponse(
         command="rerank",
         validation=validation,
         inputs={"mode": input_mode, "transport": "http"},
@@ -71,20 +114,8 @@ def run_rerank_request(
             "input_mode": input_mode,
             "transport": "http",
         },
+        artifacts=[make_data_artifact("rerank-results", serialize_data(results))],
     )
-    reranker = initialize_reranker(config, options)
-    if retrieval:
-        results = run_retrieve_and_rerank(
-            options=options,
-            retrieval=RetrievalOptions(**option_values(payload, RetrievalOptions)),
-            reranker=reranker,
-        )
-    else:
-        results = run_rerank(
-            options=options, **normalize_rerank_input(payload), reranker=reranker
-        )
-    response.artifacts = [make_data_artifact("rerank-results", serialize_data(results))]
-    return response
 
 
 def validation_error_response(message: str) -> CommandResponse:

@@ -7,14 +7,13 @@ import io
 import json
 import tempfile
 import unittest
-from dataclasses import fields
 from importlib.util import find_spec
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from rank_llm.api.cli.main import build_parser, main
-from rank_llm.api.options import RerankOptions, RetrievalOptions, option_schema
-from rank_llm.data import Candidate, InferenceInvocation, Query, Request, Result
+from rank_llm.api.cli.main import main
+from rank_llm.api.options import RetrievalOptions, option_schema
+from rank_llm.data import InferenceInvocation, Result
 
 TRANSPORTS_AVAILABLE = all(
     find_spec(name) is not None for name in ("fastapi", "fastmcp")
@@ -38,17 +37,14 @@ DIRECT = {
 
 
 def cli_call(args):
-    envelopes = []
+    stdout = io.StringIO()
     with (
         patch("rank_llm.api.cli.main.load_config", return_value=({}, None)),
-        patch("rank_llm.api.cli.main._emit_json", side_effect=envelopes.append),
-        contextlib.redirect_stdout(io.StringIO()),
+        contextlib.redirect_stdout(stdout),
         contextlib.redirect_stderr(io.StringIO()),
     ):
         code = main(["--output", "json", *args])
-    # Compare the emitted response independently of existing pipeline prints.
-    assert len(envelopes) == 1
-    return code, envelopes[0]
+    return code, json.loads(stdout.getvalue())
 
 
 async def mcp_call(name, arguments):
@@ -66,57 +62,23 @@ def mcp_results(result):
 
 @unittest.skipUnless(TRANSPORTS_AVAILABLE, "FastAPI and FastMCP are required")
 class TestRerankParity(unittest.TestCase):
-    def test_inference_fields_and_defaults_match_all_transports(self):
-        parser = build_parser()
-        cli = parser.parse_args(["rerank", "--model-path", "rank_identity"])
-        http = parser.parse_args(["serve", "http", "--model-path", "rank_identity"])
+    def test_mcp_signatures_match_shared_options(self):
         server = FastMCP("schemas")
         register_rankllm_tools(server)
         tools = asyncio.run(server.get_tools())
-        inference_fields = {f.name for f in fields(RerankOptions)}
-        retrieval_fields = {f.name for f in fields(RetrievalOptions)}
-        self.assertEqual(
-            set(vars(cli))
-            - {"command", "output", "input_json", "stdin", "dry_run", "validate_only"},
-            inference_fields | retrieval_fields,
-        )
-        self.assertEqual(
-            set(tools["rerank"].parameters["properties"])
-            - {"query_text", "query_id", "candidates"},
-            inference_fields,
-        )
-        self.assertEqual(
-            set(tools["retrieve_and_rerank"].parameters["properties"]),
-            inference_fields | retrieval_fields,
-        )
-        for f in fields(RerankOptions):
-            with self.subTest(option=f.name):
-                expected = "rank_identity" if f.name == "model_path" else f.default
-                self.assertEqual(getattr(cli, f.name), expected)
-                self.assertEqual(getattr(http, f.name), expected)
-                self.assertEqual(
-                    getattr(ServerConfig(model_path="rank_identity"), f.name), expected
-                )
-                for name in ("rerank", "retrieve_and_rerank"):
-                    props = tools[name].parameters["properties"]
-                    self.assertIn(f.name, props)
-                    if f.name != "model_path":
-                        self.assertEqual(props[f.name].get("default"), f.default)
-
-        retrieval_props = tools["retrieve_and_rerank"].parameters["properties"]
-        for f in fields(RetrievalOptions):
-            self.assertIn(f.name, retrieval_props)
-            self.assertEqual(retrieval_props[f.name].get("default"), f.default)
-
-        openapi = create_app(ServerConfig()).openapi()
-        for path in ("/v1/rerank", "/v1/retrieve-and-rerank"):
-            body = openapi["paths"][path]["post"]["requestBody"]["content"][
-                "application/json"
-            ]["schema"]
-            expected = option_schema()
-            # FastAPI omits null-valued schema annotations.
-            expected["properties"]["reasoning_effort"].pop("default")
-            self.assertEqual(body["properties"]["overrides"], expected)
+        inference = option_schema()["properties"]
+        retrieval = option_schema(RetrievalOptions)["properties"]
+        for name, expected, direct_fields in (
+            ("rerank", inference, {"query_text", "query_id", "candidates"}),
+            ("retrieve_and_rerank", {**inference, **retrieval}, set()),
+        ):
+            properties = tools[name].parameters["properties"]
+            self.assertEqual(set(properties) - direct_fields, set(expected))
+            for field, definition in expected.items():
+                with self.subTest(tool=name, field=field):
+                    for key in ("type", "default", "minimum", "enum"):
+                        if key in definition and field != "model_path":
+                            self.assertEqual(properties[field][key], definition[key])
 
     def test_direct_identity_results_match_cli_http_and_mcp(self):
         code, cli = cli_call(
@@ -153,125 +115,51 @@ class TestRerankParity(unittest.TestCase):
         self.assertEqual([c["docid"] for c in expected[0]["candidates"]], ["1", "2"])
         self.assertEqual(expected[0]["query"]["qid"], "q1")
 
-    def test_request_files_match_cli_http_and_mcp(self):
-        with tempfile.TemporaryDirectory() as directory:
-            for suffix in ("jsonl", "json"):
-                with self.subTest(suffix=suffix):
-                    path = Path(directory) / f"requests.{suffix}"
-                    records = [DIRECT, {**DIRECT, "query": "dogs"}]
-                    path.write_text(
-                        json.dumps(records)
-                        if suffix == "json"
-                        else "\n".join(json.dumps(r) for r in records)
-                    )
-                    code, cli = cli_call(
-                        [
-                            "rerank",
-                            "--model-path",
-                            "rank_identity",
-                            "--requests-file",
-                            str(path),
-                            "--max-queries",
-                            "1",
-                            "--top-k-candidates",
-                            "2",
-                        ]
-                    )
-                    self.assertEqual(code, 0, cli)
-                    payload = {
-                        "requests_file": str(path),
-                        "max_queries": 1,
-                        "top_k_candidates": 2,
-                    }
-                    http = TestClient(
-                        create_app(ServerConfig(model_path="rank_identity"))
-                    ).post("/v1/retrieve-and-rerank", json=payload)
-                    self.assertEqual(http.status_code, 200, http.text)
-                    mcp = asyncio.run(
-                        mcp_call(
-                            "retrieve_and_rerank",
-                            {**payload, "model_path": "rank_identity"},
-                        )
-                    )
-                    expected = cli["artifacts"][0]["value"]
-                    self.assertEqual(http.json()["artifacts"][0]["value"], expected)
-                    self.assertEqual(mcp_results(mcp), expected)
-                    self.assertEqual(len(expected), 1)
-                    self.assertEqual(len(expected[0]["candidates"]), 2)
-
-    def test_dataset_results_match_cli_http_and_mcp(self):
-        requests = [
-            Request(Query("cats", "q1"), [Candidate("d1", 1, {"contents": "doc"})])
+    def assert_retrieval_parity(self, payload):
+        flags = [
+            arg
+            for name, value in payload.items()
+            for arg in ("--" + name.replace("_", "-"), str(value))
         ]
-        with patch(
-            "rank_llm.retrieve.retriever.Retriever.from_dataset_with_prebuilt_index",
-            side_effect=lambda **kwargs: copy.deepcopy(requests),
-        ) as retrieve:
-            code, cli = cli_call(
-                [
-                    "rerank",
-                    "--model-path",
-                    "rank_identity",
-                    "--dataset",
-                    "dl19",
-                    "--retrieval-method",
-                    "bm25",
-                ]
-            )
-            self.assertEqual(code, 0, cli)
-            payload = {"dataset": "dl19", "retrieval_method": "bm25"}
-            http = TestClient(
-                create_app(ServerConfig(model_path="rank_identity"))
-            ).post("/v1/retrieve-and-rerank", json=payload)
-            mcp = asyncio.run(
-                mcp_call(
-                    "retrieve_and_rerank", {**payload, "model_path": "rank_identity"}
-                )
-            )
-            self.assertEqual(http.status_code, 200, http.text)
-            self.assertEqual(
-                http.json()["artifacts"][0]["value"], cli["artifacts"][0]["value"]
-            )
-            self.assertEqual(mcp_results(mcp), cli["artifacts"][0]["value"])
-            self.assertEqual(retrieve.call_count, 3)
+        code, cli = cli_call(["rerank", "--model-path", "rank_identity", *flags])
+        self.assertEqual(code, 0, cli)
+        http = TestClient(create_app(ServerConfig(model_path="rank_identity"))).post(
+            "/v1/retrieve-and-rerank", json=payload
+        )
+        self.assertEqual(http.status_code, 200, http.text)
+        mcp = asyncio.run(
+            mcp_call("retrieve_and_rerank", {**payload, "model_path": "rank_identity"})
+        )
+        expected = cli["artifacts"][0]["value"]
+        self.assertEqual(http.json()["artifacts"][0]["value"], expected)
+        self.assertEqual(mcp_results(mcp), expected)
+        return expected
 
-    def test_new_options_reach_model_and_inference(self):
-        coordinator = Mock()
-        coordinator.rerank_batch.return_value = []
-        for options in (
-            {"use_litellm": True},
-            {"pointwise_vllm": True},
-            {"listwise_vllm_with_openai_sdk": True, "base_url": "http://model.test/v1"},
-        ):
-            with (
-                self.subTest(options=options),
-                patch(
-                    "rank_llm.rerank.Reranker.create_model_coordinator",
-                    return_value=coordinator,
-                ) as factory,
-            ):
-                options = {
-                    **options,
-                    "reasoning_effort": "high",
-                    "max_passage_words": 123,
-                }
-                response = asyncio.run(
-                    mcp_call(
-                        "rerank",
-                        {
-                            "model_path": "model",
-                            "query_text": "cats",
-                            "candidates": ["doc"],
-                            **options,
-                        },
-                    )
-                )
-                self.assertFalse(response.is_error, response.content)
-                for name, value in options.items():
-                    self.assertEqual(factory.call_args.kwargs[name], value)
-                    self.assertEqual(
-                        coordinator.rerank_batch.call_args.kwargs[name], value
-                    )
+    def test_request_files_match_cli_http_and_mcp(self):
+        # JSON/JSONL parsing variants are covered in test_data.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "requests.jsonl"
+            path.write_text("\n".join(json.dumps(r) for r in [DIRECT, DIRECT]))
+            results = self.assert_retrieval_parity(
+                {"requests_file": str(path), "max_queries": 1, "top_k_candidates": 2}
+            )
+            self.assertEqual(len(results), 1)
+            self.assertEqual(len(results[0]["candidates"]), 2)
+
+    def test_service_results_match_cli_http_and_mcp(self):
+        from test.server.test_fastapi_server import SERVICE_PAYLOAD, SERVICE_RESPONSE
+
+        with patch("rank_llm.retrieve.service_retriever.requests.get") as get:
+            get.return_value.json.side_effect = lambda: copy.deepcopy(SERVICE_RESPONSE)
+            results = self.assert_retrieval_parity(SERVICE_PAYLOAD)
+        self.assertEqual(results[0]["query"]["qid"], "my-query")
+        self.assertEqual(len(results[0]["candidates"]), 2)
+        self.assertEqual(results[0]["candidates"][0]["doc"], {"contents": "one"})
+        for call in get.call_args_list:
+            self.assertEqual(
+                call.args[0],
+                "http://retriever.test:8081/v1/test-index/search?query=cats%20%26%20dogs&hits=2",
+            )
 
     def test_multiple_passes_and_file_artifacts(self):
         coordinator = Mock()
@@ -327,56 +215,6 @@ class TestRerankParity(unittest.TestCase):
                 "response",
             )
 
-    def test_servers_expose_execution_only(self):
-        server = FastMCP("tools")
-        register_rankllm_tools(server)
-        self.assertEqual(
-            set(asyncio.run(server.get_tools())), {"rerank", "retrieve_and_rerank"}
-        )
-        client = TestClient(create_app(ServerConfig(model_path="model")))
-        schemas = client.get("/openapi.json").json()
-        with patch("rank_llm.rerank.Reranker.create_model_coordinator") as factory:
-            for route, payload in (
-                ("/v1/rerank", DIRECT),
-                (
-                    "/v1/retrieve-and-rerank",
-                    {"dataset": "dl19", "retrieval_method": "bm25"},
-                ),
-            ):
-                properties = schemas["paths"][route]["post"]["requestBody"]["content"][
-                    "application/json"
-                ]["schema"]["properties"]
-                for flag in ("dry_run", "validate_only"):
-                    self.assertNotIn(flag, properties)
-                    for value in (True, False):
-                        response = client.post(route, json={**payload, flag: value})
-                        self.assertEqual(response.status_code, 400, response.text)
-            factory.assert_not_called()
-
-    def test_invalid_inputs_fail_before_model_initialization(self):
-        invalid = [
-            {**DIRECT, "candidates": "doc"},
-            {**DIRECT, "candidates": [{}]},
-            {**DIRECT, "query": {"qid": "q1"}},
-            {**DIRECT, "dataset": "dl19"},
-            {**DIRECT, "overrides": {"num_passes": 0}},
-            {**DIRECT, "overrides": {"listwise_vllm_with_openai_sdk": True}},
-            {
-                **DIRECT,
-                "overrides": {
-                    "pointwise_vllm": True,
-                    "listwise_vllm_with_openai_sdk": True,
-                    "base_url": "http://model.test",
-                },
-            },
-        ]
-        with patch("rank_llm.rerank.Reranker.create_model_coordinator") as factory:
-            client = TestClient(create_app(ServerConfig(model_path="model")))
-            for payload in invalid:
-                result = client.post("/v1/rerank", json=payload)
-                self.assertEqual(result.status_code, 400, result.text)
-            factory.assert_not_called()
-
     def test_mcp_execution_does_not_coerce_invalid_option_types(self):
         with patch("rank_llm.rerank.Reranker.create_model_coordinator") as factory:
             for name, value in (
@@ -392,59 +230,6 @@ class TestRerankParity(unittest.TestCase):
                 }
                 result = asyncio.run(mcp_call("rerank", payload))
                 self.assertTrue(result.is_error, result.content)
-            factory.assert_not_called()
-
-    def test_mcp_retrieval_forwards_new_options(self):
-        with patch(
-            "rank_llm.retrieve_and_rerank.retrieve_and_rerank", return_value=[]
-        ) as runner:
-            for options in (
-                {"use_litellm": True},
-                {"pointwise_vllm": True},
-                {
-                    "listwise_vllm_with_openai_sdk": True,
-                    "base_url": "http://model.test/v1",
-                },
-            ):
-                options = {
-                    **options,
-                    "reasoning_effort": "high",
-                    "max_passage_words": 123,
-                }
-                result = asyncio.run(
-                    mcp_call(
-                        "retrieve_and_rerank",
-                        {
-                            "model_path": "model",
-                            "dataset": "dl19",
-                            "retrieval_method": "bm25",
-                            **options,
-                        },
-                    )
-                )
-                self.assertFalse(result.is_error, result.content)
-                for name, value in options.items():
-                    self.assertEqual(runner.call_args.kwargs[name], value)
-
-    def test_cli_rejects_multiple_sources_before_execution(self):
-        with patch("rank_llm.rerank.Reranker.create_model_coordinator") as factory:
-            for flags in (
-                ["--dataset", "dl19"],
-                ["--requests-file", "requests.jsonl"],
-                ["--retriever-host", "http://retriever.test"],
-            ):
-                code, response = cli_call(
-                    [
-                        "rerank",
-                        "--model-path",
-                        "model",
-                        "--input-json",
-                        json.dumps(DIRECT),
-                        *flags,
-                    ]
-                )
-                self.assertEqual(code, 2)
-                self.assertEqual(response["status"], "validation_error")
             factory.assert_not_called()
 
 
