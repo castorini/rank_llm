@@ -190,6 +190,10 @@ class VllmHandlerWithOpenAISDK:
     running (e.g. building ``RankListwiseOSLLM`` from inside an async task).
     """
 
+    MAX_ATTEMPTS = 3
+    RETRY_BACKOFF_S = 0.5
+
+
     def __init__(
         self,
         base_url: str,
@@ -237,6 +241,25 @@ class VllmHandlerWithOpenAISDK:
             self._async_client_loop = loop
         return self._async_client
 
+    async def _create_with_retry(self, *, messages: list[dict[str, str]], **body: Any) -> Any:
+        """One chat completion, retried on transient failures.
+
+        A batch fans out ~100 concurrent requests; a dropped connection on any
+        one of them used to fail that candidate silently, and a caller that
+        treats a failed call as a failed batch loses the whole rerank.
+        """
+        for attempt in range(self.MAX_ATTEMPTS):
+            try:
+                return await self._async_client_for_current_loop().chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    **body,
+                )
+            except Exception:
+                if attempt + 1 == self.MAX_ATTEMPTS:
+                    raise
+                await asyncio.sleep(self.RETRY_BACKOFF_S * (attempt + 1))
+
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
     ) -> tuple[str, str, dict[str, Any]]:
@@ -248,11 +271,7 @@ class VllmHandlerWithOpenAISDK:
         for callers that pass no extras.
         """
         try:
-            response = await self._async_client_for_current_loop().chat.completions.create(
-                model=self._model,
-                messages=messages,
-                **kwargs,
-            )
+            response = await self._create_with_retry(messages=messages, **kwargs)
             text = response.choices[0].message.content
             reasoning = response.choices[0].message.reasoning
             usage = response.usage.model_dump(mode="json")
@@ -321,11 +340,7 @@ class VllmHandlerWithOpenAISDK:
             }
 
         try:
-            response = await self._async_client_for_current_loop().chat.completions.create(
-                model=self._model,
-                messages=messages,
-                **body,
-            )
+            response = await self._create_with_retry(messages=messages, **body)
         except Exception as e:
             print(f"Error during async score inference: {e}")
             return str(e), 0, -1.0, {}
