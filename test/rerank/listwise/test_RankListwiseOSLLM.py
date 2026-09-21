@@ -195,6 +195,18 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertTrue(hasattr(model_coordinator, "_vllm_handler"))
         self.assertIsNone(model_coordinator._base_url)
 
+    def test_stride_greater_than_window_size_raises_value_error(self):
+        with self.assertRaisesRegex(
+            ValueError, "stride must satisfy 0 < stride <= window_size"
+        ):
+            RankListwiseOSLLM(
+                model="castorini/rank_zephyr_7b_v1_full",
+                window_size=5,
+                stride=6,
+            )
+
+        self.mock_vllm_handler_class.assert_not_called()
+
     def test_close_delegates_to_vllm_handler(self):
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
@@ -293,6 +305,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
+            stride=3,
             system_message="",
         )
 
@@ -312,6 +325,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
+            stride=3,
             system_message="",
         )
 
@@ -341,6 +355,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
+            stride=3,
             system_message="",
             device="cpu",
         )
@@ -371,6 +386,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             num_few_shot_examples=0,
             variable_passages=True,
             window_size=5,
+            stride=3,
             system_message="",
             device="cpu",
         )
