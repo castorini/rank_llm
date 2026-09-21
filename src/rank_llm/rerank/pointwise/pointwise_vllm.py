@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import copy
 import logging
 from collections.abc import Sequence
@@ -49,6 +50,17 @@ DEFAULT_POSITIVE_TOKENS: tuple[str, ...] = POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS
 DEFAULT_NEGATIVE_TOKENS: tuple[str, ...] = POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS
 # vLLM's default --max-logprobs: the most top logprobs a request may ask for.
 VLLM_DEFAULT_MAX_LOGPROBS = 20
+
+
+async def _aclose(handler: Any) -> None:
+    """Await the handler's aclose() when it has one (the OpenAI-SDK handler
+    does; test doubles and other handlers may not)."""
+    aclose = getattr(handler, "aclose", None)
+    if aclose is None:
+        return
+    result = aclose()
+    if inspect.isawaitable(result):
+        await result
 
 
 class PointwiseVLLM(PointwiseRankLLM):
@@ -263,7 +275,10 @@ class PointwiseVLLM(PointwiseRankLLM):
             raise TypeError("PointwiseVLLM expects chat messages (list of dicts).")
 
         async def _one() -> tuple[str, int, float, dict[str, Any]]:
-            return await self._score_one_async(prompt, use_sem=False)
+            try:
+                return await self._score_one_async(prompt, use_sem=False)
+            finally:
+                await _aclose(self._vllm)
 
         text, out_tok, score, _usage = asyncio.run(_one())
         return text, out_tok, score
@@ -278,9 +293,14 @@ class PointwiseVLLM(PointwiseRankLLM):
             raise TypeError("PointwiseVLLM batch expects chat message lists.")
 
         async def _all() -> list[tuple[str, int, float, dict[str, Any]]]:
-            return await asyncio.gather(
-                *[self._score_one_async(m, use_sem=False) for m in messages_list]
-            )
+            try:
+                return await asyncio.gather(
+                    *[self._score_one_async(m, use_sem=False) for m in messages_list]
+                )
+            finally:
+                # This loop ends with asyncio.run; release the client's
+                # connections on it rather than leaking them.
+                await _aclose(self._vllm)
 
         rows = asyncio.run(_all())
         texts, out_counts, scores = [], [], []

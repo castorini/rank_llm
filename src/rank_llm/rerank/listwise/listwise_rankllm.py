@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import copy
 import logging
 import math
@@ -523,16 +524,25 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
 
         async def _run() -> list[Result]:
-            return await self._sliding_windows_batched_async(
-                requests,
-                rank_start,
-                rank_end,
-                top_k_retrieve,
-                shuffle_candidates,
-                logging,
-                populate_invocations_history,
-                isolate_llm_slots=True,
-            )
+            try:
+                return await self._sliding_windows_batched_async(
+                    requests,
+                    rank_start,
+                    rank_end,
+                    top_k_retrieve,
+                    shuffle_candidates,
+                    logging,
+                    populate_invocations_history,
+                    isolate_llm_slots=True,
+                )
+            finally:
+                # The loop ends with asyncio.run below; an OpenAI-SDK handler
+                # must release its connections on it (see its aclose()).
+                aclose = getattr(getattr(self, "_vllm_handler", None), "aclose", None)
+                if aclose is not None:
+                    result = aclose()
+                    if inspect.isawaitable(result):
+                        await result
 
         return asyncio.run(_run())
 

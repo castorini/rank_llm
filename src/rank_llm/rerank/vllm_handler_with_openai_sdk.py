@@ -205,10 +205,6 @@ class VllmHandlerWithOpenAISDK:
         self._base_url = base_url
         self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=base_url)
         self._async_client_loop: asyncio.AbstractEventLoop | None = None
-        # Clients retired by a loop change are kept, not dropped: garbage
-        # collection would schedule their aclose() on the closed loop, which
-        # only produces "Task exception was never retrieved" noise.
-        self._retired_async_clients: list[Any] = []
 
         if model is None:
             models = sync_client.models.list()
@@ -233,13 +229,32 @@ class VllmHandlerWithOpenAISDK:
         pool, i.e. whenever batches arrive faster than the keep-alive expiry.
         """
         loop = asyncio.get_running_loop()
-        if self._async_client_loop is None:
+        if self._async_client is None:
+            self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
+            self._async_client_loop = loop
+        elif self._async_client_loop is None:
             self._async_client_loop = loop
         elif self._async_client_loop is not loop:
-            self._retired_async_clients.append(self._async_client)
+            # The previous loop is gone without aclose() having been awaited on
+            # it; the old client's sockets are released by garbage collection.
             self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
             self._async_client_loop = loop
         return self._async_client
+
+    async def aclose(self) -> None:
+        """Release the async client's pooled connections.
+
+        Await this on the loop the client was used on, before that loop ends:
+        a client that outlives its loop can neither be closed nor reused, and
+        keeping it referenced pins ~100 sockets per batch until the process
+        runs out of file descriptors. The next batch opens a fresh client.
+        """
+        client, self._async_client, self._async_client_loop = self._async_client, None, None
+        if client is not None:
+            try:
+                await client.close()
+            except Exception:
+                pass
 
     async def _create_with_retry(self, *, messages: list[dict[str, str]], **body: Any) -> Any:
         """One chat completion, retried on transient failures.
