@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import math
+import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -273,7 +274,7 @@ class VllmHandlerWithOpenAISDK:
             except Exception:
                 if attempt + 1 == self.MAX_ATTEMPTS:
                     raise
-                await asyncio.sleep(self.RETRY_BACKOFF_S * (attempt + 1))
+                await asyncio.sleep(self.RETRY_BACKOFF_S * 2**attempt * (0.5 + random.random()))
 
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
