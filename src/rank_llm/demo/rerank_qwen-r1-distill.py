@@ -177,6 +177,9 @@ def main():
     )
     args = p.parse_args()
 
+    if args.num_queries is not None and args.num_queries <= 0:
+        p.error("--num-queries must be a positive integer")
+
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
     if args.num_queries is not None:
         requests = requests[: args.num_queries]
