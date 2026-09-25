@@ -1,5 +1,7 @@
+import argparse
 import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 from dacite import from_dict
@@ -11,6 +13,11 @@ sys.path.append(parent)
 
 from rank_llm.data import DataWriter, Request
 from rank_llm.rerank.listwise import VicunaReranker, ZephyrReranker
+
+DEFAULT_MODELS = {
+    "zephyr": "castorini/rank_zephyr_7b_v1_full",
+    "vicuna": "castorini/rank_vicuna_7b_v1",
+}
 
 request_dict = {
     "query": {"text": "how long is life cycle of flea", "qid": "264014"},
@@ -73,28 +80,102 @@ request_dict = {
         },
     ],
 }
-request = from_dict(data_class=Request, data=request_dict)
 
-kwargs = {"populate_invocations_history": True}
-reranker = ZephyrReranker()
-try:
-    rerank_results = reranker.rerank(request=request, **kwargs)
-finally:
-    # vLLM runs the engine in a subprocess; close it before loading another model.
-    reranker.close()
 
-reranker = VicunaReranker()
-try:
-    rerank_results = reranker.rerank(request=request, **kwargs)
-finally:
-    reranker.close()
-print(rerank_results)
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Rerank a fixed set of inline passages with RankZephyr or RankVicuna."
+    )
+    parser.add_argument(
+        "--rerankers",
+        choices=tuple(DEFAULT_MODELS),
+        nargs="+",
+        default=("zephyr", "vicuna"),
+        help="Rerankers to run in order (default: zephyr vicuna).",
+    )
+    parser.add_argument(
+        "--zephyr-model",
+        default=DEFAULT_MODELS["zephyr"],
+        help=f"RankZephyr model ID (default: {DEFAULT_MODELS['zephyr']}).",
+    )
+    parser.add_argument(
+        "--vicuna-model",
+        default=DEFAULT_MODELS["vicuna"],
+        help=f"RankVicuna model ID (default: {DEFAULT_MODELS['vicuna']}).",
+    )
+    parser.add_argument(
+        "--k",
+        type=int,
+        default=len(request_dict["candidates"]),
+        help="Number of inline candidates to rerank (default: all).",
+    )
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--context-size", type=int, default=4096)
+    parser.add_argument("--window-size", type=int, default=20)
+    parser.add_argument("--stride", type=int, default=10)
+    parser.add_argument("--num-gpus", type=int, default=1)
+    parser.add_argument("--device", default=None)
+    parser.add_argument(
+        "--output-dir",
+        default="demo_outputs/inline_hits",
+        help="Base output directory; each reranker writes to its own model directory.",
+    )
+    parser.add_argument(
+        "--populate-invocations-history",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    return parser
 
-# write rerank results
-writer = DataWriter(rerank_results)
-Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
-writer.write_in_jsonl_format("demo_outputs/rerank_results.jsonl")
-writer.write_in_trec_eval_format("demo_outputs/rerank_results.txt")
-writer.write_inference_invocations_history(
-    "demo_outputs/inference_invocations_history.json"
-)
+
+def _make_reranker(name: str, args: argparse.Namespace):
+    model_path = args.zephyr_model if name == "zephyr" else args.vicuna_model
+    reranker_class = ZephyrReranker if name == "zephyr" else VicunaReranker
+    return model_path, reranker_class(
+        model_path=model_path,
+        context_size=args.context_size,
+        window_size=args.window_size,
+        stride=args.stride,
+        batch_size=args.batch_size,
+        num_gpus=args.num_gpus,
+        device=args.device,
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    if not 1 <= args.k <= len(request_dict["candidates"]):
+        parser.error(f"--k must be between 1 and {len(request_dict['candidates'])}")
+    if not 0 < args.stride <= args.window_size:
+        parser.error("--stride must be greater than 0 and no larger than --window-size")
+
+    for name in args.rerankers:
+        request = from_dict(data_class=Request, data=request_dict)
+        request.candidates = request.candidates[: args.k]
+        model_path, reranker = _make_reranker(name, args)
+        try:
+            rerank_results = reranker.rerank(
+                request=request,
+                rank_end=args.k,
+                top_k_retrieve=args.k,
+                populate_invocations_history=args.populate_invocations_history,
+            )
+        finally:
+            # vLLM runs the engine in a subprocess; close it before another model.
+            reranker.close()
+
+        print(f"{name} results: {rerank_results}")
+        out_path = Path(args.output_dir) / model_path.split("/")[-1].lower()
+        out_path.mkdir(parents=True, exist_ok=True)
+        writer = DataWriter(rerank_results)
+        writer.write_in_jsonl_format(str(out_path / "rerank.jsonl"))
+        writer.write_in_trec_eval_format(str(out_path / "rerank.txt"))
+        if args.populate_invocations_history:
+            writer.write_inference_invocations_history(
+                str(out_path / "invocations.json")
+            )
+
+
+if __name__ == "__main__":
+    main()
