@@ -3,7 +3,7 @@ import io
 import json
 import unittest
 
-from rank_llm.cli.main import main
+from rank_llm.api.cli.main import main
 
 
 class TestCLIPrompt(unittest.TestCase):
@@ -58,6 +58,26 @@ class TestCLIPrompt(unittest.TestCase):
         text = stdout.getvalue()
         self.assertIn("method: multiturn_listwise", text)
         self.assertIn("[prefix_user]", text)
+
+    def test_prompt_render_does_not_validate_retrieval_metadata(self):
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "--output",
+                    "json",
+                    "prompt",
+                    "render",
+                    "rank_zephyr_template",
+                    "--input-json",
+                    json.dumps(
+                        {"query": "cats", "candidates": ["doc one"], "dataset": "dl19"}
+                    ),
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        messages = json.loads(stdout.getvalue())["artifacts"][0]["value"]["messages"]
+        self.assertIn("[1] doc one", messages[-1]["content"])
 
     def test_prompt_render_invalid_payload_fails(self):
         stdout = io.StringIO()

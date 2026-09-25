@@ -4582,7 +4582,6 @@ all = [
     { name = "faiss-cpu" },
     { name = "fastapi" },
     { name = "fastmcp" },
-    { name = "flask" },
     { name = "google-genai" },
     { name = "litellm" },
     { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
@@ -4600,7 +4599,6 @@ all = [
 ]
 api = [
     { name = "fastapi" },
-    { name = "flask" },
     { name = "uvicorn" },
 ]
 cloud = [
@@ -4652,7 +4650,6 @@ server = [
     { name = "faiss-cpu" },
     { name = "fastapi" },
     { name = "fastmcp" },
-    { name = "flask" },
     { name = "openai" },
     { name = "pandas" },
     { name = "pyserini" },
@@ -4698,7 +4695,6 @@ requires-dist = [
     { name = "faiss-cpu", marker = "extra == 'pyserini'", specifier = ">=1.8.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.0" },
     { name = "fastmcp", marker = "extra == 'mcp'", specifier = ">=2.0,<3" },
-    { name = "flask", marker = "extra == 'api'", specifier = ">=3.0.0" },
     { name = "ftfy", specifier = ">=6.2.0" },
     { name = "google-genai", marker = "extra == 'genai'", specifier = ">=1.0.0" },
     { name = "huggingface-hub", specifier = ">=0.23.0" },

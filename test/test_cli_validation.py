@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from rank_llm.cli.main import main
+from rank_llm.api.cli.main import main
 
 
 class TestCLIValidation(unittest.TestCase):
@@ -109,7 +109,7 @@ class TestCLIValidation(unittest.TestCase):
         self.assertIn("invalid JSON on line 1", payload["errors"][0]["message"])
 
     def test_dry_run_does_not_execute_reranker(self):
-        with patch("rank_llm.cli.main.run_mcp_retrieve_and_rerank") as mocked:
+        with patch("rank_llm.api.cli.main.run_retrieve_and_rerank") as mocked:
             exit_code = main(
                 [
                     "rerank",
@@ -126,7 +126,7 @@ class TestCLIValidation(unittest.TestCase):
         mocked.assert_not_called()
 
     def test_validate_only_returns_without_execution(self):
-        with patch("rank_llm.cli.main.run_mcp_rerank") as mocked:
+        with patch("rank_llm.api.cli.main.run_rerank") as mocked:
             stdout = io.StringIO()
             with contextlib.redirect_stdout(stdout):
                 exit_code = main(

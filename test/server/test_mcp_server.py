@@ -13,7 +13,7 @@ from rank_llm.retrieve import RetrievalMethod
 
 def _make_mcp_server():
     """Build a MCP server with RankLLM tools."""
-    from rank_llm.server.mcp.tools import register_rankllm_tools
+    from rank_llm.api.mcp.tools import register_rankllm_tools
 
     mcp = FastMCP("rankllm")
     register_rankllm_tools(mcp)
