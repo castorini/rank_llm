@@ -1,5 +1,9 @@
+import os
 import unittest
 from unittest.mock import patch
+
+if os.environ.get("RANK_LLM_RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest("retrieve and rerank integration requires explicit opt-in")
 
 from rank_llm.retrieve_and_rerank import retrieve_and_rerank
 

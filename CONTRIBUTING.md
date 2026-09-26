@@ -16,6 +16,29 @@ RankLLM Contribution flow
 6. Run from the root directory the unit tests with `uv run python -m unittest discover test`
 7. Update the `pyproject.toml` if applicable
 
+### Integration tests
+
+The ordinary unit test command skips tests that download prebuilt Pyserini
+indexes, contact a retrieval service, or load GPU models. The mocked retrieval
+parsing tests still run. To run an integration module, opt in explicitly:
+
+```bash
+RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.retrieve.test_PyseriniRetriever
+RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.retrieve.test_ServiceRetriever
+RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.test_retrieve_and_rerank
+RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.server.test_flask_server
+RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.server.test_mcp_server
+```
+
+The Pyserini module needs the `pyserini` extra, JDK 21, and disk space for
+prebuilt indexes. The service retriever, retrieve and rerank, and Flask modules
+need a Pyserini REST service at `localhost:8081`; their reranking paths also
+load model weights and need suitable GPU resources. The MCP module starts an
+HTTP server and loads a Pyserini index and a Qwen model through vLLM, so it
+also needs JDK 21, model downloads, and a suitable GPU. Set the opt-in variable
+only for the selected module, since setting it for the full discovery command
+runs every integration test.
+
 ## Suggested PR Description
 
 Use the following shape for PR descriptions so reviews stay consistent:

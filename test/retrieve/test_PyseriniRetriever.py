@@ -1,5 +1,9 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
+
+if os.environ.get("RANK_LLM_RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest("Pyserini index integration requires explicit opt-in")
 
 from dacite import from_dict
 

@@ -1,4 +1,8 @@
+import os
 import unittest
+
+if os.environ.get("RANK_LLM_RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest("retrieval service integration requires explicit opt-in")
 
 from rank_llm.data import Candidate, Query, Request
 from rank_llm.retrieve import RetrievalMethod, RetrievalMode, ServiceRetriever

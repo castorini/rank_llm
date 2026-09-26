@@ -1,7 +1,11 @@
+import os
 import unittest
 from unittest.mock import patch
 
-from rank_llm.api.server import create_app
+if os.environ.get("RANK_LLM_RUN_INTEGRATION_TESTS") != "1":
+    raise unittest.SkipTest("Flask server integration requires explicit opt-in")
+
+from rank_llm.server.flask.api import create_app
 
 # Needs Pyserini API to be active at 8081
 
