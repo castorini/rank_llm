@@ -347,6 +347,10 @@ python src/rank_llm/scripts/run_rank_llm.py  --model_path=gemini-3-flash-preview
     --retrieval_method=SPLADE++_EnsembleDistil_ONNX --prompt_template_path=src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml  --context_size=4096
 ```
 
+Gemini inference retries HTTP 408, 429, and 5xx errors up to three total attempts,
+rotating through configured API keys between attempts. Other errors, including
+invalid credentials and model names, are raised immediately.
+
 <a id="model-zoo"></a>
 # 🦙🐧 Model Zoo
 

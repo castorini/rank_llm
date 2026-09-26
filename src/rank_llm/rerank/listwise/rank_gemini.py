@@ -11,10 +11,14 @@ from .listwise_rankllm import ListwiseRankLLM
 
 try:
     from google import genai
-    from google.genai import types
+    from google.genai import errors, types
 except ImportError:
     genai = None
+    errors = None
     types = None
+
+
+_MAX_INFERENCE_ATTEMPTS = 3
 
 
 def populate_generation_config(**kwargs) -> dict[str, Any]:
@@ -162,7 +166,7 @@ class SafeGenai(ListwiseRankLLM):
         pass
 
     def _call_inference(self, messages, return_text=False) -> str | dict[str, Any]:
-        while True:
+        for attempt in range(_MAX_INFERENCE_ATTEMPTS):
             try:
                 if isinstance(messages, list):
                     history = messages[:-1]
@@ -181,18 +185,20 @@ class SafeGenai(ListwiseRankLLM):
                         contents=messages,
                         config=self._request_config,
                     )
-                break
-            except Exception as e:
-                print("Error in completion call")
-                print(str(e))
-                # TODO: do not retry for some of the deterministic failures.
+                return completion.text if return_text else completion
+            except Exception as exc:
+                # The SDK reports service failures as APIError. Other exceptions,
+                # including invalid requests and client-side bugs, should surface.
+                if (
+                    errors is None
+                    or not isinstance(exc, errors.APIError)
+                    or not (exc.code in (408, 429) or 500 <= exc.code < 600)
+                    or attempt == _MAX_INFERENCE_ATTEMPTS - 1
+                ):
+                    raise
                 self._cur_key_id = (self._cur_key_id + 1) % len(self._keys)
                 self._set_client()
                 time.sleep(1.0)
-
-        if return_text:
-            return completion.text
-        return completion
 
     def run_llm(
         self,
