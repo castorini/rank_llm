@@ -65,8 +65,37 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         "type": "object",
         "required": ["query", "candidates"],
         "properties": {
-            "query": {"oneOf": [{"type": "string"}, {"type": "object"}]},
-            "candidates": {"type": "array"},
+            "query": {
+                "oneOf": [
+                    {"type": "string"},
+                    {
+                        "type": "object",
+                        "required": ["text"],
+                        "properties": {
+                            "text": {"type": "string"},
+                            "qid": {"type": ["string", "integer"]},
+                        },
+                    },
+                ]
+            },
+            "candidates": {
+                "type": "array",
+                "items": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "anyOf": [{"required": ["text"]}, {"required": ["doc"]}],
+                            "properties": {
+                                "text": {"type": "string"},
+                                "doc": {"type": ["string", "object"]},
+                                "docid": {"type": ["string", "integer"]},
+                                "score": {"type": "number"},
+                            },
+                        },
+                    ]
+                },
+            },
             "overrides": {
                 "type": "object",
                 "properties": {
@@ -159,12 +188,55 @@ SCHEMAS: dict[str, dict[str, Any]] = {
 }
 
 
-def validate_rerank_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    valid = isinstance(payload, dict) and "query" in payload and "candidates" in payload
+def validate_rerank_payload(payload: Any) -> dict[str, Any]:
+    errors: list[str] = []
+    if not isinstance(payload, dict):
+        errors.append("payload must be an object")
+    else:
+        query = payload.get("query")
+        if isinstance(query, dict):
+            if not isinstance(query.get("text"), str):
+                errors.append("query.text must be a string")
+            if "qid" in query and (
+                isinstance(query["qid"], bool)
+                or not isinstance(query["qid"], str | int)
+            ):
+                errors.append("query.qid must be a string or integer")
+        elif not isinstance(query, str):
+            errors.append("query must be a string or an object with text")
+
+        candidates = payload.get("candidates")
+        if not isinstance(candidates, list):
+            errors.append("candidates must be an array")
+        else:
+            for index, candidate in enumerate(candidates):
+                if isinstance(candidate, str):
+                    continue
+                label = f"candidates[{index}]"
+                if not isinstance(candidate, dict):
+                    errors.append(f"{label} must be a string or object")
+                    continue
+                if "text" in candidate:
+                    if not isinstance(candidate["text"], str):
+                        errors.append(f"{label}.text must be a string")
+                elif not isinstance(candidate.get("doc"), str | dict):
+                    errors.append(f"{label}.doc must be a string or object")
+                if "docid" in candidate and (
+                    isinstance(candidate["docid"], bool)
+                    or not isinstance(candidate["docid"], str | int)
+                ):
+                    errors.append(f"{label}.docid must be a string or integer")
+                if "score" in candidate and (
+                    isinstance(candidate["score"], bool)
+                    or not isinstance(candidate["score"], int | float)
+                ):
+                    errors.append(f"{label}.score must be a number")
+
+    valid = not errors
     return {
         "valid": valid,
         "record_count": 1 if valid else 0,
-        "errors": [] if valid else ["payload must contain query and candidates"],
+        "errors": errors,
     }
 
 
