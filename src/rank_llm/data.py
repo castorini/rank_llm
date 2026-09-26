@@ -40,7 +40,7 @@ class InferenceInvocation:
 class Result:
     query: Query
     candidates: list[Candidate] = field(default_factory=list)
-    invocations_history: list[InferenceInvocation] = (field(default_factory=list),)
+    invocations_history: list[InferenceInvocation] = field(default_factory=list)
 
 
 @dataclass

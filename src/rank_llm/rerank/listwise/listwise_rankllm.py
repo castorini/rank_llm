@@ -158,8 +158,12 @@ class ListwiseRankLLM(RankLLM, ABC):
                         permutation,
                         in_token_count,
                         out_token_count,
-                        self._inference_handler.template["output_validation_regex"],
-                        self._inference_handler.template["output_extraction_regex"],
+                        output_validation_regex=self._inference_handler.template[
+                            "output_validation_regex"
+                        ],
+                        output_extraction_regex=self._inference_handler.template[
+                            "output_extraction_regex"
+                        ],
                     )
                 )
         else:
@@ -234,8 +238,12 @@ class ListwiseRankLLM(RankLLM, ABC):
                     permutation,
                     in_token_count,
                     out_token_count,
-                    self._inference_handler.template["output_validation_regex"],
-                    self._inference_handler.template["output_extraction_regex"],
+                    output_validation_regex=self._inference_handler.template[
+                        "output_validation_regex"
+                    ],
+                    output_extraction_regex=self._inference_handler.template[
+                        "output_extraction_regex"
+                    ],
                 )
                 result.invocations_history.append(inference_invocation)
         else:
