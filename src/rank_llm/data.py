@@ -100,7 +100,8 @@ class DataWriter:
         if self._append:
             try:
                 with open(filename) as f:
-                    existing = json.load(f)
+                    contents = f.read()
+                    existing = json.loads(contents) if contents.strip() else []
             except FileNotFoundError:
                 existing = []
             if not isinstance(existing, list):

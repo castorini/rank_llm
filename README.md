@@ -235,7 +235,8 @@ writer.write_inference_invocations_history(
 
 To add results to an existing file, use `DataWriter(results, append=True)`.
 For `write_in_json_format` and `write_inference_invocations_history`, the file
-must contain a JSON array; the writer adds the new records to that array.
+must contain a JSON array or be empty; the writer adds the new records to that
+array or starts a new one.
 JSONL and TREC output append lines as usual.
 
 # End-to-end Run and 2CR

@@ -63,6 +63,20 @@ class TestDataWriterAppend(unittest.TestCase):
             json.loads(self.filename.read_text())[0]["query"]["qid"], "first"
         )
 
+    def test_append_treats_empty_existing_file_as_new_array(self):
+        for contents in ("", " \n\t"):
+            for write_method in (
+                "write_in_json_format",
+                "write_inference_invocations_history",
+            ):
+                with self.subTest(contents=contents, write_method=write_method):
+                    self.filename.write_text(contents)
+                    writer = DataWriter(_result("first"), append=True)
+                    getattr(writer, write_method)(str(self.filename))
+                    records = json.loads(self.filename.read_text())
+                    self.assertEqual(len(records), 1)
+                    self.assertEqual(records[0]["query"]["qid"], "first")
+
     def test_append_rejects_non_array_json_without_modifying_file(self):
         original = '{"query": "existing"}'
         self.filename.write_text(original)
