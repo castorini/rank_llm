@@ -5,8 +5,8 @@ import os
 import warnings
 from collections.abc import Sequence
 
-from rank_llm.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
-from rank_llm.cli.main import main as cli_main
+from rank_llm.api.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
+from rank_llm.api.cli.main import main as cli_main
 
 # Force spawn method to avoid "Cannot re-initialize CUDA in forked subprocess" error.
 os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"

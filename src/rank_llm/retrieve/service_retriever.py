@@ -62,7 +62,7 @@ class ServiceRetriever:
 
         # Pyserini's REST API takes the index as a path segment and accepts
         # only "query" and "hits".
-        url = f"{host}/v1/{dataset}/search?query={parse.quote(request.query.text)}&hits={str(k)}"
+        url = f"{host.rstrip('/')}/v1/{parse.quote(dataset, safe='')}/search?query={parse.quote(request.query.text)}&hits={str(k)}"
         print(url)
         try:
             response = requests.get(url, timeout=timeout)
@@ -72,25 +72,30 @@ class ServiceRetriever:
                 f"Failed to retrieve data from Pyserini server: {str(e)}"
             ) from e
 
-        data = response.json()
-        # The response carries only the query text, so the qid comes from the
-        # original request.
-        retrieved_results = Request(
-            query=Query(text=data["query"]["text"], qid=request.query.qid)
-        )
-
-        for candidate in data["candidates"]:
-            # A single-field document comes back as a plain string (or null),
-            # while downstream prompt construction expects doc["contents"].
-            doc = candidate["doc"]
-            if not isinstance(doc, dict):
-                doc = {"contents": doc if doc is not None else ""}
-            retrieved_results.candidates.append(
-                Candidate(
-                    docid=candidate["docid"],
-                    score=candidate["score"],
-                    doc=doc,
-                )
+        try:
+            data = response.json()
+            # The response carries only the query text, so the qid comes from the
+            # original request.
+            retrieved_results = Request(
+                query=Query(text=data["query"]["text"], qid=request.query.qid)
             )
+
+            for candidate in data["candidates"]:
+                # A single-field document comes back as a plain string (or null),
+                # while downstream prompt construction expects doc["contents"].
+                doc = candidate["doc"]
+                if not isinstance(doc, dict):
+                    doc = {"contents": doc if doc is not None else ""}
+                retrieved_results.candidates.append(
+                    Candidate(
+                        docid=candidate["docid"],
+                        score=candidate["score"],
+                        doc=doc,
+                    )
+                )
+        except (KeyError, TypeError, ValueError) as error:
+            raise requests.exceptions.RequestException(
+                f"Invalid response from Pyserini server: {error}"
+            ) from error
 
         return retrieved_results

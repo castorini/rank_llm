@@ -1,16 +1,15 @@
 import argparse
 import unittest
 import warnings
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
+from rank_llm.api.mcp import mcp_rankllm
 from rank_llm.scripts import (
     generate_retrieve_results_json_cache,
     run_rank_llm,
     run_response_analysis,
     run_trec_eval,
 )
-from rank_llm.server.flask import api as flask_api
-from rank_llm.server.mcp import mcp_rankllm
 
 
 class TestCLILegacyWrappers(unittest.TestCase):
@@ -172,33 +171,24 @@ class TestCLILegacyWrappers(unittest.TestCase):
             ],
         )
 
-    def test_flask_legacy_entrypoint_runs_flask_app(self):
-        app = Mock()
-        with patch(
-            "rank_llm.server.flask.api.create_app",
-            return_value=(app, 8082),
-        ) as mocked:
-            exit_code = flask_api.main(["--model", "rank_zephyr", "--port", "8082"])
-
-        self.assertEqual(exit_code, 0)
-        mocked.assert_called_once_with("rank_zephyr", 8082, False)
-        app.run.assert_called_once_with(
-            host="0.0.0.0",
-            port=8082,
-            debug=False,
-        )
-
     def test_mcp_legacy_entrypoint_delegates_to_serve_mcp(self):
-        with patch(
-            "rank_llm.server.mcp.mcp_rankllm.cli_main", return_value=0
-        ) as mocked:
-            exit_code = mcp_rankllm.main(["--transport", "http", "--port", "9000"])
-
-        self.assertEqual(exit_code, 0)
-        self.assertEqual(
-            mocked.call_args.args[0],
-            ["serve", "mcp", "--transport", "http", "--port", "9000"],
-        )
+        for argv, expected in (
+            (None, ["--transport", "http", "--port", "9000"]),
+            (
+                ["--transport", "http", "--port", "9000"],
+                ["--transport", "http", "--port", "9000"],
+            ),
+            ([], []),
+        ):
+            with (
+                self.subTest(argv=argv),
+                patch(
+                    "sys.argv", ["rankllm-mcp", "--transport", "http", "--port", "9000"]
+                ),
+                patch.object(mcp_rankllm, "cli_main", return_value=0) as cli,
+            ):
+                self.assertEqual(mcp_rankllm.main(argv), 0)
+                cli.assert_called_once_with(["serve", "mcp", *expected])
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+import copy
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ from rank_llm.rerank.api_keys import (
     get_openai_api_key,
     get_openrouter_api_key,
 )
+from rank_llm.rerank.identity_reranker import IdentityReranker
 from rank_llm.rerank.rankllm import RankLLM
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
@@ -49,6 +51,47 @@ class Reranker:
         return self._model_coordinator.rerank_batch(
             requests, rank_start, rank_end, shuffle_candidates, logging, **kwargs
         )
+
+    def rerank_passes(
+        self,
+        requests: list[Request],
+        *,
+        model_path: str,
+        top_k_retrieve: int,
+        top_k_rerank: int,
+        num_passes: int = 1,
+        shuffle_candidates: bool = False,
+        print_prompts_responses: bool = False,
+        **kwargs: Any,
+    ) -> list[Result]:
+        """Apply repeated reranking, then truncate once after the final pass."""
+        if num_passes < 1:
+            raise ValueError("num_passes must be at least 1")
+        if self.get_model_coordinator() is None:
+            results = IdentityReranker().rerank_batch(
+                requests,
+                rank_end=top_k_retrieve,
+                shuffle_candidates=model_path == "rank_random",
+            )
+        else:
+            for pass_index in range(num_passes):
+                results = self.rerank_batch(
+                    requests,
+                    rank_end=top_k_retrieve,
+                    rank_start=0,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=print_prompts_responses,
+                    top_k_retrieve=top_k_retrieve,
+                    **kwargs,
+                )
+                if pass_index + 1 < num_passes:
+                    requests = [
+                        Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                        for r in results
+                    ]
+        for result in results:
+            result.candidates = result.candidates[:top_k_rerank]
+        return results
 
     async def rerank_batch_async(
         self,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from rank_llm.cli.spec import EXIT_CODES
+from rank_llm.api.spec import EXIT_CODES
 
 _PROVIDER_MODULE_TOKENS = (
     "openai",

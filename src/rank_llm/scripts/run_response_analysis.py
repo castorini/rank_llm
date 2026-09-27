@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 from collections.abc import Sequence
 
-from rank_llm.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
-from rank_llm.cli.main import main as cli_main
+from rank_llm.api.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
+from rank_llm.api.cli.main import main as cli_main
 
 
 def main(args: argparse.Namespace | Sequence[str] | None = None) -> int:

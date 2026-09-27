@@ -5,8 +5,8 @@ import os
 from argparse import Namespace
 from collections.abc import Sequence
 
-from rank_llm.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
-from rank_llm.cli.main import main as cli_main
+from rank_llm.api.cli.legacy import namespace_to_legacy_argv, translate_legacy_argv
+from rank_llm.api.cli.main import main as cli_main
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.retrieve import TOPICS, RetrievalMethod
 

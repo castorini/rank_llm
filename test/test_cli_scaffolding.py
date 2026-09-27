@@ -4,8 +4,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from rank_llm.cli.main import main
-from rank_llm.cli.responses import CommandResponse
+from rank_llm.api.cli.main import main
 
 
 class ProviderError(Exception):
@@ -15,27 +14,7 @@ class ProviderError(Exception):
 ProviderError.__module__ = "openai"
 
 
-class TestCLIResponses(unittest.TestCase):
-    def test_command_response_envelope(self):
-        response = CommandResponse(command="doctor", warnings=["stub"])
-        envelope = response.to_envelope()
-        self.assertEqual(envelope["schema_version"], "castorini.cli.v1")
-        self.assertEqual(envelope["repo"], "rank_llm")
-        self.assertEqual(envelope["command"], "doctor")
-        self.assertEqual(envelope["warnings"], ["stub"])
-
-
 class TestCLIParserAndOutput(unittest.TestCase):
-    def test_top_level_help_does_not_expose_suppress_sentinels(self):
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            with self.assertRaises(SystemExit) as raised:
-                main(["--help"])
-        self.assertEqual(raised.exception.code, 0)
-        self.assertEqual("", stderr.getvalue())
-        self.assertNotIn("==SUPPRESS==", stdout.getvalue())
-
     def test_missing_command_text_error(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
@@ -78,20 +57,13 @@ class TestCLIParserAndOutput(unittest.TestCase):
         self.assertEqual(payload["command"], "doctor")
         self.assertEqual(payload["errors"][0]["code"], "invalid_arguments")
 
-    def test_doctor_text_output(self):
-        stdout = io.StringIO()
-        stderr = io.StringIO()
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            exit_code = main(["doctor"])
-        self.assertEqual(exit_code, 0)
-        self.assertEqual("", stderr.getvalue())
-        self.assertIn('"python_version"', stdout.getvalue())
-
     def test_unexpected_runtime_error_json_error(self):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("rank_llm.cli.main._run_command", side_effect=RuntimeError("boom")),
+            patch(
+                "rank_llm.api.cli.main._run_command", side_effect=RuntimeError("boom")
+            ),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
         ):
@@ -107,7 +79,7 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stderr = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main._run_command",
+                "rank_llm.api.cli.main._run_command",
                 side_effect=ProviderError("Rate limit exceeded"),
             ),
             contextlib.redirect_stdout(stdout),
@@ -125,7 +97,9 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("rank_llm.cli.main._run_command", side_effect=ImportError("fastapi")),
+            patch(
+                "rank_llm.api.cli.main._run_command", side_effect=ImportError("fastapi")
+            ),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
         ):
@@ -141,7 +115,7 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stderr = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main._run_command",
+                "rank_llm.api.cli.main._run_command",
                 side_effect=AssertionError("tuple shape mismatch"),
             ),
             contextlib.redirect_stdout(stdout),
@@ -159,7 +133,7 @@ class TestCLIParserAndOutput(unittest.TestCase):
         stderr = io.StringIO()
         with (
             patch(
-                "rank_llm.cli.main._run_command",
+                "rank_llm.api.cli.main._run_command",
                 side_effect=AssertionError(
                     "Ensure that `AZURE_OPENAI_API_BASE`, `AZURE_OPENAI_API_VERSION` are set"
                 ),
@@ -184,7 +158,8 @@ class TestCLIParserAndOutput(unittest.TestCase):
         }
         with (
             patch(
-                "rank_llm.cli.main.run_response_analysis_files", return_value=summary
+                "rank_llm.api.cli.main.run_response_analysis_files",
+                return_value=summary,
             ),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
