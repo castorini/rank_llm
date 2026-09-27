@@ -45,6 +45,7 @@ class TestCLIValidation(unittest.TestCase):
             {"query": "q", "candidates": [42]},
             {"query": "q", "candidates": [{}]},
             {"query": "q", "candidates": [{"text": 42}]},
+            {"query": "q", "candidates": [{"text": "valid", "doc": 123}]},
             {"query": "q", "candidates": [{"doc": "passage", "score": "high"}]},
         )
         for payload in invalid_payloads:
@@ -70,6 +71,7 @@ class TestCLIValidation(unittest.TestCase):
             "candidates": [
                 "plain text",
                 {"text": "text field", "docid": "a", "score": 0.5},
+                {"text": "preferred text", "doc": {"contents": "unused"}},
                 {"doc": "document field"},
                 {"doc": {"contents": "document object"}},
             ],
@@ -108,7 +110,10 @@ class TestCLIValidation(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(rerank.call_args.kwargs["query_text"], "cats")
         self.assertEqual(rerank.call_args.kwargs["query_id"], 1)
-        self.assertEqual(len(rerank.call_args.kwargs["candidates"]), 4)
+        self.assertEqual(len(rerank.call_args.kwargs["candidates"]), 5)
+        self.assertEqual(
+            rerank.call_args.kwargs["candidates"][2]["doc"], "preferred text"
+        )
 
     def test_validate_rerank_accepts_valid_direct_payload(self):
         stdout = io.StringIO()

@@ -219,8 +219,10 @@ def validate_rerank_payload(payload: Any) -> dict[str, Any]:
                 if "text" in candidate:
                     if not isinstance(candidate["text"], str):
                         errors.append(f"{label}.text must be a string")
-                elif not isinstance(candidate.get("doc"), str | dict):
+                if "doc" in candidate and not isinstance(candidate["doc"], str | dict):
                     errors.append(f"{label}.doc must be a string or object")
+                if "text" not in candidate and "doc" not in candidate:
+                    errors.append(f"{label} must contain text or doc")
                 if "docid" in candidate and (
                     isinstance(candidate["docid"], bool)
                     or not isinstance(candidate["docid"], str | int)

@@ -225,13 +225,18 @@ class TestCLIHTTP(unittest.TestCase):
             patch("rank_llm.api.runtime.run_mcp_rerank") as rerank,
         ):
             client = TestClient(create_app(ServerConfig(model_path="model")))
-            response = client.post(
-                "/v1/rerank",
-                json={"query": "cats", "candidates": 5},
-            )
+            for payload in (
+                {"query": "cats", "candidates": 5},
+                {
+                    "query": "cats",
+                    "candidates": [{"text": "valid", "doc": 123}],
+                },
+            ):
+                with self.subTest(payload=payload):
+                    response = client.post("/v1/rerank", json=payload)
+                    self.assertEqual(response.status_code, 400)
+                    self.assertEqual(response.json()["status"], "validation_error")
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["status"], "validation_error")
         initialize.assert_not_called()
         rerank.assert_not_called()
 
