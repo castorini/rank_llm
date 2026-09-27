@@ -13,31 +13,33 @@ RankLLM Contribution flow
     - Run the following command in the project root to set up pre-commit and pre-push hooks (all commits through git UI will automatically be formatted): `uv run pre-commit install --install-hooks --hook-type pre-commit --hook-type pre-push`
     - To manually make sure your code is correctly formatted and lint-clean, run `uv run pre-commit run --all-files`
     - To run Ruff directly, use `uv run ruff check .` and `uv run ruff format .`
-6. Run from the root directory the unit tests with `uv run python -m unittest discover test`
+6. Run from the root directory the unit tests with `uv run python test/run_tests.py unit`
 7. Update the `pyproject.toml` if applicable
 
 ### Integration tests
 
-The ordinary unit test command skips tests that download prebuilt Pyserini
-indexes, contact a retrieval service, or load GPU models. The mocked retrieval
-parsing tests still run. To run an integration module, opt in explicitly:
+Run unit tests first, then resource-heavy integration tests when their
+dependencies are available:
 
 ```bash
-RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.retrieve.test_PyseriniRetriever
-RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.retrieve.test_ServiceRetriever
-RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.test_retrieve_and_rerank
-RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.server.test_flask_server
-RANK_LLM_RUN_INTEGRATION_TESTS=1 uv run python -m unittest test.server.test_mcp_server
+uv run python test/run_tests.py unit
+uv run python test/run_tests.py integration
+uv run python test/run_tests.py full
 ```
 
-The Pyserini module needs the `pyserini` extra, JDK 21, and disk space for
-prebuilt indexes. The service retriever, retrieve and rerank, and Flask modules
-need a Pyserini REST service at `localhost:8081`; their reranking paths also
-load model weights and need suitable GPU resources. The MCP module starts an
-HTTP server and loads a Pyserini index and a Qwen model through vLLM, so it
-also needs JDK 21, model downloads, and a suitable GPU. Set the opt-in variable
-only for the selected module, since setting it for the full discovery command
-runs every integration test.
+The `full` command stops if the unit phase fails; otherwise it runs all three
+integration modules and reports their failures. The integration phase requires
+a Pyserini REST service at `localhost:8081` for service retrieval and
+retrieve-and-rerank tests. Model reranking needs model weights and a suitable
+GPU. MCP tests start an HTTP server and also need JDK 21, a Pyserini index,
+and a Qwen model through vLLM. These dependencies are not automatically skipped
+when the integration phase is selected. To inspect the selected commands without
+running them, add `--dry-run`.
+
+The Pyserini constructor and Flask route tests use mocks and run in the unit
+phase without downloading indexes or model weights. To run one integration
+module directly, set `RANK_LLM_RUN_INTEGRATION_TESTS=1` and use
+`uv run python -m unittest` with its module name from `test/run_tests.py`.
 
 ## Suggested PR Description
 

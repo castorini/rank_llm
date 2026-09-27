@@ -1,9 +1,5 @@
-import os
 import unittest
 from unittest.mock import MagicMock, patch
-
-if os.environ.get("RANK_LLM_RUN_INTEGRATION_TESTS") != "1":
-    raise unittest.SkipTest("Pyserini index integration requires explicit opt-in")
 
 from dacite import from_dict
 
@@ -17,16 +13,14 @@ valid_inputs = [
     ("dl20", RetrievalMethod.SPLADE_V3),
     ("dl20", RetrievalMethod.D_BERT_KD_TASB),
     ("dl20", RetrievalMethod.OPEN_AI_ADA2),
+    ("dl23", RetrievalMethod.BM25),
+    ("dl23", RetrievalMethod.BM25_RM3),
 ]
 
 failure_inputs = [
-    ("dl23", RetrievalMethod.BM25),  # dataset error
-    ("dl23", RetrievalMethod.BM25_RM3),  # dataset error
-    ("dl18", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),  # dataset error
-    ("dl19", RetrievalMethod.UNSPECIFIED),  # retrieval method error
-    ("dl16", RetrievalMethod.UNSPECIFIED),  # dataset and retrieval method error
-    ("dl21", RetrievalMethod.D_BERT_KD_TASB),
-    ("covid", RetrievalMethod.OPEN_AI_ADA2),
+    ("dl18", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),
+    ("dl19", RetrievalMethod.UNSPECIFIED),
+    ("dl16", RetrievalMethod.UNSPECIFIED),
 ]
 
 
@@ -40,6 +34,16 @@ class MockHit:
 
 
 class TestPyseriniRetriever(unittest.TestCase):
+    def setUp(self):
+        module = "rank_llm.retrieve.pyserini_retriever"
+        self.enterContext(patch(f"{module}.LuceneSearcher", new=MagicMock()))
+        self.enterContext(patch(f"{module}.LuceneImpactSearcher", new=MagicMock()))
+        self.enterContext(patch(f"{module}.FaissSearcher", new=MagicMock()))
+        self.enterContext(patch(f"{module}.QueryEncoder", new=MagicMock()))
+        self.enterContext(patch(f"{module}.LuceneIndexReader", new=MagicMock()))
+        self.enterContext(patch(f"{module}.get_topics", return_value={}))
+        self.enterContext(patch(f"{module}.get_qrels", return_value={}))
+
     def test_valid_inputs(self):
         for dataset, retrieval_method in valid_inputs:
             retriever = PyseriniRetriever(dataset, retrieval_method)
@@ -52,9 +56,10 @@ class TestPyseriniRetriever(unittest.TestCase):
             self.assertEqual(retriever._get_index(), INDICES[key][dataset])
 
     def test_failure_inputs(self):
-        with self.assertRaises(ValueError):
-            for dataset, retrieval_method in failure_inputs:
-                PyseriniRetriever(dataset, retrieval_method)
+        for dataset, retrieval_method in failure_inputs:
+            with self.subTest(dataset=dataset, retrieval_method=retrieval_method):
+                with self.assertRaises(ValueError):
+                    PyseriniRetriever(dataset, retrieval_method)
 
     def test_get_index(self):
         # Creating PyseriniRetriever instance
@@ -70,15 +75,10 @@ class TestPyseriniRetriever(unittest.TestCase):
             retriever._retrieval_method = RetrievalMethod.BM25_RM3
             retriever._get_index()
 
-    @patch("rank_llm.retrieve.pyserini_retriever.IndexReader")
     @patch("rank_llm.retrieve.pyserini_retriever.json.loads")
-    def test_retrieve_query(self, mock_json_loads, mock_index_reader):
+    def test_retrieve_query(self, mock_json_loads):
         # Mocking json.loads to return a predefined content
         mock_json_loads.return_value = {"title": "Sample Title", "text": "Sample Text"}
-
-        # Mocking IndexReader
-        mock_index_reader_instance = MagicMock()
-        mock_index_reader.from_prebuilt_index.return_value = mock_index_reader_instance
 
         # Mocking hits
         mock_hits = MagicMock(spec=list[MockHit])

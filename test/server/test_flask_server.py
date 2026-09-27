@@ -1,147 +1,113 @@
-import os
 import unittest
-from unittest.mock import patch
-
-if os.environ.get("RANK_LLM_RUN_INTEGRATION_TESTS") != "1":
-    raise unittest.SkipTest("Flask server integration requires explicit opt-in")
+from unittest.mock import MagicMock, patch
 
 from rank_llm.server.flask.api import create_app
-
-# Needs Pyserini API to be active at 8081
-
-# - name: Run API tests
-#   run: |
-#     python -m unittest discover -s test/api
-# - name: Run retrieve_and_rerank
-#   run: |
-#     python -m unittest test/test_retrieve_and_rerank
 
 
 class TestAPI(unittest.TestCase):
     BASE_URL = "http://localhost:8082/api/model/{model_name}/index/{index_name}/{anserini_host_addr}"
 
     def setUp(self):
-        # rank zephyr mock
-        self.patcher_cuda = patch("torch.cuda.is_available")
-        self.mock_cuda = self.patcher_cuda.start()
-        self.mock_cuda.return_value = True
+        model_class = self.enterContext(
+            patch("rank_llm.rerank.listwise.RankListwiseOSLLM")
+        )
+        model_class.return_value.get_name.return_value = "rank_zephyr"
+        self.mock_retrieve_and_rerank = self.enterContext(
+            patch("rank_llm.retrieve_and_rerank.retrieve_and_rerank")
+        )
+        self.mock_empty_cache = self.enterContext(patch("torch.cuda.empty_cache"))
 
-        # Mock RankLLM host at port 8082
+        def retrieve(*, model_path, query, top_k_rerank, **kwargs):
+            coordinator = MagicMock()
+            coordinator.get_name.return_value = model_path
+            result = {
+                "query": {"text": query, "qid": kwargs["qid"]},
+                "candidates": [
+                    {"docid": str(i), "score": 1.0, "doc": {"contents": "text"}}
+                    for i in range(top_k_rerank)
+                ],
+                "invocations_history": [],
+            }
+            return [result], coordinator
+
+        self.mock_retrieve_and_rerank.side_effect = retrieve
         self.app, _ = create_app("rank_zephyr", 8082, False)
         self.client = self.app.test_client()
-
-        # Define commonly used API parameters
         self.model_name = "rank_zephyr"
         self.index_name = "msmarco-v2.1-doc"
         self.anserini_host_addr = "8081"
-        self.query = "Who killed the Yardbirds"
-        self.hits_retriever = 10
-        self.hits_reranker = 4
-        self.qid = 1
-        self.num_passes = 1
-
-        # Request query parameters
         self.query_params = {
-            "query": self.query,
-            "hits_retriever": self.hits_retriever,
-            "hits_reranker": self.hits_reranker,
-            "qid": self.qid,
-            "num_passes": self.num_passes,
+            "query": "Who killed the Yardbirds",
+            "hits_retriever": 10,
+            "hits_reranker": 4,
+            "qid": 1,
+            "num_passes": 1,
         }
 
-    def tearDown(self):
-        self.patcher_cuda.stop()
-
-    def test_basic_response_structure(self):
-        """Test that the API returns a valid JSON and status code 200 for a correct request."""
-        response = self.client.get(
+    def _get(self, model_name=None, query_params=None):
+        return self.client.get(
             self.BASE_URL.format(
-                model_name=self.model_name,
+                model_name=model_name or self.model_name,
                 index_name=self.index_name,
                 anserini_host_addr=self.anserini_host_addr,
             ),
-            query_string=self.query_params,
+            query_string=query_params
+            if query_params is not None
+            else self.query_params,
         )
+
+    def test_basic_response_structure(self):
+        response = self._get()
         self.assertEqual(response.status_code, 200)
-        response = response.json
-        self.assertIsInstance(response, dict)
-        self.assertEqual(len(response), 3)
-        self.assertEqual(len(response["candidates"]), 4)
+        self.assertIsInstance(response.json, dict)
+        self.assertEqual(len(response.json["candidates"]), 4)
+        self.assertEqual(response.json["query"]["text"], self.query_params["query"])
+        self.assertEqual(
+            self.mock_retrieve_and_rerank.call_args.kwargs["host"],
+            "http://localhost:8081",
+        )
 
     def test_optional_parameters(self):
-        """Test that the API correctly uses default values for optional parameters."""
-        # Removing 'hits_retriever' and 'hits_reranker' to test default values
         query_params = self.query_params.copy()
         query_params.pop("hits_retriever")
         query_params.pop("hits_reranker")
 
-        response = self.client.get(
-            self.BASE_URL.format(
-                model_name=self.model_name,
-                index_name=self.index_name,
-                anserini_host_addr=self.anserini_host_addr,
-            ),
-            query_string=query_params,
-        )
+        response = self._get(query_params=query_params)
         self.assertEqual(response.status_code, 200)
-        response = response.json
-        self.assertIsInstance(response, dict)
-        self.assertEqual(len(response["candidates"]), 10)
+        self.assertEqual(len(response.json["candidates"]), 10)
+        self.assertEqual(
+            self.mock_retrieve_and_rerank.call_args.kwargs["top_k_retrieve"], 20
+        )
 
-    def test_missing_query_parameter(self):
-        """Test that the API handles missing 'query' parameter gracefully."""
+    def test_missing_query_is_forwarded_to_backend(self):
         query_params = self.query_params.copy()
         query_params.pop("query")
 
-        response = self.client.get(
-            self.BASE_URL.format(
-                model_name=self.model_name,
-                index_name=self.index_name,
-                anserini_host_addr=self.anserini_host_addr,
-            ),
-            query_string=query_params,
-        )
+        response = self._get(query_params=query_params)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(self.mock_retrieve_and_rerank.call_args.kwargs["query"])
+
+    def test_downstream_error_is_json(self):
+        self.mock_retrieve_and_rerank.side_effect = ValueError("retrieval failed")
+
+        response = self._get()
         self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json, {"error": "retrieval failed"})
 
     def test_invalid_retrieval_method(self):
-        """Test that the server handles unsupported retrieval methods properly."""
         query_params = self.query_params.copy()
         query_params["retrieval_method"] = "invalid_method"
 
-        response = self.client.get(
-            self.BASE_URL.format(
-                model_name=self.model_name,
-                index_name=self.index_name,
-                anserini_host_addr=self.anserini_host_addr,
-            ),
-            query_string=query_params,
-        )
+        response = self._get(query_params=query_params)
         self.assertEqual(response.status_code, 500)
         self.assertIn("error", response.json)
+        self.mock_retrieve_and_rerank.assert_not_called()
 
     def test_model_caching(self):
-        """Test that server caching works"""
-        model_names = [
-            "rank_zephyr",
-            "unspecified",
-            "rank_zephyr",
-            "rank_vicuna",
-            "rank_vicuna",
-            "unspecified",
-            "unspecified",
-        ]
-
-        for model_name in model_names:
-            response = self.client.get(
-                self.BASE_URL.format(
-                    model_name=model_name,
-                    index_name=self.index_name,
-                    anserini_host_addr=self.anserini_host_addr,
-                ),
-                query_string=self.query_params,
-            )
+        for model_name in ("rank_zephyr", "rank_zephyr", "rank_vicuna", "rank_vicuna"):
+            response = self._get(model_name=model_name)
             self.assertEqual(response.status_code, 200)
-            self.assertIsInstance(response.json, dict)
+        self.assertEqual(self.mock_empty_cache.call_count, 1)
 
 
 if __name__ == "__main__":
