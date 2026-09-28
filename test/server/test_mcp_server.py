@@ -6,9 +6,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-if os.environ.get("RANK_LLM_RUN_INTEGRATION_TESTS") != "1":
-    raise unittest.SkipTest("MCP server integration requires explicit opt-in")
-
 from fastmcp import Client, FastMCP
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.utilities.tests import run_server_async

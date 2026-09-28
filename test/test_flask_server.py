@@ -1,9 +1,14 @@
 import unittest
+from importlib.util import find_spec
 from unittest.mock import MagicMock, patch
 
 from rank_llm.server.flask.api import create_app
 
 
+@unittest.skipUnless(
+    find_spec("flask") is not None and find_spec("torch") is not None,
+    "Flask route tests require flask and torch",
+)
 class TestAPI(unittest.TestCase):
     BASE_URL = "http://localhost:8082/api/model/{model_name}/index/{index_name}/{anserini_host_addr}"
 
