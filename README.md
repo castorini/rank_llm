@@ -251,7 +251,7 @@ rank-llm rerank --model-path castorini/rank_zephyr_7b_v1_full --top-k-candidates
 --retrieval-method SPLADE++_EnsembleDistil_ONNX --prompt-template-path src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml --context-size 4096 --variable-passages
 ```
 
-If you want to run multiple passes of the model, you can use the `--num_passes` flag.
+If you want to run multiple passes of the model, you can use the `--num-passes` flag.
 
 ## RankGPT4-o
 
@@ -260,7 +260,7 @@ We can run the RankGPT4-o model with the following command:
 rank-llm rerank --model-path gpt-4o --top-k-candidates 100 --dataset dl20 \
   --retrieval-method bm25 --prompt-template-path src/rank_llm/rerank/prompt_templates/rank_gpt_apeer_template.yaml --context-size 4096 --use-azure-openai
 ```
-Note that the `--prompt_template_path` is set to `rank_gpt_apeer` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
+Note that the `--prompt-template-path` is set to `rank_gpt_apeer` to use the LLM refined prompt from [APEER](https://arxiv.org/abs/2406.14449).
 This can be changed to `rank_GPT` to use the original prompt.
 
 ## LiT5
