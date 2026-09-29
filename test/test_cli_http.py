@@ -219,6 +219,27 @@ class TestCLIHTTP(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["status"], "validation_error")
 
+    def test_rerank_route_rejects_malformed_direct_input_before_execution(self):
+        with (
+            patch("rank_llm.api.runtime.initialize_reranker") as initialize,
+            patch("rank_llm.api.runtime.run_mcp_rerank") as rerank,
+        ):
+            client = TestClient(create_app(ServerConfig(model_path="model")))
+            for payload in (
+                {"query": "cats", "candidates": 5},
+                {
+                    "query": "cats",
+                    "candidates": [{"text": "valid", "doc": 123}],
+                },
+            ):
+                with self.subTest(payload=payload):
+                    response = client.post("/v1/rerank", json=payload)
+                    self.assertEqual(response.status_code, 400)
+                    self.assertEqual(response.json()["status"], "validation_error")
+
+        initialize.assert_not_called()
+        rerank.assert_not_called()
+
     def test_rerank_route_returns_400_for_invalid_overrides(self):
         client = TestClient(create_app(ServerConfig(model_path="model")))
         response = client.post(
