@@ -114,11 +114,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--window-size", type=int, default=20)
     parser.add_argument("--stride", type=int, default=10)
     parser.add_argument("--num-gpus", type=int, default=1)
-    parser.add_argument("--device", default=None)
     parser.add_argument(
         "--output-dir",
         default="demo_outputs/inline_hits",
-        help="Base output directory; each reranker writes to its own model directory.",
+        help="Base output directory; outputs are nested under <reranker>/<model>.",
     )
     parser.add_argument(
         "--populate-invocations-history",
@@ -138,7 +137,6 @@ def _make_reranker(name: str, args: argparse.Namespace):
         stride=args.stride,
         batch_size=args.batch_size,
         num_gpus=args.num_gpus,
-        device=args.device,
     )
 
 
@@ -166,7 +164,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             reranker.close()
 
         print(f"{name} results: {rerank_results}")
-        out_path = Path(args.output_dir) / model_path.split("/")[-1].lower()
+        out_path = Path(args.output_dir) / name / model_path.split("/")[-1].lower()
         out_path.mkdir(parents=True, exist_ok=True)
         writer = DataWriter(rerank_results)
         writer.write_in_jsonl_format(str(out_path / "rerank.jsonl"))
@@ -175,6 +173,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             writer.write_inference_invocations_history(
                 str(out_path / "invocations.json")
             )
+        else:
+            (out_path / "invocations.json").unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
