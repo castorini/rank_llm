@@ -26,7 +26,7 @@ class TestServiceRetriever(unittest.TestCase):
     def test_retrieve_and_rerank_interactive(self):
         top_k = 14
 
-        response = retrieve_and_rerank.retrieve_and_rerank(
+        response = retrieve_and_rerank(
             dataset="msmarco-v2.1-doc",
             query="hello",
             model_path="rank_zephyr",
