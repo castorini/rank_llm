@@ -13,15 +13,27 @@ repos:
         stages: [pre-commit]
   - repo: local
     hooks:
+      - id: quality-gate-pre-commit
+        name: quality gate (pre-commit)
+        entry: .venv/bin/python scripts/quality_gate.py --skip-ruff
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
       - id: ruff-check-push
         name: ruff-check (push)
-        entry: uv run ruff check .
+        entry: .venv/bin/python -m ruff check .
         language: system
         pass_filenames: false
         stages: [pre-push]
       - id: ruff-format-check-push
         name: ruff-format (push)
-        entry: uv run ruff format --check .
+        entry: .venv/bin/python -m ruff format --check .
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: quality-gate-push
+        name: quality gate (push)
+        entry: .venv/bin/python scripts/quality_gate.py --skip-ruff
         language: system
         pass_filenames: false
         stages: [pre-push]
