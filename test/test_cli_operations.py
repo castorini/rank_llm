@@ -94,6 +94,7 @@ class TestCLIOperations(unittest.TestCase):
             max_queries=-1,
             reasoning_effort="high",
             max_passage_words=222,
+            use_litellm=True,
             runner=runner,
             device_resolver=lambda: "cpu",
         )
@@ -109,6 +110,7 @@ class TestCLIOperations(unittest.TestCase):
         self.assertEqual(kwargs["device"], "cpu")
         self.assertEqual(kwargs["reasoning_effort"], "high")
         self.assertEqual(kwargs["max_passage_words"], 222)
+        self.assertTrue(kwargs["use_litellm"])
 
     def test_run_evaluate_aggregate_uses_custom_runner(self):
         runner = Mock()

@@ -67,6 +67,12 @@ class ListwiseRankLLM(RankLLM, ABC):
         # Requires one process, one long-lived event loop, and one reranker instance (see rerank_async).
         self._llm_concurrency_sem: asyncio.Semaphore | None = None
 
+        if self._stride <= 0 or self._stride > self._window_size:
+            raise ValueError(
+                f"stride must satisfy 0 < stride <= window_size "
+                f"(got stride={stride}, window_size={window_size})"
+            )
+
     def _get_llm_concurrency_sem(self) -> asyncio.Semaphore:
         """Semaphore limiting in-flight LLM calls across overlapping async rerank operations.
 
@@ -152,8 +158,12 @@ class ListwiseRankLLM(RankLLM, ABC):
                         permutation,
                         in_token_count,
                         out_token_count,
-                        self._inference_handler.template["output_validation_regex"],
-                        self._inference_handler.template["output_extraction_regex"],
+                        output_validation_regex=self._inference_handler.template[
+                            "output_validation_regex"
+                        ],
+                        output_extraction_regex=self._inference_handler.template[
+                            "output_extraction_regex"
+                        ],
                     )
                 )
         else:
@@ -228,8 +238,12 @@ class ListwiseRankLLM(RankLLM, ABC):
                     permutation,
                     in_token_count,
                     out_token_count,
-                    self._inference_handler.template["output_validation_regex"],
-                    self._inference_handler.template["output_extraction_regex"],
+                    output_validation_regex=self._inference_handler.template[
+                        "output_validation_regex"
+                    ],
+                    output_extraction_regex=self._inference_handler.template[
+                        "output_extraction_regex"
+                    ],
                 )
                 result.invocations_history.append(inference_invocation)
         else:

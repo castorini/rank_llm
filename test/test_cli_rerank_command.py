@@ -98,6 +98,61 @@ class TestCLIRerankCommand(unittest.TestCase):
         envelope = json.loads(stdout.getvalue())
         self.assertEqual(envelope["artifacts"][0]["value"], [{"direct": True}])
 
+    def test_rerank_rejects_conflicting_backend_flags(self):
+        payload = '{"query":"cats","candidates":["doc one"]}'
+        conflicting_flags = (
+            ("--use-litellm", "--use-openrouter"),
+            ("--use-litellm", "--use-azure-openai"),
+            ("--use-openrouter", "--use-azure-openai"),
+        )
+
+        for first_flag, second_flag in conflicting_flags:
+            with self.subTest(first_flag=first_flag, second_flag=second_flag):
+                stdout = io.StringIO()
+                with (
+                    patch("rank_llm.cli.main.run_mcp_rerank") as mocked,
+                    contextlib.redirect_stdout(stdout),
+                ):
+                    exit_code = main(
+                        [
+                            "--output",
+                            "json",
+                            "rerank",
+                            "--model-path",
+                            "model",
+                            "--input-json",
+                            payload,
+                            first_flag,
+                            second_flag,
+                        ]
+                    )
+
+                self.assertEqual(exit_code, 2)
+                mocked.assert_not_called()
+                response = json.loads(stdout.getvalue())
+                self.assertEqual(response["status"], "validation_error")
+                self.assertIn(
+                    "backend selectors cannot be combined",
+                    response["errors"][0]["message"],
+                )
+
+    def test_rerank_accepts_single_backend_flag(self):
+        payload = '{"query":"cats","candidates":["doc one"]}'
+        with patch("rank_llm.cli.main.run_mcp_rerank", return_value=[]) as mocked:
+            exit_code = main(
+                [
+                    "rerank",
+                    "--model-path",
+                    "model",
+                    "--input-json",
+                    payload,
+                    "--use-litellm",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        mocked.assert_called_once()
+
     def test_rerank_stdin_mode_uses_inline_handler(self):
         stdout = io.StringIO()
         stdin = io.StringIO(

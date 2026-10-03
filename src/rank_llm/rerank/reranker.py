@@ -316,6 +316,7 @@ class Reranker:
                 window_size=window_size,
                 stride=stride,
                 batch_size=batch_size,
+                api_base=base_url,
                 max_passage_words=max_passage_words,
                 sampling_kwargs=sampling_kwargs,
             )

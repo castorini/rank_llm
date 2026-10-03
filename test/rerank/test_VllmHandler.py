@@ -124,6 +124,43 @@ class TestVllmHandler(unittest.TestCase):
         self.assertEqual(prompt_tokens, 4)
         self.assertEqual(completion_tokens, 3)
 
+    def test_generate_logprobs_async(self):
+        first_token_logprobs = {
+            10: MagicMock(decoded_token="A", logprob=-0.2),
+            11: MagicMock(decoded_token="B", logprob=-0.1),
+        }
+        mock_request_output = MagicMock()
+        mock_request_output.finished = True
+        mock_request_output.outputs = [MagicMock()]
+        mock_request_output.outputs[0].logprobs = [first_token_logprobs]
+        mock_request_output.outputs[0].token_ids = [11]
+        mock_request_output.prompt_token_ids = [1, 2, 3]
+
+        async def fake_generate(prompt, sampling_params, request_id):
+            yield mock_request_output
+
+        self.mock_engine_instance.generate = fake_generate
+
+        logprobs, prompt_tokens, completion_tokens = asyncio.run(
+            self.handler.generate_logprobs_async(
+                prompt="test prompt[",
+                min_tokens=1,
+                max_tokens=1,
+                logprobs=30,
+                sampling_extra={"temperature": 0.0},
+            )
+        )
+
+        self.assertEqual(logprobs, [first_token_logprobs])
+        self.assertEqual(prompt_tokens, 3)
+        self.assertEqual(completion_tokens, 1)
+        self.mock_sampling_params_class.assert_called_once_with(
+            temperature=0.0,
+            min_tokens=1,
+            max_tokens=1,
+            logprobs=30,
+        )
+
     def test_generate_output_async_sampling_params(self):
         mock_request_output = MagicMock()
         mock_request_output.finished = True

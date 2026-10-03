@@ -142,7 +142,6 @@ class EvalFunction:
 
         script_path = download_evaluation_script("trec_eval")
         cmd_prefix = ["java", "-jar", script_path]
-        # args = sys.argv
 
         # Option to discard non-judged hits in run file
         judged_docs_only = ""
@@ -221,7 +220,7 @@ class EvalFunction:
                 ) / len(run_cutoff)
                 metric_name = f"judged_{cutoff}"
                 judged_result.append(f"{metric_name:22}\tall\t{judged:.4f}")
-            cmd = cmd_prefix + args[1:]
+            cmd = cmd_prefix + args
         else:
             cmd = cmd_prefix
 

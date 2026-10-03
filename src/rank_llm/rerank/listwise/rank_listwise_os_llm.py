@@ -139,6 +139,12 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         self._num_gpus = num_gpus
         self._base_url = base_url
 
+        if self._use_logits and self._base_url:
+            raise ValueError(
+                "use_logits is only supported by the in-process vLLM backend; "
+                "remove base_url to use FIRST logit reranking."
+            )
+
         if self._device == "cuda":
             if torch is None:
                 raise missing_extra_error(
@@ -224,33 +230,53 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             evaluations: dict[int, float] = {}
             for logit in logits.values():
                 token = logit.decoded_token
+                if not token:
+                    continue
                 if (
                     len(token) == 1
                     and token.isalpha()
-                    and ALPH_START_IDX + 1
+                    and ALPH_START_IDX + total[0]
                     <= ord(token)
-                    <= ALPH_START_IDX + self._window_size
+                    <= ALPH_START_IDX + total[1]
                 ):
                     idx = ord(token)
                     prev = evaluations.get(idx, float("-inf"))
                     if logit.logprob > prev:
                         evaluations[idx] = logit.logprob
             sorted_evaluations = sorted(evaluations.items(), key=lambda x: -x[1])
-            result_string = ">".join([f"[{chr(x)}]" for x, y in sorted_evaluations])
+            result_string = " > ".join([f"[{chr(x)}]" for x, _ in sorted_evaluations])
         else:
             evaluations: dict[int, float] = {}
             for logit in logits.values():
                 token = logit.decoded_token
-                if token.isnumeric() and not unicodedata.name(token).startswith(
-                    ("SUPERSCRIPT", "VULGAR FRACTION", "SUBSCRIPT", "CJK UNIFIED")
-                ):
+                if not token:
+                    continue
+                if token.isascii() and token.isdecimal():
                     val = int(token)
-                    if total[0] <= val <= total[1]:
-                        prev = evaluations.get(val, float("-inf"))
-                        if logit.logprob > prev:
-                            evaluations[val] = logit.logprob
+                elif (
+                    len(token) == 1
+                    and token.isnumeric()
+                    and not unicodedata.name(token).startswith(
+                        (
+                            "SUPERSCRIPT",
+                            "VULGAR FRACTION",
+                            "SUBSCRIPT",
+                            "CJK UNIFIED",
+                        )
+                    )
+                ):
+                    try:
+                        val = int(token)
+                    except ValueError:
+                        continue
+                else:
+                    continue
+                if total[0] <= val <= total[1]:
+                    prev = evaluations.get(val, float("-inf"))
+                    if logit.logprob > prev:
+                        evaluations[val] = logit.logprob
             sorted_evaluations = sorted(evaluations.items(), key=lambda x: -x[1])
-            result_string = ">".join([f"[{x}]" for x, y in sorted_evaluations])
+            result_string = " > ".join([f"[{x}]" for x, _ in sorted_evaluations])
 
         return result_string, evaluations
 
@@ -287,6 +313,44 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         """
         if current_window_size is None:
             current_window_size = self._window_size
+
+        if self._use_logits:
+            if not isinstance(prompt, str):
+                raise TypeError(
+                    "FIRST logit reranking requires a rendered string prompt."
+                )
+            logger.info("Async VLLM Logit Generating!")
+            sampling_extra = {
+                **sanitize_sampling_kwargs(self._sampling_kwargs),
+                "temperature": 0.0,
+            }
+            (
+                token_logprobs,
+                prompt_tokens,
+                completion_tokens,
+            ) = await self._vllm_handler.generate_logprobs_async(
+                prompt=f"{prompt}[",
+                min_tokens=1,
+                max_tokens=1,
+                logprobs=30,
+                sampling_extra=sampling_extra,
+            )
+            if not token_logprobs or token_logprobs[0] is None:
+                raise RuntimeError(
+                    "vLLM did not return first-token logprobs for FIRST reranking."
+                )
+            permutation, _ = self._evaluate_logits(
+                token_logprobs[0], (1, current_window_size)
+            )
+            return (
+                permutation,
+                "",
+                {
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": prompt_tokens + completion_tokens,
+                },
+            )
 
         min_tok = self.num_output_tokens(current_window_size)
         max_tok = self._get_max_output_tokens(current_window_size)

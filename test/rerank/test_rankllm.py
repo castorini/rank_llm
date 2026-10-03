@@ -1,7 +1,9 @@
 import unittest
 import warnings
+from unittest.mock import patch
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
+from rank_llm.rerank.reranker import Reranker
 
 # A real template so RankLLM.__init__ can build an inference handler.
 _TEMPLATE = "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml"
@@ -73,6 +75,23 @@ class TestPromptModeDeprecation(unittest.TestCase):
             w for w in caught if "PromptMode is deprecated" in str(w.message)
         ]
         self.assertEqual(prompt_mode_warnings, [])
+
+
+class TestModelCoordinator(unittest.TestCase):
+    def test_litellm_receives_custom_api_base(self):
+        with patch("rank_llm.rerank.listwise.SafeLiteLLM") as safe_litellm:
+            Reranker.create_model_coordinator(
+                "openai/custom-model",
+                None,
+                False,
+                use_litellm=True,
+                base_url="https://example.invalid/v1",
+            )
+
+        self.assertEqual(
+            safe_litellm.call_args.kwargs["api_base"],
+            "https://example.invalid/v1",
+        )
 
 
 if __name__ == "__main__":

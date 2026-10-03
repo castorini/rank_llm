@@ -312,6 +312,7 @@ def run_mcp_retrieve_and_rerank(
         print_prompts_responses=print_prompts_responses,
         use_azure_openai=use_azure_openai,
         use_openrouter=use_openrouter,
+        use_litellm=use_litellm,
         base_url=base_url or None,
         variable_passages=variable_passages,
         num_passes=num_passes,

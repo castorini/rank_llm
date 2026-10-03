@@ -10,6 +10,111 @@ from rank_llm.cli.main import main
 
 
 class TestCLIValidation(unittest.TestCase):
+    def test_all_direct_validation_modes_reject_malformed_candidates(self):
+        for command in (
+            ["validate", "rerank"],
+            ["rerank", "--model-path", "rank_random", "--validate-only"],
+            ["rerank", "--model-path", "rank_random", "--dry-run"],
+            ["rerank", "--model-path", "rank_random"],
+        ):
+            with self.subTest(command=command):
+                stdout = io.StringIO()
+                with (
+                    patch("rank_llm.cli.main.run_mcp_rerank") as mocked,
+                    contextlib.redirect_stdout(stdout),
+                ):
+                    exit_code = main(
+                        [
+                            "--output",
+                            "json",
+                            *command,
+                            "--input-json",
+                            '{"query":"q","candidates":5}',
+                        ]
+                    )
+                self.assertEqual(exit_code, 5)
+                self.assertEqual(
+                    json.loads(stdout.getvalue())["status"], "validation_error"
+                )
+                mocked.assert_not_called()
+
+    def test_validate_rerank_checks_nested_direct_input(self):
+        invalid_payloads = (
+            [],
+            {"query": {"qid": "q1"}, "candidates": []},
+            {"query": "q", "candidates": [42]},
+            {"query": "q", "candidates": [{}]},
+            {"query": "q", "candidates": [{"text": 42}]},
+            {"query": "q", "candidates": [{"text": "valid", "doc": 123}]},
+            {"query": "q", "candidates": [{"doc": "passage", "score": "high"}]},
+        )
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                stdout = io.StringIO()
+                with contextlib.redirect_stdout(stdout):
+                    exit_code = main(
+                        [
+                            "--output",
+                            "json",
+                            "validate",
+                            "rerank",
+                            "--input-json",
+                            json.dumps(payload),
+                        ]
+                    )
+                self.assertEqual(exit_code, 5)
+                self.assertFalse(json.loads(stdout.getvalue())["validation"]["valid"])
+
+    def test_validate_rerank_accepts_supported_candidate_forms(self):
+        payload = {
+            "query": {"text": "cats", "qid": 1},
+            "candidates": [
+                "plain text",
+                {"text": "text field", "docid": "a", "score": 0.5},
+                {"text": "preferred text", "doc": {"contents": "unused"}},
+                {"doc": "document field"},
+                {"doc": {"contents": "document object"}},
+            ],
+        }
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "--output",
+                    "json",
+                    "validate",
+                    "rerank",
+                    "--input-json",
+                    json.dumps(payload),
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        self.assertTrue(json.loads(stdout.getvalue())["validation"]["valid"])
+
+        stdout = io.StringIO()
+        with (
+            patch("rank_llm.cli.main.run_mcp_rerank", return_value=[]) as rerank,
+            contextlib.redirect_stdout(stdout),
+        ):
+            exit_code = main(
+                [
+                    "--output",
+                    "json",
+                    "rerank",
+                    "--model-path",
+                    "rank_random",
+                    "--input-json",
+                    json.dumps(payload),
+                ]
+            )
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(rerank.call_args.kwargs["query_text"], "cats")
+        self.assertEqual(rerank.call_args.kwargs["query_id"], 1)
+        self.assertEqual(len(rerank.call_args.kwargs["candidates"]), 5)
+        self.assertEqual(
+            rerank.call_args.kwargs["candidates"][2]["doc"], "preferred text"
+        )
+
     def test_validate_rerank_accepts_valid_direct_payload(self):
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):
