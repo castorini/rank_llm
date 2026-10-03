@@ -238,6 +238,7 @@ For `write_in_json_format` and `write_inference_invocations_history`, the file
 must contain a JSON array or be empty; the writer adds the new records to that
 array or starts a new one.
 JSONL and TREC output append lines as usual.
+All `DataWriter` output files use UTF-8; existing files must also use UTF-8 when appending.
 
 # End-to-end Run and 2CR
 If you are interested in running retrieval and reranking end-to-end or reproducing the results from the [reference papers](#✨-references), `rank-llm rerank` is the canonical command. `run_rank_llm.py` remains available as a compatibility wrapper for older automation.

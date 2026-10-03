@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from rank_llm.data import Candidate, DataWriter, InferenceInvocation, Query, Result
 
@@ -97,6 +98,87 @@ class TestDataWriterAppend(unittest.TestCase):
                 for record in json.loads(self.filename.read_text())
             ],
             ["second"],
+        )
+
+
+class TestDataWriterEncoding(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+
+        def non_utf8_open(*args, **kwargs):
+            kwargs.setdefault("encoding", "cp1252")
+            return open(*args, **kwargs)
+
+        locale_open = patch(
+            "rank_llm.data.open", side_effect=non_utf8_open, create=True
+        )
+        locale_open.start()
+        self.addCleanup(locale_open.stop)
+
+    def test_json_writers_preserve_unicode_when_appending(self):
+        for method in (
+            "write_in_json_format",
+            "write_in_jsonl_format",
+            "write_inference_invocations_history",
+        ):
+            with self.subTest(method=method):
+                filename = Path(self.directory.name) / method
+                first, second = _result("查询 😊"), _result("文档 📝")
+                getattr(DataWriter(first), method)(str(filename))
+                getattr(DataWriter(second, append=True), method)(str(filename))
+
+                contents = filename.read_bytes().decode("utf-8")
+                records = (
+                    [json.loads(line) for line in contents.splitlines()]
+                    if method == "write_in_jsonl_format"
+                    else json.loads(contents)
+                )
+                self.assertEqual(
+                    [record["query"]["text"] for record in records],
+                    [first.query.text, second.query.text],
+                )
+                if method == "write_inference_invocations_history":
+                    self.assertEqual(
+                        records[1]["invocations_history"][0]["response"],
+                        second.invocations_history[0].response,
+                    )
+                else:
+                    self.assertEqual(
+                        records[1]["candidates"][0]["doc"], second.candidates[0].doc
+                    )
+
+    def test_append_preserves_existing_utf8_array(self):
+        for method in (
+            "write_in_json_format",
+            "write_inference_invocations_history",
+        ):
+            with self.subTest(method=method):
+                filename = Path(self.directory.name) / method
+                existing = {"query": {"text": "查询 😊", "qid": "first"}}
+                filename.write_text(
+                    json.dumps([existing], ensure_ascii=False), encoding="utf-8"
+                )
+                getattr(DataWriter(_result("second"), append=True), method)(
+                    str(filename)
+                )
+                records = json.loads(filename.read_bytes().decode("utf-8"))
+                self.assertEqual(records[0], existing)
+                self.assertEqual(records[1]["query"]["qid"], "second")
+
+    def test_trec_writer_preserves_unicode_when_appending(self):
+        filename = Path(self.directory.name) / "output.txt"
+        first, second = _result("查询😊"), _result("文档📝")
+        first.candidates[0].docid = "文档😊"
+        second.candidates[0].docid = "文档📝"
+        DataWriter(first).write_in_trec_eval_format(str(filename))
+        DataWriter(second, append=True).write_in_trec_eval_format(str(filename))
+        self.assertEqual(
+            filename.read_bytes().decode("utf-8").splitlines(),
+            [
+                f"{first.query.qid} Q0 {first.candidates[0].docid} 1 1.0 rank_llm",
+                f"{second.query.qid} Q0 {second.candidates[0].docid} 1 1.0 rank_llm",
+            ],
         )
 
 

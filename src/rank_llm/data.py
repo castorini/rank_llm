@@ -72,7 +72,7 @@ def read_requests_from_file(file_path: str) -> list[Request]:
 
 
 class DataWriter:
-    """Write results to a file, merging with an existing JSON array when appending."""
+    """Write UTF-8 result files, merging with an existing JSON array when appending."""
 
     def __init__(
         self,
@@ -99,7 +99,7 @@ class DataWriter:
     def _write_json_array(self, filename: str, records: list[dict[str, Any]]):
         if self._append:
             try:
-                with open(filename) as f:
+                with open(filename, encoding="utf-8") as f:
                     contents = f.read()
                     existing = json.loads(contents) if contents.strip() else []
             except FileNotFoundError:
@@ -107,7 +107,7 @@ class DataWriter:
             if not isinstance(existing, list):
                 raise ValueError(f"Expected a JSON array in {filename}")
             records = existing + records
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(records, f, indent=2, ensure_ascii=False)
 
     def write_in_json_format(self, filename: str):
@@ -118,7 +118,7 @@ class DataWriter:
         self._write_json_array(filename, results)
 
     def write_in_jsonl_format(self, filename: str):
-        with open(filename, "a" if self._append else "w") as f:
+        with open(filename, "a" if self._append else "w", encoding="utf-8") as f:
             for d in self._data:
                 candidates = [candidate.__dict__ for candidate in d.candidates]
                 output = json.dumps(
@@ -129,7 +129,7 @@ class DataWriter:
                 f.write("\n")
 
     def write_in_trec_eval_format(self, filename: str):
-        with open(filename, "a" if self._append else "w") as f:
+        with open(filename, "a" if self._append else "w", encoding="utf-8") as f:
             for d in self._data:
                 qid = d.query.qid
                 for rank, cand in enumerate(d.candidates, start=1):
