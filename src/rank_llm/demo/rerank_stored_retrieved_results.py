@@ -63,10 +63,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    if args.num_queries is not None and args.num_queries <= 0:
-        parser.error("--num-queries must be greater than 0")
-    if args.k is not None and args.k <= 0:
-        parser.error("--k must be greater than 0")
+    for name in (
+        "num_queries",
+        "k",
+        "batch_size",
+        "context_size",
+        "window_size",
+        "stride",
+        "num_gpus",
+    ):
+        value = getattr(args, name)
+        if value is not None and value <= 0:
+            parser.error(f"--{name.replace('_', '-')} must be greater than 0")
     if not 0 < args.stride <= args.window_size:
         parser.error("--stride must be greater than 0 and no larger than --window-size")
 
@@ -79,7 +87,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         for request in requests:
             request.candidates = request.candidates[: args.k]
 
-    rank_end = args.k if args.k is not None else 100
+    rank_end = (
+        args.k
+        if args.k is not None
+        else max(len(request.candidates) for request in requests)
+    )
     reranker = ZephyrReranker(
         model_path=args.model,
         context_size=args.context_size,
