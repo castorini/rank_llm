@@ -157,10 +157,10 @@ cd /content/rank_llm
 Inside that shell, run the pipeline:
 
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/monot5-base-msmarco \
-  --top_k_candidates=100 --dataset=dl19 \
-  --retrieval_method=bm25 --context_size=512
+rank-llm rerank \
+  --model-path=castorini/monot5-base-msmarco \
+  --top-k-candidates=100 --dataset=dl19 \
+  --retrieval-method=bm25 --context-size=512
 ```
 
 Three things happen, and you'll see each in the output:
@@ -190,10 +190,10 @@ That gap — a cheap first stage to narrow the field, a smarter second stage to 
 Staying inside the same shell, now run the same pipeline on TREC DL20:
 
 ```bash
-python src/rank_llm/scripts/run_rank_llm.py \
-  --model_path=castorini/monot5-base-msmarco \
-  --top_k_candidates=100 --dataset=dl20 \
-  --retrieval_method=bm25 --context_size=512
+rank-llm rerank \
+  --model-path=castorini/monot5-base-msmarco \
+  --top-k-candidates=100 --dataset=dl20 \
+  --retrieval-method=bm25 --context-size=512
 ```
 
 The whole pipeline again takes under five minutes on a T4. The tail of the output should look like:
