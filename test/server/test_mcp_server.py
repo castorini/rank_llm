@@ -2,9 +2,7 @@ import asyncio
 import json
 import os
 import sys
-import tempfile
 import unittest
-from pathlib import Path
 
 from fastmcp import Client, FastMCP
 from fastmcp.client.transports import StreamableHttpTransport
@@ -26,14 +24,8 @@ class TestMCPServer(unittest.TestCase):
     """Test MCP server via HTTP transport using FastMCP Client."""
 
     def setUp(self):
-        self.output_dir = tempfile.TemporaryDirectory()
-        self.addCleanup(self.output_dir.cleanup)
-        self.rank_results_file = str(
-            Path(self.output_dir.name) / "ranked_results.jsonl"
-        )
-        self.rank_results_trec_file = str(
-            Path(self.output_dir.name) / "ranked_results.trec"
-        )
+        self.rank_results_file = "ranked_results_mcp_test.jsonl"
+        self.rank_results_trec_file = "ranked_results_mcp_test.trec"
         # Use vLLM legacy (V0) engine to avoid V1's 1024-sequence warmup OOM. Omit or set
         # VLLM_USE_V1=1 to use V1 when you have enough GPU memory.
         os.environ.setdefault("VLLM_USE_V1", "0")
@@ -103,12 +95,13 @@ class TestMCPServer(unittest.TestCase):
         self.assertEqual(
             len(first["candidates"]), 10, msg="Expected exactly 10 candidates"
         )
+        os.remove(self.rank_results_trec_file)
 
     def test_02_rerank_tool(self):
-        # Snapshot of the combined tool's real NFCorpus output for "cats".
-        fixture_path = Path(__file__).parent / "fixtures" / "nfcorpus_cats.json"
-        with fixture_path.open() as f:
-            candidates = json.load(f)["candidates"]
+        with open(self.rank_results_file) as f:
+            lines = f.readlines()
+        first = json.loads(lines[0])
+        candidates = first["candidates"]
         response = self._run_async(
             self._call_tool(
                 "rerank",
@@ -121,3 +114,4 @@ class TestMCPServer(unittest.TestCase):
         )
         self.assertFalse(response.is_error, msg=getattr(response, "content", response))
         self.assertIsNotNone(response.content)
+        os.remove(self.rank_results_file)
