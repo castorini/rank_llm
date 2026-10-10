@@ -63,7 +63,7 @@ class TestMCPServer(unittest.TestCase):
             async with Client(StreamableHttpTransport(url)) as client:
                 return await client.call_tool(name, arguments)
 
-    def test_retrieve_and_rerank_tool(self):
+    def test_01_retrieve_and_rerank_tool(self):
         os.environ.setdefault("VLLM_WORKER_MULTIPROC_METHOD", "spawn")
         response = self._run_async(
             self._call_tool(
@@ -104,10 +104,14 @@ class TestMCPServer(unittest.TestCase):
             len(first["candidates"]), 10, msg="Expected exactly 10 candidates"
         )
 
-    def test_rerank_tool(self):
+    def test_02_rerank_tool(self):
         candidates = [
-            {"docid": "cat", "score": 1.0, "doc": {"contents": "A cat"}},
-            {"docid": "dog", "score": 0.5, "doc": {"contents": "A dog"}},
+            {
+                "docid": str(i),
+                "score": 1.0 / (i + 1),
+                "doc": {"contents": f"Document {i} about cats"},
+            }
+            for i in range(10)
         ]
         response = self._run_async(
             self._call_tool(

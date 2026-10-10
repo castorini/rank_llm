@@ -18,9 +18,9 @@ valid_inputs = [
 ]
 
 failure_inputs = [
-    ("dl18", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),
-    ("dl19", RetrievalMethod.UNSPECIFIED),
-    ("dl16", RetrievalMethod.UNSPECIFIED),
+    ("dl18", RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL),  # dataset error
+    ("dl19", RetrievalMethod.UNSPECIFIED),  # retrieval method error
+    ("dl16", RetrievalMethod.UNSPECIFIED),  # dataset and retrieval method error
 ]
 
 
@@ -61,6 +61,15 @@ class TestPyseriniRetriever(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     PyseriniRetriever(dataset, retrieval_method)
 
+        # Unsupported dense configurations are absent from the encoded-query map.
+        for dataset, retrieval_method in [
+            ("dl21", RetrievalMethod.D_BERT_KD_TASB),
+            ("covid", RetrievalMethod.OPEN_AI_ADA2),
+        ]:
+            with self.subTest(dataset=dataset, retrieval_method=retrieval_method):
+                with self.assertRaises(KeyError):
+                    PyseriniRetriever(dataset, retrieval_method)
+
     def test_get_index(self):
         # Creating PyseriniRetriever instance
         retriever = PyseriniRetriever("dl19", RetrievalMethod.BM25)
@@ -75,10 +84,15 @@ class TestPyseriniRetriever(unittest.TestCase):
             retriever._retrieval_method = RetrievalMethod.BM25_RM3
             retriever._get_index()
 
+    @patch("rank_llm.retrieve.pyserini_retriever.LuceneIndexReader")
     @patch("rank_llm.retrieve.pyserini_retriever.json.loads")
-    def test_retrieve_query(self, mock_json_loads):
+    def test_retrieve_query(self, mock_json_loads, mock_index_reader):
         # Mocking json.loads to return a predefined content
         mock_json_loads.return_value = {"title": "Sample Title", "text": "Sample Text"}
+
+        # Mocking LuceneIndexReader
+        mock_index_reader_instance = MagicMock()
+        mock_index_reader.from_prebuilt_index.return_value = mock_index_reader_instance
 
         # Mocking hits
         mock_hits = MagicMock(spec=list[MockHit])
