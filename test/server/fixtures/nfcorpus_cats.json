@@ -1,0 +1,128 @@
+{
+  "query": {
+    "text": "cats",
+    "qid": "1"
+  },
+  "candidates": [
+    {
+      "docid": "MED-2340",
+      "score": 4.735499858856201,
+      "doc": {
+        "_id": "MED-2340",
+        "title": "Allergic cross-reactions between cat and pig serum albumin. Study at the protein and DNA levels.",
+        "text": "After observing a patient allergic to cat dander and pork but devoid of other allergies, we prospectively screened patients known to be allergic to cat for a second sensitization to pork. After collecting the sera of 10 young patients found to contain specific IgE to cat dander and pork, we undertook this study to detect the possible cross-reactive allergen, define its molecular characteristics, and evaluate its clinical relevance. Through immunoblotting techniques, cat and porcine serum albumin were found to be jointly recognized molecules. These findings were further analyzed by specific anti-albumin IgE titrations and cross-inhibition experiments. Cat serum albumin cDNA was obtained from cat liver, and the corresponding amino acid sequence was deduced and compared to the known porcine and human serum albumin sequences. Inhibition experiments showed that the spectrum of IgE reactivity to cat serum albumin completely contained IgE reactivity to porcine serum albumin, suggesting that sensitization to cat was the primary event. In two cohorts of cat-allergic persons, the frequency of sensitization to cat serum albumin was found to lie between 14% and 23%. Sensitization to porcine albumin was found to lie between 3% and 10%. About 1/3 of these persons are likely to experience allergic symptoms in relation to pork consumption. Sensitization to cat serum albumin should be considered a useful marker of possible cross-sensitization not only to porcine serum albumin but also to other mammalian serum albumins.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/9105522"
+        }
+      }
+    },
+    {
+      "docid": "MED-3978",
+      "score": 4.263999938964844,
+      "doc": {
+        "_id": "MED-3978",
+        "title": "Does dog or cat ownership lead to increased gastroenteritis in young children in South Australia?",
+        "text": "SUMMARY The aim of this study was to investigate the relationship between dog and cat ownership and gastroenteritis in young children. A diary study of 965 children aged 4–6 years living in rural or semi-rural South Australia was undertaken. Data were collected on pet ownership, drinking water and other risk factors for gastroenteritis. Overall 89% of households had pets and dog ownership was more common than cat ownership. The multivariable models for gastroenteritis and pet ownership indicated that living in a household with a dog or cat was associated with a reduced risk of gastroenteritis (adj. OR 0·71, 95% CI 0·55–0·92; OR 0·70, % CI 0·51–0·97 respectively). This paper adds to the evidence that pets are not a major source of gastroenteritis in the home and lends support to the health benefits of pet ownership. However, this must be weighed against the potential negative consequences, such as dog bites, particularly for this age group.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/16569272"
+        }
+      }
+    },
+    {
+      "docid": "MED-3976",
+      "score": 4.203000068664551,
+      "doc": {
+        "_id": "MED-3976",
+        "title": "Respiratory tract illnesses during the first year of life: effect of dog and cat contacts.",
+        "text": "OBJECTIVES: To investigate the effect of dog and cat contacts on the frequency of respiratory symptoms and infections during the first year of life. METHODS: In this birth cohort study, 397 children were followed up from pregnancy onward, and the frequency of respiratory symptoms and infections together with information about dog and cat contacts during the first year of life were reported by using weekly diaries and a questionnaire at the age of 1 year. All the children were born in eastern or middle Finland between September 2002 and May 2005. RESULTS: In multivariate analysis, children having dogs at home were healthier (ie, had fewer respiratory tract symptoms or infections) than children with no dog contacts (adjusted odds ratio, [aOR]: 1.31; 95% confidence interval [CI]: 1.13-1.52). Furthermore, children having dog contacts at home had less frequent otitis (aOR: 0.56; 95% CI: 0.38-0.81) and tended to need fewer courses of antibiotics (aOR: 0.71; 95% CI: 0.52-0.96) than children without such contacts. In univariate analysis, both the weekly amount of contact with dogs and cats and the average yearly amount of contact were associated with decreased respiratory infectious disease morbidity. CONCLUSIONS: These results suggest that dog contacts may have a protective effect on respiratory tract infections during the first year of life. Our findings support the theory that during the first year of life, animal contacts are important, possibly leading to better resistance to infectious respiratory illnesses during childhood.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/22778307"
+        }
+      }
+    },
+    {
+      "docid": "MED-5060",
+      "score": 4.135900020599365,
+      "doc": {
+        "_id": "MED-5060",
+        "title": "Domestic and farm-animal exposures and risk of non-Hodgkin lymphoma in a population-based study in the San Francisco Bay Area",
+        "text": "Objective To assess the association between animal exposures and non-Hodgkin lymphoma (NHL). Methods Exposure data were collected from 1,591 cases and 2,515 controls during in-person interviews in a population-based case-control study of NHL in the San Francisco Bay Area. Odds ratios (ORs) and 95% confidence intervals (CIs) were adjusted for potential confounders. Results Pet owners had a reduced risk of NHL (OR=0.71,CI=0.52 –0.97) and diffuse large-cell and immunoblastic large-cell (DLCL;OR=0.58,CI=0.39 –0.87) compared with those who never had owned a pet. Ever having owned dogs and/or cats was associated with reduced risk of all NHL (OR=0.71,CI=0.54–0.94) and of DLCL (OR=0.60,CI=0.42–0.86). Longer duration of cat ownership (p-trend=0.008), dog ownership (p-trend=0.04), and dog and/or cat ownership (p-trend =0.004) was inversely associated with risk of NHL. Ownership of pets other than cats and dogs was associated with a reduced risk of NHL (OR=0.64,CI=0.55–0.74) and DLCL (OR=0.58,CI=0.47 –0.71). Exposure to cattle for ≥5 years was associated with an increased risk of NHL (OR=1.6,CI=1.0–2.5) as was exposure to pigs for all NHL (OR=1.8,CI=1.2–2.6) and for DLCL (OR=2.0,CI=1.2–3.4). Conclusions The association between animal exposure and NHL warrants further investigation in pooled analyses.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2946322/"
+        }
+      }
+    },
+    {
+      "docid": "MED-2341",
+      "score": 4.135899066925049,
+      "doc": {
+        "_id": "MED-2341",
+        "title": "Beef, pork, and milk allergy (cross reactivity with each other and pet allergies).",
+        "text": "OBJECTIVE: The purposes of this study were to examine milk allergic patients to determine concomitant reactivity between milk, beef, pork and cat and dog dander and other common inhalant allergens. METHODS: 19 patients were selected according to their Immuno-CAP results, which had increased Ig-E levels against milk, pork or beef. Patients were also tested against Johnson grass, short ragweed, cat/dog dander and d. farina. RESULTS: Pearson's test revealed strong correlation between beef and pork, beef and milk, pork and milk Ig-E counts (consecutively r2 = 0.89, r2 = 0.81, r2 = 0.60 and p < 0.01. All cat allergic patients also appeared to be allergic to either beef/pork meat or milk. The correlation between pork and dog dander Ig-E counts was also significant (r2 = 0.38, p < 0.01). No correlation detected between milk-meat-pet and grass-weed-dust allergies. DISCUSSION AND CONCLUSION: Patients who are known to have pet allergies may need to be screened for meat and milk allergy. Milk allergic patients may also need to avoid cows and pork meat.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/16213925"
+        }
+      }
+    },
+    {
+      "docid": "MED-4901",
+      "score": 4.064000129699707,
+      "doc": {
+        "_id": "MED-4901",
+        "title": "Antioxidant status in humans after consumption of blackberry (Rubus fruticosus L.) juices with and without defatted milk.",
+        "text": "The present study was designed to evaluate the possible effect of the consumption of blackberry juices (BJ) prepared with water (BJW) and defatted milk (BJM) on the plasma antioxidant capacity and the enzymatic and nonenzymatic antioxidants. A significant (p < 0.05) increase in the ascorbic acid content in the plasma was observed after intake of both BJs. However, no changes were observed in the plasma urate and alpha-tocopherol levels. An increase on the plasma antioxidant capacity, by ORAC assay, was observed only after consumption of BJW but not statistically significant. Plasma antioxidant capacity had a good positive correlation with ascorbic acid (r = 0.93) and a negative correlation with urate level (r = -0.79). No correlation was observed between antioxidant capacity and total cyanidin or total ellagic acid contents. Further, it was observed that plasma catalase increased following intake of BJ's. No change was observed on the plasma and erythrocyte CAT and glutathione peroxidase activities. A significant decrease (p < 0.05) in the urinary antioxidant capacity between 1 and 4 h after intake of both BJs was observed. A good correlation was observed between total antioxidant capacity and urate and total cyanidin levels. These results suggested association between anthocyanin levels and CAT and a good correlation between antioxidant capacity and ascorbic acid in the human plasma after intake of BJs. Follow-up studies investigating the antioxidant properties and health benefits are necessary to demonstrate the health benefits of polyphenols.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/19053224"
+        }
+      }
+    },
+    {
+      "docid": "MED-3983",
+      "score": 3.977099895477295,
+      "doc": {
+        "_id": "MED-3983",
+        "title": "Molecular epidemiology of rabies virus in Vietnam (2006-2009).",
+        "text": "This study was aimed at determining the molecular epidemiology of rabies virus (RABV) circulating in Vietnam. Intra vitam samples (saliva and cerebrospinal fluid) were collected from 31 patients who were believed to have rabies and were admitted to hospitals in northern provinces of Vietnam. Brain samples were collected from 176 sick or furious rabid dogs from all over the country. The human and canine samples were subjected to reverse transcription-polymerase chain reaction analysis. The findings showed that 23 patients tested positive for RABV. Interestingly, 5 rabies patients did not have any history of dog or cat bites, but they had an experience of butchering dogs or cats, or consuming their meat. RABV was also detected in 2 of the 100 sick dogs from slaughterhouses. Molecular epidemiological analysis of 27 RABV strains showed that these viruses could be classified into two groups. The RABVs classified into Group 1 were distributed throughout Vietnam and had sequence similarity with the strains from China, Thailand, Malaysia, and the Philippines. However, the RABVs classified into Group 2 were only found in the northern provinces of Vietnam and showed high sequence similarity with the strain from southern China. This finding suggested the recent influx of Group 2 RABVs between Vietnam and China across the border. Although the incidence of rabies due to circulating RABVs in slaughterhouses is less common than that due to dog bite, the national program for rabies control and prevention in Vietnam should include monitoring of the health of dogs meant for human consumption and vaccination for workers at dog slaughterhouses. Further, monitoring of and research on the circulating RABVs in dog markets may help to determine the cause of rabies and control the spread of rabies in slaughterhouses in Vietnam.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/21937820"
+        }
+      }
+    },
+    {
+      "docid": "MED-4956",
+      "score": 3.607300043106079,
+      "doc": {
+        "_id": "MED-4956",
+        "title": "High prevalence and abundant atypical genotypes of Toxoplasma gondii isolated from lambs destined for human consumption in the USA.",
+        "text": "Little information is available on the presence of viable Toxoplasma gondii in tissues of lambs worldwide. The prevalence of T. gondii was determined in 383 lambs (<1 year old) from Maryland, Virginia and West Virginia, USA. Hearts of 383 lambs were obtained from a slaughter house on the day of killing. Blood removed from each heart was tested for antibodies to T. gondii by using the modified agglutination test (MAT). Sera were first screened using 1:25, 1:50, 1: 100 and 1:200 dilutions, and hearts were selected for bioassay for T. gondii. Antibodies (MAT, 1:25 or higher) to T. gondii were found in 104 (27.1%) of 383 lambs. Hearts of 68 seropositive lambs were used for isolation of viable T. gondii by bioassay in cats, mice or both. For bioassays in cats, the entire myocardium or 500g was chopped and fed to cats, one cat per heart and faeces of the recipient cats were examined for shedding of T. gondii oocysts. For bioassays in mice, 50g of the myocardium was digested in an acid pepsin solution and the digest inoculated into mice; the recipient mice were examined for T. gondii infection. In total, 53 isolates of T. gondii were obtained from 68 seropositive lambs. Genotyping of the 53 T. gondii isolates using 10 PCR-restriction fragment length polymorphism markers (SAG1, SAG2, SAG3, BTUB, GRA6, c22-8, c29-2, L358, PK1 and Apico) revealed 57 strains with 15 genotypes. Four lambs had infections with two T. gondii genotypes. Twenty-six (45.6%) strains belong to the clonal Type II lineage (these strains can be further divided into two groups based on alleles at locus Apico). Eight (15.7%) strains belong to the Type III lineage. The remaining 22 strains were divided into 11 atypical genotypes. These results indicate high parasite prevalence and high genetic diversity of T. gondii in lambs, which has important implications in public health. We believe this is the first in-depth genetic analysis of T. gondii isolates from sheep in the USA.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/18191859"
+        }
+      }
+    },
+    {
+      "docid": "MED-3977",
+      "score": 3.5251998901367188,
+      "doc": {
+        "_id": "MED-3977",
+        "title": "Survival following an acute coronary syndrome: a pet theory put to the test.",
+        "text": "OBJECTIVE: The aim of this study was to revisit findings from previous studies reporting that pet ownership improves outcome following an admission for acute coronary syndrome (ACS). METHOD: Four hundred and twenty-four patients admitted to a cardiac unit with an ACS completed questions regarding pet ownership in hospital. Rates of cardiac death and readmission were assessed 1 year following hospitalization. RESULTS: Pet owners were more likely to experience a death or readmission following their hospitalization, after controlling for key psychosocial and medical covariates. When dog and cat owners were considered separately, cat ownership was significantly associated with increased risk of death or readmission. CONCLUSION: In this independent study, pet ownership at baseline, and cat ownership in particular, was associated with increased cardiac morbidity and mortality in the year following an admission for an acute coronary syndrome, a finding contrary to previous reports.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/19522884"
+        }
+      }
+    },
+    {
+      "docid": "MED-1784",
+      "score": 3.4467999935150146,
+      "doc": {
+        "_id": "MED-1784",
+        "title": "Association between sperm quality, oxidative stress, and seminal antioxidant activity.",
+        "text": "OBJECTIVES: To determine seminal antioxidant capacity, oxidative stress markers, and their association with semen quality as oxidative stress is considered to be a major etiological factor in male infertility. SUBJECTS AND METHODS: Semen samples were obtained from 138 men and categorized on the basis of sperm count, motility, and morphology. Seminal oxidative and antioxidant markers are as follows: lipid peroxidation (LPO), protein carbonyls (PC), superoxide dismutase (SOD), catalase (CAT), thiols, and ascorbic acid were determined. RESULTS: Sperm count significantly correlated positively with progressive sperm motility and normal morphology. Sperm count and normal morphology showed significant negative correlation with LPO and PC. Sperm count and progressive motility showed significant positive relationship with SOD. The SOD, CAT, and thiols positively whereas LPO and PC negatively associated with elevated sperm count. CONCLUSION: Insufficient antioxidant enzymes and increased oxidative stress may attribute to the risk of declining semen quality and hence protective role for antioxidant enzymes against the oxidative damage cannot be ruled out. Copyright © 2010 The Canadian Society of Clinical Chemists. Published by Elsevier Inc. All rights reserved.",
+        "metadata": {
+          "url": "http://www.ncbi.nlm.nih.gov/pubmed/21145315"
+        }
+      }
+    }
+  ]
+}

@@ -105,14 +105,10 @@ class TestMCPServer(unittest.TestCase):
         )
 
     def test_02_rerank_tool(self):
-        candidates = [
-            {
-                "docid": str(i),
-                "score": 1.0 / (i + 1),
-                "doc": {"contents": f"Document {i} about cats"},
-            }
-            for i in range(10)
-        ]
+        # Snapshot of the combined tool's real NFCorpus output for "cats".
+        fixture_path = Path(__file__).parent / "fixtures" / "nfcorpus_cats.json"
+        with fixture_path.open() as f:
+            candidates = json.load(f)["candidates"]
         response = self._run_async(
             self._call_tool(
                 "rerank",
