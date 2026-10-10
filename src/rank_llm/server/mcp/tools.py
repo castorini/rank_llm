@@ -1,5 +1,8 @@
 """Register tools for the MCP server."""
 
+import asyncio
+import threading
+from collections.abc import Callable
 from typing import Any
 
 from fastmcp import FastMCP
@@ -7,6 +10,16 @@ from fastmcp import FastMCP
 from rank_llm.cli.operations import run_mcp_rerank, run_mcp_retrieve_and_rerank
 from rank_llm.data import Result
 from rank_llm.retrieve import RetrievalMethod
+
+# Keep the lock in the worker: cancellation must not release it during inference.
+_OPERATION_LOCK = threading.Lock()
+
+
+def _run_operation(
+    operation: Callable[..., list[Result]], kwargs: dict[str, Any]
+) -> list[Result]:
+    with _OPERATION_LOCK:
+        return operation(**kwargs)
 
 
 def register_rankllm_tools(mcp: FastMCP):
@@ -46,7 +59,7 @@ def register_rankllm_tools(mcp: FastMCP):
             use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
         """
     )
-    def rerank(
+    async def rerank(
         model_path: str,
         query_text: str,
         candidates: list[dict[str, Any]],
@@ -74,7 +87,7 @@ def register_rankllm_tools(mcp: FastMCP):
         use_logits: bool = False,
         use_alpha: bool = False,
     ) -> list[Result]:
-        return run_mcp_rerank(**locals())
+        return await asyncio.to_thread(_run_operation, run_mcp_rerank, locals())
 
     @mcp.tool(
         description="""
@@ -118,7 +131,7 @@ def register_rankllm_tools(mcp: FastMCP):
             use_alpha: whether to use alphabetical identifers instead of numerical. Recommended when use_logits is True.
         """
     )
-    def retrieve_and_rerank(
+    async def retrieve_and_rerank(
         model_path: str,
         query: str = "",
         batch_size: int = 32,
@@ -153,4 +166,6 @@ def register_rankllm_tools(mcp: FastMCP):
         use_logits: bool = False,
         use_alpha: bool = False,
     ) -> list[Result]:
-        return run_mcp_retrieve_and_rerank(**locals())
+        return await asyncio.to_thread(
+            _run_operation, run_mcp_retrieve_and_rerank, locals()
+        )

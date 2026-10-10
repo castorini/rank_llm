@@ -10,6 +10,7 @@ from typing import Any
 
 from rank_llm.data import Candidate, Query, Request, Result
 from rank_llm.rerank import IdentityReranker, Reranker
+from rank_llm.rerank._model_lifecycle import close_owned_model
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 from rank_llm.retrieve.retriever import RetrievalMode
 from rank_llm.utils import default_device
@@ -174,6 +175,7 @@ def run_mcp_rerank(
     kwargs["few_shot_file"] = few_shot_file or None
     kwargs["base_url"] = base_url or None
 
+    owns_model = reranker is None
     if reranker is None:
         reranker = Reranker(
             Reranker.create_model_coordinator(
@@ -184,51 +186,55 @@ def run_mcp_rerank(
             )
         )
 
-    top_k_retrieve = len(candidates)
-    top_k_rerank_effective = top_k_retrieve if top_k_rerank == -1 else top_k_rerank
-    del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
-    requests = [
-        Request(
-            query=Query(text=query_text, qid=query_id),
-            candidates=[
-                Candidate(
-                    docid=c["docid"],
-                    score=c["score"],
-                    doc={"contents": c["doc"]}
-                    if isinstance(c["doc"], str)
-                    else c["doc"],
-                )
-                for c in candidates
-            ],
-        )
-    ]
-    if reranker.get_model_coordinator() is None:
-        shuffle_candidates = model_path == "rank_random"
-        rerank_results = IdentityReranker().rerank_batch(
-            requests,
-            rank_end=top_k_retrieve,
-            shuffle_candidates=shuffle_candidates,
-        )
-    else:
-        for _ in range(num_passes):
-            rerank_results = reranker.rerank_batch(
+    try:
+        top_k_retrieve = len(candidates)
+        top_k_rerank_effective = top_k_retrieve if top_k_rerank == -1 else top_k_rerank
+        del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
+        requests = [
+            Request(
+                query=Query(text=query_text, qid=query_id),
+                candidates=[
+                    Candidate(
+                        docid=c["docid"],
+                        score=c["score"],
+                        doc={"contents": c["doc"]}
+                        if isinstance(c["doc"], str)
+                        else c["doc"],
+                    )
+                    for c in candidates
+                ],
+            )
+        ]
+        if reranker.get_model_coordinator() is None:
+            shuffle_candidates = model_path == "rank_random"
+            rerank_results = IdentityReranker().rerank_batch(
                 requests,
                 rank_end=top_k_retrieve,
-                rank_start=0,
                 shuffle_candidates=shuffle_candidates,
-                logging=print_prompts_responses,
-                top_k_retrieve=top_k_retrieve,
-                **kwargs,
             )
-            if num_passes > 1:
-                requests = [
-                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                    for r in rerank_results
-                ]
+        else:
+            for _ in range(num_passes):
+                rerank_results = reranker.rerank_batch(
+                    requests,
+                    rank_end=top_k_retrieve,
+                    rank_start=0,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=print_prompts_responses,
+                    top_k_retrieve=top_k_retrieve,
+                    **kwargs,
+                )
+                if num_passes > 1:
+                    requests = [
+                        Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                        for r in rerank_results
+                    ]
 
-    for rerank_result in rerank_results:
-        rerank_result.candidates = rerank_result.candidates[:top_k_rerank_effective]
-    return rerank_results
+        for rerank_result in rerank_results:
+            rerank_result.candidates = rerank_result.candidates[:top_k_rerank_effective]
+        return rerank_results
+    finally:
+        if owns_model:
+            close_owned_model(reranker.get_model_coordinator())
 
 
 def run_mcp_retrieve_and_rerank(
