@@ -91,7 +91,7 @@ def main() -> None:
         "--k",
         type=int,
         default=100,
-        help="Top-k passages per query from first-stage retrieval (default: 100).",
+        help="Number of passages per query to retrieve and rerank (default: 100).",
     )
     p.add_argument(
         "--model",
@@ -191,7 +191,11 @@ def main() -> None:
         sampling_kwargs=load_sampling_kw_dict(args) or None,
     )
     reranker = Reranker(coordinator)
-    kwargs = {"populate_invocations_history": True}
+    kwargs = {
+        "populate_invocations_history": True,
+        "rank_end": args.k,
+        "top_k_retrieve": args.k,
+    }
 
     print(f"\n--- Batched reranking ({len(requests)} queries) ---")
     rerank_results = reranker.rerank_batch(requests, **kwargs)
