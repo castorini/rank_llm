@@ -125,7 +125,7 @@ colab new -s rankllm --gpu T4
 
 Environment setup is boilerplate, so it's prepackaged.
 [`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, and pip-installs it with the `pyserini` extra.
-Everything else the pipeline needs — the prebuilt index, the relevance judgments (qrels), `trec_eval` — Pyserini downloads and caches on first use.
+RankLLM downloads cached BM25 candidates from `castorini/rank_llm_data` on first use. If those are unavailable, Pyserini downloads a prebuilt index and runs retrieval. Pyserini also obtains the relevance judgments (qrels) and the evaluation tool as needed.
 Fetch the script and send it to the session with an explicit timeout — installation takes a few minutes:
 
 ```bash
@@ -165,7 +165,7 @@ rank-llm rerank \
 
 Three things happen, and you'll see each in the output:
 
-1. **Retrieve** — Pyserini downloads a prebuilt Lucene index of MS MARCO v1 passages (~2 GB; Colab's datacenter network makes quick work of it) and runs BM25 to get the top 100 passages for each DL19 query.
+1. **Retrieve** — RankLLM loads the top 100 BM25 passages per query from its published cache. If the cache is unavailable, Pyserini downloads a prebuilt Lucene index of MS MARCO v1 passages and runs BM25 to produce them.
 2. **Rerank** — monoT5 scores every (query, passage) pair independently by asking the T5 model `Query: ... Document: ... Relevant:` and reading the probability of `true` vs `false` from the first generated token.
    This is *pointwise* reranking — one passage at a time — in contrast to the *listwise* rerankers in [the next lesson](onboarding-rz.md), which see many passages at once.
 3. **Evaluate** — `trec_eval` scores the reranked run against the DL19 relevance judgments.
