@@ -1,0 +1,2 @@
+method: pointwise
+body: "<|bos|>Query: {query}\nPassage: {doc_content}\nRelevant:"
