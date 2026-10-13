@@ -1,4 +1,5 @@
 from importlib.resources import files
+from pathlib import Path
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -17,6 +18,8 @@ class GaggleReranker(PointwiseRankLLM):
         device: str = "cuda",
         batch_size: int = 16,
     ):
+        if Path(prompt_template_path) != Path(TEMPLATES / "gaggle_template.yaml"):
+            raise ValueError("Gaggle rerankers use a fixed prompt template")
         super().__init__(
             model=model,
             context_size=2048,
@@ -24,7 +27,9 @@ class GaggleReranker(PointwiseRankLLM):
             device=device,
             batch_size=batch_size,
         )
-        dtype = torch.bfloat16 if device.startswith("cuda") else torch.float32
+        dtype = torch.float32
+        if device.startswith("cuda"):
+            dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
         self._tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
         self._llm = (
             AutoModelForSequenceClassification.from_pretrained(

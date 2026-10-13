@@ -1,62 +1,55 @@
 import json
+import subprocess
 from pathlib import Path
 
 import modal
 
-source = Path(__file__).resolve().parents[1] / "src"
+root = Path(__file__).resolve().parents[1]
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install(
-        "torch==2.8.0",
-        "transformers==5.16.1",
-        "accelerate>=1.0",
-        "huggingface_hub>=0.34",
-        "dacite>=1.8.1",
-        "ftfy>=6.1.1",
-        "pyyaml>=6.0",
-        "tqdm>=4.66",
+    .pip_install("torch==2.8.0", "transformers==5.16.1", "accelerate>=1.0")
+    .add_local_file(
+        str(root / "pyproject.toml"), "/opt/rank_llm/pyproject.toml", copy=True
     )
-    .env({"PYTHONPATH": "/opt/rank_llm/src", "HF_HOME": "/cache"})
-    .add_local_dir(str(source), "/opt/rank_llm/src")
+    .add_local_file(
+        str(root / "requirements.txt"), "/opt/rank_llm/requirements.txt", copy=True
+    )
+    .add_local_file(str(root / "README.md"), "/opt/rank_llm/README.md", copy=True)
+    .add_local_file(str(root / "LICENSE"), "/opt/rank_llm/LICENSE", copy=True)
+    .add_local_dir(str(root / "src"), "/opt/rank_llm/src", copy=True)
+    .run_commands("pip install -e '/opt/rank_llm[local]'")
+    .env({"HF_HOME": "/cache"})
 )
 cache = modal.Volume.from_name("gaggle-hf-cache", create_if_missing=True)
 app = modal.App("gaggle-rerank", image=image)
 
 
 @app.function(gpu="A100-40GB", memory=32768, timeout=3600, volumes={"/cache": cache})
-def rerank(model: str, query: str, passages: list[str]) -> list[dict]:
-    from rank_llm.data import Candidate, Query, Request
-    from rank_llm.rerank.reranker import Reranker
-
-    coordinator = Reranker.create_model_coordinator(
-        model, None, False, device="cuda", batch_size=16
-    )
-    cache.commit()
-    request = Request(
-        Query(query, "q1"),
-        [
-            Candidate(str(index), 0, {"text": passage})
-            for index, passage in enumerate(passages)
-        ],
-    )
-    result = coordinator.rerank_batch([request])[0]
-    return [
-        {
-            "index": int(candidate.docid),
-            "passage": candidate.doc["text"],
-            "score": candidate.score,
-        }
-        for candidate in result.candidates
+def rerank(model_path: str, payload: dict, batch_size: int) -> dict:
+    command = [
+        "rank-llm",
+        "--output",
+        "json",
+        "rerank",
+        "--model-path",
+        model_path,
+        "--input-json",
+        json.dumps(payload),
+        "--batch-size",
+        str(batch_size),
     ]
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    cache.commit()
+    if result.returncode:
+        raise RuntimeError(result.stderr or result.stdout)
+    return json.loads(result.stdout.strip().splitlines()[-1])
 
 
 @app.local_entrypoint()
-def main(input_path: str, model: str = "castorini/gaggle-reranker-20261005"):
-    data = json.loads(Path(input_path).read_text())
-    query = data["query"]
-    passages = data["passages"]
-    if not isinstance(query, str) or not isinstance(passages, list) or not passages:
-        raise ValueError("Input must contain a query and a nonempty list of passages")
-    if not all(isinstance(passage, str) for passage in passages):
-        raise ValueError("Every passage must be a string")
-    print(json.dumps(rerank.remote(model, query, passages), indent=2))
+def main(
+    input_path: str,
+    model_path: str = "castorini/gaggle-reranker-20261005",
+    batch_size: int = 16,
+):
+    payload = json.loads(Path(input_path).read_text())
+    print(json.dumps(rerank.remote(model_path, payload, batch_size), indent=2))

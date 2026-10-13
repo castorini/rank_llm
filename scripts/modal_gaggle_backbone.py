@@ -31,7 +31,13 @@ cache = modal.Volume.from_name("gaggle-hf-cache", create_if_missing=True)
 app = modal.App("gaggle-backbone", image=image)
 
 
-@app.function(gpu="A100-40GB", memory=65536, timeout=3600, volumes={"/cache": cache})
+@app.function(
+    gpu="A100-40GB",
+    memory=65536,
+    timeout=3600,
+    volumes={"/cache": cache},
+    single_use_containers=True,
+)
 def score(model_name: str, prompt: str, continuations: list[str]) -> list[dict]:
     import os
 
