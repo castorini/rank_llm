@@ -634,6 +634,16 @@ class Reranker:
                 batch_size=batch_size,
             )
             print(f"Completed loading {model_path}")
+        elif "gaggle-reranker" in model_path.lower():
+            from rank_llm.rerank.pointwise.gaggle_reranker import GaggleReranker
+
+            model_coordinator = GaggleReranker(
+                model=model_path,
+                prompt_template_path=kwargs.get("prompt_template_path")
+                or TEMPLATES / "gaggle_template.yaml",
+                device=kwargs.get("device", "cuda"),
+                batch_size=kwargs.get("batch_size", 16),
+            )
         elif "jina-reranker" in model_path.lower():
             from rank_llm.rerank.pointwise.jina_reranker import JinaReranker
 
