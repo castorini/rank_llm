@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from rank_llm.api.server import create_app
+from rank_llm.server.flask.api import create_app
 
 # Needs Pyserini API to be active at 8081
 
