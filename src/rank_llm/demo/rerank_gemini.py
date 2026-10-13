@@ -27,7 +27,13 @@ def main() -> None:
         default=None,
         help="Optional JSON/JSONL requests file. When set, skips retrieval.",
     )
-    parser.add_argument("--k", type=int, default=100)
+    parser.add_argument(
+        "--k",
+        type=int,
+        default=100,
+        help="Number of passages per query to retrieve and rerank (default: 100). "
+        "With --requests-file, caps reranking depth without changing input loading.",
+    )
     parser.add_argument("--model", default="gemini-3-flash-preview")
     parser.add_argument("--context-size", type=int, default=4096)
     parser.add_argument("--window-size", type=int, default=20)
@@ -66,7 +72,11 @@ def main() -> None:
         max_passage_words=args.max_passage_words,
     )
     reranker = Reranker(model_coordinator)
-    kwargs = {"populate_invocations_history": not args.no_history}
+    kwargs = {
+        "populate_invocations_history": not args.no_history,
+        "rank_end": args.k,
+        "top_k_retrieve": args.k,
+    }
     rerank_results = reranker.rerank_batch(requests, **kwargs)
     print(rerank_results)
 

@@ -83,7 +83,7 @@ def main() -> None:
         "--k",
         type=int,
         default=100,
-        help="Top-k passages per query from first-stage retrieval (default: 100).",
+        help="Number of passages per query to retrieve and rerank (default: 100).",
     )
     p.add_argument(
         "--base-url",
@@ -154,7 +154,11 @@ def main() -> None:
         max_passage_words=args.max_passage_words,
     )
     reranker = Reranker(coordinator)
-    kwargs = {"populate_invocations_history": True}
+    kwargs = {
+        "populate_invocations_history": True,
+        "rank_end": args.k,
+        "top_k_retrieve": args.k,
+    }
 
     print("\n--- Sync rerank_batch (full dataset) ---")
     sync_out = reranker.rerank_batch(requests, **kwargs)

@@ -168,7 +168,13 @@ def main() -> None:
             "When set, skips retrieval."
         ),
     )
-    parser.add_argument("--k", type=int, default=100)
+    parser.add_argument(
+        "--k",
+        type=int,
+        default=100,
+        help="Number of passages per query to retrieve and rerank (default: 100). "
+        "With --requests-file, sets listwise reranking depth without changing input loading.",
+    )
     parser.add_argument("--num-queries", type=int, default=None)
     parser.add_argument("--output-dir", default="demo_outputs")
     parser.add_argument("--skip-rerank", action="store_true")
@@ -217,7 +223,11 @@ def main() -> None:
                 if not args.skip_eval:
                     topics = TOPICS[dataset]
                     ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
-                kwargs = {"populate_invocations_history": not args.no_history}
+                kwargs = {
+                    "populate_invocations_history": not args.no_history,
+                    "rank_end": args.k,
+                    "top_k_retrieve": args.k,
+                }
                 rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
 
                 writer = DataWriter(rerank_results)
