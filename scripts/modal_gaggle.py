@@ -6,8 +6,9 @@ import modal
 
 root = Path(__file__).resolve().parents[1]
 image = (
-    modal.Image.debian_slim(python_version="3.12")
-    .pip_install("torch==2.8.0", "transformers==5.16.1", "accelerate>=1.0")
+    modal.Image.from_registry("ubuntu:24.04", add_python="3.12")
+    .apt_install("openjdk-21-jdk-headless")
+    .pip_install("torch==2.9.1", "transformers==5.16.1", "accelerate>=1.0")
     .add_local_file(
         str(root / "pyproject.toml"), "/opt/rank_llm/pyproject.toml", copy=True
     )
@@ -17,8 +18,15 @@ image = (
     .add_local_file(str(root / "README.md"), "/opt/rank_llm/README.md", copy=True)
     .add_local_file(str(root / "LICENSE"), "/opt/rank_llm/LICENSE", copy=True)
     .add_local_dir(str(root / "src"), "/opt/rank_llm/src", copy=True)
-    .run_commands("pip install -e '/opt/rank_llm[local]'")
-    .env({"HF_HOME": "/cache"})
+    .run_commands("pip install -e '/opt/rank_llm[local,pyserini]' 'torch==2.9.1'")
+    .workdir("/opt/rank_llm")
+    .env(
+        {
+            "HF_HOME": "/cache",
+            "PYSERINI_CACHE": "/cache/pyserini",
+            "JAVA_HOME": "/usr/lib/jvm/java-21-openjdk-amd64",
+        }
+    )
 )
 cache = modal.Volume.from_name("gaggle-hf-cache", create_if_missing=True)
 app = modal.App("gaggle-rerank", image=image)
