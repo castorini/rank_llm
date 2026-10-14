@@ -150,6 +150,12 @@ rank-llm serve http --model-path castorini/rank_zephyr_7b_v1_full --port 8082
 rank-llm serve mcp --transport stdio
 ```
 
+`rank-llm view` accepts UTF-8 request and reranking result files in
+JSONL or JSON array format, including UTF-8 JSON files produced by
+`DataWriter.write_in_json_format`.
+Empty JSON arrays and blank JSONL files show zero records with type `empty-json`
+or `empty-jsonl`, since there is no record to identify a request, result, or history.
+
 The following code snippet is a minimal walk through of retrieval, reranking, evalaution, and invocations analysis of top 100 retrieved documents for queries from `DL19`. In this example `BM25` is used as the retriever and `RankZephyr` as the reranker. Additional sample snippets are available to run under the `src/rank_llm/demo` directory.
 ```python
 from pathlib import Path
