@@ -234,6 +234,8 @@ writer.write_inference_invocations_history(
 ```
 
 To add results to an existing file, use `DataWriter(results, append=True)`.
+Result, request, retrieval-cache, and invocation-history files use UTF-8.
+Convert older files written with a locale-specific encoding to UTF-8 before reusing them.
 For `write_in_json_format` and `write_inference_invocations_history`, the file
 must contain a JSON array or be empty; the writer adds the new records to that
 array or starts a new one.
