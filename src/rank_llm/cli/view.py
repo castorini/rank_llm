@@ -86,7 +86,7 @@ def load_records(path: Path, artifact_type: str) -> list[Any]:
         )
         if not all(
             isinstance(record, dict)
-            and "query" in record
+            and (artifact_type == "invocations-history" or "query" in record)
             and isinstance(record.get(field), list)
             for record in records
         ):

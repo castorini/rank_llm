@@ -196,6 +196,21 @@ class TestCLIView(unittest.TestCase):
             "invocations-history",
         )
 
+    def test_view_history_without_query_remains_supported(self):
+        records = [{"invocations_history": [{"prompt": "p", "response": "r"}]}]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "history.json"
+            path.write_text(json.dumps(records), encoding="utf-8")
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                exit_code = main(["--output", "json", "view", str(path)])
+            self.assertEqual(exit_code, 0)
+            summary = json.loads(stdout.getvalue())["artifacts"][0]["value"]
+            self.assertEqual(
+                summary["summary"], {"record_count": 1, "invocation_total": 1}
+            )
+            self.assertEqual(summary["sampled_records"], records)
+
     def test_view_renders_text_summary(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "results.jsonl"
