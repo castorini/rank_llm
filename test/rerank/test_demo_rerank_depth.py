@@ -1,11 +1,14 @@
+import copy
 import importlib
 import io
+import json
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
-from rank_llm.data import Candidate, Query, Request
+from rank_llm.data import Candidate, Query, Request, Result
 from rank_llm.rerank.listwise.rank_gemini import SafeGenai
 from rank_llm.rerank.listwise.rank_gpt import SafeOpenai
 
@@ -181,3 +184,77 @@ class DemoRerankDepthTest(unittest.TestCase):
                         ],
                         expected,
                     )
+
+    def test_pointwise_demo_preserves_candidates_outside_selected_range(self):
+        from rank_llm.demo import rerank_pointwise_vllm as demo
+
+        def rerank(requests, **kwargs):
+            selected = slice(kwargs["rank_start"], kwargs["rank_end"])
+            candidates = copy.deepcopy(requests[0].candidates[selected][::-1])
+            for candidate in candidates:
+                candidate.score = float(candidate.docid)
+            return [Result(query=requests[0].query, candidates=candidates)]
+
+        for size, start, end in (
+            (100, 10, 50),
+            (20, 10, 50),
+            (5, 10, 50),
+            (100, 0, 100),
+        ):
+            request = Request(
+                query=Query(text="query", qid="1"),
+                candidates=[
+                    Candidate(docid=str(i), score=float(size - i), doc={})
+                    for i in range(size)
+                ],
+            )
+            original = copy.deepcopy(request)
+            with (
+                self.subTest(size=size, start=start, end=end),
+                tempfile.TemporaryDirectory() as output,
+                patch.object(
+                    demo.Retriever,
+                    "from_dataset_with_prebuilt_index",
+                    return_value=[request],
+                ),
+                patch.object(demo, "PointwiseVLLM"),
+                patch.object(demo, "Reranker") as reranker,
+                patch.object(demo, "_print_eval") as evaluate,
+                patch.object(demo, "_print_sample") as sample,
+                redirect_stdout(io.StringIO()),
+            ):
+                argv = f"demo --model test --k 100 --rank-start {start} --rank-end {end}".split()
+                model = reranker.return_value
+                model.rerank_batch.side_effect = rerank
+                model.rerank_batch_async = AsyncMock(side_effect=rerank)
+                with patch("sys.argv", [*argv, "--output-dir", output]):
+                    demo.main()
+                expected = list(range(size))
+                expected[start:end] = expected[start:end][::-1]
+                expected_ids = [str(i) for i in expected]
+                expected_scores = (
+                    [float(i) for i in expected]
+                    if start == 0 and end >= size
+                    else [c.score for c in original.candidates]
+                )
+                self.assertEqual(sample.call_count, 2)
+                model.rerank_batch_async.assert_awaited_once()
+                for call in sample.call_args_list + [evaluate.call_args]:
+                    result = call.args[0][0]
+                    self.assertEqual([c.docid for c in result.candidates], expected_ids)
+                    self.assertEqual(
+                        [c.score for c in result.candidates], expected_scores
+                    )
+                folder = Path(output) / "test" / "dl19"
+                record = json.loads((folder / "rerank.jsonl").read_text())
+                self.assertEqual(
+                    [c["docid"] for c in record["candidates"]], expected_ids
+                )
+                rows = [
+                    row.split()
+                    for row in (folder / "rerank.txt").read_text().splitlines()
+                ]
+                self.assertEqual([row[2] for row in rows], expected_ids)
+                ordered_rows = sorted(rows, key=lambda row: float(row[4]), reverse=True)
+                self.assertEqual([row[2] for row in ordered_rows], expected_ids)
+                self.assertEqual(request, original)

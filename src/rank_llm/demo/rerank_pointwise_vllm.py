@@ -3,6 +3,9 @@ Demo: generative pointwise reranking (yes/no + logprobs) against a local
 OpenAI-compatible vLLM server, using the same dl19 retrieval path as
 ``rerank_monot5.py`` / ``rerank_qwen.py`` (BM25 + prebuilt index).
 
+For partial reranking ranges, preserve all candidates and the scores at each
+rank so evaluation follows the merged order. Full-range runs retain model scores.
+
 Prerequisites:
   1. pip install -e '.[pyserini,vllm]'  (retrieval needs pyserini / JDK; vLLM
      needs openai + transformers at minimum).
@@ -34,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import copy
 import os
 import sys
 from pathlib import Path
@@ -43,7 +47,7 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.data import DataWriter
+from rank_llm.data import DataWriter, Request, Result
 from rank_llm.demo._rerank_args import parse_args_with_rank_range
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker
@@ -71,6 +75,23 @@ def _print_eval(results, qrels: str) -> None:
     for label, eval_args in EVAL_METRICS:
         value = EvalFunction.from_results(results, qrels, eval_args)
         print(f"  {label:12s} {value}")
+
+
+def _restore_candidates(
+    requests: list[Request], results: list[Result], rank_start: int, rank_end: int
+) -> None:
+    """Merge scored slices into complete runs, retaining rank scores for partial ranges."""
+    for request, result in zip(requests, results, strict=True):
+        if rank_start == 0 and rank_end >= len(request.candidates):
+            continue
+        candidates = copy.deepcopy(request.candidates)
+        # Match listwise behavior: preserve scores at each rank for run evaluation.
+        for candidate, original in zip(
+            result.candidates, candidates[rank_start:rank_end], strict=True
+        ):
+            candidate.score = original.score
+        candidates[rank_start:rank_end] = result.candidates
+        result.candidates = candidates
 
 
 def main() -> None:
@@ -164,6 +185,7 @@ def main() -> None:
 
     print("\n--- Sync rerank_batch (full dataset) ---")
     sync_out = reranker.rerank_batch(requests, **kwargs)
+    _restore_candidates(requests, sync_out, args.rank_start, args.rank_end)
     print(f"Sync: {len(sync_out)} results.")
     _print_sample(sync_out)
 
@@ -184,6 +206,7 @@ def main() -> None:
                 f"\n--- Async rerank_batch_async (first {len(sample)} queries only) ---"
             )
             async_out = await reranker.rerank_batch_async(sample, **kwargs)
+            _restore_candidates(sample, async_out, args.rank_start, args.rank_end)
             print(f"Async sample: {len(async_out)} results.")
             _print_sample(async_out)
 
