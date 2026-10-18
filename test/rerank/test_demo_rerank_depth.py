@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 from rank_llm.data import Candidate, Query, Request
+from rank_llm.rerank.listwise.rank_gemini import SafeGenai
 from rank_llm.rerank.listwise.rank_gpt import SafeOpenai
 
 
@@ -107,3 +108,42 @@ class DemoRerankDepthTest(unittest.TestCase):
         self.assertEqual(
             set().union(*(set(range(*r)) for r in ranges)), set(range(200))
         )
+
+    def test_short_requests_process_one_window_without_redundant_passes(self):
+        for model_type in (SafeGenai, SafeOpenai):
+            for size, start, depth, expected in (
+                (0, 0, 15, []),
+                (1, 0, 15, [(0, 1)]),
+                (5, 0, 15, [(0, 5)]),
+                (15, 0, 15, [(0, 15)]),
+                (30, 0, 30, [(10, 30), (0, 20)]),
+                (25, 0, 25, [(5, 25), (0, 15)]),
+                (25, 10, 30, [(10, 25)]),
+                (5, 10, 15, []),
+            ):
+                with self.subTest(model=model_type.__name__, size=size, start=start):
+                    model = object.__new__(model_type)
+                    model._batch_size, model._window_size, model._stride = 32, 20, 10
+                    model.permutation_pipeline = Mock(
+                        side_effect=lambda result, *a, **kw: result
+                    )
+                    request = Request(
+                        query=Query(text="query", qid="1"),
+                        candidates=[
+                            Candidate(docid=str(i), score=1.0, doc={})
+                            for i in range(size)
+                        ],
+                    )
+                    model.rerank_batch(
+                        [request],
+                        rank_start=start,
+                        rank_end=depth,
+                        top_k_retrieve=depth,
+                    )
+                    self.assertEqual(
+                        [
+                            call.args[1:3]
+                            for call in model.permutation_pipeline.call_args_list
+                        ],
+                        expected,
+                    )

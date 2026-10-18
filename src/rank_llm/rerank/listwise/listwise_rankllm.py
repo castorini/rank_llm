@@ -555,11 +555,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         if shuffle_candidates:
             self.shuffle_and_rescore([rerank_result], rank_start, rank_end)
         end_pos = rank_end
-        start_pos = rank_end - window_size
-        # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
-        # start_pos + stride != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
-        while end_pos > rank_start and start_pos + stride != rank_start:
-            start_pos = max(start_pos, rank_start)
+        start_pos = max(rank_end - window_size, rank_start)
+        while end_pos > start_pos:
             rerank_result = self.permutation_pipeline(
                 rerank_result,
                 start_pos,
@@ -567,8 +564,11 @@ class ListwiseRankLLM(RankLLM, ABC):
                 logging,
                 populate_invocations_history=populate_invocations_history,
             )
-            end_pos = end_pos - stride
-            start_pos = start_pos - stride
+            # Once the first candidate is included, further windows are redundant.
+            if start_pos == rank_start:
+                break
+            end_pos -= stride
+            start_pos = max(start_pos - stride, rank_start)
         return rerank_result
 
     def get_ranking_cost_upperbound(
