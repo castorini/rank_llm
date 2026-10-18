@@ -10,6 +10,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import DataWriter, read_requests_from_file
+from rank_llm.demo._rerank_args import parse_args_with_rank_range
 from rank_llm.rerank import Reranker, get_genai_api_key
 from rank_llm.rerank.listwise import SafeGenai
 from rank_llm.retrieve import Retriever
@@ -31,7 +32,7 @@ def main() -> None:
         "--k",
         type=int,
         default=100,
-        help="Number of passages per query to retrieve and rerank (default: 100). "
+        help="Retrieval depth and default reranking end index (default: 100). "
         "With --requests-file, caps reranking depth without changing input loading.",
     )
     parser.add_argument("--model", default="gemini-3-flash-preview")
@@ -51,7 +52,7 @@ def main() -> None:
         action="store_true",
         help="Do not write inference invocation history.",
     )
-    args = parser.parse_args()
+    args = parse_args_with_rank_range(parser)
 
     if args.requests_file:
         requests = read_requests_from_file(args.requests_file)
@@ -74,7 +75,8 @@ def main() -> None:
     reranker = Reranker(model_coordinator)
     kwargs = {
         "populate_invocations_history": not args.no_history,
-        "rank_end": args.k,
+        "rank_start": args.rank_start,
+        "rank_end": args.rank_end,
         "top_k_retrieve": args.k,
     }
     rerank_results = reranker.rerank_batch(requests, **kwargs)

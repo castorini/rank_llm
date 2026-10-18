@@ -37,8 +37,23 @@ class DemoRerankDepthTest(unittest.TestCase):
         request = Request(query=Query(text="query", qid="1"))
         for name, args, expected_calls in cases:
             demo = importlib.import_module(f"rank_llm.demo.{name}")
-            for depth in (None, 10, 200):
-                with self.subTest(demo=name, args=args, depth=depth):
+            for depth, start, end, valid in (
+                (None, 0, None, True),
+                (10, 0, None, True),
+                (200, 0, None, True),
+                (200, 10, 50, True),
+                (200, 10, None, True),
+                (200, 0, 50, True),
+                (200, -1, 50, False),
+                (200, 50, 50, False),
+                (200, 60, 50, False),
+                (200, 0, 201, False),
+                (200, 0, 0, False),
+                (0, 0, None, False),
+            ):
+                with self.subTest(
+                    demo=name, args=args, depth=depth, start=start, end=end
+                ):
                     model = Mock()
                     model.rerank_batch.return_value = [request]
                     model.rerank_batch_async = AsyncMock(return_value=[request])
@@ -65,6 +80,10 @@ class DemoRerankDepthTest(unittest.TestCase):
                     argv = [name, *args] + (
                         [] if depth is None else ["--k", str(depth)]
                     )
+                    if start:
+                        argv += ["--rank-start", str(start)]
+                    if end is not None:
+                        argv += ["--rank-end", str(end)]
                     with (
                         patch.multiple(demo, **replacements),
                         patch("sys.argv", argv),
@@ -76,13 +95,28 @@ class DemoRerankDepthTest(unittest.TestCase):
                         ) as retrieve,
                         redirect_stdout(io.StringIO()),
                     ):
+                        if not valid:
+                            with (
+                                patch("sys.stderr", io.StringIO()),
+                                self.assertRaises(SystemExit) as error,
+                            ):
+                                demo.main()
+                            self.assertEqual(error.exception.code, 2)
+                            retrieve.assert_not_called()
+                            for replacement in replacements.values():
+                                replacement.assert_not_called()
+                            continue
                         demo.main()
                     self.assertEqual(retrieve.call_args.kwargs["k"], depth or 100)
                     for method, count in expected_calls.items():
                         calls = getattr(model, method).call_args_list
                         self.assertEqual(len(calls), count)
                         for call in calls:
-                            self.assertEqual(call.kwargs["rank_end"], depth or 100)
+                            self.assertEqual(call.kwargs["rank_start"], start)
+                            self.assertEqual(
+                                call.kwargs["rank_end"],
+                                end if end is not None else depth or 100,
+                            )
                             self.assertEqual(
                                 call.kwargs["top_k_retrieve"], depth or 100
                             )
