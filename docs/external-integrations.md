@@ -282,3 +282,16 @@ new_nodes = get_retrieved_nodes(
 )
 visualize_retrieved_nodes(new_nodes)
 ```
+
+## MCP execution and model lifetime
+
+The MCP `rerank` and `retrieve_and_rerank` tools run synchronous retrieval and
+inference in a worker thread, leaving the server event loop available. Pipeline
+calls are serialized within the server process, including model cleanup. Cancelling
+a client request does not immediately stop its worker; the next pipeline waits
+until that operation and its cleanup finish.
+
+Models created for an invocation are closed after completion or failure when the
+backend supports `close()`. Caller-supplied rerankers and coordinators remain owned
+by their callers. Interactive retrieval transfers a newly created coordinator to
+the caller on success so it can be reused and closed when the session ends.

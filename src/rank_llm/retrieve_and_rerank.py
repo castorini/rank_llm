@@ -7,6 +7,7 @@ from huggingface_hub import hf_hub_download
 
 from rank_llm.data import DataWriter, Query, Request, read_requests_from_file
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
+from rank_llm.rerank._model_lifecycle import close_owned_model
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
     TOPICS,
@@ -51,148 +52,157 @@ def retrieve_and_rerank(
         )
     )
 
-    # Retrieve initial candidates
-    print(f"Retrieving top {top_k_retrieve} passages...")
-    requests = retrieve(
-        top_k_retrieve,
-        interactive,
-        retrieval_mode,
-        retrieval_method,
-        query,
-        qid,
-        dataset=dataset,
-        **kwargs,
-    )
-
-    if max_queries is not None:
-        requests = requests[: min(len(requests), max_queries)]
-
-    for request in requests:
-        request.candidates = request.candidates[:top_k_retrieve]
-
-    # Reranking stages
-    print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
-    if reranker.get_model_coordinator() is None:
-        # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
-        shuffle_candidates = True if model_path == "rank_random" else False
-        rerank_results = IdentityReranker().rerank_batch(
-            requests,
-            rank_end=top_k_retrieve,
-            shuffle_candidates=shuffle_candidates,
+    coordinator = reranker.get_model_coordinator()
+    owns_model = coordinator is not default_model_coordinator
+    try:
+        # Retrieve initial candidates
+        print(f"Retrieving top {top_k_retrieve} passages...")
+        requests = retrieve(
+            top_k_retrieve,
+            interactive,
+            retrieval_mode,
+            retrieval_method,
+            query,
+            qid,
+            dataset=dataset,
+            **kwargs,
         )
-    else:
-        # Reranker is of type RankLLM
-        for pass_ct in range(num_passes):
-            print(f"Pass {pass_ct + 1} of {num_passes}:")
-            rerank_results = reranker.rerank_batch(
+
+        if max_queries is not None:
+            requests = requests[: min(len(requests), max_queries)]
+
+        for request in requests:
+            request.candidates = request.candidates[:top_k_retrieve]
+
+        # Reranking stages
+        print(f"Reranking and returning {top_k_rerank} passages with {model_path}...")
+        if reranker.get_model_coordinator() is None:
+            # No reranker. IdentityReranker leaves retrieve candidate results as is or randomizes the order.
+            shuffle_candidates = True if model_path == "rank_random" else False
+            rerank_results = IdentityReranker().rerank_batch(
                 requests,
                 rank_end=top_k_retrieve,
-                rank_start=0,
                 shuffle_candidates=shuffle_candidates,
-                logging=print_prompts_responses,
-                top_k_retrieve=top_k_retrieve,
-                **kwargs,
-            )
-
-            if num_passes > 1:
-                requests = [
-                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                    for r in rerank_results
-                ]
-
-    for rr in rerank_results:
-        rr.candidates = rr.candidates[:top_k_rerank]
-
-    # generate trec_eval file & evaluate for named datasets only
-    if isinstance(dataset, str) and reranker.get_model_coordinator() is not None:
-        file_name = reranker.write_rerank_results(
-            retrieval_method.name,
-            rerank_results,
-            shuffle_candidates,
-            top_k_candidates=top_k_retrieve,
-            pass_ct=None if num_passes == 1 else pass_ct,
-            window_size=kwargs.get("window_size", None),
-            dataset_name=dataset,
-            output_trec_file=kwargs.get("output_trec_file") or None,
-            output_jsonl_file=kwargs.get("output_jsonl_file") or None,
-            invocations_history_file=kwargs.get("invocations_history_file") or None,
-        )
-        qrels_for_eval = (kwargs.get("qrels_file") or "").strip() or (
-            TOPICS[dataset] if dataset in TOPICS else None
-        )
-        # Skip evaluation for single supplied query: qrels are for dataset topics, not ad-hoc queries
-        if (
-            qrels_for_eval
-            and not query
-            and dataset not in ["news"]
-            and (dataset not in TOPICS or TOPICS[dataset] not in ["news"])
-        ):
-            from rank_llm.evaluation.trec_eval import EvalFunction
-
-            print("Evaluating:")
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.1", qrels_for_eval, file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.5", qrels_for_eval, file_name])
-            EvalFunction.eval(["-c", "-m", "ndcg_cut.10", qrels_for_eval, file_name])
-        elif not query:
-            print(
-                f"Skipping evaluation as {dataset} is not in TOPICS and no qrels file was provided."
             )
         else:
-            print("Skipping evaluation for single ad-hoc query (no qrels).")
-    elif (
-        retrieval_mode == RetrievalMode.CACHED_FILE
-        and reranker.get_model_coordinator() is not None
-    ):
-        writer = DataWriter(rerank_results)
-        keys_and_defaults = [
-            ("output_jsonl_file", ""),
-            ("output_trec_file", ""),
-            ("invocations_history_file", ""),
-        ]
-        [
-            output_jsonl_file,
-            output_trec_file,
-            invocations_history_file,
-        ] = extract_kwargs(keys_and_defaults, **kwargs)
-        if output_jsonl_file:
-            path = Path(output_jsonl_file)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            writer.write_in_jsonl_format(output_jsonl_file)
-        if output_trec_file:
-            path = Path(output_trec_file)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            writer.write_in_trec_eval_format(output_trec_file)
-        keys_and_defaults = [("populate_invocations_history", False)]
-        [populate_invocations_history] = extract_kwargs(keys_and_defaults, **kwargs)
-        if populate_invocations_history:
-            if invocations_history_file:
-                path = Path(invocations_history_file)
-                path.parent.mkdir(parents=True, exist_ok=True)
-                writer.write_inference_invocations_history(invocations_history_file)
-            else:
-                raise ValueError(
-                    "--invocations_history_file must be a valid jsonl file to store invocations history."
+            # Reranker is of type RankLLM
+            for pass_ct in range(num_passes):
+                print(f"Pass {pass_ct + 1} of {num_passes}:")
+                rerank_results = reranker.rerank_batch(
+                    requests,
+                    rank_end=top_k_retrieve,
+                    rank_start=0,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=print_prompts_responses,
+                    top_k_retrieve=top_k_retrieve,
+                    **kwargs,
                 )
-        keys_and_defaults = [("qrels_file", "")]
-        [qrels_file] = extract_kwargs(keys_and_defaults, **kwargs)
-        if qrels_file:
-            from rank_llm.evaluation.trec_eval import EvalFunction
 
-            print("Evaluating:")
-            EvalFunction.from_results(
-                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.1"]
-            )
-            EvalFunction.from_results(
-                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.5"]
-            )
-            EvalFunction.from_results(
-                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.10"]
-            )
+                if num_passes > 1:
+                    requests = [
+                        Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                        for r in rerank_results
+                    ]
 
-    if interactive:
-        return (rerank_results, reranker.get_model_coordinator())
-    else:
-        return rerank_results
+        for rr in rerank_results:
+            rr.candidates = rr.candidates[:top_k_rerank]
+
+        # generate trec_eval file & evaluate for named datasets only
+        if isinstance(dataset, str) and reranker.get_model_coordinator() is not None:
+            file_name = reranker.write_rerank_results(
+                retrieval_method.name,
+                rerank_results,
+                shuffle_candidates,
+                top_k_candidates=top_k_retrieve,
+                pass_ct=None if num_passes == 1 else pass_ct,
+                window_size=kwargs.get("window_size", None),
+                dataset_name=dataset,
+                output_trec_file=kwargs.get("output_trec_file") or None,
+                output_jsonl_file=kwargs.get("output_jsonl_file") or None,
+                invocations_history_file=kwargs.get("invocations_history_file") or None,
+            )
+            qrels_for_eval = (kwargs.get("qrels_file") or "").strip() or (
+                TOPICS[dataset] if dataset in TOPICS else None
+            )
+            # Skip evaluation for single supplied query: qrels are for dataset topics, not ad-hoc queries
+            if (
+                qrels_for_eval
+                and not query
+                and dataset not in ["news"]
+                and (dataset not in TOPICS or TOPICS[dataset] not in ["news"])
+            ):
+                from rank_llm.evaluation.trec_eval import EvalFunction
+
+                print("Evaluating:")
+                EvalFunction.eval(["-c", "-m", "ndcg_cut.1", qrels_for_eval, file_name])
+                EvalFunction.eval(["-c", "-m", "ndcg_cut.5", qrels_for_eval, file_name])
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.10", qrels_for_eval, file_name]
+                )
+            elif not query:
+                print(
+                    f"Skipping evaluation as {dataset} is not in TOPICS and no qrels file was provided."
+                )
+            else:
+                print("Skipping evaluation for single ad-hoc query (no qrels).")
+        elif (
+            retrieval_mode == RetrievalMode.CACHED_FILE
+            and reranker.get_model_coordinator() is not None
+        ):
+            writer = DataWriter(rerank_results)
+            keys_and_defaults = [
+                ("output_jsonl_file", ""),
+                ("output_trec_file", ""),
+                ("invocations_history_file", ""),
+            ]
+            [
+                output_jsonl_file,
+                output_trec_file,
+                invocations_history_file,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+            if output_jsonl_file:
+                path = Path(output_jsonl_file)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                writer.write_in_jsonl_format(output_jsonl_file)
+            if output_trec_file:
+                path = Path(output_trec_file)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                writer.write_in_trec_eval_format(output_trec_file)
+            keys_and_defaults = [("populate_invocations_history", False)]
+            [populate_invocations_history] = extract_kwargs(keys_and_defaults, **kwargs)
+            if populate_invocations_history:
+                if invocations_history_file:
+                    path = Path(invocations_history_file)
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    writer.write_inference_invocations_history(invocations_history_file)
+                else:
+                    raise ValueError(
+                        "--invocations_history_file must be a valid jsonl file to store invocations history."
+                    )
+            keys_and_defaults = [("qrels_file", "")]
+            [qrels_file] = extract_kwargs(keys_and_defaults, **kwargs)
+            if qrels_file:
+                from rank_llm.evaluation.trec_eval import EvalFunction
+
+                print("Evaluating:")
+                EvalFunction.from_results(
+                    rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.1"]
+                )
+                EvalFunction.from_results(
+                    rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.5"]
+                )
+                EvalFunction.from_results(
+                    rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.10"]
+                )
+
+        if interactive:
+            owns_model = False  # Transfer ownership to the interactive caller.
+            return (rerank_results, coordinator)
+        else:
+            return rerank_results
+    finally:
+        if owns_model:
+            close_owned_model(coordinator)
 
 
 def retrieve(

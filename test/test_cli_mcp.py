@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 import unittest
 from importlib.util import find_spec
@@ -36,10 +37,12 @@ class TestCLIMCP(unittest.TestCase):
             return_value=[{"ok": True}],
         ) as mocked:
             register_rankllm_tools(mcp)
-            result = mcp.tools["rerank"](
-                model_path="model",
-                query_text="cats",
-                candidates=[{"docid": "1", "score": 1.0, "doc": "doc"}],
+            result = asyncio.run(
+                mcp.tools["rerank"](
+                    model_path="model",
+                    query_text="cats",
+                    candidates=[{"docid": "1", "score": 1.0, "doc": "doc"}],
+                )
             )
 
         self.assertEqual(result, [{"ok": True}])
@@ -53,9 +56,11 @@ class TestCLIMCP(unittest.TestCase):
             return_value=[{"ok": True}],
         ) as mocked:
             register_rankllm_tools(mcp)
-            result = mcp.tools["retrieve_and_rerank"](
-                model_path="model",
-                dataset="dl19",
+            result = asyncio.run(
+                mcp.tools["retrieve_and_rerank"](
+                    model_path="model",
+                    dataset="dl19",
+                )
             )
 
         self.assertEqual(result, [{"ok": True}])
