@@ -18,7 +18,10 @@ class GaggleReranker(PointwiseRankLLM):
         device: str = "cuda",
         batch_size: int = 16,
     ):
-        if Path(prompt_template_path) != Path(TEMPLATES / "gaggle_template.yaml"):
+        if (
+            Path(prompt_template_path).resolve()
+            != Path(TEMPLATES / "gaggle_template.yaml").resolve()
+        ):
             raise ValueError("Gaggle rerankers use a fixed prompt template")
         super().__init__(
             model=model,

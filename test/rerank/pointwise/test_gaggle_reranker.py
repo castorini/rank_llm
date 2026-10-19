@@ -13,6 +13,18 @@ class TestGaggleReranker(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "fixed prompt template"):
             GaggleReranker(prompt_template_path="custom.yaml")
 
+    def test_accepts_relative_bundled_prompt_template(self):
+        with (
+            patch(
+                "rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification"
+            ),
+            patch("rank_llm.rerank.pointwise.gaggle_reranker.AutoTokenizer"),
+        ):
+            GaggleReranker(
+                prompt_template_path="src/rank_llm/rerank/prompt_templates/gaggle_template.yaml",
+                device="cpu",
+            )
+
     @patch("rank_llm.rerank.pointwise.gaggle_reranker.torch.cuda.is_bf16_supported")
     @patch(
         "rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification"
