@@ -128,23 +128,37 @@ class DemoRerankDepthTest(unittest.TestCase):
                             self.assertEqual(getattr(model, method).await_count, count)
 
     def test_requested_depth_reaches_tail_sliding_windows(self):
-        model = object.__new__(SafeOpenai)
-        model._batch_size = 32
-        model._window_size = 20
-        model._stride = 10
-        model.permutation_pipeline = Mock(
-            side_effect=lambda result, *args, **kw: result
-        )
         request = Request(
             query=Query(text="query", qid="1"),
             candidates=[Candidate(docid=str(i), score=1.0, doc={}) for i in range(200)],
         )
-        model.rerank_batch([request], rank_end=200, top_k_retrieve=200)
-        ranges = [call.args[1:3] for call in model.permutation_pipeline.call_args_list]
-        self.assertEqual(ranges[0], (180, 200))
-        self.assertEqual(
-            set().union(*(set(range(*r)) for r in ranges)), set(range(200))
-        )
+        for window, stride, count in (
+            (20, 10, 19),
+            (12, 3, 64),
+            (15, 9, 22),
+            (20, 20, 10),
+            (1, 1, 200),
+        ):
+            with self.subTest(window=window, stride=stride):
+                model = object.__new__(SafeOpenai)
+                model._batch_size, model._window_size, model._stride = (
+                    32,
+                    window,
+                    stride,
+                )
+                model.permutation_pipeline = Mock(
+                    side_effect=lambda result, *args, **kw: result
+                )
+                model.rerank_batch([request], rank_end=200, top_k_retrieve=200)
+                ranges = [
+                    call.args[1:3] for call in model.permutation_pipeline.call_args_list
+                ]
+                self.assertEqual(ranges[0], (200 - window, 200))
+                self.assertEqual(ranges[-1][0], 0)
+                self.assertEqual(len(ranges), count)
+                self.assertEqual(
+                    set().union(*(set(range(*r)) for r in ranges)), set(range(200))
+                )
 
     def test_short_requests_process_one_window_without_redundant_passes(self):
         for model_type in (SafeGenai, SafeOpenai):
