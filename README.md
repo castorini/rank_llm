@@ -20,7 +20,7 @@ We offer a suite of rerankers - pointwise models like MonoT5, pairwise models li
 </p>
 
 ## Releases
-current_version = "0.25.7"
+current_version = "0.26.0"
 
 ## Content
 1. [Installation](#installation)
@@ -419,6 +419,7 @@ If you would like to contribute to the project, please refer to the [contributio
 
 ## 📜️ Release History
 
++ v0.26.0: [Release Notes](docs/release-notes/release-notes-v0.26.0.md)
 + v0.25.7: August 25, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.7.md)]
 + v0.25.6: August 5, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.6.md)]
 + v0.25.0: July 23, 2025 [[Release Notes](docs/release-notes/release-notes-v0.25.0.md)]
