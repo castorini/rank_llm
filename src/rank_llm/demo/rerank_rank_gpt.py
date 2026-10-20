@@ -40,6 +40,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import DataWriter, Result
+from rank_llm.demo._rerank_args import parse_args_with_rank_range
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker, get_openai_api_key
 from rank_llm.rerank.listwise import SafeOpenai
@@ -81,7 +82,7 @@ def main() -> None:
         "--k",
         type=int,
         default=100,
-        help="Top-k passages per query from first-stage retrieval (default: 100).",
+        help="Retrieval depth and default reranking end index (default: 100).",
     )
     p.add_argument(
         "--model",
@@ -144,7 +145,7 @@ def main() -> None:
         action="store_true",
         help="Skip inline evaluation (useful in batch benchmark runs).",
     )
-    args = p.parse_args()
+    args = parse_args_with_rank_range(p)
 
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
     if args.num_queries is not None:
@@ -175,7 +176,12 @@ def main() -> None:
         base_url=args.base_url,
     )
     reranker = Reranker(coordinator)
-    kwargs = {"populate_invocations_history": True}
+    kwargs = {
+        "populate_invocations_history": True,
+        "rank_start": args.rank_start,
+        "rank_end": args.rank_end,
+        "top_k_retrieve": args.k,
+    }
 
     print(f"\n--- Batched reranking ({len(requests)} queries) ---")
     rerank_results = reranker.rerank_batch(requests, **kwargs)

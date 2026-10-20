@@ -48,6 +48,7 @@ sys.path.append(parent)
 
 from rank_llm.analysis.response_analysis import ResponseAnalyzer
 from rank_llm.data import DataWriter, Request, Result
+from rank_llm.demo._rerank_args import parse_args_with_rank_range
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker
 from rank_llm.rerank.listwise import RankListwiseOSLLM
@@ -120,7 +121,7 @@ def main() -> None:
         "--k",
         type=int,
         default=100,
-        help="Top-k passages per query from first-stage retrieval (default: 100).",
+        help="Retrieval depth and default reranking end index (default: 100).",
     )
     p.add_argument(
         "--base-url",
@@ -190,7 +191,7 @@ def main() -> None:
         default=None,
         help="Same fields as sampling-json-file, as an inline JSON object string.",
     )
-    args = p.parse_args()
+    args = parse_args_with_rank_range(p)
 
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
     if args.num_queries is not None:
@@ -219,7 +220,12 @@ def main() -> None:
         sampling_kwargs=load_sampling_kw_dict(args) or None,
     )
     reranker = Reranker(coordinator)
-    kwargs = {"populate_invocations_history": True}
+    kwargs = {
+        "populate_invocations_history": True,
+        "rank_start": args.rank_start,
+        "rank_end": args.rank_end,
+        "top_k_retrieve": args.k,
+    }
 
     print(f"\n--- Async concurrent reranking ({len(requests)} queries) ---")
     rerank_results = asyncio.run(

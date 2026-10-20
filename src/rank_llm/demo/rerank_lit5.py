@@ -39,6 +39,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import DataWriter, Result
+from rank_llm.demo._rerank_args import parse_args_with_rank_range
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank.listwise.lit5_reranker import (
     LiT5DistillReranker,
@@ -89,7 +90,7 @@ def main() -> None:
         "--k",
         type=int,
         default=100,
-        help="Top-k passages per query from first-stage retrieval (default: 100).",
+        help="Retrieval depth and default reranking end index (default: 100).",
     )
     p.add_argument(
         "--distill-model",
@@ -152,7 +153,7 @@ def main() -> None:
         action="store_true",
         help="Skip inline evaluation (useful in batch benchmark runs).",
     )
-    args = p.parse_args()
+    args = parse_args_with_rank_range(p)
 
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
     if args.num_queries is not None:
@@ -182,7 +183,12 @@ def main() -> None:
             device=args.device,
             batch_size=args.batch_size,
         )
-        kwargs = {"populate_invocations_history": True}
+        kwargs = {
+            "populate_invocations_history": True,
+            "rank_start": args.rank_start,
+            "rank_end": args.rank_end,
+            "top_k_retrieve": args.k,
+        }
         print(f"\n--- LiT5-Distill batched reranking ({len(requests)} queries) ---")
         rerank_results = distill.rerank_batch(requests, **kwargs)
         print(f"Reranked {len(rerank_results)} results.")
@@ -205,7 +211,13 @@ def main() -> None:
         )
         request = requests[0]
         print(f"\n--- LiT5-Score single-query demo (qid={request.query.qid}) ---")
-        score_results = score.rerank_batch([request], populate_invocations_history=True)
+        score_results = score.rerank_batch(
+            [request],
+            populate_invocations_history=True,
+            rank_start=args.rank_start,
+            rank_end=args.rank_end,
+            top_k_retrieve=args.k,
+        )
         score_result = score_results[0]
         print(f"qid={score_result.query.qid} text={score_result.query.text!r}")
         for c in score_result.candidates[:5]:

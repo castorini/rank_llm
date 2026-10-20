@@ -3,6 +3,9 @@ Demo: generative pointwise reranking (yes/no + logprobs) against a local
 OpenAI-compatible vLLM server, using the same dl19 retrieval path as
 ``rerank_monot5.py`` / ``rerank_qwen.py`` (BM25 + prebuilt index).
 
+For partial reranking ranges, preserve all candidates and the scores at each
+rank so evaluation follows the merged order. Full-range runs retain model scores.
+
 Prerequisites:
   1. pip install -e '.[pyserini,vllm]'  (retrieval needs pyserini / JDK; vLLM
      needs openai + transformers at minimum).
@@ -34,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import copy
 import os
 import sys
 from pathlib import Path
@@ -43,7 +47,8 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
-from rank_llm.data import DataWriter
+from rank_llm.data import DataWriter, Request, Result
+from rank_llm.demo._rerank_args import parse_args_with_rank_range
 from rank_llm.evaluation.trec_eval import EvalFunction
 from rank_llm.rerank import Reranker
 from rank_llm.rerank.pointwise.pointwise_vllm import PointwiseVLLM
@@ -72,6 +77,23 @@ def _print_eval(results, qrels: str) -> None:
         print(f"  {label:12s} {value}")
 
 
+def _restore_candidates(
+    requests: list[Request], results: list[Result], rank_start: int, rank_end: int
+) -> None:
+    """Merge scored slices into complete runs, retaining rank scores for partial ranges."""
+    for request, result in zip(requests, results, strict=True):
+        if rank_start == 0 and rank_end >= len(request.candidates):
+            continue
+        candidates = copy.deepcopy(request.candidates)
+        # Match listwise behavior: preserve scores at each rank for run evaluation.
+        for candidate, original in zip(
+            result.candidates, candidates[rank_start:rank_end], strict=True
+        ):
+            candidate.score = original.score
+        candidates[rank_start:rank_end] = result.candidates
+        result.candidates = candidates
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument(
@@ -83,7 +105,7 @@ def main() -> None:
         "--k",
         type=int,
         default=100,
-        help="Top-k passages per query from first-stage retrieval (default: 100).",
+        help="Retrieval depth and default reranking end index (default: 100).",
     )
     p.add_argument(
         "--base-url",
@@ -127,7 +149,7 @@ def main() -> None:
         action="store_true",
         help="Skip inline evaluation (useful in batch benchmark runs).",
     )
-    args = p.parse_args()
+    args = parse_args_with_rank_range(p)
 
     requests = Retriever.from_dataset_with_prebuilt_index(args.dataset, k=args.k)
     if args.num_queries is not None:
@@ -154,10 +176,16 @@ def main() -> None:
         max_passage_words=args.max_passage_words,
     )
     reranker = Reranker(coordinator)
-    kwargs = {"populate_invocations_history": True}
+    kwargs = {
+        "populate_invocations_history": True,
+        "rank_start": args.rank_start,
+        "rank_end": args.rank_end,
+        "top_k_retrieve": args.k,
+    }
 
     print("\n--- Sync rerank_batch (full dataset) ---")
     sync_out = reranker.rerank_batch(requests, **kwargs)
+    _restore_candidates(requests, sync_out, args.rank_start, args.rank_end)
     print(f"Sync: {len(sync_out)} results.")
     _print_sample(sync_out)
 
@@ -178,6 +206,7 @@ def main() -> None:
                 f"\n--- Async rerank_batch_async (first {len(sample)} queries only) ---"
             )
             async_out = await reranker.rerank_batch_async(sample, **kwargs)
+            _restore_candidates(sample, async_out, args.rank_start, args.rank_end)
             print(f"Async sample: {len(async_out)} results.")
             _print_sample(async_out)
 

@@ -9,7 +9,10 @@ parent = os.path.dirname(SCRIPT_DIR)
 parent = os.path.dirname(parent)
 sys.path.append(parent)
 
+from rank_llm.demo._rerank_args import parse_args_with_rank_range
+
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
+
 DEFAULT_RERANKERS = [
     "monot5",
     "duot5",
@@ -155,7 +158,8 @@ def create_reranker(name: str, args: argparse.Namespace):
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run experimental reranking demos across models and datasets."
+        description="Run experimental reranking demos across models and datasets.",
+        epilog="MonoT5 and DuoT5 do not support --rank-start/--rank-end.",
     )
     parser.add_argument("--rerankers", default=None)
     parser.add_argument("--analysis-rerankers", default=None)
@@ -168,7 +172,13 @@ def main() -> None:
             "When set, skips retrieval."
         ),
     )
-    parser.add_argument("--k", type=int, default=100)
+    parser.add_argument(
+        "--k",
+        type=int,
+        default=100,
+        help="Retrieval depth and default reranking end index (default: 100). "
+        "With --requests-file, sets listwise reranking depth without changing input loading.",
+    )
     parser.add_argument("--num-queries", type=int, default=None)
     parser.add_argument("--output-dir", default="demo_outputs")
     parser.add_argument("--skip-rerank", action="store_true")
@@ -188,7 +198,7 @@ def main() -> None:
     parser.add_argument("--mistral-model", default="castorini/first_mistral")
     parser.add_argument("--qwen-model", default="Qwen/Qwen2.5-7B-Instruct")
     parser.add_argument("--llama-model", default="meta-llama/Llama-3.1-8B-Instruct")
-    args = parser.parse_args()
+    args = parse_args_with_rank_range(parser)
 
     from rank_llm.data import DataWriter, read_requests_from_file
     from rank_llm.evaluation.trec_eval import EvalFunction
@@ -217,7 +227,12 @@ def main() -> None:
                 if not args.skip_eval:
                     topics = TOPICS[dataset]
                     ret_ndcg_10 = EvalFunction.from_results(retrieved_results, topics)
-                kwargs = {"populate_invocations_history": not args.no_history}
+                kwargs = {
+                    "populate_invocations_history": not args.no_history,
+                    "rank_start": args.rank_start,
+                    "rank_end": args.rank_end,
+                    "top_k_retrieve": args.k,
+                }
                 rerank_results = reranker.rerank_batch(retrieved_results, **kwargs)
 
                 writer = DataWriter(rerank_results)

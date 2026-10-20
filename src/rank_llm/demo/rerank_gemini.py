@@ -10,6 +10,7 @@ parent = os.path.dirname(parent)
 sys.path.append(parent)
 
 from rank_llm.data import DataWriter, read_requests_from_file
+from rank_llm.demo._rerank_args import parse_args_with_rank_range
 from rank_llm.rerank import Reranker, get_genai_api_key
 from rank_llm.rerank.listwise import SafeGenai
 from rank_llm.retrieve import Retriever
@@ -27,7 +28,13 @@ def main() -> None:
         default=None,
         help="Optional JSON/JSONL requests file. When set, skips retrieval.",
     )
-    parser.add_argument("--k", type=int, default=100)
+    parser.add_argument(
+        "--k",
+        type=int,
+        default=100,
+        help="Retrieval depth and default reranking end index (default: 100). "
+        "With --requests-file, caps reranking depth without changing input loading.",
+    )
     parser.add_argument("--model", default="gemini-3-flash-preview")
     parser.add_argument("--context-size", type=int, default=4096)
     parser.add_argument("--window-size", type=int, default=20)
@@ -45,7 +52,7 @@ def main() -> None:
         action="store_true",
         help="Do not write inference invocation history.",
     )
-    args = parser.parse_args()
+    args = parse_args_with_rank_range(parser)
 
     if args.requests_file:
         requests = read_requests_from_file(args.requests_file)
@@ -66,7 +73,12 @@ def main() -> None:
         max_passage_words=args.max_passage_words,
     )
     reranker = Reranker(model_coordinator)
-    kwargs = {"populate_invocations_history": not args.no_history}
+    kwargs = {
+        "populate_invocations_history": not args.no_history,
+        "rank_start": args.rank_start,
+        "rank_end": args.rank_end,
+        "top_k_retrieve": args.k,
+    }
     rerank_results = reranker.rerank_batch(requests, **kwargs)
     print(rerank_results)
 

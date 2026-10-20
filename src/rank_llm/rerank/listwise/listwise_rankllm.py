@@ -555,11 +555,8 @@ class ListwiseRankLLM(RankLLM, ABC):
         if shuffle_candidates:
             self.shuffle_and_rescore([rerank_result], rank_start, rank_end)
         end_pos = rank_end
-        start_pos = rank_end - window_size
-        # end_pos > rank_start ensures that the list is non-empty while allowing last window to be smaller than window_size
-        # start_pos + stride != rank_start prevents processing of redundant windows (e.g. 0-20, followed by 0-10)
-        while end_pos > rank_start and start_pos + stride != rank_start:
-            start_pos = max(start_pos, rank_start)
+        start_pos = max(rank_end - window_size, rank_start)
+        while end_pos > start_pos:
             rerank_result = self.permutation_pipeline(
                 rerank_result,
                 start_pos,
@@ -567,8 +564,11 @@ class ListwiseRankLLM(RankLLM, ABC):
                 logging,
                 populate_invocations_history=populate_invocations_history,
             )
-            end_pos = end_pos - stride
-            start_pos = start_pos - stride
+            # Once the first candidate is included, further windows are redundant.
+            if start_pos == rank_start:
+                break
+            end_pos -= stride
+            start_pos = max(start_pos - stride, rank_start)
         return rerank_result
 
     def get_ranking_cost_upperbound(
@@ -586,11 +586,13 @@ class ListwiseRankLLM(RankLLM, ABC):
             Tuple[float, int]: A tuple object containing the cost and the total number of tokens used (input tokens + output tokens).
         """
         # For every prompt generated for every query assume the max context size is used.
-        num_promt = (rank_end - rank_start - self._window_size) / self._stride + 1
-        input_token_count = (
-            num_q * num_promt * (self._context_size - self.num_output_tokens())
+        num_prompts = self._count_windows(
+            rank_end, max(rank_start, 0), rank_end, self._window_size, self._stride
         )
-        output_token_count = num_q * num_promt * self.num_output_tokens()
+        input_token_count = (
+            num_q * num_prompts * (self._context_size - self.num_output_tokens())
+        )
+        output_token_count = num_q * num_prompts * self.num_output_tokens()
         cost = (
             input_token_count * self.cost_per_1k_token(input_token=True)
             + output_token_count * self.cost_per_1k_token(input_token=False)
@@ -620,16 +622,19 @@ class ListwiseRankLLM(RankLLM, ABC):
         stride = self._stride
         # Go through the retrieval result using the sliding window and count the number of tokens for generated prompts.
         # This is an estimated cost analysis since the actual prompts' length will depend on the ranking.
+        rank_start = max(rank_start, 0)
         for result in tqdm(retrieved_results):
-            end_pos = rank_end
-            start_pos = rank_end - window_size
-            while start_pos >= rank_start:
-                start_pos = max(start_pos, rank_start)
+            end_pos = min(rank_end, len(result.candidates))
+            start_pos = max(end_pos - window_size, rank_start)
+            num_prompts = self._count_windows(
+                len(result.candidates), rank_start, rank_end, window_size, stride
+            )
+            for _ in range(num_prompts):
                 prompt, _ = self.create_prompt(result, start_pos, end_pos)
                 input_token_count += self.get_num_tokens(prompt)
-                end_pos = end_pos - stride
-                start_pos = start_pos - stride
                 output_token_count += self.num_output_tokens()
+                end_pos -= stride
+                start_pos = max(start_pos - stride, rank_start)
         cost = (
             input_token_count * self.cost_per_1k_token(input_token=True)
             + output_token_count * self.cost_per_1k_token(input_token=False)
