@@ -50,7 +50,7 @@ gemini = [
 ]
 local = [
     "torch>=2.6.0",
-    "transformers>=5",
+    "transformers[sentencepiece]>=5",
 ]
 vllm = [
     "openai>=1.23.6",

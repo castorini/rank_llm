@@ -4594,7 +4594,7 @@ all = [
     { name = "six" },
     { name = "tiktoken" },
     { name = "torch" },
-    { name = "transformers" },
+    { name = "transformers", extra = ["sentencepiece"] },
     { name = "uvicorn" },
     { name = "vllm" },
 ]
@@ -4624,7 +4624,7 @@ litellm = [
 ]
 local = [
     { name = "torch" },
-    { name = "transformers" },
+    { name = "transformers", extra = ["sentencepiece"] },
 ]
 mcp = [
     { name = "faiss-cpu" },
@@ -4635,7 +4635,7 @@ mcp = [
     { name = "python-dotenv" },
     { name = "tiktoken" },
     { name = "torch" },
-    { name = "transformers" },
+    { name = "transformers", extra = ["sentencepiece"] },
     { name = "vllm" },
 ]
 openai = [
@@ -4659,7 +4659,7 @@ server = [
     { name = "python-dotenv" },
     { name = "tiktoken" },
     { name = "torch" },
-    { name = "transformers" },
+    { name = "transformers", extra = ["sentencepiece"] },
     { name = "uvicorn" },
     { name = "vllm" },
 ]
@@ -4672,12 +4672,12 @@ training = [
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "six" },
     { name = "torch" },
-    { name = "transformers" },
+    { name = "transformers", extra = ["sentencepiece"] },
 ]
 vllm = [
     { name = "openai" },
     { name = "torch" },
-    { name = "transformers" },
+    { name = "transformers", extra = ["sentencepiece"] },
     { name = "vllm" },
 ]
 
@@ -4737,7 +4737,7 @@ requires-dist = [
     { name = "torch", marker = "extra == 'local'", specifier = ">=2.6.0" },
     { name = "torch", marker = "extra == 'training'", specifier = ">=2.6.0" },
     { name = "tqdm", specifier = ">=4.66.2" },
-    { name = "transformers", marker = "extra == 'local'", specifier = ">=5" },
+    { name = "transformers", extras = ["sentencepiece"], marker = "extra == 'local'", specifier = ">=5" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.32.0" },
     { name = "vllm", marker = "extra == 'vllm'", specifier = ">=0.19.1" },
 ]
@@ -5728,6 +5728,12 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4d/fe/7e84d20ac7d4d5d14bac2eab5976088d86342959fc2c0da54b4c2fc99856/transformers-5.7.0.tar.gz", hash = "sha256:a9d35cf39804e3456c1f9bc1a79ad5ffa878640a61f51f66f71c97f4b4e2ce10", size = 8401287, upload-time = "2026-04-28T18:30:09.75Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/60/86a9fe3037bec221094e2acb680219ad88b77006edba42fc0407a577ca93/transformers-5.7.0-py3-none-any.whl", hash = "sha256:869660cd8fc92badc041f5551bf755a42f4b9558c93341bf3fa3eeed7065079c", size = 10474236, upload-time = "2026-04-28T18:30:05.655Z" },
+]
+
+[package.optional-dependencies]
+sentencepiece = [
+    { name = "protobuf" },
+    { name = "sentencepiece" },
 ]
 
 [[package]]

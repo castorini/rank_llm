@@ -22,6 +22,8 @@
   - Requires Python 3.12 or newer.
   - Updated Pyserini to v2.4.0 and local inference dependencies
     to Transformers 5 or newer.
+  - Included SentencePiece tokenizer dependencies in the `local` extra
+    so monoT5 works without installing other integrations.
   - Migrated Gemini support to the Google Gen AI SDK.
   - Removed SGLang and TensorRT-LLM backend implementations.
 - Bug fixes:
