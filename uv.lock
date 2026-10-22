@@ -4702,7 +4702,7 @@ requires-dist = [
     { name = "ftfy", specifier = ">=6.2.0" },
     { name = "google-genai", marker = "extra == 'genai'", specifier = ">=1.0.0" },
     { name = "huggingface-hub", specifier = ">=0.23.0" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.67.0,<1.107.0" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.67.0,<=1.106.0" },
     { name = "numpy", marker = "extra == 'training'", specifier = ">=1.26.4" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.23.6" },
     { name = "openai", marker = "extra == 'vllm'", specifier = ">=1.23.6" },
