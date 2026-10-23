@@ -1,3 +1,4 @@
+import os
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -503,7 +504,7 @@ class Reranker:
             keys_and_defaults = [
                 (
                     "prompt_template_path",
-                    "src/rank_llm/rerank/prompt_templates/monoelectra_template.yaml",
+                    (TEMPLATES / "monoelectra_template.yaml"),
                 ),
                 ("context_size", 512),
                 ("device", "cuda"),
@@ -808,10 +809,15 @@ def extract_kwargs(
         value = kwargs.get(key, None)
         if value is None:
             value = default
+        # Paths such as prompt_template_path may be given as str or os.PathLike,
+        # the same types RankLLM accepts.
+        expected_type = (
+            str | os.PathLike if isinstance(default, os.PathLike) else type(default)
+        )
         if (
             value is not None
             and default is not None
-            and not isinstance(value, type(default))
+            and not isinstance(value, expected_type)
         ):
             raise ValueError(
                 f"Provided kwarg for {key} must be of type {type(default).__name__}, got {type(value).__name__}"

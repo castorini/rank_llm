@@ -3,7 +3,7 @@ import warnings
 from unittest.mock import patch
 
 from rank_llm.rerank.rankllm import PromptMode, RankLLM
-from rank_llm.rerank.reranker import Reranker
+from rank_llm.rerank.reranker import TEMPLATES, Reranker, extract_kwargs
 
 # A real template so RankLLM.__init__ can build an inference handler.
 _TEMPLATE = "src/rank_llm/rerank/prompt_templates/rank_gpt_template.yaml"
@@ -92,6 +92,29 @@ class TestModelCoordinator(unittest.TestCase):
             safe_litellm.call_args.kwargs["api_base"],
             "https://example.invalid/v1",
         )
+
+    def test_str_prompt_template_path_is_accepted(self):
+        # `rank-llm rerank`, the HTTP server and the MCP tools pass a str path.
+        with (
+            patch("rank_llm.rerank.listwise.SafeOpenai") as safe_openai,
+            patch("rank_llm.rerank.reranker.get_openai_api_key", return_value="key"),
+        ):
+            Reranker.create_model_coordinator(
+                "gpt-4o-mini", None, False, prompt_template_path=_TEMPLATE
+            )
+
+        self.assertEqual(
+            safe_openai.call_args.kwargs["prompt_template_path"], _TEMPLATE
+        )
+
+    def test_extract_kwargs_still_rejects_other_types(self):
+        with self.assertRaisesRegex(ValueError, "prompt_template_path"):
+            extract_kwargs(
+                [("prompt_template_path", TEMPLATES / "rank_gpt_template.yaml")],
+                prompt_template_path=1,
+            )
+        with self.assertRaisesRegex(ValueError, "window_size"):
+            extract_kwargs([("window_size", 20)], window_size="20")
 
 
 if __name__ == "__main__":
