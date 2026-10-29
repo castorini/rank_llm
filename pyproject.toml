@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rank-llm"
-version = "0.25.7"
+version = "0.26.0"
 description = "A Package for reranking with LLMs (pointwise, pairwise, and listwise)"
 readme = "README.md"
 authors = [
@@ -37,7 +37,7 @@ genai = [
     "python-dotenv>=1.0.1",
 ]
 litellm = [
-    "litellm>=1.67.0,<2.0",
+    "litellm>=1.67.0,<=1.106.0",
     "python-dotenv>=1.0.1",
 ]
 cloud = [
@@ -50,7 +50,7 @@ gemini = [
 ]
 local = [
     "torch>=2.6.0",
-    "transformers>=5",
+    "transformers[sentencepiece]>=5",
 ]
 vllm = [
     "openai>=1.23.6",
@@ -112,7 +112,7 @@ Homepage = "https://github.com/castorini/rank_llm"
 rank-llm = "rank_llm.cli.main:main"
 
 [tool.bumpver]
-current_version = "0.25.7"
+current_version = "0.26.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "Bump version {old_version} -> {new_version}"
 commit = true
