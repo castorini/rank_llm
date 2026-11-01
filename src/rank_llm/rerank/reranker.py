@@ -528,6 +528,48 @@ class Reranker:
                 device=device,
                 batch_size=batch_size,
             )
+        elif any(k in model_path.lower() for k in ["cross-encoder", "cross_encoder", "bge-reranker", "bge_reranker"]):
+            from rank_llm.rerank.pointwise.cross_encoder_reranker import CrossEncoderReranker
+
+            print(f"Loading {model_path} ...")
+
+            model_full_paths = {
+                "cross-encoder": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+                "cross_encoder": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+                "bge-reranker": "BAAI/bge-reranker-base",
+                "bge_reranker": "BAAI/bge-reranker-base",
+            }
+
+            keys_and_defaults = [
+                (
+                    "prompt_template_path",
+                    (TEMPLATES / "cross_encoder_template.yaml"),
+                ),
+                ("context_size", 512),
+                ("device", None),
+                ("batch_size", 32),
+                ("apply_sigmoid", False),
+            ]
+            [
+                prompt_template_path,
+                context_size,
+                device,
+                batch_size,
+                apply_sigmoid,
+            ] = extract_kwargs(keys_and_defaults, **kwargs)
+
+            model_coordinator = CrossEncoderReranker(
+                model=(
+                    model_full_paths[model_path.lower()]
+                    if model_path.lower() in model_full_paths
+                    else model_path
+                ),
+                prompt_template_path=prompt_template_path,
+                context_size=context_size,
+                device=device,
+                batch_size=batch_size,
+                apply_sigmoid=apply_sigmoid,
+            )
         elif "duot5" in model_path:
             # using duot5
             from rank_llm.rerank.pairwise.duot5 import DuoT5

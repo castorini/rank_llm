@@ -1,3 +1,4 @@
+import importlib.machinery
 import sys
 import unittest
 from importlib import import_module
@@ -122,7 +123,8 @@ class TestOptionalDependencies(unittest.TestCase):
 
     def test_rank_listwise_os_llm_reports_vllm_extra(self):
         fake_torch = SimpleNamespace(
-            cuda=SimpleNamespace(is_available=lambda: False, device_count=lambda: 0)
+            cuda=SimpleNamespace(is_available=lambda: False, device_count=lambda: 0),
+            __spec__=importlib.machinery.ModuleSpec("torch", None),
         )
         sys.modules.pop("rank_llm.rerank.listwise.rank_listwise_os_llm", None)
         with patch.dict("sys.modules", {"torch": fake_torch}):
