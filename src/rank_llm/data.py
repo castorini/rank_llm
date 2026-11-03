@@ -15,6 +15,15 @@ class Query:
     fields: dict[str, Any] = field(default_factory=dict)
 
 
+def _query_record(query: Query) -> dict[str, Any]:
+    """Serialised form of a query. Empty ``fields`` are omitted so that output
+    files are unchanged for callers that never set context fields."""
+    record = dict(query.__dict__)
+    if not record.get("fields"):
+        record.pop("fields", None)
+    return record
+
+
 @dataclass
 class Candidate:
     docid: str | int
@@ -96,7 +105,7 @@ class DataWriter:
             for info in d.invocations_history:
                 values.append(info.__dict__)
             aggregated_history.append(
-                {"query": d.query.__dict__, "invocations_history": values}
+                {"query": _query_record(d.query), "invocations_history": values}
             )
         self._write_json_array(filename, aggregated_history)
 
@@ -118,7 +127,7 @@ class DataWriter:
         results = []
         for d in self._data:
             candidates = [candidate.__dict__ for candidate in d.candidates]
-            results.append({"query": d.query.__dict__, "candidates": candidates})
+            results.append({"query": _query_record(d.query), "candidates": candidates})
         self._write_json_array(filename, results)
 
     def write_in_jsonl_format(self, filename: str):
@@ -126,7 +135,7 @@ class DataWriter:
             for d in self._data:
                 candidates = [candidate.__dict__ for candidate in d.candidates]
                 output = json.dumps(
-                    {"query": d.query.__dict__, "candidates": candidates},
+                    {"query": _query_record(d.query), "candidates": candidates},
                     ensure_ascii=False,
                 )
                 f.write(output)
