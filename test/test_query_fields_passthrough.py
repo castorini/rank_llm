@@ -51,3 +51,26 @@ class TestQueryFieldsPassthrough(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestQueryFieldsSerialisation(unittest.TestCase):
+    def test_empty_fields_are_omitted_and_set_fields_are_kept(self):
+        import json
+        import tempfile
+        from pathlib import Path
+
+        from rank_llm.data import DataWriter, Query, Result
+
+        plain = Result(query=Query(text="q", qid="1"))
+        with_ctx = Result(
+            query=Query(text="q", qid="2", fields={"global_query": "g"})
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / "r.json"
+            DataWriter([plain, with_ctx]).write_in_json_format(str(out))
+            records = json.loads(out.read_text())
+        self.assertEqual(records[0]["query"], {"text": "q", "qid": "1"})
+        self.assertEqual(
+            records[1]["query"],
+            {"text": "q", "qid": "2", "fields": {"global_query": "g"}},
+        )
