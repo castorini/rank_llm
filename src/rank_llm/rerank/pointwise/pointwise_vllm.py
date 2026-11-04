@@ -127,7 +127,13 @@ class PointwiseVLLM(PointwiseRankLLM):
         return len(ids)
 
     def _probe_messages(self, result: Result) -> list[dict[str, str]]:
-        """Messages matching ``generate_chat_messages`` layout with an empty document."""
+        """Messages matching ``generate_chat_messages`` layout with an empty document.
+
+        The query message must be the one the real prompt carries, including a
+        template's ``query_block`` with its context fields: the document budget
+        is what remains after this probe, and a probe without the fields
+        over-allots the document by their length and overflows the context.
+        """
         query = self._inference_handler._replace_number(result.query.text)
 
         if self._inference_handler.template.get("message_roles") == "reranker":
@@ -136,7 +142,12 @@ class PointwiseVLLM(PointwiseRankLLM):
             ).strip()
             return [
                 {"role": "system", "content": instruction},
-                {"role": "query", "content": query},
+                {
+                    "role": "query",
+                    "content": self._inference_handler._build_query_role_content(
+                        result, query
+                    ),
+                },
                 {"role": "document", "content": ""},
             ]
 
