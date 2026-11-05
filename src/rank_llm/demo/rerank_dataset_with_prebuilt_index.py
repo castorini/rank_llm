@@ -9,9 +9,9 @@ Example bounded run (retrieval still processes all topics):
 Every retrieval method is retrieved and evaluated (nDCG@10, MAP@100, R@20)
 before the model loads; each is then reranked with the same model and evaluated
 again (nDCG@10).
-Outputs are <output-dir>/<retrieval-method>/<model>/rerank.jsonl, rerank.txt,
-and invocations.json; disabling history removes the previous invocations.json
-in that directory.
+Outputs are <output-dir>/<retrieval-method>/<model>/<dataset>/rerank.jsonl,
+rerank.txt, and invocations.json; disabling history removes the previous
+invocations.json in that directory.
 """
 
 import argparse
@@ -87,7 +87,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output-dir",
         default="demo_outputs/prebuilt_index",
-        help="Base output directory; outputs are nested under <retrieval-method>/<model>.",
+        help="Base output directory; outputs are nested under <retrieval-method>/<model>/<dataset>.",
     )
     parser.add_argument(
         "--populate-invocations-history",
@@ -170,7 +170,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             # Evaluate rerank results.
             print(EvalFunction.from_results(rerank_results, topics))
 
-            output_dir = Path(args.output_dir) / method / model_name
+            output_dir = Path(args.output_dir) / method / model_name / args.dataset
             output_dir.mkdir(parents=True, exist_ok=True)
             writer = DataWriter(rerank_results)
             writer.write_in_jsonl_format(str(output_dir / "rerank.jsonl"))

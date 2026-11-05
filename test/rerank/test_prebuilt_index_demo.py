@@ -79,9 +79,16 @@ class PrebuiltIndexDemoTest(unittest.TestCase):
         self.assertEqual(self.evaluate.call_count, 8)
         self.assertEqual(self.analyzer.from_inline_results.call_count, 2)
         for method in demo.DEFAULT_RETRIEVAL_METHODS:
-            folder = self.root / "output" / method / "rank_vicuna_7b_v1"
+            folder = self.root / "output" / method / "rank_vicuna_7b_v1" / "dl19"
             for name in ("rerank.jsonl", "rerank.txt", "invocations.json"):
                 self.assertTrue((folder / name).exists())
+
+    def test_datasets_do_not_overwrite_each_other(self):
+        self.run_demo("--retrieval-methods", "bm25", "--dataset", "dl19")
+        self.run_demo("--retrieval-methods", "bm25", "--dataset", "dl20")
+        folder = self.root / "output" / "bm25" / "rank_vicuna_7b_v1"
+        for dataset in ("dl19", "dl20"):
+            self.assertTrue((folder / dataset / "rerank.jsonl").exists())
 
     def test_limits_queries_and_candidates(self):
         self.run_demo("--retrieval-methods", "bm25", "--num-queries", "1", "--k", "4")
@@ -90,7 +97,14 @@ class PrebuiltIndexDemoTest(unittest.TestCase):
         self.assertEqual(len(kwargs["requests"]), 1)
         self.assertEqual(kwargs["rank_end"], 4)
         rows = (
-            (self.root / "output" / "bm25" / "rank_vicuna_7b_v1" / "rerank.jsonl")
+            (
+                self.root
+                / "output"
+                / "bm25"
+                / "rank_vicuna_7b_v1"
+                / "dl19"
+                / "rerank.jsonl"
+            )
             .read_text()
             .splitlines()
         )
@@ -99,7 +113,12 @@ class PrebuiltIndexDemoTest(unittest.TestCase):
     def test_disabling_history_removes_stale_file(self):
         self.run_demo("--retrieval-methods", "bm25")
         history = (
-            self.root / "output" / "bm25" / "rank_vicuna_7b_v1" / "invocations.json"
+            self.root
+            / "output"
+            / "bm25"
+            / "rank_vicuna_7b_v1"
+            / "dl19"
+            / "invocations.json"
         )
         self.assertTrue(history.exists())
         self.run_demo(
