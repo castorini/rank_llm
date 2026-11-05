@@ -37,6 +37,9 @@ RETRIEVAL_METHOD_CHOICES = [
     for method in RetrievalMethod
     if method not in (RetrievalMethod.UNSPECIFIED, RetrievalMethod.CUSTOM_INDEX)
 ]
+# Cached retrieval results only go up to top 1000; deeper requests would be
+# silently truncated while still reranked as the requested depth.
+MAX_K = 1000
 DEFAULT_MODELS = {
     "zephyr": "castorini/rank_zephyr_7b_v1_full",
     "vicuna": "castorini/rank_vicuna_7b_v1",
@@ -73,7 +76,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--k",
         type=int,
         default=100,
-        help="Number of candidates to retrieve and rerank (default: 100).",
+        help=f"Number of candidates to retrieve and rerank, at most {MAX_K} (default: 100).",
     )
     parser.add_argument(
         "--num-queries",
@@ -116,6 +119,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             parser.error(f"--{name.replace('_', '-')} must be greater than 0")
     if not 0 < args.stride <= args.window_size:
         parser.error("--stride must be greater than 0 and no larger than --window-size")
+    if args.k > MAX_K:
+        parser.error(f"--k must be at most {MAX_K}")
     if args.dataset not in TOPICS:
         parser.error(f"unknown dataset: {args.dataset}")
 
