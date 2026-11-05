@@ -215,6 +215,7 @@ class SafeGenai(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> tuple[str, int]:
+        current_window_size = rank_end - rank_start
         max_length = self._max_passage_words
         while True:
             message = self._inference_handler.generate_prompt(
@@ -224,13 +225,21 @@ class SafeGenai(ListwiseRankLLM):
                 max_length=max_length,
             )[-1]["content"]
             num_tokens = self.get_num_tokens(message)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens():
+            if num_tokens <= self.max_tokens() - self.num_output_tokens(
+                current_window_size
+            ):
                 break
             else:
-                max_length -= max(
-                    1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // ((rank_end - rank_start) * 4),
+                estimated_max_length = self.estimate_max_passage_words(
+                    current_window_size
+                )
+                if max_length > estimated_max_length:
+                    max_length = estimated_max_length
+                    continue
+                max_length = self.reduce_max_passage_words(
+                    current_max_words=max_length,
+                    current_window_size=current_window_size,
+                    prompt_tokens=num_tokens,
                 )
         return message, self.get_num_tokens(message)
 

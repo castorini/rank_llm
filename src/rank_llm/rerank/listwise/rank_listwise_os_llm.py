@@ -450,6 +450,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> tuple[str, int] | tuple[list[dict[str, str]], int]:
+        current_window_size = rank_end - rank_start
         max_length = self._max_passage_words
 
         while True:
@@ -479,14 +480,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             ):
                 break
             else:
-                max_length -= max(
-                    1,
-                    (
-                        num_tokens
-                        - self.max_tokens()
-                        + self.num_output_tokens(rank_end - rank_start)
-                    )
-                    // ((rank_end - rank_start) * 4),
+                estimated_max_length = self.estimate_max_passage_words(
+                    current_window_size
+                )
+                if max_length > estimated_max_length:
+                    max_length = estimated_max_length
+                    continue
+                max_length = self.reduce_max_passage_words(
+                    current_max_words=max_length,
+                    current_window_size=current_window_size,
+                    prompt_tokens=num_tokens,
                 )
         if self._base_url:
             return messages, self.get_num_tokens(messages)
