@@ -109,11 +109,39 @@ class PrebuiltIndexDemoTest(unittest.TestCase):
         # Response analysis needs the invocations history, so it is skipped.
         self.assertEqual(self.analyzer.from_inline_results.call_count, 1)
 
-    def test_reranker_closed_when_retrieval_fails(self):
-        self.retrieve.side_effect = RuntimeError("boom")
+    def test_all_methods_are_retrieved_before_loading_reranker(self):
+        retrieve = self.retrieve.side_effect
+
+        def fail_on_splade(dataset, method, k):
+            if method == RetrievalMethod.SPLADE_P_P_ENSEMBLE_DISTIL:
+                raise ValueError("no index for this dataset")
+            return retrieve(dataset, method, k)
+
+        self.retrieve.side_effect = fail_on_splade
+        with self.assertRaises(ValueError):
+            self.run_demo()
+        self.assertEqual(self.retrieve.call_count, 2)
+        self.model.assert_not_called()
+
+    def test_reranker_closed_when_reranking_fails(self):
+        self.model.return_value.rerank_batch.side_effect = RuntimeError("boom")
         with self.assertRaises(RuntimeError):
             self.run_demo()
         self.model.return_value.close.assert_called_once()
+
+    def test_k_cannot_exceed_cached_retrieval_depth(self):
+        with (
+            redirect_stderr(io.StringIO()) as stderr,
+            self.assertRaises(SystemExit) as error,
+        ):
+            self.run_demo("--k", "1001")
+        self.assertEqual(error.exception.code, 2)
+        self.assertIn("--k must be at most 1000", stderr.getvalue())
+        self.retrieve.assert_not_called()
+        self.model.assert_not_called()
+
+        self.run_demo("--retrieval-methods", "bm25", "--k", "1000")
+        self.assertEqual(self.retrieve.call_args.kwargs["k"], 1000)
 
     def test_nonpositive_numeric_arguments_fail_before_loading(self):
         for option in (

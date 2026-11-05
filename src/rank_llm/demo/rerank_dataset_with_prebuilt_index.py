@@ -6,8 +6,9 @@ Example bounded run (retrieval still processes all topics):
         --retrieval-methods bm25 --num-queries 1 --k 4 --window-size 2 \
         --stride 1 --batch-size 1
 
-Each retrieval method is evaluated (nDCG@10, MAP@100, R@20), reranked with the
-same model, and evaluated again (nDCG@10).
+Every retrieval method is retrieved and evaluated (nDCG@10, MAP@100, R@20)
+before the model loads; each is then reranked with the same model and evaluated
+again (nDCG@10).
 Outputs are <output-dir>/<retrieval-method>/<model>/rerank.jsonl, rerank.txt,
 and invocations.json; disabling history removes the previous invocations.json
 in that directory.
@@ -40,6 +41,9 @@ RETRIEVAL_METHOD_CHOICES = [
     if method not in (RetrievalMethod.UNSPECIFIED, RetrievalMethod.CUSTOM_INDEX)
 ]
 DEFAULT_MODEL = "castorini/rank_vicuna_7b_v1"
+# Cached retrieval results only go up to top 1000; deeper requests would be
+# silently truncated while still reranked as the requested depth.
+MAX_K = 1000
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -67,7 +71,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--k",
         type=int,
         default=100,
-        help="Number of candidates to retrieve and rerank (default: 100).",
+        help=f"Number of candidates to retrieve and rerank, at most {MAX_K} (default: 100).",
     )
     parser.add_argument(
         "--num-queries",
@@ -110,10 +114,35 @@ def main(argv: Sequence[str] | None = None) -> None:
             parser.error(f"--{name.replace('_', '-')} must be greater than 0")
     if not 0 < args.stride <= args.window_size:
         parser.error("--stride must be greater than 0 and no larger than --window-size")
+    if args.k > MAX_K:
+        parser.error(f"--k must be at most {MAX_K}")
     if args.dataset not in TOPICS:
         parser.error(f"unknown dataset: {args.dataset}")
 
     topics = TOPICS[args.dataset]
+    # Retrieve and evaluate every method before loading the reranker, so an
+    # unsupported dataset/method pair fails before any GPU work is done.
+    retrieved_by_method = {}
+    for method in args.retrieval_methods:
+        retrieved_results = Retriever.from_dataset_with_prebuilt_index(
+            args.dataset, RetrievalMethod(method), k=args.k
+        )
+        if args.num_queries is not None:
+            retrieved_results = retrieved_results[: args.num_queries]
+        if not retrieved_results:
+            parser.error(f"dataset {args.dataset} has no queries")
+
+        # Evaluate retrieved results. By default ndcg@10 is the eval metric,
+        # other values can be specified.
+        print(EvalFunction.from_results(retrieved_results, topics))
+        # map_100
+        eval_args = ["-c", "-m", "map_cut.100", "-l2"]
+        print(EvalFunction.from_results(retrieved_results, topics, eval_args))
+        # recall_20
+        eval_args = ["-c", "-m", "recall.20"]
+        print(EvalFunction.from_results(retrieved_results, topics, eval_args))
+        retrieved_by_method[method] = retrieved_results
+
     model_name = args.model.rsplit("/", 1)[-1].lower()
     reranker = VicunaReranker(
         model_path=args.model,
@@ -124,25 +153,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         num_gpus=args.num_gpus,
     )
     try:
-        for method in args.retrieval_methods:
-            retrieved_results = Retriever.from_dataset_with_prebuilt_index(
-                args.dataset, RetrievalMethod(method), k=args.k
-            )
-            if args.num_queries is not None:
-                retrieved_results = retrieved_results[: args.num_queries]
-            if not retrieved_results:
-                parser.error(f"dataset {args.dataset} has no queries")
-
-            # Evaluate retrieved results. By default ndcg@10 is the eval metric,
-            # other values can be specified.
-            print(EvalFunction.from_results(retrieved_results, topics))
-            # map_100
-            eval_args = ["-c", "-m", "map_cut.100", "-l2"]
-            print(EvalFunction.from_results(retrieved_results, topics, eval_args))
-            # recall_20
-            eval_args = ["-c", "-m", "recall.20"]
-            print(EvalFunction.from_results(retrieved_results, topics, eval_args))
-
+        for method, retrieved_results in retrieved_by_method.items():
             rerank_results = reranker.rerank_batch(
                 requests=retrieved_results,
                 rank_end=args.k,
