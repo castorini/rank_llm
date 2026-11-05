@@ -69,7 +69,7 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
         self.assertEqual(kwargs["top_k_retrieve"], 100)
         self.assertTrue(kwargs["populate_invocations_history"])
         self.analyzer.from_inline_results.assert_called_once()
-        folder = self.root / "output" / "rank_zephyr_7b_v1_full"
+        folder = self.root / "output" / "rank_zephyr_7b_v1_full" / "dl19"
         for name in ("rerank.jsonl", "rerank.txt", "invocations.json"):
             self.assertTrue((folder / name).exists())
 
@@ -81,9 +81,16 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
         self.run_demo("--reranker", "vicuna", "--model", "org/Custom-Model")
         self.assertEqual(self.vicuna.call_args.kwargs["model_path"], "org/Custom-Model")
         self.assertTrue(
-            (self.root / "output" / "custom-model" / "rerank.jsonl").exists()
+            (self.root / "output" / "custom-model" / "dl19" / "rerank.jsonl").exists()
         )
         self.zephyr.assert_not_called()
+
+    def test_datasets_do_not_overwrite_each_other(self):
+        self.run_demo("--dataset", "dl19")
+        self.run_demo("--dataset", "dl20")
+        folder = self.root / "output" / "rank_zephyr_7b_v1_full"
+        for dataset in ("dl19", "dl20"):
+            self.assertTrue((folder / dataset / "rerank.jsonl").exists())
 
     def test_limits_queries_and_candidates(self):
         self.run_demo(
@@ -102,7 +109,7 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
         self.assertEqual(len(kwargs["requests"]), 1)
         self.assertEqual(kwargs["rank_end"], 4)
         rows = (
-            (self.root / "output" / "rank_zephyr_7b_v1_full" / "rerank.jsonl")
+            (self.root / "output" / "rank_zephyr_7b_v1_full" / "dl19" / "rerank.jsonl")
             .read_text()
             .splitlines()
         )
@@ -110,7 +117,13 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
 
     def test_disabling_history_removes_stale_file(self):
         self.run_demo()
-        history = self.root / "output" / "rank_zephyr_7b_v1_full" / "invocations.json"
+        history = (
+            self.root
+            / "output"
+            / "rank_zephyr_7b_v1_full"
+            / "dl19"
+            / "invocations.json"
+        )
         self.assertTrue(history.exists())
         self.analyzer.from_inline_results.reset_mock()
         self.run_demo("--no-populate-invocations-history")
