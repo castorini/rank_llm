@@ -164,8 +164,22 @@ class ListwiseRankLLM(RankLLM, ABC):
         if prompt_tokens <= budget:
             return prompt, prompt_tokens
 
-        low, high = 1, configured_limit - 1
-        best: tuple[Any, int] | None = None
+        # Use the measured overflow to seed the search near the fitting bound.
+        # This is especially important for remote token counters such as
+        # Gemini's, where every candidate check is an RPC.
+        candidate = self.reduce_max_passage_words(
+            current_max_words=configured_limit,
+            current_window_size=current_window_size,
+            prompt_tokens=prompt_tokens,
+        )
+        prompt, prompt_tokens = render_prompt(candidate)
+        if prompt_tokens <= budget:
+            best: tuple[Any, int] | None = (prompt, prompt_tokens)
+            low, high = candidate + 1, configured_limit - 1
+        else:
+            best = None
+            low, high = 1, candidate - 1
+
         while low <= high:
             candidate = (low + high) // 2
             prompt, prompt_tokens = render_prompt(candidate)
