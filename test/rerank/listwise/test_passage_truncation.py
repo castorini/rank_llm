@@ -7,6 +7,7 @@ class DummyListwiseRankLLM(ListwiseRankLLM):
     def __init__(self, context_size=4096, output_tokens=40):
         self._context_size = context_size
         self._output_tokens = output_tokens
+        self._max_passage_words = 300
 
     def run_llm_batched(self, prompts, **kwargs):
         raise NotImplementedError
@@ -67,6 +68,17 @@ class PassageTruncationTest(unittest.TestCase):
                 current_window_size=20,
                 prompt_tokens=200,
             )
+
+    def test_fit_prompt_searches_back_up_after_reduction(self):
+        reranker = DummyListwiseRankLLM(context_size=100, output_tokens=0)
+
+        prompt, tokens = reranker.fit_prompt_to_context(
+            lambda max_words: ("x" * max_words, max_words),
+            current_window_size=1,
+        )
+
+        self.assertEqual(tokens, 100)
+        self.assertEqual(len(prompt), 100)
 
 
 if __name__ == "__main__":

@@ -216,26 +216,17 @@ class SafeGenai(ListwiseRankLLM):
         self, result: Result, rank_start: int, rank_end: int
     ) -> tuple[str, int]:
         current_window_size = rank_end - rank_start
-        max_length = self._max_passage_words
-        while True:
+
+        def render_prompt(max_length: int) -> tuple[str, int]:
             message = self._inference_handler.generate_prompt(
                 result=result,
                 rank_start=rank_start,
                 rank_end=rank_end,
                 max_length=max_length,
             )[-1]["content"]
-            num_tokens = self.get_num_tokens(message)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                current_window_size
-            ):
-                break
-            else:
-                max_length = self.reduce_max_passage_words(
-                    current_max_words=max_length,
-                    current_window_size=current_window_size,
-                    prompt_tokens=num_tokens,
-                )
-        return message, self.get_num_tokens(message)
+            return message, self.get_num_tokens(message)
+
+        return self.fit_prompt_to_context(render_prompt, current_window_size)
 
     def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
