@@ -37,6 +37,9 @@ DEFAULT_DATASETS = ["scifact", "dbpedia", "nfc", "covid", "news", "signal", "rob
 # Some of the datasets have different number of retrieved candidates per query.
 SINGLE_BATCH_DATASETS = ("scifact", "dbpedia", "nfc")
 DEFAULT_MODEL = "liuwenhan/reasonrank-32B"
+# Cached retrieval results only go up to top 1000; deeper requests would be
+# silently truncated while outputs are still labeled with the requested depth.
+MAX_K = 1000
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -58,7 +61,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--k",
         type=int,
         default=100,
-        help="Number of candidates to retrieve and rerank (default: 100).",
+        help=f"Number of candidates to retrieve and rerank, at most {MAX_K} (default: 100).",
     )
     parser.add_argument(
         "--num-queries",
@@ -108,6 +111,8 @@ def main(argv: Sequence[str] | None = None) -> None:
             parser.error(f"--{name.replace('_', '-')} must be greater than 0")
     if not 0 < args.stride <= args.window_size:
         parser.error("--stride must be greater than 0 and no larger than --window-size")
+    if args.k > MAX_K:
+        parser.error(f"--k must be at most {MAX_K}")
     unknown = [dataset for dataset in args.datasets if dataset not in TOPICS]
     if unknown:
         parser.error(f"unknown dataset(s): {', '.join(unknown)}")

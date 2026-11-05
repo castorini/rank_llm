@@ -127,6 +127,20 @@ class ReasonRankDemoTest(unittest.TestCase):
         self.retrieve.assert_not_called()
         self.model.assert_not_called()
 
+    def test_k_cannot_exceed_cached_retrieval_depth(self):
+        with (
+            redirect_stderr(io.StringIO()) as stderr,
+            self.assertRaises(SystemExit) as error,
+        ):
+            self.run_demo("--k", "1001")
+        self.assertEqual(error.exception.code, 2)
+        self.assertIn("--k must be at most 1000", stderr.getvalue())
+        self.retrieve.assert_not_called()
+        self.model.assert_not_called()
+
+        self.run_demo("--datasets", "scifact", "--k", "1000")
+        self.assertEqual(self.retrieve.call_args.kwargs["k"], 1000)
+
     def test_stride_cannot_exceed_window_and_datasets_must_exist(self):
         for args in (("--window-size", "2", "--stride", "3"), ("--datasets", "nope")):
             with (
