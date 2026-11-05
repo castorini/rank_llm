@@ -480,12 +480,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
             ):
                 break
             else:
-                estimated_max_length = self.estimate_max_passage_words(
-                    current_window_size
-                )
-                if max_length > estimated_max_length:
-                    max_length = estimated_max_length
-                    continue
                 max_length = self.reduce_max_passage_words(
                     current_max_words=max_length,
                     current_window_size=current_window_size,

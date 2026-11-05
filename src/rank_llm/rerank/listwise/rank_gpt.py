@@ -328,12 +328,9 @@ class SafeOpenai(ListwiseRankLLM):
             ):
                 break
             else:
-                estimated_max_length = self.estimate_max_passage_words(
-                    current_window_size
-                )
-                if max_length > estimated_max_length:
-                    max_length = estimated_max_length
-                    continue
+                # Use the measured overflow from this exact prompt.  The
+                # context-based estimate is intentionally not applied as a
+                # hard jump because passage lengths may be highly uneven.
                 max_length = self.reduce_max_passage_words(
                     current_max_words=max_length,
                     current_window_size=current_window_size,

@@ -220,6 +220,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="max_passage_words",
         type=int,
         default=300,
+        help="Maximum per-passage word limit; reduced if the rendered prompt exceeds context.",
     )
     validate_parser = subparsers.add_parser(
         "validate",
@@ -421,6 +422,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="max_passage_words",
         type=int,
         default=300,
+        help="Maximum per-passage word limit; reduced if the rendered prompt exceeds context.",
     )
     serve_mcp_parser = serve_subparsers.add_parser(
         "mcp",
