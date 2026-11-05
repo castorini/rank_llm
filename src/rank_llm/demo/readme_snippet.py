@@ -5,9 +5,10 @@ Example bounded run (retrieval still processes all topics):
     python src/rank_llm/demo/readme_snippet.py \
         --num-queries 1 --k 4 --window-size 2 --stride 1 --batch-size 1
 
-Outputs are <output-dir>/<model>/<dataset>/rerank.jsonl, rerank.txt, and
-invocations.json;
-disabling history removes the previous invocations.json in that directory.
+Outputs are <output-dir>/<model>/<dataset>/<retrieval-method>_top<k>/rerank.jsonl,
+rerank.txt, and invocations.json, so runs with different retrieval settings do
+not overwrite each other; disabling history removes the previous
+invocations.json in that directory.
 """
 
 import argparse
@@ -93,7 +94,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output-dir",
         default="demo_outputs/readme_snippet",
-        help="Base output directory; results are nested under <model>/<dataset>.",
+        help="Base output directory; results are nested under <model>/<dataset>/<retrieval-method>_top<k>.",
     )
     parser.add_argument(
         "--populate-invocations-history",
@@ -198,7 +199,12 @@ def main(argv: Sequence[str] | None = None) -> None:
 
     # ---- Save results ----
     model_name = model_path.rsplit("/", 1)[-1].lower()
-    output_dir = Path(args.output_dir) / model_name / args.dataset
+    output_dir = (
+        Path(args.output_dir)
+        / model_name
+        / args.dataset
+        / f"{args.retrieval_method}_top{args.k}"
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     writer = DataWriter(rerank_results)
     writer.write_in_jsonl_format(str(output_dir / "rerank.jsonl"))

@@ -69,7 +69,9 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
         self.assertEqual(kwargs["top_k_retrieve"], 100)
         self.assertTrue(kwargs["populate_invocations_history"])
         self.analyzer.from_inline_results.assert_called_once()
-        folder = self.root / "output" / "rank_zephyr_7b_v1_full" / "dl19"
+        folder = (
+            self.root / "output" / "rank_zephyr_7b_v1_full" / "dl19" / "bm25_top100"
+        )
         for name in ("rerank.jsonl", "rerank.txt", "invocations.json"):
             self.assertTrue((folder / name).exists())
 
@@ -81,7 +83,14 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
         self.run_demo("--reranker", "vicuna", "--model", "org/Custom-Model")
         self.assertEqual(self.vicuna.call_args.kwargs["model_path"], "org/Custom-Model")
         self.assertTrue(
-            (self.root / "output" / "custom-model" / "dl19" / "rerank.jsonl").exists()
+            (
+                self.root
+                / "output"
+                / "custom-model"
+                / "dl19"
+                / "bm25_top100"
+                / "rerank.jsonl"
+            ).exists()
         )
         self.zephyr.assert_not_called()
 
@@ -90,7 +99,23 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
         self.run_demo("--dataset", "dl20")
         folder = self.root / "output" / "rank_zephyr_7b_v1_full"
         for dataset in ("dl19", "dl20"):
-            self.assertTrue((folder / dataset / "rerank.jsonl").exists())
+            self.assertTrue(
+                (folder / dataset / "bm25_top100" / "rerank.jsonl").exists()
+            )
+
+    def test_retrieval_settings_do_not_overwrite_each_other(self):
+        self.run_demo()
+        self.run_demo("--retrieval-method", "SPLADE++_EnsembleDistil_ONNX")
+        self.run_demo("--k", "20", "--no-populate-invocations-history")
+        folder = self.root / "output" / "rank_zephyr_7b_v1_full" / "dl19"
+        for name in (
+            "bm25_top100",
+            "SPLADE++_EnsembleDistil_ONNX_top100",
+            "bm25_top20",
+        ):
+            self.assertTrue((folder / name / "rerank.jsonl").exists())
+        # Disabling history in one configuration leaves the others' history alone.
+        self.assertTrue((folder / "bm25_top100" / "invocations.json").exists())
 
     def test_limits_queries_and_candidates(self):
         self.run_demo(
@@ -109,7 +134,14 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
         self.assertEqual(len(kwargs["requests"]), 1)
         self.assertEqual(kwargs["rank_end"], 4)
         rows = (
-            (self.root / "output" / "rank_zephyr_7b_v1_full" / "dl19" / "rerank.jsonl")
+            (
+                self.root
+                / "output"
+                / "rank_zephyr_7b_v1_full"
+                / "dl19"
+                / "SPLADE++_EnsembleDistil_ONNX_top4"
+                / "rerank.jsonl"
+            )
             .read_text()
             .splitlines()
         )
@@ -122,6 +154,7 @@ class ReadmeSnippetDemoTest(unittest.TestCase):
             / "output"
             / "rank_zephyr_7b_v1_full"
             / "dl19"
+            / "bm25_top100"
             / "invocations.json"
         )
         self.assertTrue(history.exists())
