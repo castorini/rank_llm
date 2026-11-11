@@ -172,14 +172,14 @@ class EvalFunction:
                     if args[-2] != original_qrels:
                         truncated_qrels_file = args[-2]
                     print("Trunc", args[-2])
-    
+
                 if not os.path.exists(args[-2]):
                     if get_qrels_file is None:
                         raise missing_extra_error(
                             "pyserini",
                             "Evaluation requires the Pyserini qrels helpers.",
                         )
-    
+
                     args[-2] = get_qrels_file(args[-2])
                 if os.path.exists(args[-1]):
                     # Convert run to trec if it's on msmarco
@@ -199,16 +199,16 @@ class EvalFunction:
                         run["name"] = "TEMPRUN"
                         run.to_csv(temp_file, sep="\t", header=None, index=None)
                         args[-1] = temp_file
-    
+
                 run = pd.read_csv(args[-1], sep="\s+", header=None)
                 qrels = pd.read_csv(args[-2], sep="\s+", header=None)
-    
+
                 # cast doc_id column as string
                 run[0] = run[0].astype(str)
                 qrels[0] = qrels[0].astype(str)
-    
+
                 # Discard non-judged hits
-    
+
                 if judged_docs_only:
                     if not temp_file:
                         temp_file = tempfile.NamedTemporaryFile(delete=False).name
@@ -229,7 +229,7 @@ class EvalFunction:
                 cmd = cmd_prefix + args
             else:
                 cmd = cmd_prefix
-    
+
             print(f"Running command: {cmd}")
             shell = platform.system() == "Windows"
             process = subprocess.Popen(
@@ -238,14 +238,14 @@ class EvalFunction:
             stdout, stderr = process.communicate()
             if stderr:
                 print(stderr.decode("utf-8"))
-    
+
             print("Results:")
             results = stdout.decode("utf-8").rstrip()
             print(results)
-    
+
             for judged in judged_result:
                 print(judged)
-    
+
             return results
         finally:
             for path in (temp_file, truncated_qrels_file):
