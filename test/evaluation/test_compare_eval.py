@@ -1,11 +1,11 @@
 """Unit tests for the lightweight RankLLM evaluation-comparison helper."""
 
 import importlib.util
-from contextlib import redirect_stdout
-from io import StringIO
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 
