@@ -82,5 +82,46 @@ class TestEvalTempFileCleanup(unittest.TestCase):
         self._evaluate_with_truncated_qrels(fail=True)
 
 
+    def test_eval_cleans_converted_run_on_subprocess_error(self):
+        msmarco_run = self.directory / "msmarco.txt"
+        msmarco_run.write_text("q1 D1 1\n", encoding="utf-8")
+        original_named_tempfile = tempfile.NamedTemporaryFile
+        created_files = []
+
+        def track_named_tempfile(*args, **kwargs):
+            kwargs["dir"] = self.directory
+            handle = original_named_tempfile(*args, **kwargs)
+            created_files.append(Path(handle.name))
+            return handle
+
+        with (
+            patch(
+                "src.rank_llm.evaluation.trec_eval.download_evaluation_script",
+                return_value="trec_eval.jar",
+            ),
+            patch(
+                "src.rank_llm.evaluation.trec_eval._require_pandas",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "src.rank_llm.evaluation.trec_eval.tempfile.NamedTemporaryFile",
+                side_effect=track_named_tempfile,
+            ),
+            patch(
+                "src.rank_llm.evaluation.trec_eval.subprocess.Popen",
+                side_effect=OSError("subprocess failed"),
+            ),
+        ):
+            with self.assertRaisesRegex(OSError, "subprocess failed"):
+                EvalFunction.eval(
+                    ["-c", "-m", "ndcg_cut.10", str(self.qrels), str(msmarco_run)],
+                    trunc=False,
+                )
+
+        self.assertEqual(len(created_files), 1)
+        self.assertFalse(created_files[0].exists())
+        self.assertTrue(msmarco_run.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
