@@ -151,8 +151,8 @@ def main(argv: list[str] | None = None) -> int:
     regressions = 0
     if args.format == "markdown":
         print("# RankLLM evaluation comparison")
-        print(f"\nBaseline: \`{args.run_a}\`  ")
-        print(f"Candidate: \`{args.run_b}\`\n")
+        print(f"\nBaseline: `{args.run_a}`  ")
+        print(f"Candidate: `{args.run_b}`\n")
         print("| File | Metric | Baseline | Candidate | Delta | Status |")
         print("| --- | --- | ---: | ---: | ---: | --- |")
     else:
@@ -166,9 +166,9 @@ def main(argv: list[str] | None = None) -> int:
         regressions += int(bad)
         status = "FAIL" if bad else "PASS" if args.max_drop is not None else "—"
         if args.format == "markdown":
-            safe_file = file_name.replace("|", "\\|").replace("\`", "\\\`")
+            safe_file = file_name.replace("|", "\\|").replace("`", "\\`")
             print(
-                f"| \`{safe_file}\` | {metric} | {value_a:.4f} | "
+                f"| `{safe_file}` | {metric} | {value_a:.4f} | "
                 f"{value_b:.4f} | {delta:+.4f} | {status} |"
             )
         else:
