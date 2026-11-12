@@ -236,7 +236,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for RankZephyr o
 
 | RankZephyr DL19 | Frequency |
 |-----------------|-----------|
-| 0.7798          | 3         |
+| 0.7798          | 4         |
 | 0.7795          | 1         |
 
 | RankZephyr DL20 | Frequency |
@@ -246,7 +246,7 @@ More specifically, we are interested in the `ndcg_cut_10` score for RankZephyr o
 | 0.8198          | 4         |
 | 0.8197          | 5         |
 | 0.8169          | 1         |
-| 0.8162          | 2         |
+| 0.8162          | 3         |
 | 0.8154          | 2         |
 | 0.8151          | 1         |
 | 0.8144          | 2         |
@@ -277,3 +277,4 @@ After editing the tables above, add a log entry here as well like the previous g
 + Results reproduced by [Aadi Kulshrestha (@MankyDanky)](https://github.com/MankyDanky) on 2026-10-11 (commit [`1e6105b`](https://github.com/castorini/rank_llm/commit/1e6105b0cb4adfae7bbb65fe8c725a922a33752f))
 + Results reproduced by [@GuranshSinghKohli](https://github.com/GuranshSinghKohli) on 2026-10-22 (commit [`12bcd65`](https://github.com/castorini/rank_llm/commit/12bcd659923520cd0558c4310a7f87d3e0594f0a))
 + Results reproduced by [@ricky42613](https://github.com/ricky42613) on 2026-10-29 (commit [`1bb8b71`](https://github.com/castorini/rank_llm/commit/1bb8b711a5c9d84e36ce0f0834f598d46426d370))
++ Results reproduced by [@nabirarashid](https://github.com/nabirarashid) on 2026-11-12 (commit [`0fd5678`](https://github.com/castorini/rank_llm/commit/0fd5678ffc43488531ba26a42f367d42480a75ec))
