@@ -310,9 +310,9 @@ class SafeOpenai(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> tuple[list[dict[str, str]], int]:
-        max_length = self._max_passage_words
+        current_window_size = rank_end - rank_start
 
-        while True:
+        def render_prompt(max_length: int) -> tuple[list[dict[str, str]], int]:
             prompt = self._inference_handler.generate_prompt(
                 result=result,
                 rank_start=rank_start,
@@ -321,17 +321,9 @@ class SafeOpenai(ListwiseRankLLM):
                 num_fewshot_examples=self._num_few_shot_examples,
                 fewshot_examples=self._examples,
             )
-            num_tokens = self.get_num_tokens(prompt)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens():
-                break
-            else:
-                max_length -= max(
-                    1,
-                    (num_tokens - self.max_tokens() + self.num_output_tokens())
-                    // ((rank_end - rank_start) * 4),
-                )
+            return prompt, self.get_num_tokens(prompt)
 
-        return prompt, num_tokens
+        return self.fit_prompt_to_context(render_prompt, current_window_size)
 
     def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""

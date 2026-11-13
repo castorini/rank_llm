@@ -120,6 +120,30 @@ class TestOptionalDependencies(unittest.TestCase):
         self.assertEqual(calls[1][1]["contents"], "rank these passages")
         self.assertEqual(calls[2][0], "count_tokens")
 
+    def test_safe_genai_caches_output_estimates_by_window_size(self):
+        fake_torch = SimpleNamespace(
+            cuda=SimpleNamespace(is_available=lambda: False, device_count=lambda: 0)
+        )
+        with patch.dict("sys.modules", {"torch": fake_torch}):
+            rank_gemini = import_module("rank_llm.rerank.listwise.rank_gemini")
+
+        reranker = rank_gemini.SafeGenai.__new__(rank_gemini.SafeGenai)
+        reranker._window_size = 20
+        reranker._output_token_estimates = {}
+        count_calls = []
+
+        def fake_count_tokens(contents):
+            count_calls.append(contents)
+            return 11
+
+        reranker._count_tokens = fake_count_tokens
+
+        self.assertEqual(reranker.num_output_tokens(10), 10)
+        self.assertEqual(reranker.num_output_tokens(10), 10)
+        self.assertEqual(reranker.num_output_tokens(20), 10)
+        self.assertEqual(reranker.num_output_tokens(20), 10)
+        self.assertEqual(len(count_calls), 2)
+
     def test_rank_listwise_os_llm_reports_vllm_extra(self):
         fake_torch = SimpleNamespace(
             cuda=SimpleNamespace(is_available=lambda: False, device_count=lambda: 0)

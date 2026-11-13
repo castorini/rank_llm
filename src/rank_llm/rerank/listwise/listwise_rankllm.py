@@ -1,9 +1,11 @@
 import asyncio
 import copy
 import logging
+import math
 import random
 from abc import ABC
 from collections import deque
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -112,6 +114,77 @@ class ListwiseRankLLM(RankLLM, ABC):
             int: The maximum token count.
         """
         return self._context_size
+
+    def reduce_max_passage_words(
+        self,
+        current_max_words: int,
+        current_window_size: int,
+        prompt_tokens: int,
+    ) -> int:
+        """Reduce a passage budget after an exact prompt-size check overflows."""
+        if current_window_size <= 0:
+            raise ValueError("current_window_size must be greater than 0")
+        available_tokens = self.max_tokens() - self.num_output_tokens(
+            current_window_size
+        )
+        overflow_tokens = max(prompt_tokens - available_tokens, 0)
+        if overflow_tokens and current_max_words <= 1:
+            raise ValueError(
+                "Prompt cannot fit within the model context at one word per passage"
+            )
+        reduction = max(
+            1,
+            math.ceil(overflow_tokens * 0.75 / current_window_size),
+        )
+        return max(1, current_max_words - reduction)
+
+    def fit_prompt_to_context(
+        self,
+        render_prompt: Callable[[int], tuple[Any, int]],
+        current_window_size: int,
+    ) -> tuple[Any, int]:
+        """Find the largest passage limit whose rendered prompt fits.
+
+        The configured passage limit is an upper bound. After an overflow, use
+        a binary search between the last failing and last fitting limits so an
+        approximate token-to-word ratio cannot permanently over-truncate text.
+        """
+        budget = self.max_tokens() - self.num_output_tokens(current_window_size)
+        configured_limit = self._max_passage_words
+        prompt, prompt_tokens = render_prompt(configured_limit)
+        if prompt_tokens <= budget:
+            return prompt, prompt_tokens
+
+        # Use the measured overflow to seed the search near the fitting bound.
+        # This is especially important for remote token counters such as
+        # Gemini's, where every candidate check is an RPC.
+        candidate = self.reduce_max_passage_words(
+            current_max_words=configured_limit,
+            current_window_size=current_window_size,
+            prompt_tokens=prompt_tokens,
+        )
+        prompt, prompt_tokens = render_prompt(candidate)
+        if prompt_tokens <= budget:
+            best: tuple[Any, int] | None = (prompt, prompt_tokens)
+            low, high = candidate + 1, configured_limit - 1
+        else:
+            best = None
+            low, high = 1, candidate - 1
+
+        while low <= high:
+            candidate = (low + high) // 2
+            prompt, prompt_tokens = render_prompt(candidate)
+            if prompt_tokens <= budget:
+                best = (prompt, prompt_tokens)
+                low = candidate + 1
+            else:
+                high = candidate - 1
+
+        if best is None:
+            raise ValueError(
+                "Prompt cannot fit within the model context at one word per passage"
+            )
+        return best
 
     async def run_llm_async(
         self,

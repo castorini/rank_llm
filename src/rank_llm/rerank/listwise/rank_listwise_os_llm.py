@@ -450,9 +450,11 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
     ) -> tuple[str, int] | tuple[list[dict[str, str]], int]:
-        max_length = self._max_passage_words
+        current_window_size = rank_end - rank_start
 
-        while True:
+        def render_prompt(
+            max_length: int,
+        ) -> tuple[list[dict[str, str]], int]:
             messages = self._inference_handler.generate_prompt(
                 result=result,
                 rank_start=rank_start,
@@ -474,22 +476,18 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
                 prompt = fix_text(prompt)
                 num_tokens = self.get_num_tokens(prompt)
-            if num_tokens <= self.max_tokens() - self.num_output_tokens(
-                rank_end - rank_start
-            ):
-                break
-            else:
-                max_length -= max(
-                    1,
-                    (
-                        num_tokens
-                        - self.max_tokens()
-                        + self.num_output_tokens(rank_end - rank_start)
-                    )
-                    // ((rank_end - rank_start) * 4),
-                )
+            return messages, num_tokens
+
+        messages, _ = self.fit_prompt_to_context(render_prompt, current_window_size)
         if self._base_url:
             return messages, self.get_num_tokens(messages)
+        prompt = self._tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=self._is_thinking,
+        )
+        prompt = fix_text(prompt)
         return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
