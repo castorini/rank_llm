@@ -73,7 +73,7 @@ class SafeGenai(ListwiseRankLLM):
             keys = [keys]
         if not keys:
             raise ValueError("Please provide Genai API Keys.")
-        self._output_token_estimate = None
+        self._output_token_estimates: dict[int, int] = {}
         self._keys = keys
         self._cur_key_id = key_start_id or 0
         self._cur_key_id = self._cur_key_id % len(self._keys)
@@ -231,21 +231,14 @@ class SafeGenai(ListwiseRankLLM):
     def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        if self._output_token_estimate and self._window_size == current_window_size:
-            return self._output_token_estimate
-        else:
-            _output_token_estimate = (
+        if current_window_size not in self._output_token_estimates:
+            self._output_token_estimates[current_window_size] = (
                 self._count_tokens(
                     " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
                 )
                 - 1
             )
-            if (
-                self._output_token_estimate is None
-                and self._window_size == current_window_size
-            ):
-                self._output_token_estimate = _output_token_estimate
-            return _output_token_estimate
+        return self._output_token_estimates[current_window_size]
 
     def create_prompt_batched(
         self, results: list[Result], rank_start: int, rank_end: int
