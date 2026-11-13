@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -40,7 +40,12 @@ def load_prompt_template(name_or_path: str) -> dict[str, Any]:
     if not path.exists():
         raise PromptTemplateError(f"Unknown prompt template: {name_or_path}")
     with path.open("r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle)
+        loaded = yaml.safe_load(handle)
+    if not isinstance(loaded, dict):
+        raise PromptTemplateError(
+            f"Prompt template must deserialize to an object: {path}"
+        )
+    return cast(dict[str, Any], loaded)
 
 
 def build_prompt_template_view(name_or_path: str) -> dict[str, Any]:
