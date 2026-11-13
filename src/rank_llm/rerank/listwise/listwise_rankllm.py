@@ -115,15 +115,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         return self._context_size
 
-    def estimate_max_passage_words(self, current_window_size: int) -> int:
-        """Estimate a per-passage word budget for a listwise prompt."""
-        if current_window_size <= 0:
-            raise ValueError("current_window_size must be greater than 0")
-        available_tokens = self.max_tokens() - self.num_output_tokens(
-            current_window_size
-        )
-        return max(1, int(available_tokens * 0.75 / current_window_size))
-
     def reduce_max_passage_words(
         self,
         current_max_words: int,

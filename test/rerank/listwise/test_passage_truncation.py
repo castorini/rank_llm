@@ -35,12 +35,6 @@ class DummyListwiseRankLLM(ListwiseRankLLM):
 
 
 class PassageTruncationTest(unittest.TestCase):
-    def test_estimate_uses_context_output_and_window(self):
-        reranker = DummyListwiseRankLLM(context_size=4096, output_tokens=40)
-
-        self.assertEqual(reranker.estimate_max_passage_words(20), 152)
-        self.assertEqual(reranker.estimate_max_passage_words(10), 304)
-
     def test_reduction_uses_token_to_word_ratio(self):
         reranker = DummyListwiseRankLLM(context_size=4096, output_tokens=40)
 
@@ -52,12 +46,6 @@ class PassageTruncationTest(unittest.TestCase):
             ),
             283,
         )
-
-    def test_estimate_rejects_empty_window(self):
-        reranker = DummyListwiseRankLLM()
-
-        with self.assertRaisesRegex(ValueError, "current_window_size"):
-            reranker.estimate_max_passage_words(0)
 
     def test_reduction_rejects_unrepresentable_prompt(self):
         reranker = DummyListwiseRankLLM(context_size=128, output_tokens=40)
