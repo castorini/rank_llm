@@ -186,7 +186,7 @@ class Retriever:
                 max_k_file and max_k >= k
             ):  # try to see if retrieving from local file works
                 try:
-                    with open(max_k_file) as f:
+                    with open(max_k_file, encoding="utf-8") as f:
                         results = [
                             from_dict(data_class=Request, data=json.loads(line))
                             for line in f
@@ -203,7 +203,7 @@ class Retriever:
                 query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{100 if k <= 100 else 1000}.jsonl"
                 cached_file = download_cached_hits(query_name)
                 print(f"Cached file: {cached_file}")
-                with open(cached_file) as f:
+                with open(cached_file, encoding="utf-8") as f:
                     results = [
                         from_dict(data_class=Request, data=json.loads(line))
                         for line in f
@@ -246,7 +246,7 @@ class Retriever:
                 retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
-                with open(candidates_file) as f:
+                with open(candidates_file, encoding="utf-8") as f:
                     loaded_results = json.load(f)
                 retrieved_results = [
                     from_dict(data_class=Request, data=r) for r in loaded_results
