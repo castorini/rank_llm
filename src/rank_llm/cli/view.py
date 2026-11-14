@@ -15,7 +15,13 @@ def build_view_summary(path: str, *, records: int = 1) -> dict[str, Any]:
         raise ViewError(f"missing file: {path}")
 
     artifact_type = detect_artifact_type(file_path)
-    if artifact_type in {"rerank-output", "request-input", "invocations-history"}:
+    if artifact_type in {
+        "rerank-output",
+        "request-input",
+        "invocations-history",
+        "empty-json",
+        "empty-jsonl",
+    }:
         loaded_records = load_records(file_path, artifact_type)
         return {
             "path": str(file_path),
@@ -39,33 +45,53 @@ def detect_artifact_type(path: Path) -> str:
         return "trec-output"
     if path.suffix == ".json":
         data = json.loads(path.read_text(encoding="utf-8"))
-        if (
-            isinstance(data, list)
-            and data
-            and isinstance(data[0], dict)
-            and "invocations_history" in data[0]
-        ):
-            return "invocations-history"
-    if path.suffix == ".jsonl":
+        if isinstance(data, list) and not data:
+            return "empty-json"
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            first_record = data[0]
+            if "invocations_history" in first_record:
+                return "invocations-history"
+        else:
+            raise ViewError(f"could not detect artifact type for: {path}")
+    elif path.suffix == ".jsonl":
         first_record = _first_jsonl_record(path)
-        if "query" in first_record and "candidates" in first_record:
-            candidates = first_record["candidates"]
-            if any(
-                not _looks_like_ranked_candidate(candidate) for candidate in candidates
-            ):
-                return "request-input"
-            return "rerank-output"
+        if first_record is None:
+            return "empty-jsonl"
+    else:
+        raise ViewError(f"could not detect artifact type for: {path}")
+    if "query" in first_record and "candidates" in first_record:
+        candidates = first_record["candidates"]
+        if not isinstance(candidates, list):
+            raise ViewError(f"expected a candidates list in: {path}")
+        if any(not _looks_like_ranked_candidate(candidate) for candidate in candidates):
+            return "request-input"
+        return "rerank-output"
     raise ViewError(f"could not detect artifact type for: {path}")
 
 
 def load_records(path: Path, artifact_type: str) -> list[Any]:
-    if artifact_type == "invocations-history":
-        return json.loads(path.read_text(encoding="utf-8"))
-    return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    if path.suffix == ".json":
+        records = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        records = [
+            json.loads(line)
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    if artifact_type in {"rerank-output", "request-input", "invocations-history"}:
+        field = (
+            "invocations_history"
+            if artifact_type == "invocations-history"
+            else "candidates"
+        )
+        if not all(
+            isinstance(record, dict)
+            and (artifact_type == "invocations-history" or "query" in record)
+            and isinstance(record.get(field), list)
+            for record in records
+        ):
+            raise ViewError(f"expected query/{field} records in: {path}")
+    return records
 
 
 def render_view_summary(summary: dict[str, Any]) -> str:
@@ -93,11 +119,14 @@ def summarize_records(records: list[Any], artifact_type: str) -> dict[str, Any]:
     return {"record_count": len(records)}
 
 
-def _first_jsonl_record(path: Path) -> dict[str, Any]:
+def _first_jsonl_record(path: Path) -> dict[str, Any] | None:
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.strip():
-            return json.loads(line)
-    raise ViewError(f"empty jsonl file: {path}")
+            record = json.loads(line)
+            if not isinstance(record, dict):
+                raise ViewError(f"expected a JSON object in: {path}")
+            return record
+    return None
 
 
 def _looks_like_ranked_candidate(candidate: Any) -> bool:
