@@ -109,7 +109,7 @@ This investment not only enables you to complete the onboarding but also positio
 
 ### Installing rank_llm
 
-Please refer to the [instructions here](https://github.com/castorini/rank_llm?tab=readme-ov-file#-instructions) to install rank_llm.
+Please refer to the [instructions here](https://github.com/castorini/rank_llm?tab=readme-ov-file#-installation) to install rank_llm.
 
 #### Running RankZephyr on a Colab GPU
 

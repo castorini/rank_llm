@@ -48,8 +48,6 @@ Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with Firs
 
 If you are running on Colab, follow the same setup steps from the [RankZephyr lesson](./onboarding-rz.md#running-rankzephyr-on-a-colab-gpu) (Colab CLI, A100, the vLLM/CUDA 12.8 pins, and JDK 21). The environment is identical; only the run commands below change.
 
-**Before running:** pre-seed the qrels as shown in the [RankZephyr lesson](./onboarding-rz.md) so evaluation doesn't hit Anserini's dead qrels download URL.
-
 Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following commands to run FirstMistral on TREC DL19 and DL20:
 
 ---
