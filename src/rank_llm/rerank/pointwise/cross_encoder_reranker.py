@@ -1,5 +1,7 @@
+import json
 import logging
 from importlib.resources import files
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -36,15 +38,29 @@ class CrossEncoderReranker(PointwiseRankLLM):
         batch_size: int = 32,
         apply_sigmoid: bool = False,
         trust_remote_code: bool = False,
+        max_passage_words: int = 300,
     ):
-        default_template = TEMPLATES / "cross_encoder_template.yaml"
         if prompt_template_path is None:
-            prompt_template_path = default_template
-        elif str(prompt_template_path) != str(default_template):
-            raise ValueError(
-                f"CrossEncoderReranker operates directly on query-document pairs via sequence "
-                f"classification tokenization and does not support custom prompt templates ({prompt_template_path})."
-            )
+            prompt_template_path = TEMPLATES / "cross_encoder_template.yaml"
+        else:
+            is_default = False
+            try:
+                default_resolved = Path(
+                    str(TEMPLATES / "cross_encoder_template.yaml")
+                ).resolve()
+                target_resolved = Path(str(prompt_template_path)).resolve()
+                if (
+                    default_resolved == target_resolved
+                    or target_resolved.name == "cross_encoder_template.yaml"
+                ):
+                    is_default = True
+            except Exception:
+                pass
+            if not is_default:
+                raise ValueError(
+                    f"CrossEncoderReranker operates directly on query-document pairs via sequence "
+                    f"classification tokenization and does not support custom prompt templates ({prompt_template_path})."
+                )
 
         if device is None:
             if torch.cuda.is_available():
@@ -63,6 +79,7 @@ class CrossEncoderReranker(PointwiseRankLLM):
             few_shot_file=None,
             device=device,
             batch_size=batch_size,
+            max_passage_words=max_passage_words,
         )
 
         self._apply_sigmoid = apply_sigmoid
@@ -191,15 +208,22 @@ class CrossEncoderReranker(PointwiseRankLLM):
             doc_tokens = doc_tokens[:max_doc_tokens]
             doc_text = self._tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
-        prompt = f"QUERY: {query} DOCUMENT: {doc_text}"
-        final_token_count = self.get_num_tokens(prompt)
+        prompt = json.dumps({"query": query, "doc": doc_text})
+        final_token_count = query_tokens + self.get_num_tokens(doc_text)
         return prompt, final_token_count
 
     def _parse_prompt(self, prompt: str) -> tuple[str, str]:
-        """Parse query and document from prompt string."""
-        parts = prompt.split(" DOCUMENT: ", 1)
-        if len(parts) == 2:
-            query = parts[0].replace("QUERY: ", "")
+        """Parse query and document safely from prompt string."""
+        if prompt.startswith('{"query":'):
+            try:
+                data = json.loads(prompt)
+                return data.get("query", ""), data.get("doc", "")
+            except (json.JSONDecodeError, TypeError):
+                pass
+        # Fallback for legacy format: "QUERY: ... DOCUMENT: ..."
+        if " DOCUMENT: " in prompt:
+            parts = prompt.split(" DOCUMENT: ", 1)
+            query = parts[0].removeprefix("QUERY: ")
             document = parts[1]
             return query, document
         return prompt, ""

@@ -549,6 +549,7 @@ class Reranker:
                 ("device", None),
                 ("batch_size", 32),
                 ("apply_sigmoid", False),
+                ("max_passage_words", 300),
             ]
             [
                 prompt_template_path,
@@ -556,6 +557,7 @@ class Reranker:
                 device,
                 batch_size,
                 apply_sigmoid,
+                max_passage_words,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = CrossEncoderReranker(
@@ -569,6 +571,7 @@ class Reranker:
                 device=device,
                 batch_size=batch_size,
                 apply_sigmoid=apply_sigmoid,
+                max_passage_words=max_passage_words,
             )
         elif "duot5" in model_path:
             # using duot5

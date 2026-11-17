@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import torch
 
-from rank_llm.data import Candidate, Query, Request
+from rank_llm.data import Candidate, Query, Request, Result
 from rank_llm.rerank.pointwise.cross_encoder_reranker import CrossEncoderReranker
 from rank_llm.rerank.reranker import Reranker
 
@@ -16,10 +16,11 @@ from rank_llm.rerank.reranker import Reranker
 class TestCrossEncoderReranker(unittest.TestCase):
     def test_factory_creation(self, mock_tok, mock_model):
         coordinator = Reranker.create_model_coordinator(
-            "cross-encoder", None, False, device="cpu"
+            "cross-encoder", None, False, device="cpu", max_passage_words=500
         )
         self.assertIsInstance(coordinator, CrossEncoderReranker)
         self.assertEqual(coordinator._model, "cross-encoder/ms-marco-MiniLM-L-6-v2")
+        self.assertEqual(coordinator._max_passage_words, 500)
 
     def test_bge_reranker_factory(self, mock_tok, mock_model):
         coordinator = Reranker.create_model_coordinator(
@@ -85,13 +86,34 @@ class TestCrossEncoderReranker(unittest.TestCase):
             docid="d1",
             score=0.0,
         )
-        from rank_llm.data import Result
-
         res = Result(query=query, candidates=[candidate])
 
         prompt, num_tokens = reranker.create_prompt(res, 0)
-        self.assertIn("Title: Sample Paper", prompt)
-        self.assertIn("Segment details", prompt)
+        q, d = reranker._parse_prompt(prompt)
+        self.assertIn("Title: Sample Paper", d)
+        self.assertIn("Segment details", d)
+
+    def test_query_containing_sentinel_preserved(self, mock_tok, mock_model):
+        mock_tokenizer_inst = MagicMock()
+        mock_tokenizer_inst.encode.return_value = [101, 102]
+        mock_tokenizer_inst.decode.return_value = "Normal document body"
+        mock_tok.from_pretrained.return_value = mock_tokenizer_inst
+
+        reranker = CrossEncoderReranker(
+            model="cross-encoder/ms-marco-MiniLM-L-6-v2", device="cpu"
+        )
+
+        query_text = "What does DOCUMENT: mean in syntax?"
+        query = Query(text=query_text, qid="q1")
+        candidate = Candidate(
+            doc={"text": "Normal document body"}, docid="d1", score=0.0
+        )
+        res = Result(query=query, candidates=[candidate])
+
+        prompt, _ = reranker.create_prompt(res, 0)
+        parsed_q, parsed_d = reranker._parse_prompt(prompt)
+        self.assertEqual(parsed_q, query_text)
+        self.assertEqual(parsed_d, "Normal document body")
 
     def test_binary_logits_relative_ranking(self, mock_tok, mock_model):
         mock_tokenizer_inst = MagicMock()
@@ -102,8 +124,6 @@ class TestCrossEncoderReranker(unittest.TestCase):
         mock_tokenizer_inst.encode.return_value = [1, 2]
         mock_tok.from_pretrained.return_value = mock_tokenizer_inst
 
-        # Candidate 0: [100.0, 1.0] -> overwhelming class 0, class 1 probability ~ 0
-        # Candidate 1: [0.0, 0.0] -> neutral, class 1 probability = 0.5
         mock_model_inst = MagicMock()
         mock_model_inst.to.return_value = mock_model_inst
         mock_model_inst.return_value = SimpleNamespace(
@@ -116,13 +136,12 @@ class TestCrossEncoderReranker(unittest.TestCase):
         )
 
         prompts = [
-            "QUERY: q DOCUMENT: d1",
-            "QUERY: q DOCUMENT: d2",
+            '{"query": "q", "doc": "d1"}',
+            '{"query": "q", "doc": "d2"}',
         ]
         outputs, tokens, scores = reranker.run_llm_batched(prompts)
 
         self.assertEqual(len(scores), 2)
-        # Candidate 1 must score higher than candidate 0 because candidate 0 has class 0 overwhelming
         self.assertGreater(scores[1], scores[0])
         self.assertAlmostEqual(scores[1], 0.5, places=3)
         self.assertLess(scores[0], 0.01)
@@ -137,13 +156,26 @@ class TestCrossEncoderReranker(unittest.TestCase):
         mock_model_inst.to.return_value = mock_model_inst
         mock_model.from_pretrained.return_value = mock_model_inst
 
-        # Request context_size=4096, should be clamped to 512
         reranker = CrossEncoderReranker(
             model="cross-encoder/ms-marco-MiniLM-L-6-v2",
             context_size=4096,
             device="cpu",
         )
         self.assertEqual(reranker._context_size, 512)
+
+    def test_bundled_template_path_accepted(self, mock_tok, mock_model):
+        mock_tok.from_pretrained.return_value = MagicMock()
+        mock_model_inst = MagicMock()
+        mock_model_inst.to.return_value = mock_model_inst
+        mock_model.from_pretrained.return_value = mock_model_inst
+
+        # Should accept relative path to bundled template without raising ValueError
+        reranker = CrossEncoderReranker(
+            model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+            prompt_template_path="src/rank_llm/rerank/prompt_templates/cross_encoder_template.yaml",
+            device="cpu",
+        )
+        self.assertIsNotNone(reranker)
 
     def test_custom_template_rejection(self, mock_tok, mock_model):
         mock_tok.from_pretrained.return_value = MagicMock()
@@ -176,7 +208,7 @@ class TestCrossEncoderReranker(unittest.TestCase):
             model="BAAI/bge-reranker-base", device="cpu", apply_sigmoid=False
         )
 
-        prompts = ["QUERY: test query DOCUMENT: test passage 1"]
+        prompts = ['{"query": "test query", "doc": "test passage 1"}']
         outputs, tokens, scores = reranker.run_llm_batched(prompts)
         self.assertEqual(len(scores), 1)
         self.assertAlmostEqual(scores[0], 3.2, places=4)
