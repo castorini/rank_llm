@@ -240,11 +240,11 @@ After completing this guide, add your `ndcg_cut_10` for runs on both DL19 and DL
 
 | monoT5 DL19 | Frequency |
 |-------------|-----------|
-| 0.7043      | 5         |
+| 0.7043      | 6         |
 
 | monoT5 DL20 | Frequency |
 |-------------|-----------|
-| 0.6771      | 7         |
+| 0.6771      | 8         |
 
 For each result, if it is present in the corresponding table above, please increase its frequency by 1.
 If a result is not present, add a new row (in sorted order) to the corresponding table with frequency 1.
@@ -258,3 +258,4 @@ After editing the tables above, add a log entry here as well like the previous g
 + Results reproduced by [@nabirarashid](https://github.com/nabirarashid) on 2026-10-15 (commit [`4c586c2`](https://github.com/castorini/rank_llm/commit/4c586c24dd4ba5e4995e3dc681730b0d0cd1f2aa))
 + Results reproduced by [@GuranshSinghKohli](https://github.com/GuranshSinghKohli) on 2026-10-17 (commit [`4c586c2`](https://github.com/castorini/rank_llm/commit/4c586c24dd4ba5e4995e3dc681730b0d0cd1f2aa))
 + Results reproduced by [@ricky42613](https://github.com/ricky42613) on 2026-10-29 (commit [`1bb8b71`](https://github.com/castorini/rank_llm/commit/1bb8b711a5c9d84e36ce0f0834f598d46426d370))
++ Results reproduced by [@tanvirsarao](https://github.com/tanvirsarao) on 2026-11-18 (commit [`e4d3035`](https://github.com/castorini/rank_llm/commit/e4d3035b024f353632598d862c0b0b40c3ccd496))
