@@ -194,7 +194,6 @@ class VllmHandlerWithOpenAISDK:
     MAX_ATTEMPTS = 3
     RETRY_BACKOFF_S = 0.5
 
-
     def __init__(
         self,
         base_url: str,
@@ -250,14 +249,20 @@ class VllmHandlerWithOpenAISDK:
         keeping it referenced pins ~100 sockets per batch until the process
         runs out of file descriptors. The next batch opens a fresh client.
         """
-        client, self._async_client, self._async_client_loop = self._async_client, None, None
+        client, self._async_client, self._async_client_loop = (
+            self._async_client,
+            None,
+            None,
+        )
         if client is not None:
             try:
                 await client.close()
             except Exception:
                 pass
 
-    async def _create_with_retry(self, *, messages: list[dict[str, str]], **body: Any) -> Any:
+    async def _create_with_retry(
+        self, *, messages: list[dict[str, str]], **body: Any
+    ) -> Any:
         """One chat completion, retried on transient failures.
 
         A batch fans out ~100 concurrent requests; a dropped connection on any
@@ -266,15 +271,19 @@ class VllmHandlerWithOpenAISDK:
         """
         for attempt in range(self.MAX_ATTEMPTS):
             try:
-                return await self._async_client_for_current_loop().chat.completions.create(
-                    model=self._model,
-                    messages=messages,
-                    **body,
+                return (
+                    await self._async_client_for_current_loop().chat.completions.create(
+                        model=self._model,
+                        messages=messages,
+                        **body,
+                    )
                 )
             except Exception:
                 if attempt + 1 == self.MAX_ATTEMPTS:
                     raise
-                await asyncio.sleep(self.RETRY_BACKOFF_S * 2**attempt * (0.5 + random.random()))
+                await asyncio.sleep(
+                    self.RETRY_BACKOFF_S * 2**attempt * (0.5 + random.random())
+                )
 
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any

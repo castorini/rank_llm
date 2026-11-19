@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import copy
+import inspect
 import logging
 from collections.abc import Sequence
 from functools import cmp_to_key
