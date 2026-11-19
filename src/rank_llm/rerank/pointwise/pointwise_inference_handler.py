@@ -236,7 +236,10 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             instruction = self.template.get("instruction", "").strip()
             return [
                 {"role": "system", "content": instruction},
-                {"role": "query", "content": self._build_query_role_content(result, query)},
+                {
+                    "role": "query",
+                    "content": self._build_query_role_content(result, query),
+                },
                 {"role": "document", "content": doc},
             ]
 

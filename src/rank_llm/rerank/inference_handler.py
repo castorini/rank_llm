@@ -43,7 +43,7 @@ class BaseInferenceHandler(ABC):
     def _declared_query_fields(self, template: dict[str, Any]) -> list[str]:
         """Names declared under `query_fields`, validated as a list of strings."""
         declared = template.get(QUERY_FIELDS_KEY, []) or []
-        if isinstance(declared, str) or not isinstance(declared, (list, tuple)):
+        if isinstance(declared, str) or not isinstance(declared, list | tuple):
             raise ValueError(
                 f"'{QUERY_FIELDS_KEY}' must be a list of placeholder names, got "
                 f"{type(declared).__name__}"

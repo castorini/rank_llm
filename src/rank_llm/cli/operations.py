@@ -31,9 +31,7 @@ def normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
         query_fields = query.get("fields")
         if query_fields is None:
             query_fields = {
-                key: value
-                for key, value in query.items()
-                if key not in ("text", "qid")
+                key: value for key, value in query.items() if key not in ("text", "qid")
             }
         if not isinstance(query_fields, dict):
             raise ValueError("query.fields must be an object of named context values")
