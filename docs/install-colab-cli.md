@@ -240,11 +240,11 @@ After completing this guide, add your `ndcg_cut_10` for runs on both DL19 and DL
 
 | monoT5 DL19 | Frequency |
 |-------------|-----------|
-| 0.7043      | 6         |
+| 0.7043      | 5         |
 
 | monoT5 DL20 | Frequency |
 |-------------|-----------|
-| 0.6771      | 8         |
+| 0.6771      | 7         |
 
 For each result, if it is present in the corresponding table above, please increase its frequency by 1.
 If a result is not present, add a new row (in sorted order) to the corresponding table with frequency 1.
