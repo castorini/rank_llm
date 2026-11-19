@@ -125,11 +125,13 @@ More specifically, we are interested in the `ndcg_cut_10` score for FirstMistral
 |-------------------|-----------|
 | 0.7880            | 1         |
 | 0.7783            | 1         |
+| 0.7739            | 1         |
 | 0.7723            | 3         |
 
 | FirstMistral DL20 | Frequency |
 |-------------------|-----------|
 | 0.7906            | 1         |
+| 0.7900            | 1         |
 | 0.7892            | 1         |
 | 0.7889            | 1         |
 | 0.7885            | 2         |
@@ -169,3 +171,4 @@ After editing the tables above, add a log entry here as well like the previous g
 + Results reproduced by [@GuranshSinghKohli](https://github.com/GuranshSinghKohli) on 2026-10-22 (commit [`12bcd65`](https://github.com/castorini/rank_llm/commit/12bcd659923520cd0558c4310a7f87d3e0594f0a))
 + Results reproduced by [@ricky42613](https://github.com/ricky42613) on 2026-10-29 (commit [`1bb8b71`](https://github.com/castorini/rank_llm/commit/1bb8b711a5c9d84e36ce0f0834f598d46426d370))
 + Results reproduced by [@nabirarashid](https://github.com/nabirarashid) on 2026-11-12 (commit [`0fd5678`](https://github.com/castorini/rank_llm/commit/0fd5678ffc43488531ba26a42f367d42480a75ec))
++ Results reproduced by [@tanvirsarao](https://github.com/tanvirsarao) on 2026-11-18 (commit [`e4d3035`](https://github.com/castorini/rank_llm/commit/e4d3035b024f353632598d862c0b0b40c3ccd496))
