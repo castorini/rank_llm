@@ -148,7 +148,6 @@ class TestSetwiseSelectionParsing(unittest.TestCase):
             ["d2", "d0", "d1", "d3", "d4"],
         )
 
-
     def test_unparseable_output_falls_back_to_first_stage_order(self):
         result = from_dict(
             data_class=Result,

@@ -54,7 +54,9 @@ class TestACAReQueryBlocks(unittest.TestCase):
         )
 
     def test_m2_global_query_only(self):
-        roles = query_role(load("acare_m2_template.yaml"), {"global_query": GLOBAL_QUERY})
+        roles = query_role(
+            load("acare_m2_template.yaml"), {"global_query": GLOBAL_QUERY}
+        )
         self.assertEqual(
             roles["query"],
             f"#Original Question (global query): {GLOBAL_QUERY}\n#Query: {SUB_QUERY}",
@@ -74,7 +76,9 @@ class TestACAReQueryBlocks(unittest.TestCase):
 
     def test_instruction_is_sent_as_system_role(self):
         template = load("acare_m3_template.yaml")
-        roles = query_role(template, {"global_query": GLOBAL_QUERY, "reasoning": REASONING})
+        roles = query_role(
+            template, {"global_query": GLOBAL_QUERY, "reasoning": REASONING}
+        )
         self.assertEqual(roles["system"], template["instruction"])
 
     def test_empty_field_drops_only_its_own_line(self):
@@ -88,7 +92,9 @@ class TestACAReQueryBlocks(unittest.TestCase):
         )
 
     def test_absent_field_behaves_like_empty(self):
-        roles = query_role(load("acare_m3_template.yaml"), {"global_query": GLOBAL_QUERY})
+        roles = query_role(
+            load("acare_m3_template.yaml"), {"global_query": GLOBAL_QUERY}
+        )
         self.assertEqual(
             roles["query"],
             f"#Original Question (global query): {GLOBAL_QUERY}\n#Query: {SUB_QUERY}",

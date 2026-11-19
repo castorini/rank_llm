@@ -47,7 +47,6 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             ),
         }
 
-
         # Validate the method value
         if template["method"] != "singleturn_listwise":
             raise ValueError(

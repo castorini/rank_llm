@@ -14,7 +14,11 @@ def normalize(query):
 class TestQueryFieldsPassthrough(unittest.TestCase):
     def test_explicit_fields_object_is_carried(self):
         out = normalize(
-            {"text": "sub query", "qid": "q1", "fields": {"global_query": "big question"}}
+            {
+                "text": "sub query",
+                "qid": "q1",
+                "fields": {"global_query": "big question"},
+            }
         )
         self.assertEqual(out["query_text"], "sub query")
         self.assertEqual(out["query_id"], "q1")
@@ -62,9 +66,7 @@ class TestQueryFieldsSerialisation(unittest.TestCase):
         from rank_llm.data import DataWriter, Query, Result
 
         plain = Result(query=Query(text="q", qid="1"))
-        with_ctx = Result(
-            query=Query(text="q", qid="2", fields={"global_query": "g"})
-        )
+        with_ctx = Result(query=Query(text="q", qid="2", fields={"global_query": "g"}))
         with tempfile.TemporaryDirectory() as directory:
             out = Path(directory) / "r.json"
             DataWriter([plain, with_ctx]).write_in_json_format(str(out))
