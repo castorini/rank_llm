@@ -5,6 +5,7 @@ RankListwiseOSLLM accepts sampling_kwargs, but the factory used by
 prescribed decoding configuration (RubricRanker: temperature 0.7, top_p 0.8,
 top_k 20, min_p 0) silently got the defaults instead.
 """
+
 import unittest
 from unittest.mock import patch
 
@@ -23,14 +24,17 @@ class TestListwiseCoordinatorSampling(unittest.TestCase):
             return mock.call_args.kwargs
 
     def test_sampling_kwargs_are_forwarded(self):
-        self.assertEqual(self._build(sampling_kwargs=SAMPLING)["sampling_kwargs"], SAMPLING)
+        self.assertEqual(
+            self._build(sampling_kwargs=SAMPLING)["sampling_kwargs"], SAMPLING
+        )
 
     def test_absent_sampling_kwargs_stays_none(self):
         self.assertIsNone(self._build()["sampling_kwargs"])
 
     def test_base_url_still_forwarded(self):
         self.assertEqual(
-            self._build(sampling_kwargs=SAMPLING)["base_url"], "http://localhost:8000/v1"
+            self._build(sampling_kwargs=SAMPLING)["base_url"],
+            "http://localhost:8000/v1",
         )
 
 
