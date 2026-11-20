@@ -70,26 +70,25 @@ class EvalFunction:
         Returns:
             str: Evaluation results as a string.
         """
-        # Convert the list of Result objects to a temporary run file format
-        temp_run_file = tempfile.NamedTemporaryFile(
-            delete=False, mode="w", suffix=".txt"
-        ).name
-        with open(temp_run_file, "w") as file:
-            for result in results:
-                qid = result.query.qid
-                for rank, cand in enumerate(result.candidates, start=1):
-                    file.write(f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n")
-        # make a deep copy of eval_args to preserve its default value for the next run
-        args = []
-        if eval_args is None:
-            eval_args = ["-c", "-m", "ndcg_cut.10"]
-        args.extend(eval_args)
-        args.append(qrels)
-        args.append(temp_run_file)
-        eval_result = EvalFunction.eval(args, trunc=True)
-        os.remove(temp_run_file)
+        # Write the intermediate TREC run file, cleaning it up even if evaluation fails.
+        temp_file = tempfile.NamedTemporaryFile(
+            delete=False, mode="w", suffix=".txt", encoding="utf-8"
+        )
+        temp_run_file = temp_file.name
+        try:
+            with temp_file as file:
+                for result in results:
+                    qid = result.query.qid
+                    for rank, cand in enumerate(result.candidates, start=1):
+                        file.write(
+                            f"{qid} Q0 {cand.docid} {rank} {cand.score} rank_llm\n"
+                        )
 
-        return eval_result
+            args = ["-c", "-m", "ndcg_cut.10"] if eval_args is None else list(eval_args)
+            args.extend((qrels, temp_run_file))
+            return EvalFunction.eval(args, trunc=True)
+        finally:
+            Path(temp_run_file).unlink(missing_ok=True)
 
     @staticmethod
     def trunc(qrels: str, run: str):
@@ -161,85 +160,94 @@ class EvalFunction:
 
         temp_file = ""
 
-        if len(args) > 1:
-            pd = _require_pandas()
-            if trunc:
-                args[-2] = EvalFunction.trunc(args[-2], args[-1])
-                print("Trunc", args[-2])
+        # Both a truncated qrels file and a converted run may be created here.
+        # Their lifecycle belongs to this evaluation call, including error paths.
+        truncated_qrels_file = ""
+        try:
+            if len(args) > 1:
+                pd = _require_pandas()
+                if trunc:
+                    original_qrels = args[-2]
+                    args[-2] = EvalFunction.trunc(original_qrels, args[-1])
+                    if args[-2] != original_qrels:
+                        truncated_qrels_file = args[-2]
+                    print("Trunc", args[-2])
 
-            if not os.path.exists(args[-2]):
-                if get_qrels_file is None:
-                    raise missing_extra_error(
-                        "pyserini",
-                        "Evaluation requires the Pyserini qrels helpers.",
-                    )
+                if not os.path.exists(args[-2]):
+                    if get_qrels_file is None:
+                        raise missing_extra_error(
+                            "pyserini",
+                            "Evaluation requires the Pyserini qrels helpers.",
+                        )
 
-                args[-2] = get_qrels_file(args[-2])
-            if os.path.exists(args[-1]):
-                # Convert run to trec if it's on msmarco
-                with open(args[-1]) as f:
-                    first_line = f.readline()
-                if "Q0" not in first_line:
-                    temp_file = tempfile.NamedTemporaryFile(delete=False).name
-                    print("msmarco run detected. Converting to trec...")
-                    run = pd.read_csv(
-                        args[-1],
-                        sep="\s+",
-                        header=None,
-                        names=["query_id", "doc_id", "rank"],
-                    )
-                    run["score"] = 1 / run["rank"]
-                    run.insert(1, "Q0", "Q0")
-                    run["name"] = "TEMPRUN"
+                    args[-2] = get_qrels_file(args[-2])
+                if os.path.exists(args[-1]):
+                    # Convert run to trec if it's on msmarco
+                    with open(args[-1]) as f:
+                        first_line = f.readline()
+                    if "Q0" not in first_line:
+                        temp_file = tempfile.NamedTemporaryFile(delete=False).name
+                        print("msmarco run detected. Converting to trec...")
+                        run = pd.read_csv(
+                            args[-1],
+                            sep="\s+",
+                            header=None,
+                            names=["query_id", "doc_id", "rank"],
+                        )
+                        run["score"] = 1 / run["rank"]
+                        run.insert(1, "Q0", "Q0")
+                        run["name"] = "TEMPRUN"
+                        run.to_csv(temp_file, sep="\t", header=None, index=None)
+                        args[-1] = temp_file
+
+                run = pd.read_csv(args[-1], sep="\s+", header=None)
+                qrels = pd.read_csv(args[-2], sep="\s+", header=None)
+
+                # cast doc_id column as string
+                run[0] = run[0].astype(str)
+                qrels[0] = qrels[0].astype(str)
+
+                # Discard non-judged hits
+
+                if judged_docs_only:
+                    if not temp_file:
+                        temp_file = tempfile.NamedTemporaryFile(delete=False).name
+                    judged_indexes = pd.merge(
+                        run[[0, 2]].reset_index(), qrels[[0, 2]], on=[0, 2]
+                    )["index"]
+                    run = run.loc[judged_indexes]
                     run.to_csv(temp_file, sep="\t", header=None, index=None)
                     args[-1] = temp_file
+                # Measure judged@cutoffs
+                for cutoff in cutoffs:
+                    run_cutoff = run.groupby(0).head(cutoff)
+                    judged = len(
+                        pd.merge(run_cutoff[[0, 2]], qrels[[0, 2]], on=[0, 2])
+                    ) / len(run_cutoff)
+                    metric_name = f"judged_{cutoff}"
+                    judged_result.append(f"{metric_name:22}\tall\t{judged:.4f}")
+                cmd = cmd_prefix + args
+            else:
+                cmd = cmd_prefix
 
-            run = pd.read_csv(args[-1], sep="\s+", header=None)
-            qrels = pd.read_csv(args[-2], sep="\s+", header=None)
+            print(f"Running command: {cmd}")
+            shell = platform.system() == "Windows"
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell
+            )
+            stdout, stderr = process.communicate()
+            if stderr:
+                print(stderr.decode("utf-8"))
 
-            # cast doc_id column as string
-            run[0] = run[0].astype(str)
-            qrels[0] = qrels[0].astype(str)
+            print("Results:")
+            results = stdout.decode("utf-8").rstrip()
+            print(results)
 
-            # Discard non-judged hits
+            for judged in judged_result:
+                print(judged)
 
-            if judged_docs_only:
-                if not temp_file:
-                    temp_file = tempfile.NamedTemporaryFile(delete=False).name
-                judged_indexes = pd.merge(
-                    run[[0, 2]].reset_index(), qrels[[0, 2]], on=[0, 2]
-                )["index"]
-                run = run.loc[judged_indexes]
-                run.to_csv(temp_file, sep="\t", header=None, index=None)
-                args[-1] = temp_file
-            # Measure judged@cutoffs
-            for cutoff in cutoffs:
-                run_cutoff = run.groupby(0).head(cutoff)
-                judged = len(
-                    pd.merge(run_cutoff[[0, 2]], qrels[[0, 2]], on=[0, 2])
-                ) / len(run_cutoff)
-                metric_name = f"judged_{cutoff}"
-                judged_result.append(f"{metric_name:22}\tall\t{judged:.4f}")
-            cmd = cmd_prefix + args
-        else:
-            cmd = cmd_prefix
-
-        print(f"Running command: {cmd}")
-        shell = platform.system() == "Windows"
-        process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell
-        )
-        stdout, stderr = process.communicate()
-        if stderr:
-            print(stderr.decode("utf-8"))
-
-        print("Results:")
-        results = stdout.decode("utf-8").rstrip()
-        print(results)
-
-        for judged in judged_result:
-            print(judged)
-
-        if temp_file:
-            os.remove(temp_file)
-        return results
+            return results
+        finally:
+            for path in (temp_file, truncated_qrels_file):
+                if path:
+                    Path(path).unlink(missing_ok=True)
