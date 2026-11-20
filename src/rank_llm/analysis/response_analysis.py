@@ -89,7 +89,7 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
-        with open(self._data[0]) as f:
+        with open(self._data[0], encoding="utf-8") as f:
             invocations_histories = json.load(f)
             output_validation_regex = invocations_histories[0]["invocations_history"][
                 0
@@ -98,7 +98,7 @@ class ResponseAnalyzer:
                 0
             ]["output_extraction_regex"]
         for result in self._data:
-            with open(result) as f:
+            with open(result, encoding="utf-8") as f:
                 invocations_histories = json.load(f)
             for entry in invocations_histories:
                 for inference_invocation in entry["invocations_history"]:
