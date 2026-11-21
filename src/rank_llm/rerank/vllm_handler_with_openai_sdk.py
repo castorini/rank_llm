@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import math
+import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -189,6 +191,9 @@ class VllmHandlerWithOpenAISDK:
     running (e.g. building ``RankListwiseOSLLM`` from inside an async task).
     """
 
+    MAX_ATTEMPTS = 3
+    RETRY_BACKOFF_S = 0.5
+
     def __init__(
         self,
         base_url: str,
@@ -197,7 +202,9 @@ class VllmHandlerWithOpenAISDK:
         if any(dep is None for dep in (OpenAI, AsyncOpenAI, AutoTokenizer)):
             raise ImportError("OpenAI-compatible vLLM support requires rank-llm[vllm].")
         sync_client = OpenAI(api_key="EMPTY", base_url=base_url)
+        self._base_url = base_url
         self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=base_url)
+        self._async_client_loop: asyncio.AbstractEventLoop | None = None
 
         if model is None:
             models = sync_client.models.list()
@@ -212,6 +219,72 @@ class VllmHandlerWithOpenAISDK:
         """Return the tokenizer loaded in ``__init__`` (always sync, loop-safe)."""
         return self._tokenizer
 
+    def _async_client_for_current_loop(self) -> Any:
+        """The async client bound to the running event loop.
+
+        Callers drive each batch with ``asyncio.run``, which closes its loop on
+        return. The client's pooled HTTP connections belong to the loop they
+        were opened on, so reusing the client from the next loop fails with
+        "Event loop is closed" whenever a connection is still alive in the
+        pool, i.e. whenever batches arrive faster than the keep-alive expiry.
+        """
+        loop = asyncio.get_running_loop()
+        if self._async_client is None:
+            self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
+            self._async_client_loop = loop
+        elif self._async_client_loop is None:
+            self._async_client_loop = loop
+        elif self._async_client_loop is not loop:
+            # The previous loop is gone without aclose() having been awaited on
+            # it; the old client's sockets are released by garbage collection.
+            self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
+            self._async_client_loop = loop
+        return self._async_client
+
+    async def aclose(self) -> None:
+        """Release the async client's pooled connections.
+
+        Await this on the loop the client was used on, before that loop ends:
+        a client that outlives its loop can neither be closed nor reused, and
+        keeping it referenced pins ~100 sockets per batch until the process
+        runs out of file descriptors. The next batch opens a fresh client.
+        """
+        client, self._async_client, self._async_client_loop = (
+            self._async_client,
+            None,
+            None,
+        )
+        if client is not None:
+            try:
+                await client.close()
+            except Exception:
+                pass
+
+    async def _create_with_retry(
+        self, *, messages: list[dict[str, str]], **body: Any
+    ) -> Any:
+        """One chat completion, retried on transient failures.
+
+        A batch fans out ~100 concurrent requests; a dropped connection on any
+        one of them used to fail that candidate silently, and a caller that
+        treats a failed call as a failed batch loses the whole rerank.
+        """
+        for attempt in range(self.MAX_ATTEMPTS):
+            try:
+                return (
+                    await self._async_client_for_current_loop().chat.completions.create(
+                        model=self._model,
+                        messages=messages,
+                        **body,
+                    )
+                )
+            except Exception:
+                if attempt + 1 == self.MAX_ATTEMPTS:
+                    raise
+                await asyncio.sleep(
+                    self.RETRY_BACKOFF_S * 2**attempt * (0.5 + random.random())
+                )
+
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
     ) -> tuple[str, str, dict[str, Any]]:
@@ -223,11 +296,7 @@ class VllmHandlerWithOpenAISDK:
         for callers that pass no extras.
         """
         try:
-            response = await self._async_client.chat.completions.create(
-                model=self._model,
-                messages=messages,
-                **kwargs,
-            )
+            response = await self._create_with_retry(messages=messages, **kwargs)
             text = response.choices[0].message.content
             reasoning = response.choices[0].message.reasoning
             usage = response.usage.model_dump(mode="json")
@@ -296,11 +365,7 @@ class VllmHandlerWithOpenAISDK:
             }
 
         try:
-            response = await self._async_client.chat.completions.create(
-                model=self._model,
-                messages=messages,
-                **body,
-            )
+            response = await self._create_with_retry(messages=messages, **body)
         except Exception as e:
             print(f"Error during async score inference: {e}")
             return str(e), 0, -1.0, {}
