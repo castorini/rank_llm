@@ -397,11 +397,19 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         current_window_size: int | None = None,
     ) -> list[tuple[str, str, dict[str, Any]]]:
         import asyncio
+        import inspect
 
         async def _run_all():
-            return await asyncio.gather(
-                *[self.run_llm_async(p, current_window_size) for p in prompts]
-            )
+            try:
+                return await asyncio.gather(
+                    *[self.run_llm_async(p, current_window_size) for p in prompts]
+                )
+            finally:
+                aclose = getattr(self._vllm_handler, "aclose", None)
+                if aclose is not None:
+                    result = aclose()
+                    if inspect.isawaitable(result):
+                        await result
 
         return asyncio.run(_run_all())
 
