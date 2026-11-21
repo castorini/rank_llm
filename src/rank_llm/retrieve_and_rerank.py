@@ -10,7 +10,6 @@ from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
     TOPICS,
-    PyseriniRetriever,
     RetrievalMethod,
     RetrievalMode,
     Retriever,
@@ -255,6 +254,8 @@ def retrieve(
                     )
                 )
         elif query:
+            from rank_llm.retrieve import PyseriniRetriever
+
             # Single supplied query: run retrieval for this query against the dataset index
             if not isinstance(dataset, str):
                 raise ValueError(
