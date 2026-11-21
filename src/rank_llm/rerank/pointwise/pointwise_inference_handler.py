@@ -9,12 +9,45 @@ else:
 from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.inference_handler import BaseInferenceHandler
 
+# Optional template key naming the tokens a pointwise judge answers with:
+#   output_tokens:
+#     positive: ["yes"]
+#     negative: ["no"]
+# The prompt tells the model how to answer, so the answer tokens are declared
+# beside it. Spellings are matched as token ids (quote leading spaces in YAML,
+# e.g. " yes"); see PointwiseAnswerTokens.
+OUTPUT_TOKENS_KEY = "output_tokens"
+
+
+def validate_output_tokens(value: Any) -> None:
+    """Raise unless ``value`` maps positive and negative to non-empty lists of strings."""
+    if not isinstance(value, dict) or set(value) != {"positive", "negative"}:
+        raise ValueError(
+            f"'{OUTPUT_TOKENS_KEY}' must have exactly the keys 'positive' and "
+            f"'negative', each a list of answer token spellings; got {value!r}"
+        )
+    for side in ("positive", "negative"):
+        spellings = value[side]
+        if (
+            not isinstance(spellings, list)
+            or not spellings
+            or not all(isinstance(s, str) and s for s in spellings)
+        ):
+            raise ValueError(
+                f"'{OUTPUT_TOKENS_KEY}.{side}' must be a non-empty list of "
+                f"non-empty strings; got {spellings!r}"
+            )
+
 
 class PointwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: dict[str, str]):
         super().__init__(template)
 
     def _validate_template(self, template: dict[str, str], strict: bool = False):
+        if OUTPUT_TOKENS_KEY in template:
+            # Structured, not a format string: checked here, not as a section.
+            validate_output_tokens(template[OUTPUT_TOKENS_KEY])
+            template = {k: v for k, v in template.items() if k != OUTPUT_TOKENS_KEY}
         is_reranker = template.get("message_roles") == "reranker"
 
         TEMPLATE_SECTIONS = {

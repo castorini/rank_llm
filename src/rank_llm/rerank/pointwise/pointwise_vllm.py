@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import logging
+from collections.abc import Sequence
 from functools import cmp_to_key
 from importlib.resources import files
 from typing import Any
@@ -12,12 +13,15 @@ from typing import Any
 from tqdm import tqdm
 
 from rank_llm.data import InferenceInvocation, Request, Result
+from rank_llm.rerank.pointwise.pointwise_inference_handler import OUTPUT_TOKENS_KEY
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
 from rank_llm.rerank.rankllm import PromptMode
 from rank_llm.rerank.vllm_handler_with_openai_sdk import (
     POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS,
     POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS,
+    PointwiseAnswerTokens,
     VllmHandlerWithOpenAISDK,
+    single_token_ids,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,20 +35,20 @@ def _single_token_ids_from_strings(
     """Token ids for ``allowed_token_ids`` when ``max_tokens=1``.
 
     Only ids where ``encode(s)`` returns exactly one token are included.
-    Multi-piece spellings of ``yes``/``no`` are skipped so the server cannot
-    sample a continuation piece that logprob scoring would not recognize.
+    Multi-piece spellings are skipped so the server cannot sample a
+    continuation piece that logprob scoring would not recognize.
     """
-    seen: set[int] = set()
-    out: list[int] = []
-    for s in strings:
-        ids = tokenizer.encode(s, add_special_tokens=False)
-        if len(ids) != 1:
-            continue
-        tid = ids[0]
-        if tid not in seen:
-            seen.add(tid)
-            out.append(tid)
-    return out
+    return single_token_ids(tokenizer, strings)[0]
+
+
+# A judge prompt names its own answer words, e.g. "yes" / "no" or "true" /
+# "false"; without a template or argument saying which, these defaults keep
+# the long-standing behaviour: yes and no in three cases, bare or with a
+# leading or trailing space, whichever of those are single tokens.
+DEFAULT_POSITIVE_TOKENS: tuple[str, ...] = POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS
+DEFAULT_NEGATIVE_TOKENS: tuple[str, ...] = POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS
+# vLLM's default --max-logprobs: the most top logprobs a request may ask for.
+VLLM_DEFAULT_MAX_LOGPROBS = 20
 
 
 class PointwiseVLLM(PointwiseRankLLM):
@@ -57,6 +61,12 @@ class PointwiseVLLM(PointwiseRankLLM):
     work if it follows the template and ``allowed_token_ids``; Qwen, Llama,
     Mistral, etc. differ mainly by tokenizer and optional chat extras (e.g.
     ``enable_thinking``).
+
+    The answer tokens are positive and negative spellings: ``positive_tokens``
+    / ``negative_tokens`` if given, else the template's ``output_tokens``, else
+    the yes/no defaults above. ``allowed_token_ids`` is their union, and the
+    score is the positive probability mass over the mass on both (see
+    :class:`PointwiseAnswerTokens`).
 
     Few-shot examples are not supported (``num_few_shot_examples`` is fixed at 0).
 
@@ -76,6 +86,8 @@ class PointwiseVLLM(PointwiseRankLLM):
         max_concurrent_llm_calls: int | None = None,
         disable_thinking_extra_body: bool = True,
         max_passage_words: int = 300,
+        positive_tokens: Sequence[str] | None = None,
+        negative_tokens: Sequence[str] | None = None,
     ) -> None:
         super().__init__(
             model=model,
@@ -93,18 +105,24 @@ class PointwiseVLLM(PointwiseRankLLM):
         self._llm_concurrency_sem: asyncio.Semaphore | None = None
         self._max_concurrent = max_concurrent_llm_calls or max(batch_size, 1)
 
-        yes_ids = _single_token_ids_from_strings(
-            self._tokenizer, POINTWISE_YES_ALLOWED_TOKEN_SPELLINGS
+        positive, negative, source = self._answer_spellings(
+            positive_tokens, negative_tokens
         )
-        no_ids = _single_token_ids_from_strings(
-            self._tokenizer, POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS
+        self._answer_tokens = PointwiseAnswerTokens.from_spellings(
+            self._tokenizer, positive, negative, warn_skipped=source != "default"
         )
-        self._allowed_token_ids = list(dict.fromkeys(yes_ids + no_ids))
-        if not self._allowed_token_ids:
-            raise ValueError(
-                "PointwiseVLLM: no single-token yes/no ids found for this tokenizer. "
-                "Extend POINTWISE_*_LOGPROB_TOKEN_STRINGS or use a model whose tokenizer "
-                "maps at least one yes/no spelling to one token."
+        self._allowed_token_ids = self._answer_tokens.allowed_token_ids
+        # Every allowed token must be able to appear among the top logprobs.
+        self._top_logprobs = max(
+            VLLM_DEFAULT_MAX_LOGPROBS, len(self._allowed_token_ids)
+        )
+        if self._top_logprobs > VLLM_DEFAULT_MAX_LOGPROBS:
+            logger.warning(
+                "%d answer tokens need top_logprobs=%d; start vLLM with "
+                "--max-logprobs %d or more",
+                len(self._allowed_token_ids),
+                self._top_logprobs,
+                self._top_logprobs,
             )
 
         self._score_extra_body: dict[str, Any] = {
@@ -112,6 +130,31 @@ class PointwiseVLLM(PointwiseRankLLM):
         }
         if disable_thinking_extra_body:
             self._score_extra_body["chat_template_kwargs"] = {"enable_thinking": False}
+
+    def _answer_spellings(
+        self,
+        positive_tokens: Sequence[str] | None,
+        negative_tokens: Sequence[str] | None,
+    ) -> tuple[tuple[str, ...], tuple[str, ...], str]:
+        """(positive, negative, source): arguments, else template, else defaults."""
+        if (positive_tokens is None) != (negative_tokens is None):
+            raise ValueError(
+                "positive_tokens and negative_tokens must be given together"
+            )
+
+        def as_tuple(spellings: Sequence[str]) -> tuple[str, ...]:
+            return (spellings,) if isinstance(spellings, str) else tuple(spellings)
+
+        if positive_tokens is not None:
+            return as_tuple(positive_tokens), as_tuple(negative_tokens), "arguments"
+        declared = self._inference_handler.template.get(OUTPUT_TOKENS_KEY)
+        if declared is not None:
+            return tuple(declared["positive"]), tuple(declared["negative"]), "template"
+        return DEFAULT_POSITIVE_TOKENS, DEFAULT_NEGATIVE_TOKENS, "default"
+
+    @property
+    def answer_tokens(self) -> PointwiseAnswerTokens:
+        return self._answer_tokens
 
     def _get_llm_concurrency_sem(self) -> asyncio.Semaphore:
         if self._llm_concurrency_sem is None:
@@ -199,10 +242,14 @@ class PointwiseVLLM(PointwiseRankLLM):
                 return await self._vllm.chat_completion_score_async(
                     messages,
                     extra_body=self._score_extra_body,
+                    top_logprobs=self._top_logprobs,
+                    answer_tokens=self._answer_tokens,
                 )
         return await self._vllm.chat_completion_score_async(
             messages,
             extra_body=self._score_extra_body,
+            top_logprobs=self._top_logprobs,
+            answer_tokens=self._answer_tokens,
         )
 
     def run_llm(
@@ -352,6 +399,8 @@ class PointwiseVLLM(PointwiseRankLLM):
                 ) = await self._vllm.chat_completion_score_async(
                     msgs,
                     extra_body=self._score_extra_body,
+                    top_logprobs=self._top_logprobs,
+                    answer_tokens=self._answer_tokens,
                 )
             progress.update(1)
             return qi, ci, msgs, n_tok, text, out_tok, score, usage

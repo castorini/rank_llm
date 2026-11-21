@@ -336,6 +336,9 @@ class Reranker:
                 ("max_concurrent_llm_calls", None),
                 ("disable_thinking_extra_body", True),
                 ("max_passage_words", 300),
+                # Answer tokens; None = the template's output_tokens, else yes/no.
+                ("positive_tokens", None),
+                ("negative_tokens", None),
             ]
             (
                 prompt_template_path,
@@ -344,6 +347,8 @@ class Reranker:
                 max_concurrent_llm_calls,
                 disable_thinking_extra_body,
                 max_passage_words,
+                positive_tokens,
+                negative_tokens,
             ) = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = PointwiseVLLM(
@@ -355,6 +360,8 @@ class Reranker:
                 max_concurrent_llm_calls=max_concurrent_llm_calls,
                 disable_thinking_extra_body=disable_thinking_extra_body,
                 max_passage_words=max_passage_words,
+                positive_tokens=positive_tokens,
+                negative_tokens=negative_tokens,
             )
         elif base_url and kwargs.get("listwise_vllm_with_openai_sdk"):
             rest = {k: v for k, v in kwargs.items() if k != "base_url"}
