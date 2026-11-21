@@ -6,6 +6,8 @@ from typing import Any
 
 import yaml
 
+from rank_llm.rerank.inference_handler import render_reranker_messages
+
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
@@ -130,16 +132,20 @@ def build_rendered_prompt_view(
                 }
             )
     elif method == "pointwise":
-        candidate = candidates[0]
-        messages = [
-            {
-                "role": "user",
-                "content": template["body"].format(
-                    query=query_text,
-                    doc_content=_candidate_text(candidate),
-                ),
-            }
-        ]
+        document = _candidate_text(candidates[0])
+        if template.get("message_roles") == "reranker":
+            messages = render_reranker_messages(
+                template["instruction"], query_text, document
+            )
+        else:
+            messages = [
+                {
+                    "role": "user",
+                    "content": template["body"].format(
+                        query=query_text, doc_content=document
+                    ),
+                }
+            ]
     elif method == "pairwise":
         candidate_1 = candidates[0]
         candidate_2 = candidates[1] if len(candidates) > 1 else candidates[0]

@@ -452,6 +452,21 @@ class Reranker:
                 keys=genai_keys,
                 max_passage_words=max_passage_words,
             )
+        elif (
+            "kalm-reranker" in Path(model_path).name.lower()
+            or Path(model_path, "kalm_reranker.py").is_file()
+        ):
+            from rank_llm.rerank.pointwise.kalm_reranker import KaLMReranker
+
+            model_coordinator = KaLMReranker(
+                model=model_path,
+                prompt_template_path=kwargs.get("prompt_template_path"),
+                context_size=kwargs.get("context_size", 1024),
+                device=kwargs.get("device"),
+                batch_size=kwargs.get("batch_size", 32),
+                max_passage_words=kwargs.get("max_passage_words", 300),
+                encoder_chunk_size=kwargs.get("encoder_chunk_size", 4),
+            )
         elif "monot5" in model_path:
             # using monot5
             from rank_llm.rerank.pointwise.monot5 import MonoT5

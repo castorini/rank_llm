@@ -7,7 +7,10 @@ else:
     T5Tokenizer = Any
 
 from rank_llm.data import Result, TemplateSectionConfig
-from rank_llm.rerank.inference_handler import BaseInferenceHandler
+from rank_llm.rerank.inference_handler import (
+    BaseInferenceHandler,
+    render_reranker_messages,
+)
 
 
 class PointwiseInferenceHandler(BaseInferenceHandler):
@@ -160,12 +163,14 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
     def generate_chat_messages(
         self, result: Result, **kwargs: Any
     ) -> list[dict[str, str]]:
-        """Build chat messages for pointwise VLLM backends.
+        """Build structured messages for pointwise rerankers.
 
         When ``message_roles`` is ``"reranker"`` in the template, emits separate
         ``query`` / ``document`` role messages expected by models like
         Qwen3-Reranker whose chat template maps those roles to named fields.
         Otherwise falls back to the standard ``system`` + ``user`` layout.
+        Backends that handle their own document tokenization can pass
+        ``max_doc_tokens=None`` and supply a ``max_passage_words`` limit.
         """
         try:
             index = kwargs["index"]
@@ -184,18 +189,15 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         doc_raw = self._convert_doc_to_prompt_content(
             result.candidates[index].doc, max_length=word_limit
         )
-        doc_tokens = tokenizer.encode(
-            doc_raw, truncation=True, max_length=max_doc_tokens
-        )
-        doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
+        doc = doc_raw
+        if max_doc_tokens is not None:
+            doc_tokens = tokenizer.encode(
+                doc_raw, truncation=True, max_length=max_doc_tokens
+            )
+            doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         if self.template.get("message_roles") == "reranker":
-            instruction = self.template.get("instruction", "").strip()
-            return [
-                {"role": "system", "content": instruction},
-                {"role": "query", "content": query},
-                {"role": "document", "content": doc},
-            ]
+            return render_reranker_messages(self.template["instruction"], query, doc)
 
         user_parts: list[str] = []
         if num_fewshot_examples > 0 and fewshot_examples:

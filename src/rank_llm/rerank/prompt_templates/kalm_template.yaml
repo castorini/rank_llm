@@ -1,0 +1,3 @@
+method: "pointwise"
+message_roles: "reranker"
+instruction: "Given a query, retrieve documents that answer the query."
