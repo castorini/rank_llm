@@ -110,3 +110,4 @@ The reproduced scores agree with the [reported Greenhouse results](https://githu
 | TREC-COVID | 50 | 0.8563 | 0.859 |
 
 + Results reproduced by [@MankyDanky](https://github.com/MankyDanky) on 2026-10-19 using a Modal A100.
++ Results reproduced by [@tanvirsarao](https://github.com/tanvirsarao) on 2026-11-20 using a Modal A100.
