@@ -252,6 +252,20 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertTrue(hasattr(model_coordinator, "_vllm_handler"))
         self.assertEqual(model_coordinator._base_url, "http://localhost:8000/v1")
 
+    def test_openai_sdk_does_not_require_local_inference_dependencies(self):
+        with (
+            patch("rank_llm.rerank.listwise.rank_listwise_os_llm.vllm", None),
+            patch("rank_llm.rerank.listwise.rank_listwise_os_llm.torch", None),
+            patch.dict("sys.modules", {"rank_llm.rerank.vllm_handler": None}),
+        ):
+            model_coordinator = RankListwiseOSLLM(
+                model="castorini/rank_zephyr_7b_v1_full",
+                device="cuda", base_url="http://localhost:8000/v1",
+            )
+
+        self.assertIs(model_coordinator._vllm_handler, self.mock_openai_handler_instance)
+        self.mock_vllm_handler_class.assert_not_called()
+
     def test_valid_inputs(self):
         for (
             model,
