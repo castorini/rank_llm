@@ -7,10 +7,10 @@ from ftfy import fix_text
 
 from rank_llm.data import Result, TemplateSectionConfig
 
-# Template key listing the names of `Query.fields` entries a template may
+# Template key listing the names of `Query.extra_fields` entries a template may
 # reference as placeholders. Declaring them keeps validation strict-clean while
 # letting a template use context beyond the query text itself.
-QUERY_FIELDS_KEY = "query_fields"
+EXTRA_FIELDS_KEY = "extra_fields"
 
 
 class BaseInferenceHandler(ABC):
@@ -40,17 +40,17 @@ class BaseInferenceHandler(ABC):
         """
         pass
 
-    def _declared_query_fields(self, template: dict[str, Any]) -> list[str]:
-        """Names declared under `query_fields`, validated as a list of strings."""
-        declared = template.get(QUERY_FIELDS_KEY, []) or []
+    def _declared_extra_fields(self, template: dict[str, Any]) -> list[str]:
+        """Names declared under `extra_fields`, validated as a list of strings."""
+        declared = template.get(EXTRA_FIELDS_KEY, []) or []
         if isinstance(declared, str) or not isinstance(declared, list | tuple):
             raise ValueError(
-                f"'{QUERY_FIELDS_KEY}' must be a list of placeholder names, got "
+                f"'{EXTRA_FIELDS_KEY}' must be a list of placeholder names, got "
                 f"{type(declared).__name__}"
             )
         if not all(isinstance(name, str) and name for name in declared):
             raise ValueError(
-                f"'{QUERY_FIELDS_KEY}' must contain non-empty strings, got {declared!r}"
+                f"'{EXTRA_FIELDS_KEY}' must contain non-empty strings, got {declared!r}"
             )
         return list(declared)
 
@@ -70,8 +70,8 @@ class BaseInferenceHandler(ABC):
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
 
-        # Placeholders backed by Query.fields are allowed in every section.
-        query_field_placeholders = set(self._declared_query_fields(template))
+        # Placeholders backed by Query.extra_fields are allowed in every section.
+        extra_field_placeholders = set(self._declared_extra_fields(template))
 
         if check_query:
             query_present = (
@@ -80,7 +80,7 @@ class BaseInferenceHandler(ABC):
 
         # Validate the rest of the template keys
         for template_key, template_text in template.items():
-            if template_key == QUERY_FIELDS_KEY:
+            if template_key == EXTRA_FIELDS_KEY:
                 continue  # A list of names, not a formattable section.
             if template_key not in template_section:
                 raise ValueError(f"Unsupported template section: {template_key}")
@@ -90,7 +90,7 @@ class BaseInferenceHandler(ABC):
             allowed_placeholders = (
                 required_placeholders
                 | section.allowed_placeholders
-                | query_field_placeholders
+                | extra_field_placeholders
             )
             used_placeholders = {
                 name
@@ -119,17 +119,17 @@ class BaseInferenceHandler(ABC):
                 "query placeholder must be present in prefix and/or suffix"
             )
 
-    def _query_field_values(self, result: Result) -> dict[str, Any]:
-        """Values for the template's declared `query_fields`, taken from Query.fields.
+    def _extra_field_values(self, result: Result) -> dict[str, Any]:
+        """Values for the template's declared `extra_fields`, taken from Query.extra_fields.
 
         A declared field that the query does not carry resolves to the empty
         string, so one template can serve queries whose optional context is
         sometimes absent without failing to render.
         """
-        declared = self._declared_query_fields(self.template)
+        declared = self._declared_extra_fields(self.template)
         if not declared:
             return {}
-        available = getattr(result.query, "fields", None) or {}
+        available = getattr(result.query, "extra_fields", None) or {}
         return {name: available.get(name, "") for name in declared}
 
     def _replace_number(self, s: str) -> str:
@@ -199,8 +199,8 @@ class BaseInferenceHandler(ABC):
             raise KeyError(
                 f"Template section '{template_key}' references placeholder {err} which was "
                 f"not supplied. Available placeholders: {sorted(fmt_values)}. Placeholders "
-                f"beyond the section's built-ins must be declared in '{QUERY_FIELDS_KEY}' "
-                f"and supplied through Query.fields."
+                f"beyond the section's built-ins must be declared in '{EXTRA_FIELDS_KEY}' "
+                f"and supplied through Query.extra_fields."
             ) from err
 
     @abstractmethod

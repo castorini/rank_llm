@@ -1,4 +1,4 @@
-"""ACARe context-mode templates and the Query.fields plumbing they rely on."""
+"""ACARe context-mode templates and the Query.extra_fields plumbing they rely on."""
 
 import unittest
 from importlib.resources import files
@@ -30,7 +30,7 @@ def make_result(fields=None):
     return from_dict(
         data_class=Result,
         data={
-            "query": {"text": SUB_QUERY, "qid": "q1", "fields": fields or {}},
+            "query": {"text": SUB_QUERY, "qid": "q1", "extra_fields": fields or {}},
             "candidates": [
                 {"doc": {"contents": "A passage."}, "docid": "d1", "score": 0.5}
             ],
@@ -103,7 +103,7 @@ class TestACAReQueryBlocks(unittest.TestCase):
         )
 
     def test_stock_template_is_unchanged_by_the_feature(self):
-        """A template without query_fields still sends the bare query text."""
+        """A template without extra_fields still sends the bare query text."""
         roles = query_role(load("pointwise_vllm_template.yaml"), {})
         self.assertEqual(roles["query"], SUB_QUERY)
 
@@ -137,7 +137,7 @@ class TestACAReAnswerTokens(unittest.TestCase):
             )
             PointwiseInferenceHandler(
                 template
-            )  # valid beside query_fields / query_block
+            )  # valid beside extra_fields / query_block
 
     def test_pointwise_vllm_takes_them_from_the_template(self):
         handler = MagicMock()
@@ -168,16 +168,16 @@ class TestQueryFieldsValidation(unittest.TestCase):
             handler.generate_chat_messages(
                 make_result(), index=0, max_doc_tokens=100, tokenizer=FakeTokenizer()
             )
-        self.assertIn("query_fields", str(ctx.exception))
+        self.assertIn("extra_fields", str(ctx.exception))
 
-    def test_query_fields_must_be_a_list_of_names(self):
+    def test_extra_fields_must_be_a_list_of_names(self):
         with self.assertRaises(ValueError):
             PointwiseInferenceHandler(
                 {
                     "method": "pointwise",
                     "message_roles": "reranker",
                     "instruction": "Rank it",
-                    "query_fields": "reasoning",
+                    "extra_fields": "reasoning",
                 }
             )
 

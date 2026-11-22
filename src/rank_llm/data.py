@@ -9,18 +9,19 @@ from dacite import from_dict
 class Query:
     text: str
     qid: str | int
-    # Optional named context fields carried alongside the query text. Prompt
-    # templates reference them by name after declaring them in `query_fields`
-    # (e.g. an agent's reasoning trace, or the originating global query).
-    fields: dict[str, Any] = field(default_factory=dict)
+    # Optional named values carried alongside the query text, e.g. an agent's
+    # reasoning trace or the question that started its session. A prompt
+    # template uses them as placeholders after declaring their names in its
+    # `extra_fields` key.
+    extra_fields: dict[str, Any] = field(default_factory=dict)
 
 
 def _query_record(query: Query) -> dict[str, Any]:
-    """Serialised form of a query. Empty ``fields`` are omitted so that output
-    files are unchanged for callers that never set context fields."""
+    """Serialised form of a query. Empty ``extra_fields`` are omitted so that
+    output files are unchanged for callers that never set them."""
     record = dict(query.__dict__)
-    if not record.get("fields"):
-        record.pop("fields", None)
+    if not record.get("extra_fields"):
+        record.pop("extra_fields", None)
     return record
 
 

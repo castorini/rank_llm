@@ -9,14 +9,14 @@
 # are reproduced here verbatim rather than supplied dynamically.
 #
 # `query_intent` is the agent's reasoning before issuing the query; supply it
-# through Query.fields. The upstream "rag" variant is this template without the
+# through Query.extra_fields. The upstream "rag" variant is this template without the
 # [QUERY INTENT] block and with a user-question framing.
 #
 # Serve with the sampling the model was distilled under: temperature 0.7,
 # top_p 0.8, top_k 20, min_p 0, and thinking disabled. Set window_size to the
 # rerank depth so the whole candidate set is judged in a single pass.
 method: "singleturn_listwise"
-query_fields: ["query_intent"]
+extra_fields: ["query_intent"]
 system_message: |-
   You are a high-quality document set selector for a deep-research agent. Given a search query from the agent, the agent's reasoning as query intent, and a list of retrieved documents (including title, url, search snippet and full text), select the best subset that jointly answers the query.
 

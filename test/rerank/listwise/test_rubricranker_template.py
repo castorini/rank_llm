@@ -29,7 +29,11 @@ def make_result():
     return from_dict(
         data_class=Result,
         data={
-            "query": {"text": QUERY, "qid": "q1", "fields": {"query_intent": INTENT}},
+            "query": {
+                "text": QUERY,
+                "qid": "q1",
+                "extra_fields": {"query_intent": INTENT},
+            },
             "candidates": [
                 {"doc": {"contents": doc}, "docid": f"d{i}", "score": 1.0 - i / 10}
                 for i, doc in enumerate(DOCS)
@@ -116,8 +120,8 @@ class TestRubricRankerRagVariant(unittest.TestCase):
     def test_no_query_intent_block(self):
         self.assertNotIn("[QUERY INTENT]", self.messages[-1]["content"])
 
-    def test_needs_no_query_fields(self):
-        self.assertNotIn("query_fields", self.template)
+    def test_needs_no_extra_fields(self):
+        self.assertNotIn("extra_fields", self.template)
 
 
 class TestSetwiseSelectionParsing(unittest.TestCase):

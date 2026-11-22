@@ -14,7 +14,7 @@
 #   M2  + global query            -> acare_m2_template.yaml
 #   M3  + both                    -> acare_m3_template.yaml
 #
-# Supply `reasoning` through Query.fields. An empty value drops its line, so
+# Supply `reasoning` through Query.extra_fields. An empty value drops its line, so
 # this template degrades to the M0 *layout* -- but the M0 instruction differs,
 # so prefer the stock template when no context is available.
 method: "pointwise"
@@ -23,7 +23,7 @@ message_roles: "reranker"
 output_tokens:
   positive: ["yes"]
   negative: ["no"]
-query_fields: ["reasoning"]
+extra_fields: ["reasoning"]
 instruction: >-
   Given a user generated web search query and the user's reasoning trace that motivated the
   query (when available), retrieve relevant passages that answer the query in light of the

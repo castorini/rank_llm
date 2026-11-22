@@ -81,7 +81,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 allowed_placeholders=set(),
             ),
             # Optional: composes the text sent as the `query` role, so a
-            # template can fold declared query_fields into the query block
+            # template can fold declared extra_fields into the query block
             # instead of requiring the caller to pre-assemble the string.
             "query_block": TemplateSectionConfig(
                 required=False,
@@ -171,7 +171,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         fmt_values = {
             "query": query,
             "doc_content": doc,
-            **self._query_field_values(result),
+            **self._extra_field_values(result),
         }
         body_text = self._format_template(template_key="body", fmt_values=fmt_values)
 
@@ -207,13 +207,13 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
 
         Without a `query_block` section this is the query text, matching the
         stock Qwen3-Reranker layout. With one, the section composes the query
-        together with the template's declared query_fields. Template lines whose
+        together with the template's declared extra_fields. Template lines whose
         only substitutions resolve to empty are dropped first, so one template
         degrades cleanly when optional context is absent.
         """
         if "query_block" not in self.template:
             return query
-        field_values = self._query_field_values(result)
+        field_values = self._extra_field_values(result)
         empty = {name for name, value in field_values.items() if not str(value).strip()}
         template_text = self.template["query_block"]
         if empty:

@@ -136,7 +136,7 @@ class _WordTokenizer(_MockTokenizer):
 class TestPointwiseVLLMContextBudget(unittest.TestCase):
     """The document gets what the query block leaves, and the prompt fits."""
 
-    def test_query_fields_count_against_the_document_budget(self):
+    def test_extra_fields_count_against_the_document_budget(self):
         from rank_llm.data import Candidate, Query, Result
 
         mock_vllm = MagicMock()
@@ -159,7 +159,7 @@ class TestPointwiseVLLMContextBudget(unittest.TestCase):
             query=Query(
                 text="sub query",
                 qid="q1",
-                fields={"global_query": "g " * 80, "reasoning": "r " * 80},
+                extra_fields={"global_query": "g " * 80, "reasoning": "r " * 80},
             ),
             candidates=[
                 Candidate(docid="d1", score=1.0, doc={"contents": "w " * 1000})
