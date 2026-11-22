@@ -7,6 +7,10 @@
 # Supply `global_query` through Query.fields.
 method: "pointwise"
 message_roles: "reranker"
+# Scored like Qwen3-Reranker: P("yes") over P("yes") + P("no").
+output_tokens:
+  positive: ["yes"]
+  negative: ["no"]
 query_fields: ["global_query"]
 instruction: >-
   Given a user generated query issued during an iterative research session and the original

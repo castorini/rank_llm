@@ -2,6 +2,7 @@
 
 import unittest
 from importlib.resources import files
+from unittest.mock import MagicMock, patch
 
 import yaml
 from dacite import from_dict
@@ -10,6 +11,7 @@ from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_inference_handler import (
     PointwiseInferenceHandler,
 )
+from rank_llm.rerank.pointwise.pointwise_vllm import PointwiseVLLM
 from test.rerank.conftest import FakeTokenizer
 
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
@@ -104,6 +106,53 @@ class TestACAReQueryBlocks(unittest.TestCase):
         """A template without query_fields still sends the bare query text."""
         roles = query_role(load("pointwise_vllm_template.yaml"), {})
         self.assertEqual(roles["query"], SUB_QUERY)
+
+
+class _YesNoTokenizer:
+    """`yes` and `no` are single tokens; anything else is several."""
+
+    def encode(self, text, add_special_tokens=False, **kwargs):
+        return {"yes": [1], "no": [2]}.get(text, [100, 101])
+
+    def decode(self, ids, **kwargs):
+        return {1: "yes", 2: "no"}.get(ids[0], "?")
+
+
+class TestACAReAnswerTokens(unittest.TestCase):
+    """Every ACARe mode scores like Qwen3-Reranker: P("yes") over P("yes") + P("no")."""
+
+    MODES = (
+        "acare_m1_template.yaml",
+        "acare_m2_template.yaml",
+        "acare_m3_template.yaml",
+    )
+
+    def test_each_mode_declares_lowercase_yes_no(self):
+        for name in self.MODES:
+            template = load(name)
+            self.assertEqual(
+                template["output_tokens"],
+                {"positive": ["yes"], "negative": ["no"]},
+                name,
+            )
+            PointwiseInferenceHandler(
+                template
+            )  # valid beside query_fields / query_block
+
+    def test_pointwise_vllm_takes_them_from_the_template(self):
+        handler = MagicMock()
+        handler.get_tokenizer.return_value = _YesNoTokenizer()
+        for name in self.MODES:
+            with patch(
+                "rank_llm.rerank.pointwise.pointwise_vllm.VllmHandlerWithOpenAISDK",
+                return_value=handler,
+            ):
+                reranker = PointwiseVLLM(
+                    model="m",
+                    base_url="http://127.0.0.1:8000/v1",
+                    prompt_template_path=TEMPLATES / name,
+                )
+            self.assertEqual(reranker.answer_tokens.allowed_token_ids, [1, 2], name)
 
 
 class TestQueryFieldsValidation(unittest.TestCase):

@@ -8,6 +8,10 @@
 # so switch templates rather than relying on that when a field is always absent.
 method: "pointwise"
 message_roles: "reranker"
+# Scored like Qwen3-Reranker: P("yes") over P("yes") + P("no").
+output_tokens:
+  positive: ["yes"]
+  negative: ["no"]
 query_fields: ["global_query", "reasoning"]
 instruction: >-
   Given a user generated query, the original question (global query), and the user's reasoning
