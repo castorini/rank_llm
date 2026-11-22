@@ -528,8 +528,13 @@ class Reranker:
                 device=device,
                 batch_size=batch_size,
             )
-        elif any(k in model_path.lower() for k in ["cross-encoder", "cross_encoder", "bge-reranker", "bge_reranker"]):
-            from rank_llm.rerank.pointwise.cross_encoder_reranker import CrossEncoderReranker
+        elif any(
+            k in model_path.lower()
+            for k in ["cross-encoder", "cross_encoder", "bge-reranker", "bge_reranker"]
+        ):
+            from rank_llm.rerank.pointwise.cross_encoder_reranker import (
+                CrossEncoderReranker,
+            )
 
             print(f"Loading {model_path} ...")
 
@@ -550,6 +555,8 @@ class Reranker:
                 ("batch_size", 32),
                 ("apply_sigmoid", False),
                 ("max_passage_words", 300),
+                ("trust_remote_code", False),
+                ("relevance_label_id", None),
             ]
             [
                 prompt_template_path,
@@ -558,6 +565,8 @@ class Reranker:
                 batch_size,
                 apply_sigmoid,
                 max_passage_words,
+                trust_remote_code,
+                relevance_label_id,
             ] = extract_kwargs(keys_and_defaults, **kwargs)
 
             model_coordinator = CrossEncoderReranker(
@@ -571,7 +580,9 @@ class Reranker:
                 device=device,
                 batch_size=batch_size,
                 apply_sigmoid=apply_sigmoid,
+                trust_remote_code=trust_remote_code,
                 max_passage_words=max_passage_words,
+                relevance_label_id=relevance_label_id,
             )
         elif "duot5" in model_path:
             # using duot5

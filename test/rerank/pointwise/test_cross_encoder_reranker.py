@@ -213,6 +213,105 @@ class TestCrossEncoderReranker(unittest.TestCase):
         self.assertEqual(len(scores), 1)
         self.assertAlmostEqual(scores[0], 3.2, places=4)
 
+    def test_trust_remote_code_forwarded(self, mock_tok, mock_model):
+        mock_tok.from_pretrained.return_value = MagicMock()
+        mock_model_inst = MagicMock()
+        mock_model_inst.to.return_value = mock_model_inst
+        mock_model.from_pretrained.return_value = mock_model_inst
+
+        coordinator = Reranker.create_model_coordinator(
+            "cross-encoder", None, False, device="cpu", trust_remote_code=True
+        )
+        self.assertIsInstance(coordinator, CrossEncoderReranker)
+        mock_tok.from_pretrained.assert_called_with(
+            "cross-encoder/ms-marco-MiniLM-L-6-v2", trust_remote_code=True
+        )
+        mock_model.from_pretrained.assert_called_with(
+            "cross-encoder/ms-marco-MiniLM-L-6-v2", trust_remote_code=True
+        )
+
+    def test_multiclass_explicit_relevance_label_id(self, mock_tok, mock_model):
+        mock_tokenizer_inst = MagicMock()
+        mock_tokenizer_inst.return_value = {
+            "input_ids": torch.tensor([[1, 2]]),
+            "attention_mask": torch.tensor([[1, 1]]),
+        }
+        mock_tok.from_pretrained.return_value = mock_tokenizer_inst
+
+        mock_model_inst = MagicMock()
+        mock_model_inst.to.return_value = mock_model_inst
+        # Class logits: [contradiction=0.0, entailment=10.0, neutral=0.0]
+        mock_model_inst.return_value = SimpleNamespace(
+            logits=torch.tensor([[0.0, 10.0, 0.0]])
+        )
+        mock_model.from_pretrained.return_value = mock_model_inst
+
+        reranker = CrossEncoderReranker(
+            model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+            device="cpu",
+            relevance_label_id=1,
+        )
+
+        prompts = ['{"query": "q", "doc": "d"}']
+        outputs, tokens, scores = reranker.run_llm_batched(prompts)
+        self.assertEqual(len(scores), 1)
+        self.assertGreater(scores[0], 0.99)
+
+    def test_multiclass_auto_discovered_label(self, mock_tok, mock_model):
+        mock_tokenizer_inst = MagicMock()
+        mock_tokenizer_inst.return_value = {
+            "input_ids": torch.tensor([[1, 2]]),
+            "attention_mask": torch.tensor([[1, 1]]),
+        }
+        mock_tok.from_pretrained.return_value = mock_tokenizer_inst
+
+        mock_model_inst = MagicMock()
+        mock_model_inst.to.return_value = mock_model_inst
+        mock_model_inst.config = SimpleNamespace(
+            label2id={"contradiction": 0, "entailment": 1, "neutral": 2}
+        )
+        mock_model_inst.return_value = SimpleNamespace(
+            logits=torch.tensor([[0.0, 10.0, 0.0]])
+        )
+        mock_model.from_pretrained.return_value = mock_model_inst
+
+        reranker = CrossEncoderReranker(
+            model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+            device="cpu",
+        )
+        self.assertEqual(reranker._relevance_label_id, 1)
+
+        prompts = ['{"query": "q", "doc": "d"}']
+        outputs, tokens, scores = reranker.run_llm_batched(prompts)
+        self.assertEqual(len(scores), 1)
+        self.assertGreater(scores[0], 0.99)
+
+    def test_multiclass_unresolved_label_raises_value_error(self, mock_tok, mock_model):
+        mock_tokenizer_inst = MagicMock()
+        mock_tokenizer_inst.return_value = {
+            "input_ids": torch.tensor([[1, 2]]),
+            "attention_mask": torch.tensor([[1, 1]]),
+        }
+        mock_tok.from_pretrained.return_value = mock_tokenizer_inst
+
+        mock_model_inst = MagicMock()
+        mock_model_inst.to.return_value = mock_model_inst
+        mock_model_inst.config = SimpleNamespace(label2id={"a": 0, "b": 1, "c": 2})
+        mock_model_inst.return_value = SimpleNamespace(
+            logits=torch.tensor([[1.0, 2.0, 3.0]])
+        )
+        mock_model.from_pretrained.return_value = mock_model_inst
+
+        reranker = CrossEncoderReranker(
+            model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+            device="cpu",
+        )
+
+        prompts = ['{"query": "q", "doc": "d"}']
+        with self.assertRaises(ValueError) as ctx:
+            reranker.run_llm_batched(prompts)
+        self.assertIn("relevance label could be identified", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

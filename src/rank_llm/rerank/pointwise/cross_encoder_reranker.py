@@ -39,6 +39,7 @@ class CrossEncoderReranker(PointwiseRankLLM):
         apply_sigmoid: bool = False,
         trust_remote_code: bool = False,
         max_passage_words: int = 300,
+        relevance_label_id: int | None = None,
     ):
         if prompt_template_path is None:
             prompt_template_path = TEMPLATES / "cross_encoder_template.yaml"
@@ -70,28 +71,16 @@ class CrossEncoderReranker(PointwiseRankLLM):
             else:
                 device = "cpu"
 
-        super().__init__(
-            model=model,
-            context_size=context_size,
-            prompt_mode=None,
-            prompt_template_path=prompt_template_path,
-            num_few_shot_examples=0,
-            few_shot_file=None,
-            device=device,
-            batch_size=batch_size,
-            max_passage_words=max_passage_words,
-        )
-
-        self._apply_sigmoid = apply_sigmoid
         self._tokenizer = AutoTokenizer.from_pretrained(
             model, trust_remote_code=trust_remote_code
         )
         self._llm = AutoModelForSequenceClassification.from_pretrained(
             model, trust_remote_code=trust_remote_code
-        ).to(self._device)
+        )
+        self._llm = self._llm.to(device)
         self._llm.eval()
 
-        # Clamp context_size to the model's physical positional limit
+        # Clamp context_size to the model physical positional limit
         model_limit = None
         if hasattr(self._llm, "config"):
             cfg_limit = getattr(self._llm.config, "max_position_embeddings", None)
@@ -104,15 +93,46 @@ class CrossEncoderReranker(PointwiseRankLLM):
                 model_limit = tok_limit
 
         if isinstance(model_limit, int) and model_limit > 0:
+            effective_context_size = min(context_size, model_limit)
             if context_size > model_limit:
                 logger.info(
                     "Clamping context_size from %s to model max limit %s",
                     context_size,
                     model_limit,
                 )
-            self._context_size = min(context_size, model_limit)
         else:
-            self._context_size = context_size
+            effective_context_size = context_size
+
+        super().__init__(
+            model=model,
+            context_size=effective_context_size,
+            prompt_mode=None,
+            prompt_template_path=prompt_template_path,
+            num_few_shot_examples=0,
+            few_shot_file=None,
+            device=device,
+            batch_size=batch_size,
+            max_passage_words=max_passage_words,
+        )
+
+        self._apply_sigmoid = apply_sigmoid
+        self._context_size = effective_context_size
+
+        # Determine relevance class index for multi-class checkpoints
+        self._relevance_label_id = relevance_label_id
+        if self._relevance_label_id is None and hasattr(self._llm, "config"):
+            label2id = getattr(self._llm.config, "label2id", None)
+            if isinstance(label2id, dict):
+                for label_name, idx in label2id.items():
+                    if str(label_name).lower() in (
+                        "relevant",
+                        "entailment",
+                        "positive",
+                        "label_1",
+                        "1",
+                    ):
+                        self._relevance_label_id = idx
+                        break
 
     def run_llm_batched(
         self,
@@ -164,14 +184,31 @@ class CrossEncoderReranker(PointwiseRankLLM):
                     raw_scores = torch.sigmoid(raw_scores)
             # Case 2: Binary classification logits (shape: [batch_size, 2])
             elif logits.shape[1] == 2:
-                # Class 1 represents relevant, class 0 represents non-relevant.
-                # Compute relative relevance via softmax probability for class 1
+                # Class 1 represents relevant by standard convention, or user-configured index
+                target_idx = (
+                    self._relevance_label_id
+                    if self._relevance_label_id is not None
+                    else 1
+                )
                 scores_2d = torch.softmax(logits, dim=-1)
-                raw_scores = scores_2d[:, 1]
+                raw_scores = scores_2d[:, target_idx]
             else:
-                # Multi-class classification: softmax over classes and take final class
+                # Multi-class classification (> 2 logits)
+                num_classes = logits.shape[1]
+                target_idx = self._relevance_label_id
+                if target_idx is None or target_idx >= num_classes or target_idx < 0:
+                    cfg_labels = (
+                        getattr(self._llm.config, "label2id", None)
+                        if hasattr(self._llm, "config")
+                        else None
+                    )
+                    raise ValueError(
+                        f"Model outputs {num_classes} classes but no explicit or discoverable "
+                        f"relevance label could be identified (label2id={cfg_labels}). "
+                        f"Please specify an explicit `relevance_label_id`."
+                    )
                 scores_nd = torch.softmax(logits, dim=-1)
-                raw_scores = scores_nd[:, -1]
+                raw_scores = scores_nd[:, target_idx]
 
             numpy_scores = raw_scores.detach().cpu().to(torch.float32).numpy()
 
