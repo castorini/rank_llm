@@ -1,4 +1,6 @@
+import asyncio
 import copy
+import inspect
 import os
 from pathlib import Path
 from typing import Any
@@ -7,6 +9,7 @@ from huggingface_hub import hf_hub_download
 
 from rank_llm.data import DataWriter, Query, Request, read_requests_from_file
 from rank_llm.rerank import IdentityReranker, RankLLM, Reranker
+from rank_llm.rerank.listwise.listwise_rankllm import ListwiseRankLLM
 from rank_llm.rerank.reranker import extract_kwargs
 from rank_llm.retrieve import (
     TOPICS,
@@ -81,24 +84,58 @@ def retrieve_and_rerank(
             shuffle_candidates=shuffle_candidates,
         )
     else:
-        # Reranker is of type RankLLM
-        for pass_ct in range(num_passes):
-            print(f"Pass {pass_ct + 1} of {num_passes}:")
-            rerank_results = reranker.rerank_batch(
-                requests,
-                rank_end=top_k_retrieve,
-                rank_start=0,
-                shuffle_candidates=shuffle_candidates,
-                logging=print_prompts_responses,
-                top_k_retrieve=top_k_retrieve,
-                **kwargs,
-            )
+        coordinator = reranker.get_model_coordinator()
+        if isinstance(coordinator, ListwiseRankLLM):
+            # vLLM background tasks must remain on one loop across all passes.
+            async def run_passes():
+                current_requests = requests
+                try:
+                    for pass_ct in range(num_passes):
+                        print(f"Pass {pass_ct + 1} of {num_passes}:")
+                        results = await reranker.rerank_batch_async(
+                            current_requests,
+                            rank_end=top_k_retrieve,
+                            rank_start=0,
+                            shuffle_candidates=shuffle_candidates,
+                            logging=print_prompts_responses,
+                            top_k_retrieve=top_k_retrieve,
+                            isolate_llm_slots=True,
+                            **kwargs,
+                        )
+                        current_requests = [
+                            Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                            for r in results
+                        ]
+                    return results
+                finally:
+                    # Release remote connections before their owning loop closes.
+                    aclose = getattr(
+                        getattr(coordinator, "_vllm_handler", None), "aclose", None
+                    )
+                    if aclose is not None:
+                        result = aclose()
+                        if inspect.isawaitable(result):
+                            await result
 
-            if num_passes > 1:
-                requests = [
-                    Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
-                    for r in rerank_results
-                ]
+            rerank_results = asyncio.run(run_passes())
+            pass_ct = num_passes - 1
+        else:
+            for pass_ct in range(num_passes):
+                print(f"Pass {pass_ct + 1} of {num_passes}:")
+                rerank_results = reranker.rerank_batch(
+                    requests,
+                    rank_end=top_k_retrieve,
+                    rank_start=0,
+                    shuffle_candidates=shuffle_candidates,
+                    logging=print_prompts_responses,
+                    top_k_retrieve=top_k_retrieve,
+                    **kwargs,
+                )
+                if num_passes > 1:
+                    requests = [
+                        Request(copy.deepcopy(r.query), copy.deepcopy(r.candidates))
+                        for r in rerank_results
+                    ]
 
     for rr in rerank_results:
         rr.candidates = rr.candidates[:top_k_rerank]

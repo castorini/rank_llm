@@ -451,8 +451,6 @@ class ListwiseRankLLM(RankLLM, ABC):
         else:
             semaphore = self._get_llm_concurrency_sem()
 
-        pending_tasks: set = set()
-
         async def _process_one(idx: int, s: int, e: int) -> None:
             async with semaphore:
                 prompt, in_tok = self.create_prompt(rerank_results[idx], s, e)
@@ -475,22 +473,14 @@ class ListwiseRankLLM(RankLLM, ABC):
                 next_start = s - stride
                 next_start = max(next_start, rank_start)
                 if next_end > next_start and s != rank_start:
-                    task = asyncio.ensure_future(
-                        _process_one(idx, next_start, next_end)
-                    )
-                    pending_tasks.add(task)
-                    task.add_done_callback(pending_tasks.discard)
+                    task_group.create_task(_process_one(idx, next_start, next_end))
 
-        async def _run_all() -> None:
-            for idx, s, e in work_queue:
-                task = asyncio.ensure_future(_process_one(idx, s, e))
-                pending_tasks.add(task)
-                task.add_done_callback(pending_tasks.discard)
-            while pending_tasks:
-                await asyncio.wait(list(pending_tasks))
-
-        await _run_all()
-        progress.close()
+        try:
+            async with asyncio.TaskGroup() as task_group:
+                for idx, s, e in work_queue:
+                    task_group.create_task(_process_one(idx, s, e))
+        finally:
+            progress.close()
         return rerank_results
 
     def sliding_windows_batched(
