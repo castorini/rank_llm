@@ -6,6 +6,12 @@ from typing import Any
 
 import yaml
 
+from rank_llm.rerank.inference_handler import (
+    EXTRA_FIELDS_KEY,
+    compose_query_block,
+    resolve_extra_field_values,
+)
+
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
@@ -60,6 +66,7 @@ def build_rendered_prompt_view(
     method = template["method"]
     query_text = _query_text(payload["query"])
     candidates = payload["candidates"]
+    extra = _extra_field_values(template, payload["query"])
 
     if method == "singleturn_listwise":
         user_content = ""
@@ -67,6 +74,7 @@ def build_rendered_prompt_view(
             user_content += template["prefix"].format(
                 query=query_text,
                 num=len(candidates),
+                **extra,
             )
         for index, candidate in enumerate(candidates, start=1):
             user_content += template["body"].format(
@@ -78,6 +86,7 @@ def build_rendered_prompt_view(
             user_content += template["suffix"].format(
                 query=query_text,
                 num=len(candidates),
+                **extra,
             )
         messages = _with_system(template, [{"role": "user", "content": user_content}])
     elif method == "multiturn_listwise":
@@ -131,15 +140,30 @@ def build_rendered_prompt_view(
             )
     elif method == "pointwise":
         candidate = candidates[0]
-        messages = [
-            {
-                "role": "user",
-                "content": template["body"].format(
-                    query=query_text,
-                    doc_content=_candidate_text(candidate),
-                ),
-            }
-        ]
+        if template.get("message_roles") == "reranker":
+            # Separate system / query / document messages, as PointwiseVLLM
+            # sends them to rerankers like Qwen3-Reranker.
+            query_content = (
+                compose_query_block(template["query_block"], query_text, extra)
+                if template.get("query_block")
+                else query_text
+            )
+            messages = [
+                {"role": "system", "content": template.get("instruction", "").strip()},
+                {"role": "query", "content": query_content},
+                {"role": "document", "content": _candidate_text(candidate)},
+            ]
+        else:
+            messages = [
+                {
+                    "role": "user",
+                    "content": template["body"].format(
+                        query=query_text,
+                        doc_content=_candidate_text(candidate),
+                        **extra,
+                    ),
+                }
+            ]
     elif method == "pairwise":
         candidate_1 = candidates[0]
         candidate_2 = candidates[1] if len(candidates) > 1 else candidates[0]
@@ -260,3 +284,10 @@ def _collect_placeholders(template: dict[str, Any]) -> set[str]:
             if inside:
                 current += character
     return placeholders
+
+
+def _extra_field_values(template: dict[str, Any], query: Any) -> dict[str, Any]:
+    """The template's declared extra fields, filled from the payload query."""
+    declared = template.get(EXTRA_FIELDS_KEY) or []
+    available = query.get(EXTRA_FIELDS_KEY) if isinstance(query, dict) else None
+    return resolve_extra_field_values(list(declared), available)

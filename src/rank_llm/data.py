@@ -9,6 +9,20 @@ from dacite import from_dict
 class Query:
     text: str
     qid: str | int
+    # Optional named values carried alongside the query text, e.g. an agent's
+    # reasoning trace or the question that started its session. A prompt
+    # template uses them as placeholders after declaring their names in its
+    # `extra_fields` key.
+    extra_fields: dict[str, Any] = field(default_factory=dict)
+
+
+def _query_record(query: Query) -> dict[str, Any]:
+    """Serialised form of a query. Empty ``extra_fields`` are omitted so that
+    output files are unchanged for callers that never set them."""
+    record = dict(query.__dict__)
+    if not record.get("extra_fields"):
+        record.pop("extra_fields", None)
+    return record
 
 
 @dataclass
@@ -48,6 +62,9 @@ class TemplateSectionConfig:
     required: bool
     required_placeholders: set[str]
     allowed_placeholders: set[str]
+    # Whether the renderer fills this section with the query's extra_fields
+    # values, so a template may use its declared extra fields here.
+    accepts_extra_fields: bool = False
 
 
 def read_requests_from_file(file_path: str) -> list[Request]:
@@ -92,7 +109,7 @@ class DataWriter:
             for info in d.invocations_history:
                 values.append(info.__dict__)
             aggregated_history.append(
-                {"query": d.query.__dict__, "invocations_history": values}
+                {"query": _query_record(d.query), "invocations_history": values}
             )
         self._write_json_array(filename, aggregated_history)
 
@@ -114,7 +131,7 @@ class DataWriter:
         results = []
         for d in self._data:
             candidates = [candidate.__dict__ for candidate in d.candidates]
-            results.append({"query": d.query.__dict__, "candidates": candidates})
+            results.append({"query": _query_record(d.query), "candidates": candidates})
         self._write_json_array(filename, results)
 
     def write_in_jsonl_format(self, filename: str):
@@ -122,7 +139,7 @@ class DataWriter:
             for d in self._data:
                 candidates = [candidate.__dict__ for candidate in d.candidates]
                 output = json.dumps(
-                    {"query": d.query.__dict__, "candidates": candidates},
+                    {"query": _query_record(d.query), "candidates": candidates},
                     ensure_ascii=False,
                 )
                 f.write(output)

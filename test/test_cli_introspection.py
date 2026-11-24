@@ -44,6 +44,18 @@ class TestCLIIntrospection(unittest.TestCase):
             ["none", "minimal", "low", "medium", "high", "xhigh"],
         )
 
+    def test_rerank_direct_input_schema_documents_extra_fields(self):
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            exit_code = main(["--output", "json", "schema", "rerank-direct-input"])
+        self.assertEqual(exit_code, 0)
+        schema = json.loads(stdout.getvalue())["artifacts"][0]["value"]["schema"]
+        query_object = schema["properties"]["query"]["oneOf"][1]
+        self.assertEqual(
+            query_object["properties"]["extra_fields"]["additionalProperties"],
+            {"type": ["string", "null"]},
+        )
+
     def test_doctor_returns_readiness(self):
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):

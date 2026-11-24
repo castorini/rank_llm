@@ -258,6 +258,7 @@ def run_rerank_request(
         model_path=effective_config.model_path,
         query_text=normalized["query_text"],
         query_id=normalized["query_id"],
+        extra_fields=normalized["extra_fields"],
         candidates=normalized["candidates"],
         batch_size=effective_config.batch_size,
         top_k_rerank=effective_config.top_k_rerank,

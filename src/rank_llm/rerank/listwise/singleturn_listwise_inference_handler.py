@@ -3,12 +3,27 @@ from typing import Any
 from rank_llm.data import Result, TemplateSectionConfig
 from rank_llm.rerank.listwise.listwise_inference_handler import ListwiseInferenceHandler
 
+# Optional template key: the fewest tokens the model must generate. Without it
+# a backend that enforces a minimum (in-process vLLM) asks for a complete
+# permutation of the window. A template whose model returns a subset of the
+# window, such as a selector answering "[4] [2] [7]", sets a small value so the
+# model can stop after its selection.
+MIN_OUTPUT_TOKENS_KEY = "min_output_tokens"
+
 
 class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
     def __init__(self, template: dict[str, str]):
         super().__init__(template)
 
     def _validate_template(self, template: dict[str, str], strict: bool = False):
+        if MIN_OUTPUT_TOKENS_KEY in template:
+            value = template[MIN_OUTPUT_TOKENS_KEY]
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError(
+                    f"'{MIN_OUTPUT_TOKENS_KEY}' must be a positive integer, got {value!r}"
+                )
+            # A number, not a format string: checked here, not as a section.
+            template = {k: v for k, v in template.items() if k != MIN_OUTPUT_TOKENS_KEY}
         TEMPLATE_SECTIONS: dict[str, TemplateSectionConfig] = {
             "method": TemplateSectionConfig(
                 required=True,
@@ -29,11 +44,13 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
                 required=False,
                 required_placeholders=set(),
                 allowed_placeholders={"query", "num"},
+                accepts_extra_fields=True,
             ),
             "suffix": TemplateSectionConfig(
                 required=False,
                 required_placeholders=set(),
                 allowed_placeholders={"query", "num", "psg_ids"},
+                accepts_extra_fields=True,
             ),
             "output_validation_regex": TemplateSectionConfig(
                 required=True,
@@ -69,7 +86,9 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             if name is not None
         ]
 
-        prefix_fmt_values = suffix_fmt_values = {"num": num, "query": query}
+        extra_field_values = kwargs.get("extra_field_values", {})
+        prefix_fmt_values = {"num": num, "query": query, **extra_field_values}
+        suffix_fmt_values = {"num": num, "query": query, **extra_field_values}
 
         if "psg_ids" in suffix_placeholders:  # Used in RankLRL prompt mode
             rank_start = kwargs["rank_start"]
@@ -144,7 +163,15 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             prompt_messages.extend(examples)
 
         prefix_text, suffix_text = self._generate_prefix_suffix(
-            num=num, query=query, rank_start=rank_start, rank_end=rank_end
+            num=num,
+            query=query,
+            rank_start=rank_start,
+            rank_end=rank_end,
+            # Like the query, so "[1]" in context is not mistaken for a passage id.
+            extra_field_values={
+                name: self._replace_number(value) if isinstance(value, str) else value
+                for name, value in self._extra_field_values(result).items()
+            },
         )
         body_text = self._generate_body(
             result=result,

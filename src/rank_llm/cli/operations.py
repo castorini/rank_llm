@@ -25,6 +25,14 @@ def normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
     query = payload["query"]
     query_text = query["text"] if isinstance(query, dict) else query
     query_id = query.get("qid", "") if isinstance(query, dict) else ""
+    # A dict query may carry named values for the prompt template under
+    # `extra_fields` (the template declares the names it uses under the key of
+    # the same name). Other keys are ignored, as before.
+    extra_fields: Any = query.get("extra_fields") if isinstance(query, dict) else None
+    if extra_fields is None:
+        extra_fields = {}
+    if not isinstance(extra_fields, dict):
+        raise ValueError("query.extra_fields must be an object of named values")
     candidates = []
     for index, candidate in enumerate(payload["candidates"], start=1):
         if isinstance(candidate, str):
@@ -46,7 +54,12 @@ def normalize_direct_rerank_input(payload: dict[str, Any]) -> dict[str, Any]:
                 "doc": candidate["doc"],
             }
         )
-    return {"query_text": query_text, "query_id": query_id, "candidates": candidates}
+    return {
+        "query_text": query_text,
+        "query_id": query_id,
+        "extra_fields": extra_fields,
+        "candidates": candidates,
+    }
 
 
 def _default_retrieve_and_rerank(*args: Any, **kwargs: Any) -> Any:
@@ -138,6 +151,7 @@ def run_mcp_rerank(
     query_text: str,
     candidates: list[dict[str, Any]],
     query_id: str | int = "",
+    extra_fields: dict[str, Any] | None = None,
     batch_size: int = 32,
     top_k_rerank: int = -1,
     context_size: int = 4096,
@@ -170,6 +184,7 @@ def run_mcp_rerank(
     kwargs = locals().copy()
     del kwargs["model_path"]
     del kwargs["reranker"]
+    del kwargs["extra_fields"]  # request data, not model-coordinator config
     kwargs["prompt_template_path"] = prompt_template_path or None
     kwargs["few_shot_file"] = few_shot_file or None
     kwargs["base_url"] = base_url or None
@@ -189,7 +204,7 @@ def run_mcp_rerank(
     del kwargs["top_k_rerank"], kwargs["shuffle_candidates"]
     requests = [
         Request(
-            query=Query(text=query_text, qid=query_id),
+            query=Query(text=query_text, qid=query_id, extra_fields=extra_fields or {}),
             candidates=[
                 Candidate(
                     docid=c["docid"],

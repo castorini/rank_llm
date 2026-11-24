@@ -1,0 +1,33 @@
+# ACARe (agent-context-aware reranker), mode M1: reasoning trace + sub-query.
+#
+# ACARe is a Qwen3-Reranker-4B fine-tune that conditions on the agent context
+# around a search, not just the search string. Which of the four context modes
+# applies is decided by which fields the query carries; each mode has its own
+# instruction, so each gets its own template.
+#
+#   M0  sub-query only            -> use the stock pointwise_vllm_template.yaml,
+#                                    whose prompt is byte-identical to M0; it
+#                                    declares no output_tokens, so pass
+#                                    positive_tokens=["yes"], negative_tokens=["no"]
+#                                    to score M0 like the modes below
+#   M1  + reasoning trace         -> this file
+#   M2  + global query            -> acare_m2_template.yaml
+#   M3  + both                    -> acare_m3_template.yaml
+#
+# Supply `reasoning` through Query.extra_fields. An empty value drops its line, so
+# this template degrades to the M0 *layout* -- but the M0 instruction differs,
+# so prefer the stock template when no context is available.
+method: "pointwise"
+message_roles: "reranker"
+# Scored like Qwen3-Reranker: P("yes") over P("yes") + P("no").
+output_tokens:
+  positive: ["yes"]
+  negative: ["no"]
+extra_fields: ["reasoning"]
+instruction: >-
+  Given a user generated web search query and the user's reasoning trace that motivated the
+  query (when available), retrieve relevant passages that answer the query in light of the
+  reasoning context
+query_block: |-
+  #Reasoning Trace: {reasoning}
+  #Query: {query}

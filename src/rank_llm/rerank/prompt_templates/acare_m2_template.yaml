@@ -1,0 +1,21 @@
+# ACARe mode M2: originating global query + sub-query.
+#
+# The mode for agents whose reasoning trace is not observable (most commercial
+# APIs): the agent's sub-query is scored in light of the benchmark question that
+# motivated the whole session. See acare_m1_template.yaml for the mode map.
+#
+# Supply `global_query` through Query.extra_fields.
+method: "pointwise"
+message_roles: "reranker"
+# Scored like Qwen3-Reranker: P("yes") over P("yes") + P("no").
+output_tokens:
+  positive: ["yes"]
+  negative: ["no"]
+extra_fields: ["global_query"]
+instruction: >-
+  Given a user generated query issued during an iterative research session and the original
+  question (global query) that motivated the session, retrieve relevant passages that answer
+  the query in light of the original question
+query_block: |-
+  #Original Question (global query): {global_query}
+  #Query: {query}

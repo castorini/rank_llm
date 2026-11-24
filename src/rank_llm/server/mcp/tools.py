@@ -23,6 +23,7 @@ def register_rankllm_tools(mcp: FastMCP):
             query_text: Query text to get search results for.
             candidates: List of candidates to rerank.
             query_id: Query ID.
+            extra_fields: extra named values for the prompt template, e.g. {"reasoning": "..."}; a template uses the names it declares under `extra_fields`.
             top_k_rerank: the number of top candidates to return from reranking (-1 means same as top_k_candidates)
             context_size: context size used for model
             num_gpus: the number of GPUs to use
@@ -51,6 +52,7 @@ def register_rankllm_tools(mcp: FastMCP):
         query_text: str,
         candidates: list[dict[str, Any]],
         query_id: str | int = "",
+        extra_fields: dict[str, str | None] | None = None,
         batch_size: int = 32,
         top_k_rerank: int = -1,
         context_size: int = 4096,

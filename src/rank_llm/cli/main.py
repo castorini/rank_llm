@@ -710,6 +710,7 @@ def _run_rerank_command(args: argparse.Namespace) -> CommandResponse:
             model_path=args.model_path,
             query_text=normalized["query_text"],
             query_id=normalized["query_id"],
+            extra_fields=normalized["extra_fields"],
             candidates=normalized["candidates"],
             batch_size=args.batch_size,
             top_k_rerank=args.top_k_rerank,

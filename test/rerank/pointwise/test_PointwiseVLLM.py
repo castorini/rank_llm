@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from dacite import from_dict
@@ -121,3 +122,84 @@ class TestPointwiseVLLM(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class _WordTokenizer(_MockTokenizer):
+    """Counts every whitespace word of every message, with no ceiling."""
+
+    def apply_chat_template(
+        self, messages, add_generation_prompt=True, tokenize=True, **kwargs
+    ):
+        return [0] * (10 + sum(len(m.get("content", "").split()) for m in messages))
+
+
+class TestPointwiseVLLMContextBudget(unittest.TestCase):
+    """The document gets what the query block leaves, and the prompt fits."""
+
+    def test_body_extra_fields_reach_the_budget_probe(self):
+        import tempfile
+
+        from rank_llm.data import Candidate, Query, Result
+
+        mock_vllm = MagicMock()
+        mock_vllm.get_tokenizer.return_value = _WordTokenizer()
+        with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+            handle.write(
+                'method: "pointwise"\n'
+                'extra_fields: ["intent"]\n'
+                'body: "Query: {query} Intent: {intent} Document: {doc_content}"\n'
+            )
+        with patch(
+            "rank_llm.rerank.pointwise.pointwise_vllm.VllmHandlerWithOpenAISDK",
+            return_value=mock_vllm,
+        ):
+            reranker = PointwiseVLLM(
+                model="dummy-model",
+                base_url="http://127.0.0.1:8000/v1",
+                prompt_template_path=handle.name,
+                context_size=300,
+                max_passage_words=100000,
+            )
+        Path(handle.name).unlink()
+        result = Result(
+            query=Query(text="sub query", qid="q1", extra_fields={"intent": "why"}),
+            candidates=[Candidate(docid="d1", score=1.0, doc={"contents": "w " * 50})],
+        )
+        messages, _ = reranker.create_prompt(result, 0)
+        self.assertIn("Intent: why", messages[-1]["content"])
+
+    def test_extra_fields_count_against_the_document_budget(self):
+        from rank_llm.data import Candidate, Query, Result
+
+        mock_vllm = MagicMock()
+        mock_vllm.get_tokenizer.return_value = _WordTokenizer()
+        templates = (
+            Path(__file__).resolve().parents[3] / "src/rank_llm/rerank/prompt_templates"
+        )
+        with patch(
+            "rank_llm.rerank.pointwise.pointwise_vllm.VllmHandlerWithOpenAISDK",
+            return_value=mock_vllm,
+        ):
+            reranker = PointwiseVLLM(
+                model="dummy-model",
+                base_url="http://127.0.0.1:8000/v1",
+                prompt_template_path=templates / "acare_m3_template.yaml",
+                context_size=300,
+                max_passage_words=100000,
+            )
+        result = Result(
+            query=Query(
+                text="sub query",
+                qid="q1",
+                extra_fields={"global_query": "g " * 80, "reasoning": "r " * 80},
+            ),
+            candidates=[
+                Candidate(docid="d1", score=1.0, doc={"contents": "w " * 1000})
+            ],
+        )
+        messages, n_tok = reranker.create_prompt(result, 0)
+        self.assertLessEqual(n_tok, 300 - 8)
+        document = next(m["content"] for m in messages if m["role"] == "document")
+        self.assertGreater(len(document.split()), 0)
+        query = next(m["content"] for m in messages if m["role"] == "query")
+        self.assertIn("#Reasoning Trace:", query)

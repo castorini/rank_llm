@@ -1,0 +1,51 @@
+# RubricRanker (Liu et al., arXiv 2608.03527), "deepresearch" variant.
+#
+# A generative set selector rather than a scorer: it selects at most 10 of the
+# candidates and ranks the selection, emitting "[4] [2] [7]". Unselected
+# candidates keep their first-stage order behind the selection, which is what
+# receive_permutation already does for any partial permutation.
+#
+# The five rubrics are baked into the student model's system message, so they
+# are reproduced here verbatim rather than supplied dynamically.
+#
+# `query_intent` is the agent's reasoning before issuing the query; supply it
+# through Query.extra_fields. The upstream "rag" variant is this template without the
+# [QUERY INTENT] block and with a user-question framing.
+#
+# Serve with the sampling the model was distilled under: temperature 0.7,
+# top_p 0.8, top_k 20, min_p 0, and thinking disabled. Set window_size to the
+# rerank depth so the whole candidate set is judged in a single pass.
+method: "singleturn_listwise"
+# RubricRanker returns a subset of the window ("[4] [2] [7]", at most ten), not
+# a full permutation, so a backend must let it stop after one token.
+min_output_tokens: 1
+extra_fields: ["query_intent"]
+system_message: |-
+  You are a high-quality document set selector for a deep-research agent. Given a search query from the agent, the agent's reasoning as query intent, and a list of retrieved documents (including title, url, search snippet and full text), select the best subset that jointly answers the query.
+
+  The query intent may clarify why this query was issued and what information it is trying to find, but it may also contain broader, exploratory, or irrelevant thoughts. Stay anchored on the query itself and only use the parts of the query intent that are actually relevant to this query.
+
+  Use these 5 rubrics to judge a candidate document set:
+  1. Relevance (set-level, primary objective): the selected set should jointly cover the key information needed to satisfy the query, in light of the query intent.
+  2. Conciseness (set-level): avoid redundant documents that repeat information already covered by another selected document.
+  3. Consistency (set-level): prefer sets whose documents agree on facts; avoid mixing in documents that contradict the rest without good reason.
+  4. Source Authority (doc-level): only consider this when the query clearly belongs to a high-stakes or expertise-sensitive domain such as medicine, law, finance, policy, government regulation, or science. For general, everyday, entertainment, or low-stakes informational queries, ignore this rubric. When it does apply, prefer documents from authoritative or trustworthy sources, but only among those that already contribute to Relevance.
+  5. Timeliness (doc-level): only consider this when the query explicitly contains a time constraint (a specific year, date, or time range) or clearly requires the latest / most up-to-date information. For queries with no temporal requirement, ignore this rubric. When it does apply, prefer recent / up-to-date documents, but only among those that already contribute to Relevance.
+
+  Output format (STRICT): respond with only the selected document identifiers, each wrapped in square brackets and separated by a single space, ordered from most to least useful. Example: [4] [2] [7] [11] [1]. Do not output any other text or explanation.
+prefix: |
+  I will provide you with {num} documents, each indicated by a numerical identifier []. Select and rank the documents based on their joint usefulness for the search query: {query}.
+
+  [QUERY INTENT]
+  {query_intent}
+
+  Search Query: {query}.
+
+  [DOCUMENTS]
+# Two trailing newlines: upstream joins documents with a blank line, and the
+# last one also separates the document block from the suffix.
+body: "[{rank}] {candidate}\n\n"
+suffix: |-
+  Select the best subset of the {num} documents above so that, judged by the 5 rubrics, the selected set best answers the query (anchored on the query, with the query intent only as clarification). Then rank the selected documents from most to least useful. The number of selected passages is at most 10 and should not include redundant ones. The output must be only the selected identifiers in ranked order, e.g. [2] [1] [4]. Only respond with the selection; do not say any other word and do not explain.
+output_validation_regex: r"^\[\d+\]( \[\d+\])*$"
+output_extraction_regex: r"\[(\d+)\]"

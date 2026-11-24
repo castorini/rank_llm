@@ -73,10 +73,14 @@ class ServiceRetriever:
             ) from e
 
         data = response.json()
-        # The response carries only the query text, so the qid comes from the
-        # original request.
+        # The response carries only the query text, so the qid and any extra
+        # fields (context for the reranker) come from the original request.
         retrieved_results = Request(
-            query=Query(text=data["query"]["text"], qid=request.query.qid)
+            query=Query(
+                text=data["query"]["text"],
+                qid=request.query.qid,
+                extra_fields=dict(request.query.extra_fields),
+            )
         )
 
         for candidate in data["candidates"]:

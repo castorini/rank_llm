@@ -7,7 +7,7 @@ else:
     T5Tokenizer = Any
 
 from rank_llm.data import Result, TemplateSectionConfig
-from rank_llm.rerank.inference_handler import BaseInferenceHandler
+from rank_llm.rerank.inference_handler import BaseInferenceHandler, compose_query_block
 
 # Optional template key naming the tokens a pointwise judge answers with:
 #   output_tokens:
@@ -49,6 +49,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             validate_output_tokens(template[OUTPUT_TOKENS_KEY])
             template = {k: v for k, v in template.items() if k != OUTPUT_TOKENS_KEY}
         is_reranker = template.get("message_roles") == "reranker"
+        if "query_block" in template and not is_reranker:
+            raise ValueError(
+                "'query_block' composes the query role message and needs "
+                "message_roles: reranker; without it only 'body' is rendered"
+            )
 
         TEMPLATE_SECTIONS = {
             "method": TemplateSectionConfig(
@@ -69,6 +74,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 allowed_placeholders=(
                     {"instruction", "query", "doc_content"} if is_reranker else set()
                 ),
+                accepts_extra_fields=True,
             ),
             "message_roles": TemplateSectionConfig(
                 required=False,
@@ -79,6 +85,15 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 required=is_reranker,
                 required_placeholders=set(),
                 allowed_placeholders=set(),
+            ),
+            # Optional: composes the text sent as the `query` role, so a
+            # template can fold declared extra_fields into the query block
+            # instead of requiring the caller to pre-assemble the string.
+            "query_block": TemplateSectionConfig(
+                required=False,
+                required_placeholders={"query"},
+                allowed_placeholders=set(),
+                accepts_extra_fields=True,
             ),
         }
 
@@ -117,7 +132,12 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                 example_doc = match.group("doc").strip()
                 example_relevance = ex["conversations"][1]["value"].strip()
 
-                fmt_values = {"query": example_query, "doc_content": example_doc}
+                # Examples come from other queries and carry no extra fields.
+                fmt_values = {
+                    "query": example_query,
+                    "doc_content": example_doc,
+                    **{name: "" for name in self._declared_extra_fields(self.template)},
+                }
                 fewshot_text = self._format_template("body", fmt_values=fmt_values)
 
                 keyword = "Relevant"
@@ -160,7 +180,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         )
         doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
-        fmt_values = {"query": query, "doc_content": doc}
+        fmt_values = {
+            "query": query,
+            "doc_content": doc,
+            **self._extra_field_values(result),
+        }
         body_text = self._format_template(template_key="body", fmt_values=fmt_values)
 
         return body_text
@@ -189,6 +213,21 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             max_passage_words=max_passage_words,
         )
         return prompt.replace("<unk>", "")
+
+    def _build_query_role_content(self, result: Result, query: str) -> str:
+        """Text for the `query` role message.
+
+        Without a `query_block` section this is the query text, matching the
+        stock Qwen3-Reranker layout. With one, the section composes the query
+        together with the template's declared extra_fields. Template lines whose
+        only substitutions resolve to empty are dropped first, so one template
+        degrades cleanly when optional context is absent.
+        """
+        if "query_block" not in self.template:
+            return query
+        return compose_query_block(
+            self.template["query_block"], query, self._extra_field_values(result)
+        )
 
     def generate_chat_messages(
         self, result: Result, **kwargs: Any
@@ -226,7 +265,10 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             instruction = self.template.get("instruction", "").strip()
             return [
                 {"role": "system", "content": instruction},
-                {"role": "query", "content": query},
+                {
+                    "role": "query",
+                    "content": self._build_query_role_content(result, query),
+                },
                 {"role": "document", "content": doc},
             ]
 
@@ -237,7 +279,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
                     num_examples=num_fewshot_examples, examples=fewshot_examples
                 )
             )
-        fmt_values = {"query": query, "doc_content": doc}
+        fmt_values = {
+            "query": query,
+            "doc_content": doc,
+            **self._extra_field_values(result),
+        }
         body_text = self._format_template(template_key="body", fmt_values=fmt_values)
         user_parts.append(body_text)
         user_content = "".join(user_parts).replace("<unk>", "")

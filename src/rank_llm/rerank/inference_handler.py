@@ -7,6 +7,66 @@ from ftfy import fix_text
 
 from rank_llm.data import Result, TemplateSectionConfig
 
+# Template key listing the names of `Query.extra_fields` entries a template may
+# reference as placeholders. Declaring them keeps validation strict-clean while
+# letting a template use context beyond the query text itself.
+EXTRA_FIELDS_KEY = "extra_fields"
+
+
+def resolve_extra_field_values(
+    declared: list[str], available: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Values for a template's declared extra fields.
+
+    A declared field the query does not carry, or carries as None, resolves to
+    the empty string, so one template serves queries whose optional context is
+    sometimes absent (and None never reaches a prompt as the text "None").
+    """
+    available = available or {}
+    return {
+        name: "" if available.get(name) is None else available[name]
+        for name in declared
+    }
+
+
+def compose_query_block(
+    template_text: str, query: str, field_values: dict[str, Any]
+) -> str:
+    """The `query` role text of a reranker-roles template's `query_block`.
+
+    Template lines whose only placeholders are extra fields that resolve to
+    empty are dropped first, so one template degrades cleanly when optional
+    context is absent. Shared by prompt construction and `rank-llm prompt render`.
+    """
+    formatter = Formatter()
+    empty = {name for name, value in field_values.items() if not str(value).strip()}
+    if empty:
+        kept: list[str] = []
+        for line in template_text.split("\n"):
+            placeholders = {
+                name for _, name, _, _ in formatter.parse(line) if name is not None
+            }
+            if placeholders and placeholders <= empty:
+                continue
+            kept.append(line)
+        template_text = "\n".join(kept)
+    return format_section(
+        template_text, "query_block", {"query": query, **field_values}
+    ).strip()
+
+
+def format_section(template_text: str, section: str, fmt_values: dict[str, Any]) -> str:
+    """Substitute `fmt_values` into a template section, naming any missing placeholder."""
+    try:
+        return template_text.format(**fmt_values)
+    except KeyError as err:
+        raise KeyError(
+            f"Template section '{section}' references placeholder {err} which was "
+            f"not supplied. Available placeholders: {sorted(fmt_values)}. Placeholders "
+            f"beyond the section's built-ins must be declared in '{EXTRA_FIELDS_KEY}' "
+            f"and supplied through Query.extra_fields."
+        ) from err
+
 
 class BaseInferenceHandler(ABC):
     def __init__(self, template: dict[str, str]):
@@ -35,6 +95,28 @@ class BaseInferenceHandler(ABC):
         """
         pass
 
+    def _declared_extra_fields(self, template: dict[str, Any]) -> list[str]:
+        """Names declared under `extra_fields`, validated as a list of strings."""
+        declared = template.get(EXTRA_FIELDS_KEY, []) or []
+        if isinstance(declared, str) or not isinstance(declared, list | tuple):
+            raise ValueError(
+                f"'{EXTRA_FIELDS_KEY}' must be a list of placeholder names, got "
+                f"{type(declared).__name__}"
+            )
+        if not all(isinstance(name, str) and name for name in declared):
+            raise ValueError(
+                f"'{EXTRA_FIELDS_KEY}' must contain non-empty strings, got {declared!r}"
+            )
+        # str.format reads '.', '[' and leading digits as attribute, index or
+        # positional syntax, so only identifiers can be filled by name.
+        unbindable = [name for name in declared if not name.isidentifier()]
+        if unbindable:
+            raise ValueError(
+                f"'{EXTRA_FIELDS_KEY}' names must be identifiers (letters, digits, "
+                f"underscores; not starting with a digit), got {unbindable!r}"
+            )
+        return list(declared)
+
     def _general_validation(
         self,
         template: dict[str, str],
@@ -51,6 +133,28 @@ class BaseInferenceHandler(ABC):
         if missing_template_keys:
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
 
+        # Placeholders backed by Query.extra_fields: only in sections whose
+        # renderer receives them, and never under a built-in placeholder's name
+        # (the extra value would silently replace e.g. the query text).
+        extra_field_placeholders = set(self._declared_extra_fields(template))
+        builtins = set().union(
+            *(
+                config.required_placeholders | config.allowed_placeholders
+                for config in template_section.values()
+            )
+        )
+        shadowing = extra_field_placeholders & builtins
+        if shadowing:
+            raise ValueError(
+                f"'{EXTRA_FIELDS_KEY}' names {sorted(shadowing)} are built-in "
+                f"placeholders of this template type; choose other names"
+            )
+        accepting = sorted(
+            key
+            for key, config in template_section.items()
+            if config.accepts_extra_fields
+        )
+
         if check_query:
             query_present = (
                 False if "prefix" in template or "suffix" in template else True
@@ -58,17 +162,32 @@ class BaseInferenceHandler(ABC):
 
         # Validate the rest of the template keys
         for template_key, template_text in template.items():
+            if template_key == EXTRA_FIELDS_KEY:
+                continue  # A list of names, not a formattable section.
             if template_key not in template_section:
                 raise ValueError(f"Unsupported template section: {template_key}")
 
             section = template_section[template_key]
             required_placeholders = section.required_placeholders
             allowed_placeholders = required_placeholders | section.allowed_placeholders
+            if section.accepts_extra_fields:
+                allowed_placeholders = allowed_placeholders | extra_field_placeholders
             used_placeholders = {
                 name
                 for _, name, _, _ in self._formatter.parse(template_text)
                 if name is not None
             }
+            misplaced = (
+                used_placeholders & extra_field_placeholders
+                if not section.accepts_extra_fields
+                else set()
+            )
+            if misplaced:
+                raise ValueError(
+                    f"Extra fields {sorted(misplaced)} are used in the '{template_key}' "
+                    f"section, which is rendered without them; they can be used in: "
+                    f"{', '.join(accepting) or 'no section of this template type'}"
+                )
             missing_placeholders = required_placeholders - used_placeholders
             if missing_placeholders:
                 raise ValueError(
@@ -90,6 +209,18 @@ class BaseInferenceHandler(ABC):
             raise ValueError(
                 "query placeholder must be present in prefix and/or suffix"
             )
+
+    def _extra_field_values(self, result: Result) -> dict[str, Any]:
+        """Values for the template's declared `extra_fields`, taken from Query.extra_fields.
+
+        A declared field that the query does not carry resolves to the empty
+        string, so one template can serve queries whose optional context is
+        sometimes absent without failing to render.
+        """
+        return resolve_extra_field_values(
+            self._declared_extra_fields(self.template),
+            getattr(result.query, "extra_fields", None),
+        )
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
@@ -146,7 +277,13 @@ class BaseInferenceHandler(ABC):
                 )
             return ""
 
-        return template_text.format(**fmt_values)
+        return self._format_text(template_text, template_key, fmt_values)
+
+    def _format_text(
+        self, template_text: str, template_key: str, fmt_values: dict[str, str | int]
+    ) -> str:
+        """Substitute `fmt_values` into `template_text`, naming any missing placeholder."""
+        return format_section(template_text, template_key, fmt_values)
 
     @abstractmethod
     def _generate_fewshot_prompt(
