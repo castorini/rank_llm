@@ -3,7 +3,6 @@ import math
 from importlib.resources import files
 
 from transformers import T5ForConditionalGeneration, T5Tokenizer
-from transformers.generation import GenerationConfig
 
 from rank_llm.data import Result
 from rank_llm.rerank.pointwise.pointwise_rankllm import PointwiseRankLLM
@@ -39,21 +38,15 @@ class MonoT5(PointwiseRankLLM):
 
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = T5ForConditionalGeneration.from_pretrained(model).to(self._device)
+        # Legacy checkpoints set total-length limits; MonoT5 uses new-token limits.
+        self._llm.generation_config.max_length = None
+        self._llm.generation_config.min_length = None
         self._context_size = context_size
 
         self._true_id = self._tokenizer.encode("true", add_special_tokens=False)[0]
         self._false_id = self._tokenizer.encode("false", add_special_tokens=False)[0]
 
-    def run_llm_batched(
-        self,
-        prompts: list[str],
-    ) -> tuple[list[str], list[int], list[float]]:
-        gen_cfg = GenerationConfig.from_model_config(self._llm.config)
-        gen_cfg.max_new_tokens = self.num_output_tokens()
-        gen_cfg.min_new_tokens = self.num_output_tokens()
-        gen_cfg.output_scores = True
-        gen_cfg.return_dict_in_generate = True
-        gen_cfg.do_sample = False
+    def run_llm_batched(self, prompts: list[str]) -> tuple[list[str], list[int], list[float]]:
         all_outputs, all_output_token_counts, all_scores = [], [], []
 
         token_prompts = self._tokenizer(
@@ -69,7 +62,13 @@ class MonoT5(PointwiseRankLLM):
         )
 
         batch_outputs = self._llm.generate(
-            token_prompts, attention_mask=attention_mask, generation_config=gen_cfg
+            token_prompts,
+            attention_mask=attention_mask,
+            max_new_tokens=self.num_output_tokens(),
+            min_new_tokens=self.num_output_tokens(),
+            output_scores=True,
+            return_dict_in_generate=True,
+            do_sample=False,
         )
 
         batch_output_ids = batch_outputs.sequences
@@ -87,9 +86,7 @@ class MonoT5(PointwiseRankLLM):
         for logit_tensor in batch_logits[0]:
             truth_logit = logit_tensor[self._true_id]
             false_logit = logit_tensor[self._false_id]
-            score = math.exp(truth_logit) / (
-                math.exp(truth_logit) + math.exp(false_logit)
-            )
+            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
             all_scores.append(score)
             all_output_token_counts.append(self.num_output_tokens())
 
@@ -114,9 +111,7 @@ class MonoT5(PointwiseRankLLM):
         )
         few_shot_tokens = self.get_num_tokens(few_shot_section)
 
-        max_doc_tokens = (
-            self._context_size - few_shot_tokens - query_tokens - reserved_for_output
-        )
+        max_doc_tokens = self._context_size - few_shot_tokens - query_tokens - reserved_for_output
 
         prompt = self._inference_handler.generate_prompt(
             result=result,
