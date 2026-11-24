@@ -87,7 +87,7 @@ class TestEvalCommandArgs(unittest.TestCase):
     def test_preserves_multiple_metrics_and_prints_once(self):
         output = "ndcg_cut_10\tall\t0.5000\nrecall_20\tall\t0.7500"
 
-        def evaluate(args):
+        def evaluate(args, **kwargs):
             print(output)
             args.pop()
             return 0.75
@@ -106,6 +106,26 @@ class TestEvalCommandArgs(unittest.TestCase):
         self.assertEqual(result, output)
         self.assertEqual(captured.getvalue(), output + "\n")
         self.assertEqual(args, original)
+
+    def test_per_query_only_output_uses_pyserini_parser(self):
+        from pyserini.eval.trec_eval import trec_eval
+
+        output = "ndcg_cut_10\tq1\t0.5000"
+        args = ["-q", "-n", "-m", "ndcg_cut.10", str(self.qrels), str(self.run)]
+        captured = StringIO()
+        with (
+            patch(
+                "src.rank_llm.evaluation.trec_eval._require_trec_eval",
+                return_value=trec_eval,
+            ),
+            patch("pyserini.eval.trec_eval.subprocess.Popen") as process,
+            redirect_stdout(captured),
+        ):
+            process.return_value.communicate.return_value = (output.encode(), b"")
+            result = EvalFunction.eval(args, trunc=False)
+        self.assertEqual(result, output)
+        self.assertEqual(captured.getvalue(), output + "\n")
+        self.assertEqual(process.call_args.args[0][-len(args) :], args)
 
     def test_failure_propagates_and_cleans_truncated_qrels(self):
         with patch("src.rank_llm.evaluation.trec_eval._require_trec_eval") as loader:

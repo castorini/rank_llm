@@ -151,7 +151,7 @@ class EvalFunction:
             # Pyserini expects argv[0] and prints the full metric output. Its return
             # value only represents the last metric, so preserve stdout instead.
             with redirect_stdout(output):
-                trec_eval(["trec_eval", *args])
+                trec_eval(["trec_eval", *args], return_per_query_results="-q" in args)
         finally:
             if truncated_qrels is not None:
                 os.remove(truncated_qrels)
