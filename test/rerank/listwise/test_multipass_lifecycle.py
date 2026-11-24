@@ -2,6 +2,7 @@ import asyncio
 import importlib.util
 import unittest
 from pathlib import Path
+from types import MethodType
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from rank_llm.data import Candidate, Query, Request, Result
@@ -52,6 +53,58 @@ class TestMultipassLifecycle(unittest.TestCase):
         self.assertTrue(all(loop is loops[0] for loop in loops))
         self.assertEqual(orders, [["a", "b"], ["b", "a"], ["a", "b"]])
         self.assertTrue(tasks[0].cancelled())
+
+    def test_reused_coordinator_isolates_semaphore_across_pipeline_calls(self):
+        pipeline = load_pipeline()
+        coordinator = MagicMock(spec=ListwiseRankLLM)
+        coordinator._stride = coordinator._window_size = coordinator._batch_size = 1
+        coordinator._llm_concurrency_sem = None
+        for name in (
+            "rerank_batch_async",
+            "_sliding_windows_batched_async",
+            "_get_llm_concurrency_sem",
+        ):
+            setattr(
+                coordinator,
+                name,
+                MethodType(getattr(ListwiseRankLLM, name), coordinator),
+            )
+        coordinator._count_windows.return_value = 1
+        coordinator.create_prompt.return_value = ("prompt", 1)
+        coordinator._apply_llm_output_to_result.side_effect = lambda result, *args: (
+            result
+        )
+        calls = 0
+
+        async def generate(*args):
+            nonlocal calls
+            calls += 1
+            # Yield with the only slot held so the second query must wait.
+            await asyncio.sleep(0)
+            return "[1]", "", {}
+
+        coordinator.run_llm_async = generate
+        request = Request(Query("q", "1"), [Candidate("a", 1.0, {"text": "a"})])
+        with (
+            patch.object(
+                pipeline.Reranker, "create_model_coordinator", return_value=coordinator
+            ),
+            patch.object(
+                pipeline, "retrieve", side_effect=lambda *a, **k: [request, request]
+            ),
+        ):
+            for _ in range(2):
+                results, reused = pipeline.retrieve_and_rerank(
+                    "model",
+                    "",
+                    [],
+                    num_passes=3,
+                    interactive=True,
+                    default_model_coordinator=coordinator,
+                )
+                self.assertIs(reused, coordinator)
+                self.assertEqual(len(results), 2)
+        self.assertEqual(calls, 12)
 
     def test_failed_pass_does_not_write_or_evaluate(self):
         pipeline = load_pipeline()

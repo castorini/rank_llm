@@ -99,6 +99,7 @@ def retrieve_and_rerank(
                             shuffle_candidates=shuffle_candidates,
                             logging=print_prompts_responses,
                             top_k_retrieve=top_k_retrieve,
+                            isolate_llm_slots=True,
                             **kwargs,
                         )
                         current_requests = [
