@@ -107,6 +107,14 @@ class BaseInferenceHandler(ABC):
             raise ValueError(
                 f"'{EXTRA_FIELDS_KEY}' must contain non-empty strings, got {declared!r}"
             )
+        # str.format reads '.', '[' and leading digits as attribute, index or
+        # positional syntax, so only identifiers can be filled by name.
+        unbindable = [name for name in declared if not name.isidentifier()]
+        if unbindable:
+            raise ValueError(
+                f"'{EXTRA_FIELDS_KEY}' names must be identifiers (letters, digits, "
+                f"underscores; not starting with a digit), got {unbindable!r}"
+            )
         return list(declared)
 
     def _general_validation(

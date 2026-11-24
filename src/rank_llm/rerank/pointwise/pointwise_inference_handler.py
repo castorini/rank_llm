@@ -49,6 +49,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             validate_output_tokens(template[OUTPUT_TOKENS_KEY])
             template = {k: v for k, v in template.items() if k != OUTPUT_TOKENS_KEY}
         is_reranker = template.get("message_roles") == "reranker"
+        if "query_block" in template and not is_reranker:
+            raise ValueError(
+                "'query_block' composes the query role message and needs "
+                "message_roles: reranker; without it only 'body' is rendered"
+            )
 
         TEMPLATE_SECTIONS = {
             "method": TemplateSectionConfig(

@@ -136,6 +136,38 @@ class _WordTokenizer(_MockTokenizer):
 class TestPointwiseVLLMContextBudget(unittest.TestCase):
     """The document gets what the query block leaves, and the prompt fits."""
 
+    def test_body_extra_fields_reach_the_budget_probe(self):
+        import tempfile
+
+        from rank_llm.data import Candidate, Query, Result
+
+        mock_vllm = MagicMock()
+        mock_vllm.get_tokenizer.return_value = _WordTokenizer()
+        with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+            handle.write(
+                'method: "pointwise"\n'
+                'extra_fields: ["intent"]\n'
+                'body: "Query: {query} Intent: {intent} Document: {doc_content}"\n'
+            )
+        with patch(
+            "rank_llm.rerank.pointwise.pointwise_vllm.VllmHandlerWithOpenAISDK",
+            return_value=mock_vllm,
+        ):
+            reranker = PointwiseVLLM(
+                model="dummy-model",
+                base_url="http://127.0.0.1:8000/v1",
+                prompt_template_path=handle.name,
+                context_size=300,
+                max_passage_words=100000,
+            )
+        Path(handle.name).unlink()
+        result = Result(
+            query=Query(text="sub query", qid="q1", extra_fields={"intent": "why"}),
+            candidates=[Candidate(docid="d1", score=1.0, doc={"contents": "w " * 50})],
+        )
+        messages, _ = reranker.create_prompt(result, 0)
+        self.assertIn("Intent: why", messages[-1]["content"])
+
     def test_extra_fields_count_against_the_document_budget(self):
         from rank_llm.data import Candidate, Query, Result
 

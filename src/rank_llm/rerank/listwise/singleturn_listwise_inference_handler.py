@@ -167,7 +167,11 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             query=query,
             rank_start=rank_start,
             rank_end=rank_end,
-            extra_field_values=self._extra_field_values(result),
+            # Like the query, so "[1]" in context is not mistaken for a passage id.
+            extra_field_values={
+                name: self._replace_number(value) if isinstance(value, str) else value
+                for name, value in self._extra_field_values(result).items()
+            },
         )
         body_text = self._generate_body(
             result=result,

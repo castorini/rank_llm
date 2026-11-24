@@ -137,6 +137,48 @@ class TestExtraFieldNames(unittest.TestCase):
             SingleTurnListwiseInferenceHandler({**LISTWISE, "extra_fields": ["num"]})
 
 
+class TestExtraFieldNameSyntax(unittest.TestCase):
+    def test_names_str_format_cannot_fill_by_name_are_rejected(self):
+        for bad in ("agent.reasoning", "items[0]", "0", "2nd", "has space"):
+            with self.assertRaisesRegex(ValueError, "must be identifiers", msg=bad):
+                SingleTurnListwiseInferenceHandler(
+                    {**LISTWISE, "extra_fields": [bad], "prefix": "Query: {query}\n"}
+                )
+
+
+class TestQueryBlockNeedsRerankerRoles(unittest.TestCase):
+    def test_query_block_without_reranker_roles_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "message_roles: reranker"):
+            PointwiseInferenceHandler(
+                {
+                    "method": "pointwise",
+                    "extra_fields": ["intent"],
+                    "body": "Query: {query} Document: {doc_content}",
+                    "query_block": "#Intent: {intent}\n#Query: {query}",
+                }
+            )
+
+
+class TestListwiseExtraFieldNumbers(unittest.TestCase):
+    def test_bracketed_numbers_are_normalized_like_the_query(self):
+        handler = SingleTurnListwiseInferenceHandler(
+            {
+                **LISTWISE,
+                "extra_fields": ["intent"],
+                "prefix": "Q: {query}\nI: {intent}\n",
+            }
+        )
+        messages = handler.generate_prompt(
+            result({"intent": "compare [1] with [12]"}),
+            rank_start=0,
+            rank_end=1,
+            max_length=100,
+        )
+        user = messages[-1]["content"]
+        self.assertIn("I: compare (1) with (12)", user)
+        self.assertNotIn("[12]", user)
+
+
 class TestEmptyExtraFieldValues(unittest.TestCase):
     TEMPLATE = {
         "method": "pointwise",

@@ -212,7 +212,11 @@ class PointwiseVLLM(PointwiseRankLLM):
 
         body_empty = self._inference_handler._format_template(
             "body",
-            {"query": query, "doc_content": ""},
+            {
+                "query": query,
+                "doc_content": "",
+                **self._inference_handler._extra_field_values(result),
+            },
         )
         user_content = body_empty.replace("<unk>", "")
         messages: list[dict[str, str]] = []

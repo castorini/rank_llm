@@ -74,6 +74,13 @@ SCHEMAS: dict[str, dict[str, Any]] = {
                         "properties": {
                             "text": {"type": "string"},
                             "qid": {"type": ["string", "integer"]},
+                            "extra_fields": {
+                                "type": "object",
+                                "description": "Extra named values for the prompt "
+                                "template; it uses the names it declares under "
+                                "extra_fields.",
+                                "additionalProperties": {"type": ["string", "null"]},
+                            },
                         },
                     },
                 ]
