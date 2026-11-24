@@ -42,7 +42,9 @@ class TestMultipassLifecycle(unittest.TestCase):
 
         coordinator.rerank_batch_async = AsyncMock(side_effect=rerank)
         with (
-            patch.object(pipeline.Reranker, "create_model_coordinator", return_value=coordinator),
+            patch.object(
+                pipeline.Reranker, "create_model_coordinator", return_value=coordinator
+            ),
             patch.object(pipeline, "retrieve", return_value=[request]),
         ):
             pipeline.retrieve_and_rerank("model", "", [], num_passes=3)
@@ -54,9 +56,13 @@ class TestMultipassLifecycle(unittest.TestCase):
     def test_failed_pass_does_not_write_or_evaluate(self):
         pipeline = load_pipeline()
         coordinator = MagicMock(spec=ListwiseRankLLM)
-        coordinator.rerank_batch_async = AsyncMock(side_effect=RuntimeError("engine failed"))
+        coordinator.rerank_batch_async = AsyncMock(
+            side_effect=RuntimeError("engine failed")
+        )
         with (
-            patch.object(pipeline.Reranker, "create_model_coordinator", return_value=coordinator),
+            patch.object(
+                pipeline.Reranker, "create_model_coordinator", return_value=coordinator
+            ),
             patch.object(pipeline, "retrieve", return_value=[]),
             patch.object(pipeline.Reranker, "write_rerank_results") as write,
         ):
@@ -91,7 +97,12 @@ class TestWindowFailure(unittest.IsolatedAsyncioTestCase):
         request = Request(Query("q", "1"), [Candidate("a", 1.0, {"text": "a"})])
         with self.assertRaises(ExceptionGroup) as raised:
             await ListwiseRankLLM._sliding_windows_batched_async(
-                model, [request, request], 0, 1, 1, isolate_llm_slots=True,
+                model,
+                [request, request],
+                0,
+                1,
+                1,
+                isolate_llm_slots=True,
             )
         self.assertIsInstance(raised.exception.exceptions[0], RuntimeError)
         self.assertTrue(cancelled.is_set())

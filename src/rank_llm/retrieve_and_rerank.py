@@ -108,7 +108,9 @@ def retrieve_and_rerank(
                     return results
                 finally:
                     # Release remote connections before their owning loop closes.
-                    aclose = getattr(getattr(coordinator, "_vllm_handler", None), "aclose", None)
+                    aclose = getattr(
+                        getattr(coordinator, "_vllm_handler", None), "aclose", None
+                    )
                     if aclose is not None:
                         result = aclose()
                         if inspect.isawaitable(result):
