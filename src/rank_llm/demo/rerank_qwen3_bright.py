@@ -224,8 +224,7 @@ def main() -> None:
 
     if args.use_alpha and args.window_size > 26:
         p.error(
-            "--window-size must be <= 26 with --use-alpha; "
-            "use --no-use-alpha for larger windows."
+            "--window-size must be <= 26 with --use-alpha; use --no-use-alpha for larger windows."
         )
 
     bright_dir = Path(args.bright_dir)
@@ -247,9 +246,7 @@ def main() -> None:
 
     retrieve_ndcg_10 = None
     if run_eval:
-        retrieve_ndcg_10 = EvalFunction.from_results(
-            retrieve_results, str(qrels), NDCG_10_ARGS
-        )
+        retrieve_ndcg_10 = EvalFunction.from_results(retrieve_results, str(qrels), NDCG_10_ARGS)
         print(f"Retrieval nDCG@10: {retrieve_ndcg_10}")
 
     TEMPLATES = files("rank_llm.rerank.prompt_templates")
@@ -283,17 +280,13 @@ def main() -> None:
     rerank_results = reranker.rerank_batch(retrieve_results, **kwargs)
     _print_sample(rerank_results)
 
-    analyzer = ResponseAnalyzer.from_inline_results(
-        rerank_results, use_alpha=args.use_alpha
-    )
+    analyzer = ResponseAnalyzer.from_inline_results(rerank_results, use_alpha=args.use_alpha)
     error_counts = analyzer.count_errors()
     print(error_counts.__repr__())
 
     rerank_ndcg_10 = None
     if run_eval:
-        rerank_ndcg_10 = EvalFunction.from_results(
-            rerank_results, str(qrels), NDCG_10_ARGS
-        )
+        rerank_ndcg_10 = EvalFunction.from_results(rerank_results, str(qrels), NDCG_10_ARGS)
         print(f"Reranking nDCG@10 ({args.model}): {rerank_ndcg_10}")
 
     model_tag = args.model.split("/")[-1].lower()

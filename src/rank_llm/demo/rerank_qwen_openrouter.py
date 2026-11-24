@@ -38,17 +38,13 @@ try:
     thinking_reranker = Reranker(thinking_coordinator)
     print(f"Using {model} with thinking mode via OpenRouter")
 
-    thinking_results = thinking_reranker.rerank_batch(
-        requests, populate_invocations_history=True
-    )
+    thinking_results = thinking_reranker.rerank_batch(requests, populate_invocations_history=True)
 
     # Save thinking results
     writer = DataWriter(thinking_results)
     Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
     writer.write_in_jsonl_format("demo_outputs/qwen_openrouter_thinking_results.jsonl")
-    writer.write_in_trec_eval_format(
-        "demo_outputs/qwen_openrouter_thinking_results.txt"
-    )
+    writer.write_in_trec_eval_format("demo_outputs/qwen_openrouter_thinking_results.txt")
     writer.write_inference_invocations_history(
         "demo_outputs/qwen_openrouter_thinking_invocations.json"
     )
@@ -76,12 +72,8 @@ try:
 
     # Save non-thinking results
     writer = DataWriter(non_thinking_results)
-    writer.write_in_jsonl_format(
-        "demo_outputs/qwen_openrouter_non_thinking_results.jsonl"
-    )
-    writer.write_in_trec_eval_format(
-        "demo_outputs/qwen_openrouter_non_thinking_results.txt"
-    )
+    writer.write_in_jsonl_format("demo_outputs/qwen_openrouter_non_thinking_results.jsonl")
+    writer.write_in_trec_eval_format("demo_outputs/qwen_openrouter_non_thinking_results.txt")
     writer.write_inference_invocations_history(
         "demo_outputs/qwen_openrouter_non_thinking_invocations.json"
     )

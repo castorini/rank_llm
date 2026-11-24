@@ -42,8 +42,7 @@ class ServiceRetriever:
         request: Request,
         k: int = 50,
         host: str = "http://localhost:8081",
-        timeout: int = 15
-        * 60,  # downloding and decompressing the index can take a long time.
+        timeout: int = 15 * 60,  # downloding and decompressing the index can take a long time.
     ) -> Request:
         """
         Executes the retrieval process based on the configation provided with the Retriever instance. Takes in a Request object with a query and empty candidates object and the top k items to retrieve.
@@ -68,16 +67,12 @@ class ServiceRetriever:
             response = requests.get(url, timeout=timeout)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            raise type(e)(
-                f"Failed to retrieve data from Pyserini server: {str(e)}"
-            ) from e
+            raise type(e)(f"Failed to retrieve data from Pyserini server: {str(e)}") from e
 
         data = response.json()
         # The response carries only the query text, so the qid comes from the
         # original request.
-        retrieved_results = Request(
-            query=Query(text=data["query"]["text"], qid=request.query.qid)
-        )
+        retrieved_results = Request(query=Query(text=data["query"]["text"], qid=request.query.qid))
 
         for candidate in data["candidates"]:
             # A single-field document comes back as a plain string (or null),

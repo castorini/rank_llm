@@ -107,8 +107,7 @@ def main() -> None:
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",

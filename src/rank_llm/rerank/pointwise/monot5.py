@@ -87,9 +87,7 @@ class MonoT5(PointwiseRankLLM):
         for logit_tensor in batch_logits[0]:
             truth_logit = logit_tensor[self._true_id]
             false_logit = logit_tensor[self._false_id]
-            score = math.exp(truth_logit) / (
-                math.exp(truth_logit) + math.exp(false_logit)
-            )
+            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
             all_scores.append(score)
             all_output_token_counts.append(self.num_output_tokens())
 
@@ -114,9 +112,7 @@ class MonoT5(PointwiseRankLLM):
         )
         few_shot_tokens = self.get_num_tokens(few_shot_section)
 
-        max_doc_tokens = (
-            self._context_size - few_shot_tokens - query_tokens - reserved_for_output
-        )
+        max_doc_tokens = self._context_size - few_shot_tokens - query_tokens - reserved_for_output
 
         prompt = self._inference_handler.generate_prompt(
             result=result,

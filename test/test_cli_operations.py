@@ -122,9 +122,7 @@ class TestCLIOperations(unittest.TestCase):
         )
 
         runner.assert_called_once_with("model", 2048, "results")
-        self.assertEqual(
-            summary["output_file"], "trec_eval_aggregated_results_model.jsonl"
-        )
+        self.assertEqual(summary["output_file"], "trec_eval_aggregated_results_model.jsonl")
 
     def test_run_response_analysis_files_uses_custom_runner(self):
         runner = Mock(return_value={"files": ["one.json"], "metrics": {"errors": 0}})

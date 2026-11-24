@@ -39,9 +39,7 @@ class TestRetrieveAndRerank(unittest.TestCase):
     def test_improper_arguments(self):
         # Missing dataset
         with self.assertRaises(TypeError):
-            retrieve_and_rerank(
-                "unspecified", query="hi", interactive=True, num_passes=4
-            )
+            retrieve_and_rerank("unspecified", query="hi", interactive=True, num_passes=4)
         # Missing model path
         with self.assertRaises(TypeError):
             retrieve_and_rerank(

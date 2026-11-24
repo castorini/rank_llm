@@ -57,9 +57,7 @@ class PyseriniRetriever:
             if os.path.exists(index_path):
                 self._init_from_custom_index(index_path, index_type, encoder, onnx)
             else:
-                self._init_from_prebuilt_index(
-                    index_path, encoder, onnx, encoded_queries
-                )
+                self._init_from_prebuilt_index(index_path, encoder, onnx, encoded_queries)
         else:
             self._init_from_retrieval_method(dataset, retrieval_method)
 
@@ -71,9 +69,7 @@ class PyseriniRetriever:
         else:
             self._init_topics_from_dict(dataset)
 
-    def _init_from_retrieval_method(
-        self, dataset: str, retrieval_method: RetrievalMethod
-    ):
+    def _init_from_retrieval_method(self, dataset: str, retrieval_method: RetrievalMethod):
         if retrieval_method in [RetrievalMethod.BM25, RetrievalMethod.BM25_RM3]:
             if LuceneSearcher is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
@@ -137,17 +133,13 @@ class PyseriniRetriever:
             if FaissSearcher is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
 
-            self._searcher = FaissSearcher.from_prebuilt_index(
-                self._get_index(), query_encoder
-            )
+            self._searcher = FaissSearcher.from_prebuilt_index(self._get_index(), query_encoder)
             if not self._searcher:
                 raise ValueError(
                     f"Could not create faiss searcher for `{dataset}` dataset from prebuilt `{self._get_index()}` index."
                 )
         else:
-            raise ValueError(
-                f"Unsupported/Invalid retrieval method: {retrieval_method}"
-            )
+            raise ValueError(f"Unsupported/Invalid retrieval method: {retrieval_method}")
 
     def _init_from_custom_index(
         self, index_path: str, index_type: str, encoder: str = None, onnx: bool = False
@@ -179,11 +171,7 @@ class PyseriniRetriever:
         onnx: bool = False,
         encoded_queries: str = None,
     ):
-        if (
-            TF_INDEX_INFO is None
-            or IMPACT_INDEX_INFO is None
-            or FAISS_INDEX_INFO is None
-        ):
+        if TF_INDEX_INFO is None or IMPACT_INDEX_INFO is None or FAISS_INDEX_INFO is None:
             raise ImportError(PYSERINI_INSTALL_HINT)
 
         self._dataset = index_path
@@ -217,9 +205,7 @@ class PyseriniRetriever:
             if FaissSearcher is None:
                 raise ImportError(PYSERINI_INSTALL_HINT)
 
-            self._searcher = FaissSearcher.from_prebuilt_index(
-                index_path, query_encoder
-            )
+            self._searcher = FaissSearcher.from_prebuilt_index(index_path, query_encoder)
         else:
             raise ValueError(f"Cannot build pre-built index: {index_path}")
 
@@ -240,9 +226,7 @@ class PyseriniRetriever:
             base_index = FAISS_INDEX_INFO[index_path]["texts"]
             self._index_reader = LuceneIndexReader.from_prebuilt_index(base_index)
         else:
-            raise ValueError(
-                f"Could not build LuceneIndexReader from topics: {topics_path}"
-            )
+            raise ValueError(f"Could not build LuceneIndexReader from topics: {topics_path}")
 
     def _init_custom_topics(self, topics_path: str, index_path: str):
         if DefaultQueryIterator is None:
@@ -294,9 +278,7 @@ class PyseriniRetriever:
         if LuceneIndexReader is None:
             raise ImportError(PYSERINI_INSTALL_HINT)
 
-        self._index_reader = LuceneIndexReader.from_prebuilt_index(
-            self._get_index("bm25")
-        )
+        self._index_reader = LuceneIndexReader.from_prebuilt_index(self._get_index("bm25"))
 
     def _get_index(self, key: str = None) -> str:
         if not key:
@@ -308,22 +290,16 @@ class PyseriniRetriever:
             raise ValueError(f"dataset {self._dataset} not in INDICES[{key}]")
         return INDICES[key][self._dataset]
 
-    def _retrieve_query(
-        self, query: str, ranks: list[Request], k: int, qid=None
-    ) -> None:
+    def _retrieve_query(self, query: str, ranks: list[Request], k: int, qid=None) -> None:
         hits = self._searcher.search(query, k=k)
         ranks.append(Request(query=Query(text=query, qid=str(qid)), candidates=[]))
         for hit in hits:
             document = self._index_reader.doc(hit.docid)
             content = json.loads(document.raw())
             # hit.score could be of type 'numpy.float32' which is not json serializable. Always explicitly cast it to float.
-            ranks[-1].candidates.append(
-                Candidate(docid=hit.docid, score=hit.score, doc=content)
-            )
+            ranks[-1].candidates.append(Candidate(docid=hit.docid, score=hit.score, doc=content))
 
-    def retrieve_for_query_text(
-        self, query_text: str, k: int = 100, qid=1
-    ) -> list[Request]:
+    def retrieve_for_query_text(self, query_text: str, k: int = 100, qid=1) -> list[Request]:
         """
         Retrieves documents for a single query string against the configured index.
         Use this when the query is supplied directly (e.g. ad-hoc search) rather than
@@ -425,10 +401,10 @@ def evaluate_retrievals(retrieve_results_dirname: str = "retrieve_results") -> N
         for retrieval_method in RetrievalMethod:
             if retrieval_method == RetrievalMethod.UNSPECIFIED:
                 continue
-            file_name = f"{retrieve_results_dirname}/{retrieval_method.name}/trec_results_{dataset}.txt"
+            file_name = (
+                f"{retrieve_results_dirname}/{retrieval_method.name}/trec_results_{dataset}.txt"
+            )
             if not os.path.isfile(file_name):
                 continue
             EvalFunction.eval(["-c", "-m", "ndcg_cut.10", TOPICS[dataset], file_name])
-            EvalFunction.eval(
-                ["-c", "-m", "map_cut.100", "-l2", TOPICS[dataset], file_name]
-            )
+            EvalFunction.eval(["-c", "-m", "map_cut.100", "-l2", TOPICS[dataset], file_name])

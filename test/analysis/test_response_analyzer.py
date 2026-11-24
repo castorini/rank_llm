@@ -57,9 +57,7 @@ class TestResponseAnalyzer(unittest.TestCase):
 
         self.assertEqual(len(responses), 3, "Should have 3 responses")
         self.assertEqual(len(num_passages), 3, "Should have 3 num_passages")
-        self.assertEqual(
-            num_passages, [3, 2, 4], "Num passages should match expected values"
-        )
+        self.assertEqual(num_passages, [3, 2, 4], "Num passages should match expected values")
         self.assertEqual(
             output_validation_regex,
             self.mock_results[0].invocations_history[0].output_validation_regex,

@@ -125,14 +125,10 @@ class ListwiseRankLLM(RankLLM, ABC):
         """Reduce a passage budget after an exact prompt-size check overflows."""
         if current_window_size <= 0:
             raise ValueError("current_window_size must be greater than 0")
-        available_tokens = self.max_tokens() - self.num_output_tokens(
-            current_window_size
-        )
+        available_tokens = self.max_tokens() - self.num_output_tokens(current_window_size)
         overflow_tokens = max(prompt_tokens - available_tokens, 0)
         if overflow_tokens and current_max_words <= 1:
-            raise ValueError(
-                "Prompt cannot fit within the model context at one word per passage"
-            )
+            raise ValueError("Prompt cannot fit within the model context at one word per passage")
         reduction = max(
             1,
             math.ceil(overflow_tokens * 0.75 / current_window_size),
@@ -182,9 +178,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 high = candidate - 1
 
         if best is None:
-            raise ValueError(
-                "Prompt cannot fit within the model context at one word per passage"
-            )
+            raise ValueError("Prompt cannot fit within the model context at one word per passage")
         return best
 
     async def run_llm_async(
@@ -245,13 +239,9 @@ class ListwiseRankLLM(RankLLM, ABC):
             assert len(llm_out) == 3
             permutation, reasoning, usage = llm_out
             in_token_count = (
-                usage.get("prompt_tokens")
-                or usage.get("input_tokens")
-                or in_token_count
+                usage.get("prompt_tokens") or usage.get("input_tokens") or in_token_count
             )
-            out_token_count = (
-                usage.get("completion_tokens") or usage.get("output_tokens") or 0
-            )
+            out_token_count = usage.get("completion_tokens") or usage.get("output_tokens") or 0
             if logging:
                 logger.debug(f"output: {permutation}")
             if populate_invocations_history:
@@ -273,9 +263,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                         ],
                     )
                 )
-        return self.receive_permutation(
-            result, permutation, rank_start, rank_end, logging
-        )
+        return self.receive_permutation(result, permutation, rank_start, rank_end, logging)
 
     def permutation_pipeline(
         self,
@@ -324,13 +312,9 @@ class ListwiseRankLLM(RankLLM, ABC):
             ## New format (text, reasoning, usage)
             permutation, reasoning, usage = llm_result
             in_token_count = (
-                usage.get("prompt_tokens")
-                or usage.get("input_tokens")
-                or in_token_count
+                usage.get("prompt_tokens") or usage.get("input_tokens") or in_token_count
             )
-            out_token_count = (
-                usage.get("completion_tokens") or usage.get("output_tokens") or 0
-            )
+            out_token_count = usage.get("completion_tokens") or usage.get("output_tokens") or 0
             if logging:
                 print(f"Output: {permutation}")
             if populate_invocations_history:
@@ -351,14 +335,10 @@ class ListwiseRankLLM(RankLLM, ABC):
                     ],
                 )
                 result.invocations_history.append(inference_invocation)
-        result = self.receive_permutation(
-            result, permutation, rank_start, rank_end, logging
-        )
+        result = self.receive_permutation(result, permutation, rank_start, rank_end, logging)
         return result
 
-    def shuffle_and_rescore(
-        self, rerank_results: list[Result], rank_start: int, rank_end: int
-    ):
+    def shuffle_and_rescore(self, rerank_results: list[Result], rank_start: int, rank_end: int):
         """
         Shuffles candidates between rank_start and rank_end, and rescales scores based on new rank.
 
@@ -439,9 +419,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 work_queue.append((idx, start_pos, end_pos))
 
         total_work = sum(
-            self._count_windows(
-                len(r.candidates), rank_start, rank_end, window_size, stride
-            )
+            self._count_windows(len(r.candidates), rank_start, rank_end, window_size, stride)
             for r in rerank_results
         )
         progress = tqdm(total=total_work, desc="Sliding windows")
@@ -475,9 +453,7 @@ class ListwiseRankLLM(RankLLM, ABC):
                 next_start = s - stride
                 next_start = max(next_start, rank_start)
                 if next_end > next_start and s != rank_start:
-                    task = asyncio.ensure_future(
-                        _process_one(idx, next_start, next_end)
-                    )
+                    task = asyncio.ensure_future(_process_one(idx, next_start, next_end))
                     pending_tasks.add(task)
                     task.add_done_callback(pending_tasks.discard)
 
@@ -566,9 +542,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         """
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end_adj = min(top_k_retrieve, rank_end)
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         return await self._sliding_windows_batched_async(
             requests,
             rank_start=max(rank_start, 0),
@@ -672,9 +646,7 @@ class ListwiseRankLLM(RankLLM, ABC):
         num_prompts = self._count_windows(
             rank_end, max(rank_start, 0), rank_end, self._window_size, self._stride
         )
-        input_token_count = (
-            num_q * num_prompts * (self._context_size - self.num_output_tokens())
-        )
+        input_token_count = num_q * num_prompts * (self._context_size - self.num_output_tokens())
         output_token_count = num_q * num_prompts * self.num_output_tokens()
         cost = (
             input_token_count * self.cost_per_1k_token(input_token=True)

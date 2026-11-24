@@ -65,9 +65,7 @@ logger = logging.getLogger(__name__)
 TOKEN_ID_PREFIX = "token_id:"
 
 
-def single_token_ids(
-    tokenizer: Any, spellings: Sequence[str]
-) -> tuple[list[int], list[str]]:
+def single_token_ids(tokenizer: Any, spellings: Sequence[str]) -> tuple[list[int], list[str]]:
     """Token ids of the spellings that encode to exactly one token, and the skipped ones.
 
     A pointwise judge answers with one token, so a spelling that the tokenizer
@@ -132,9 +130,7 @@ class PointwiseAnswerTokens:
             sides[name] = ids
         overlap = set(sides["positive"]) & set(sides["negative"])
         if overlap:
-            raise ValueError(
-                f"Token ids {sorted(overlap)} are both positive and negative answers"
-            )
+            raise ValueError(f"Token ids {sorted(overlap)} are both positive and negative answers")
         answer_ids = sides["positive"] + sides["negative"]
         lookup: dict[str, int] = {f"{TOKEN_ID_PREFIX}{i}": i for i in answer_ids}
         decode = getattr(tokenizer, "decode", None)
@@ -260,9 +256,7 @@ class VllmHandlerWithOpenAISDK:
             except Exception:
                 pass
 
-    async def _create_with_retry(
-        self, *, messages: list[dict[str, str]], **body: Any
-    ) -> Any:
+    async def _create_with_retry(self, *, messages: list[dict[str, str]], **body: Any) -> Any:
         """One chat completion, retried on transient failures.
 
         A batch fans out ~100 concurrent requests; a dropped connection on any
@@ -271,19 +265,15 @@ class VllmHandlerWithOpenAISDK:
         """
         for attempt in range(self.MAX_ATTEMPTS):
             try:
-                return (
-                    await self._async_client_for_current_loop().chat.completions.create(
-                        model=self._model,
-                        messages=messages,
-                        **body,
-                    )
+                return await self._async_client_for_current_loop().chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    **body,
                 )
             except Exception:
                 if attempt + 1 == self.MAX_ATTEMPTS:
                     raise
-                await asyncio.sleep(
-                    self.RETRY_BACKOFF_S * 2**attempt * (0.5 + random.random())
-                )
+                await asyncio.sleep(self.RETRY_BACKOFF_S * 2**attempt * (0.5 + random.random()))
 
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
@@ -373,9 +363,7 @@ class VllmHandlerWithOpenAISDK:
         usage = response.usage.model_dump(mode="json") if response.usage else {}
         choice = response.choices[0]
         text = (choice.message.content or "").strip()
-        out_tokens = int(
-            usage.get("completion_tokens") or usage.get("output_tokens") or 0
-        )
+        out_tokens = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
 
         top_lp: list[dict[str, Any]] = []
         if choice.logprobs and choice.logprobs.content:

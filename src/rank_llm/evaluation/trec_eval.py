@@ -71,9 +71,7 @@ class EvalFunction:
             str: Evaluation results as a string.
         """
         # Convert the list of Result objects to a temporary run file format
-        temp_run_file = tempfile.NamedTemporaryFile(
-            delete=False, mode="w", suffix=".txt"
-        ).name
+        temp_run_file = tempfile.NamedTemporaryFile(delete=False, mode="w", suffix=".txt").name
         with open(temp_run_file, "w") as file:
             for result in results:
                 qid = result.query.qid
@@ -206,18 +204,18 @@ class EvalFunction:
             if judged_docs_only:
                 if not temp_file:
                     temp_file = tempfile.NamedTemporaryFile(delete=False).name
-                judged_indexes = pd.merge(
-                    run[[0, 2]].reset_index(), qrels[[0, 2]], on=[0, 2]
-                )["index"]
+                judged_indexes = pd.merge(run[[0, 2]].reset_index(), qrels[[0, 2]], on=[0, 2])[
+                    "index"
+                ]
                 run = run.loc[judged_indexes]
                 run.to_csv(temp_file, sep="\t", header=None, index=None)
                 args[-1] = temp_file
             # Measure judged@cutoffs
             for cutoff in cutoffs:
                 run_cutoff = run.groupby(0).head(cutoff)
-                judged = len(
-                    pd.merge(run_cutoff[[0, 2]], qrels[[0, 2]], on=[0, 2])
-                ) / len(run_cutoff)
+                judged = len(pd.merge(run_cutoff[[0, 2]], qrels[[0, 2]], on=[0, 2])) / len(
+                    run_cutoff
+                )
                 metric_name = f"judged_{cutoff}"
                 judged_result.append(f"{metric_name:22}\tall\t{judged:.4f}")
             cmd = cmd_prefix + args
@@ -226,9 +224,7 @@ class EvalFunction:
 
         print(f"Running command: {cmd}")
         shell = platform.system() == "Windows"
-        process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell
-        )
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=shell)
         stdout, stderr = process.communicate()
         if stderr:
             print(stderr.decode("utf-8"))

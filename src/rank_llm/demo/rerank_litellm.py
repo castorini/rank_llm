@@ -30,9 +30,7 @@ DATASET = os.environ.get("LITELLM_DATASET", "dl19")
 WINDOW_SIZE = int(os.environ.get("LITELLM_WINDOW_SIZE", "20"))
 STRIDE = int(os.environ.get("LITELLM_STRIDE", "10"))
 BATCH_SIZE = int(os.environ.get("LITELLM_BATCH_SIZE", "32"))
-TEMPLATE = os.environ.get(
-    "LITELLM_TEMPLATE", str(TEMPLATES / "rank_zephyr_template.yaml")
-)
+TEMPLATE = os.environ.get("LITELLM_TEMPLATE", str(TEMPLATES / "rank_zephyr_template.yaml"))
 
 requests = Retriever.from_dataset_with_prebuilt_index(DATASET)
 
@@ -54,6 +52,4 @@ Path("demo_outputs/").mkdir(parents=True, exist_ok=True)
 writer = DataWriter(rerank_results)
 writer.write_in_jsonl_format("demo_outputs/rerank_results.jsonl")
 writer.write_in_trec_eval_format("demo_outputs/rerank_results.txt")
-writer.write_inference_invocations_history(
-    "demo_outputs/inference_invocations_history.json"
-)
+writer.write_inference_invocations_history("demo_outputs/inference_invocations_history.json")

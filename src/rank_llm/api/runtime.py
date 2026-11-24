@@ -151,9 +151,7 @@ def _validate_override_types(overrides: dict[str, Any]) -> None:
         expected_type = _OVERRIDE_FIELD_TYPES[key]
         if expected_type is bool and not isinstance(value, bool):
             raise TypeError(f"override '{key}' must be a boolean")
-        if expected_type is int and (
-            not isinstance(value, int) or isinstance(value, bool)
-        ):
+        if expected_type is int and (not isinstance(value, int) or isinstance(value, bool)):
             raise TypeError(f"override '{key}' must be an integer")
         if expected_type is str and not isinstance(value, str):
             raise TypeError(f"override '{key}' must be a string")
@@ -168,16 +166,12 @@ def _extract_override_payload(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("overrides must be an object when provided")
     unknown_keys = sorted(set(overrides) - _OVERRIDABLE_FIELDS)
     if unknown_keys:
-        raise ValueError(
-            "unsupported rerank override field(s): " + ", ".join(unknown_keys)
-        )
+        raise ValueError("unsupported rerank override field(s): " + ", ".join(unknown_keys))
     _validate_override_types(overrides)
     return overrides
 
 
-def _merge_config_with_payload(
-    payload: dict[str, Any], *, config: ServerConfig
-) -> ServerConfig:
+def _merge_config_with_payload(payload: dict[str, Any], *, config: ServerConfig) -> ServerConfig:
     overrides = _extract_override_payload(payload)
     effective_config = replace(config, **overrides) if overrides else config
     enabled_backends = [
@@ -186,17 +180,12 @@ def _merge_config_with_payload(
         if getattr(effective_config, field_name)
     ]
     if len(enabled_backends) > 1:
-        raise ValueError(
-            "backend selectors cannot be combined: " + ", ".join(enabled_backends)
-        )
+        raise ValueError("backend selectors cannot be combined: " + ", ".join(enabled_backends))
     return effective_config
 
 
 def _cache_key(config: ServerConfig) -> tuple[tuple[str, Any], ...]:
-    return tuple(
-        (field_name, getattr(config, field_name))
-        for field_name in _RERANKER_CACHE_FIELDS
-    )
+    return tuple((field_name, getattr(config, field_name)) for field_name in _RERANKER_CACHE_FIELDS)
 
 
 def initialize_reranker(
@@ -244,9 +233,7 @@ def initialize_reranker(
     return reranker
 
 
-def run_rerank_request(
-    payload: dict[str, Any], *, config: ServerConfig
-) -> CommandResponse:
+def run_rerank_request(payload: dict[str, Any], *, config: ServerConfig) -> CommandResponse:
     validation = validate_rerank_payload(payload)
     if not validation["valid"]:
         raise ValueError("; ".join(validation["errors"]))

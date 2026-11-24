@@ -15,9 +15,7 @@ class RankingCostTest(unittest.TestCase):
         model.create_prompt = Mock(return_value=("prompt", 20))
         model.get_num_tokens = Mock(return_value=20)
         model.num_output_tokens = Mock(return_value=10)
-        model.cost_per_1k_token = Mock(
-            side_effect=lambda input_token: 1.0 if input_token else 2.0
-        )
+        model.cost_per_1k_token = Mock(side_effect=lambda input_token: 1.0 if input_token else 2.0)
         return model
 
     def test_prompt_estimates_match_inference_windows(self):
@@ -45,17 +43,13 @@ class RankingCostTest(unittest.TestCase):
                     request = Request(
                         query=Query(text="query", qid="1"),
                         candidates=[
-                            Candidate(docid=str(i), score=1.0, doc={})
-                            for i in range(size)
+                            Candidate(docid=str(i), score=1.0, doc={}) for i in range(size)
                         ],
                     )
                     model.rerank_batch(
                         [request], rank_start=start, rank_end=end, top_k_retrieve=100
                     )
-                    windows = [
-                        call.args[1:3]
-                        for call in model.permutation_pipeline.call_args_list
-                    ]
+                    windows = [call.args[1:3] for call in model.permutation_pipeline.call_args_list]
                     cost, tokens = model.get_ranking_cost([request], start, end)
                     self.assertEqual(
                         [call.args[1:3] for call in model.create_prompt.call_args_list],
@@ -90,6 +84,4 @@ class RankingCostTest(unittest.TestCase):
                     self.assertEqual(tokens, 2 * count * 128)
                     self.assertIsInstance(tokens, int)
                     self.assertAlmostEqual(cost, 2 * count * 0.138)
-                    self.assertEqual(
-                        model.get_ranking_cost_upperbound(0, start, end), (0.0, 0)
-                    )
+                    self.assertEqual(model.get_ranking_cost_upperbound(0, start, end), (0.0, 0))

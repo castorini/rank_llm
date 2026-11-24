@@ -176,18 +176,16 @@ class Reranker:
                 parents=True, exist_ok=True
             )
         if not invocations_history_file:
-            Path(
-                f"{inference_invocations_history_dirname}/{retrieval_method_name}/"
-            ).mkdir(parents=True, exist_ok=True)
+            Path(f"{inference_invocations_history_dirname}/{retrieval_method_name}/").mkdir(
+                parents=True, exist_ok=True
+            )
 
         # TREC output: use provided path or computed default
         if output_trec_file:
             Path(output_trec_file).parent.mkdir(parents=True, exist_ok=True)
             result_file_name = output_trec_file
         else:
-            result_file_name = (
-                f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
-            )
+            result_file_name = f"{rerank_results_dirname}/{retrieval_method_name}/{name}.txt"
         writer.write_in_trec_eval_format(result_file_name)
 
         # JSONL output: use provided path or computed default
@@ -321,9 +319,7 @@ class Reranker:
                 max_passage_words=max_passage_words,
                 sampling_kwargs=sampling_kwargs,
             )
-        elif base_url and (
-            kwargs.get("pointwise_vllm") or kwargs.get("pointwise_qwen3_vllm")
-        ):
+        elif base_url and (kwargs.get("pointwise_vllm") or kwargs.get("pointwise_qwen3_vllm")):
             from rank_llm.rerank.pointwise.pointwise_vllm import PointwiseVLLM
 
             keys_and_defaults = [
@@ -489,9 +485,7 @@ class Reranker:
 
             model_coordinator = MonoT5(
                 model=(
-                    model_full_paths[model_path]
-                    if model_path in model_full_paths
-                    else model_path
+                    model_full_paths[model_path] if model_path in model_full_paths else model_path
                 ),
                 prompt_template_path=prompt_template_path,
                 context_size=context_size,
@@ -561,9 +555,7 @@ class Reranker:
 
             model_coordinator = DuoT5(
                 model=(
-                    model_full_paths[model_path]
-                    if model_path in model_full_paths
-                    else model_path
+                    model_full_paths[model_path] if model_path in model_full_paths else model_path
                 ),
                 prompt_template_path=prompt_template_path,
                 context_size=context_size,
@@ -777,11 +769,7 @@ def _create_rank_listwise_os_llm_coordinator(
     ] = extract_kwargs(keys_and_defaults, **kwargs)
 
     return RankListwiseOSLLM(
-        model=(
-            model_full_paths[model_path]
-            if model_path in model_full_paths
-            else model_path
-        ),
+        model=(model_full_paths[model_path] if model_path in model_full_paths else model_path),
         name=model_path,
         context_size=context_size,
         prompt_template_path=prompt_template_path,
@@ -821,14 +809,8 @@ def extract_kwargs(
             value = default
         # Paths such as prompt_template_path may be given as str or os.PathLike,
         # the same types RankLLM accepts.
-        expected_type = (
-            str | os.PathLike if isinstance(default, os.PathLike) else type(default)
-        )
-        if (
-            value is not None
-            and default is not None
-            and not isinstance(value, expected_type)
-        ):
+        expected_type = str | os.PathLike if isinstance(default, os.PathLike) else type(default)
+        if value is not None and default is not None and not isinstance(value, expected_type):
             raise ValueError(
                 f"Provided kwarg for {key} must be of type {type(default).__name__}, got {type(value).__name__}"
             )

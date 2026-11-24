@@ -129,9 +129,7 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
         result = results[0]
         self.assertEqual(len(result.candidates), 5)
         for i in range(len(result.candidates) - 1):
-            self.assertGreaterEqual(
-                result.candidates[i].score, result.candidates[i + 1].score
-            )
+            self.assertGreaterEqual(result.candidates[i].score, result.candidates[i + 1].score)
         mock_model.rerank.assert_called_once()
 
     def test_chunking_calls(self):
@@ -142,9 +140,7 @@ class TestJinaRerankerRerankBatch(unittest.TestCase):
         result = results[0]
         self.assertEqual(len(result.candidates), 7)
         for i in range(len(result.candidates) - 1):
-            self.assertGreaterEqual(
-                result.candidates[i].score, result.candidates[i + 1].score
-            )
+            self.assertGreaterEqual(result.candidates[i].score, result.candidates[i + 1].score)
         # 7 docs / batch_size 3 -> 3 calls (3 + 3 + 1)
         self.assertEqual(mock_model.rerank.call_count, 3)
 

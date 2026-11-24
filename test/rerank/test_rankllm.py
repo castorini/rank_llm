@@ -47,9 +47,7 @@ class _MinimalRankLLM(RankLLM):
     ):
         return []
 
-    def get_output_filename(
-        self, top_k_candidates, dataset_name, shuffle_candidates, **kwargs
-    ):
+    def get_output_filename(self, top_k_candidates, dataset_name, shuffle_candidates, **kwargs):
         return ""
 
 
@@ -71,9 +69,7 @@ class TestPromptModeDeprecation(unittest.TestCase):
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
             self._make()  # prompt_mode defaults to None
-        prompt_mode_warnings = [
-            w for w in caught if "PromptMode is deprecated" in str(w.message)
-        ]
+        prompt_mode_warnings = [w for w in caught if "PromptMode is deprecated" in str(w.message)]
         self.assertEqual(prompt_mode_warnings, [])
 
 
@@ -103,9 +99,7 @@ class TestModelCoordinator(unittest.TestCase):
                 "gpt-4o-mini", None, False, prompt_template_path=_TEMPLATE
             )
 
-        self.assertEqual(
-            safe_openai.call_args.kwargs["prompt_template_path"], _TEMPLATE
-        )
+        self.assertEqual(safe_openai.call_args.kwargs["prompt_template_path"], _TEMPLATE)
 
     def test_extract_kwargs_still_rejects_other_types(self):
         with self.assertRaisesRegex(ValueError, "prompt_template_path"):

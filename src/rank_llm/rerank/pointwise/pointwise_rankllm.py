@@ -62,9 +62,7 @@ class PointwiseRankLLM(RankLLM, ABC):
         logging: bool = False,
         **kwargs: Any,
     ) -> list[Result]:
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -76,26 +74,20 @@ class PointwiseRankLLM(RankLLM, ABC):
 
         total_candidates = sum(len(result.candidates) for result in rerank_results)
 
-        with tqdm(
-            total=total_candidates, desc="Progress through (q, d) pairs"
-        ) as progress_bar:
+        with tqdm(total=total_candidates, desc="Progress through (q, d) pairs") as progress_bar:
             index = 0
             while index < total_candidates:
                 prompts, token_counts = self.create_prompt_batched(
                     results=rerank_results, index=index
                 )
 
-                outputs, output_token_counts, scores = self.run_llm_batched(
-                    prompts=prompts
-                )
+                outputs, output_token_counts, scores = self.run_llm_batched(prompts=prompts)
 
                 for i, score in enumerate(scores):
                     query_number, candidate_number = self.get_query_and_candidate_index(
                         rerank_results, index + i
                     )
-                    rerank_results[query_number].candidates[
-                        candidate_number
-                    ].score = score
+                    rerank_results[query_number].candidates[candidate_number].score = score
                     if populate_invocations_history:
                         inference_invocation = InferenceInvocation(
                             prompts[i],
@@ -111,9 +103,7 @@ class PointwiseRankLLM(RankLLM, ABC):
                 index += self._batch_size
 
         for result in rerank_results:
-            result.candidates.sort(
-                key=cmp_to_key(self.candidate_comparator), reverse=True
-            )
+            result.candidates.sort(key=cmp_to_key(self.candidate_comparator), reverse=True)
 
         return rerank_results
 
@@ -140,9 +130,7 @@ class PointwiseRankLLM(RankLLM, ABC):
                 sum(len(result.candidates) for result in results),
             ),
         ):
-            query_number, candidate_number = self.get_query_and_candidate_index(
-                results, i
-            )
+            query_number, candidate_number = self.get_query_and_candidate_index(results, i)
             prompt, token_count = self.create_prompt(
                 result=results[query_number], index=candidate_number
             )
@@ -164,9 +152,7 @@ class PointwiseRankLLM(RankLLM, ABC):
         _modelname = self._model.split("/")[-1]
         if _modelname.startswith("checkpoint"):
             _modelname = self._model.split("/")[-2] + "_" + _modelname
-        name = (
-            f"{_modelname}_{self._context_size}_{top_k_candidates}_{self._prompt_mode}"
-        )
+        name = f"{_modelname}_{self._context_size}_{top_k_candidates}_{self._prompt_mode}"
         if dataset_name:
             name = f"{name}_{dataset_name}"
 

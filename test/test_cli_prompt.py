@@ -14,16 +14,12 @@ class TestCLIPrompt(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
         catalog = payload["artifacts"][0]["value"]
-        self.assertTrue(
-            any(entry["name"] == "rank_zephyr_template" for entry in catalog)
-        )
+        self.assertTrue(any(entry["name"] == "rank_zephyr_template" for entry in catalog))
 
     def test_prompt_show_returns_template(self):
         stdout = io.StringIO()
         with contextlib.redirect_stdout(stdout):
-            exit_code = main(
-                ["--output", "json", "prompt", "show", "rank_zephyr_template"]
-            )
+            exit_code = main(["--output", "json", "prompt", "show", "rank_zephyr_template"])
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
         template = payload["artifacts"][0]["value"]["template"]

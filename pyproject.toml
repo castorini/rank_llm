@@ -130,10 +130,14 @@ push = false
 
 [tool.ruff]
 target-version = "py312"
+line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["E501"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
 
 [tool.ruff.lint.per-file-ignores]
 "src/rank_llm/analysis/response_analysis.py" = ["E402"]

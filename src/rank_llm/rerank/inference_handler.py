@@ -52,9 +52,7 @@ class BaseInferenceHandler(ABC):
             raise ValueError(f"Missing required template keys: {missing_template_keys}")
 
         if check_query:
-            query_present = (
-                False if "prefix" in template or "suffix" in template else True
-            )
+            query_present = False if "prefix" in template or "suffix" in template else True
 
         # Validate the rest of the template keys
         for template_key, template_text in template.items():
@@ -65,9 +63,7 @@ class BaseInferenceHandler(ABC):
             required_placeholders = section.required_placeholders
             allowed_placeholders = required_placeholders | section.allowed_placeholders
             used_placeholders = {
-                name
-                for _, name, _, _ in self._formatter.parse(template_text)
-                if name is not None
+                name for _, name, _, _ in self._formatter.parse(template_text) if name is not None
             }
             missing_placeholders = required_placeholders - used_placeholders
             if missing_placeholders:
@@ -87,16 +83,12 @@ class BaseInferenceHandler(ABC):
                 query_present = True
 
         if check_query and not query_present:
-            raise ValueError(
-                "query placeholder must be present in prefix and/or suffix"
-            )
+            raise ValueError("query placeholder must be present in prefix and/or suffix")
 
     def _replace_number(self, s: str) -> str:
         return re.sub(r"\[(\d+)\]", r"(\1)", s)
 
-    def _convert_doc_to_prompt_content(
-        self, doc: dict[str, Any], max_length: int
-    ) -> str:
+    def _convert_doc_to_prompt_content(self, doc: dict[str, Any], max_length: int) -> str:
         if "text" in doc:
             content = doc["text"]
         elif "segment" in doc:
@@ -165,9 +157,7 @@ class BaseInferenceHandler(ABC):
         pass
 
     @abstractmethod
-    def generate_prompt(
-        self, result: Result, **kwargs: Any
-    ) -> list[dict[str, str]] | str:
+    def generate_prompt(self, result: Result, **kwargs: Any) -> list[dict[str, str]] | str:
         """
         Generates complete prompt(s) for the ranking task.
 

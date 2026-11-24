@@ -48,9 +48,7 @@ class TestCLIView(unittest.TestCase):
                 exit_code = main(["--output", "json", "view", str(path)])
         self.assertEqual(exit_code, 0)
         payload = json.loads(stdout.getvalue())
-        self.assertEqual(
-            payload["artifacts"][0]["value"]["artifact_type"], "trec-output"
-        )
+        self.assertEqual(payload["artifacts"][0]["value"]["artifact_type"], "trec-output")
 
     def test_view_detects_invocations_history(self):
         with tempfile.TemporaryDirectory() as temp_dir:

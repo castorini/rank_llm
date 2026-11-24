@@ -126,9 +126,7 @@ r = from_dict(
 class TestRankListwiseOSLLM(unittest.TestCase):
     def setUp(self):
         # Patch device detection and torch so tests run without a GPU
-        self.patcher_device = patch(
-            "rank_llm.utils.default_device", return_value="cuda"
-        )
+        self.patcher_device = patch("rank_llm.utils.default_device", return_value="cuda")
         self.mock_device = self.patcher_device.start()
         self.patcher_torch = patch(
             "rank_llm.rerank.listwise.rank_listwise_os_llm.torch", new=MagicMock()
@@ -144,12 +142,10 @@ class TestRankListwiseOSLLM(unittest.TestCase):
 
         # Mock Tokenizer
         self.mock_tokenizer = MagicMock()
-        self.mock_tokenizer.apply_chat_template.side_effect = (
-            lambda messages, **kwargs: str(messages)
+        self.mock_tokenizer.apply_chat_template.side_effect = lambda messages, **kwargs: str(
+            messages
         )
-        self.mock_tokenizer.encode.side_effect = lambda x, **kwargs: (
-            [0] * (len(x) // 4 + 1)
-        )
+        self.mock_tokenizer.encode.side_effect = lambda x, **kwargs: [0] * (len(x) // 4 + 1)
 
         self.patcher_auto_tokenizer = patch(
             "rank_llm.rerank.listwise.rank_listwise_os_llm.AutoTokenizer"
@@ -177,9 +173,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.mock_vllm_handler_instance.get_tokenizer.return_value = self.mock_tokenizer
 
         self.mock_openai_handler_instance = self.mock_openai_handler_class.return_value
-        self.mock_openai_handler_instance.get_tokenizer.return_value = (
-            self.mock_tokenizer
-        )
+        self.mock_openai_handler_instance.get_tokenizer.return_value = self.mock_tokenizer
 
     def tearDown(self):
         self.patcher_device.stop()
@@ -198,9 +192,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertIsNone(model_coordinator._base_url)
 
     def test_stride_greater_than_window_size_raises_value_error(self):
-        with self.assertRaisesRegex(
-            ValueError, "stride must satisfy 0 < stride <= window_size"
-        ):
+        with self.assertRaisesRegex(ValueError, "stride must satisfy 0 < stride <= window_size"):
             RankListwiseOSLLM(
                 model="castorini/rank_zephyr_7b_v1_full",
                 window_size=5,
@@ -273,9 +265,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             )
             self.assertEqual(model_coordinator._model, model)
             self.assertEqual(model_coordinator._context_size, context_size)
-            self.assertEqual(
-                model_coordinator._num_few_shot_examples, num_few_shot_examples
-            )
+            self.assertEqual(model_coordinator._num_few_shot_examples, num_few_shot_examples)
             self.assertEqual(model_coordinator._variable_passages, variable_passages)
             self.assertEqual(model_coordinator._window_size, window_size)
             self.assertEqual(model_coordinator._system_message, system_message)
@@ -335,9 +325,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             2,
             populate_invocations_history=True,
         )
-        self.assertEqual(
-            [candidate.docid for candidate in reranked.candidates[:2]], ["d2", "d1"]
-        )
+        self.assertEqual([candidate.docid for candidate in reranked.candidates[:2]], ["d2", "d1"])
         self.assertEqual(len(reranked.invocations_history), 1)
         invocation = reranked.invocations_history[0]
         self.assertEqual(invocation.input_token_count, 17)
@@ -416,9 +404,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         self.assertEqual(evaluations, {10: -0.1, 2: -0.5})
 
     def test_use_logits_requires_local_vllm(self):
-        with self.assertRaisesRegex(
-            ValueError, "only supported by the in-process vLLM backend"
-        ):
+        with self.assertRaisesRegex(ValueError, "only supported by the in-process vLLM backend"):
             RankListwiseOSLLM(
                 model="castorini/first_mistral",
                 use_logits=True,
@@ -435,14 +421,10 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             return_value=(None, 10, 1)
         )
 
-        with self.assertRaisesRegex(
-            RuntimeError, "did not return first-token logprobs"
-        ):
+        with self.assertRaisesRegex(RuntimeError, "did not return first-token logprobs"):
             asyncio.run(model_coordinator.run_llm_async("rendered prompt"))
 
-    @patch(
-        "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens"
-    )
+    @patch("rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.num_output_tokens")
     def test_num_output_tokens(self, mock_num_output_tokens):
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
@@ -475,9 +457,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         output = model_coordinator.num_output_tokens()
         self.assertEqual(output, 19)
 
-    @patch(
-        "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.run_llm_batched"
-    )
+    @patch("rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.run_llm_batched")
     def test_run_llm_batched(self, mock_run_llm_batched):
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",
@@ -536,9 +516,7 @@ class TestRankListwiseOSLLM(unittest.TestCase):
             expected_output = min(end, len(r.candidates)) - max(0, start)
             self.assertEqual(get_first_int(prompt), max(expected_output, 0))
 
-    @patch(
-        "rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.get_num_tokens"
-    )
+    @patch("rank_llm.rerank.listwise.rank_listwise_os_llm.RankListwiseOSLLM.get_num_tokens")
     def test_get_num_tokens(self, mock_get_num_tokens):
         model_coordinator = RankListwiseOSLLM(
             model="castorini/rank_zephyr_7b_v1_full",

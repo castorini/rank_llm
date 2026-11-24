@@ -63,9 +63,9 @@ def sample_data(json_objects, num_passages, num_samples, include_original):
         # print(rankings)
         # print(response)
         if include_original:
-            obj["conversations"][prompt_index]["value"] = obj["conversations"][
-                prompt_index
-            ]["value"].replace("e.g., [4] > [2], ", "e.g., [2] > [1], ")
+            obj["conversations"][prompt_index]["value"] = obj["conversations"][prompt_index][
+                "value"
+            ].replace("e.g., [4] > [2], ", "e.g., [2] > [1], ")
             new_objs.append(obj)
         for k in range(num_samples):
             n = (
@@ -142,9 +142,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--data_path", type=str, required=True, help="Path to the dataset file"
-    )
+    parser.add_argument("--data_path", type=str, required=True, help="Path to the dataset file")
     parser.add_argument(
         "--num_samples",
         type=int,
@@ -162,8 +160,6 @@ if __name__ == "__main__":
         action="store_true",
         help="whether to include the original prompt in the output",
     )
-    parser.add_argument(
-        "--output_file", type=str, required=True, help="Path to the output file"
-    )
+    parser.add_argument("--output_file", type=str, required=True, help="Path to the output file")
     args = parser.parse_args()
     main(args)

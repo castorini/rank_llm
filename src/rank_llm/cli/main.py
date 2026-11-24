@@ -126,33 +126,19 @@ def build_parser() -> argparse.ArgumentParser:
         choices=list(RetrievalMethod),
     )
     rerank_parser.add_argument("--batch-size", dest="batch_size", type=int, default=32)
-    rerank_parser.add_argument(
-        "--top-k-candidates", dest="top_k_candidates", type=int, default=100
-    )
-    rerank_parser.add_argument(
-        "--top-k-rerank", dest="top_k_rerank", type=int, default=-1
-    )
-    rerank_parser.add_argument(
-        "--max-queries", dest="max_queries", type=int, default=-1
-    )
-    rerank_parser.add_argument(
-        "--context-size", dest="context_size", type=int, default=4096
-    )
+    rerank_parser.add_argument("--top-k-candidates", dest="top_k_candidates", type=int, default=100)
+    rerank_parser.add_argument("--top-k-rerank", dest="top_k_rerank", type=int, default=-1)
+    rerank_parser.add_argument("--max-queries", dest="max_queries", type=int, default=-1)
+    rerank_parser.add_argument("--context-size", dest="context_size", type=int, default=4096)
     rerank_parser.add_argument("--num-gpus", dest="num_gpus", type=int, default=1)
-    rerank_parser.add_argument(
-        "--prompt-template-path", dest="prompt_template_path", default=""
-    )
+    rerank_parser.add_argument("--prompt-template-path", dest="prompt_template_path", default="")
     rerank_parser.add_argument(
         "--num-few-shot-examples", dest="num_few_shot_examples", type=int, default=0
     )
     rerank_parser.add_argument("--few-shot-file", dest="few_shot_file", default="")
     rerank_parser.add_argument("--qrels-file", dest="qrels_file", default="")
-    rerank_parser.add_argument(
-        "--output-jsonl-file", dest="output_jsonl_file", default=""
-    )
-    rerank_parser.add_argument(
-        "--output-trec-file", dest="output_trec_file", default=""
-    )
+    rerank_parser.add_argument("--output-jsonl-file", dest="output_jsonl_file", default="")
+    rerank_parser.add_argument("--output-trec-file", dest="output_trec_file", default="")
     rerank_parser.add_argument(
         "--invocations-history-file", dest="invocations_history_file", default=""
     )
@@ -162,21 +148,13 @@ def build_parser() -> argparse.ArgumentParser:
     rerank_parser.add_argument(
         "--print-prompts-responses", dest="print_prompts_responses", action="store_true"
     )
-    rerank_parser.add_argument(
-        "--use-azure-openai", dest="use_azure_openai", action="store_true"
-    )
-    rerank_parser.add_argument(
-        "--use-openrouter", dest="use_openrouter", action="store_true"
-    )
+    rerank_parser.add_argument("--use-azure-openai", dest="use_azure_openai", action="store_true")
+    rerank_parser.add_argument("--use-openrouter", dest="use_openrouter", action="store_true")
     rerank_parser.add_argument("--use-litellm", dest="use_litellm", action="store_true")
     rerank_parser.add_argument("--base-url", dest="base_url", default="")
-    rerank_parser.add_argument(
-        "--variable-passages", dest="variable_passages", action="store_true"
-    )
+    rerank_parser.add_argument("--variable-passages", dest="variable_passages", action="store_true")
     rerank_parser.add_argument("--num-passes", dest="num_passes", type=int, default=1)
-    rerank_parser.add_argument(
-        "--window-size", dest="window_size", type=int, default=20
-    )
+    rerank_parser.add_argument("--window-size", dest="window_size", type=int, default=20)
     rerank_parser.add_argument("--stride", dest="stride", type=int, default=10)
     rerank_parser.add_argument(
         "--system-message",
@@ -197,9 +175,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     rerank_parser.add_argument("--use-logits", dest="use_logits", action="store_true")
     rerank_parser.add_argument("--use-alpha", dest="use_alpha", action="store_true")
-    rerank_parser.add_argument(
-        "--pointwise-vllm", dest="pointwise_vllm", action="store_true"
-    )
+    rerank_parser.add_argument("--pointwise-vllm", dest="pointwise_vllm", action="store_true")
     rerank_parser.add_argument(
         "--listwise-vllm-with-openai-sdk",
         dest="listwise_vllm_with_openai_sdk",
@@ -300,9 +276,7 @@ def build_parser() -> argparse.ArgumentParser:
     serve_http_parser.add_argument("--host", default="0.0.0.0")
     serve_http_parser.add_argument("--port", type=int, default=8082)
     serve_http_parser.add_argument("--model-path", required=True, dest="model_path")
-    serve_http_parser.add_argument(
-        "--batch-size", dest="batch_size", type=int, default=32
-    )
+    serve_http_parser.add_argument("--batch-size", dest="batch_size", type=int, default=32)
     serve_http_parser.add_argument(
         "--top-k-rerank",
         dest="top_k_rerank",
@@ -359,12 +333,8 @@ def build_parser() -> argparse.ArgumentParser:
         dest="variable_passages",
         action="store_true",
     )
-    serve_http_parser.add_argument(
-        "--num-passes", dest="num_passes", type=int, default=1
-    )
-    serve_http_parser.add_argument(
-        "--window-size", dest="window_size", type=int, default=20
-    )
+    serve_http_parser.add_argument("--num-passes", dest="num_passes", type=int, default=1)
+    serve_http_parser.add_argument("--window-size", dest="window_size", type=int, default=20)
     serve_http_parser.add_argument("--stride", dest="stride", type=int, default=10)
     serve_http_parser.add_argument(
         "--system-message",
@@ -864,9 +834,7 @@ def _run_prompt_command(args: argparse.Namespace) -> CommandResponse:
             error_code="missing_resource",
             command="prompt",
         ) from exc
-    return CommandResponse(
-        command="prompt", warnings=["prompt command not implemented yet."]
-    )
+    return CommandResponse(command="prompt", warnings=["prompt command not implemented yet."])
 
 
 def _run_view_command(args: argparse.Namespace) -> CommandResponse:
@@ -911,11 +879,7 @@ def _run_schema_command(args: argparse.Namespace) -> CommandResponse:
     return CommandResponse(
         command="schema",
         inputs={"name": args.name},
-        artifacts=[
-            make_data_artifact(
-                "schema", {"name": args.name, "schema": SCHEMAS[args.name]}
-            )
-        ],
+        artifacts=[make_data_artifact("schema", {"name": args.name, "schema": SCHEMAS[args.name]})],
     )
 
 
@@ -960,9 +924,7 @@ def _run_analyze_command(args: argparse.Namespace) -> CommandResponse:
     if has_partial_success_metrics(summary.get("metrics")):
         status = "partial_success"
         exit_code = EXIT_CODES["partial_success"]
-        warnings.append(
-            "Analyzed responses include a mix of valid outputs and malformed outputs."
-        )
+        warnings.append("Analyzed responses include a mix of valid outputs and malformed outputs.")
     return CommandResponse(
         command="analyze",
         status=status,
@@ -1172,9 +1134,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             }
             and response.artifacts
         ):
-            sys.stdout.write(
-                json.dumps(response.artifacts[0]["value"], indent=2) + "\n"
-            )
+            sys.stdout.write(json.dumps(response.artifacts[0]["value"], indent=2) + "\n")
         elif response.warnings:
             sys.stdout.write("\n".join(response.warnings) + "\n")
     return response.exit_code

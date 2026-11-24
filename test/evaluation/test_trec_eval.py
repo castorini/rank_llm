@@ -26,9 +26,7 @@ class TestEvalFunction(unittest.TestCase):
                 data_class=Result,
                 data={
                     "query": {"text": "Query2", "qid": "q2"},
-                    "candidates": [
-                        {"doc": {"text": "Doc3"}, "docid": "D3", "score": 0.85}
-                    ],
+                    "candidates": [{"doc": {"text": "Doc3"}, "docid": "D3", "score": 0.85}],
                 },
             ),
         ]
@@ -80,9 +78,7 @@ class TestEvalCommandArgs(unittest.TestCase):
         return self._captured_cmd(lambda: EvalFunction.eval(args, trunc=False))
 
     def test_eval_keeps_first_option(self):
-        cmd = self._run_eval(
-            ["-c", "-m", "ndcg_cut.10", str(self.qrels), str(self.run)]
-        )
+        cmd = self._run_eval(["-c", "-m", "ndcg_cut.10", str(self.qrels), str(self.run)])
         self.assertEqual(
             cmd,
             [

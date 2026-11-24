@@ -23,9 +23,7 @@ okish_str = "\033[94m[OKish]\033[0m"
 
 
 def run_command(cmd):
-    process = subprocess.Popen(
-        cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     stdout = stdout.decode("utf-8")
     stderr = stderr.decode("utf-8")

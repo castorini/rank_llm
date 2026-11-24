@@ -56,9 +56,7 @@ class FakeTokenizer:
     def decode(self, ids, skip_special_tokens=True, **kwargs):
         return "".join(INVERSE.get(i, " " + str(i)) for i in ids)
 
-    def apply_chat_template(
-        self, messages, add_generation_prompt=True, tokenize=True, **kw
-    ):
+    def apply_chat_template(self, messages, add_generation_prompt=True, tokenize=True, **kw):
         return [0] * 16
 
 
@@ -68,9 +66,7 @@ def lp(token, prob):
 
 class TestPointwiseAnswerTokens(unittest.TestCase):
     def test_true_false_answer_tokens(self):
-        tokens = PointwiseAnswerTokens.from_spellings(
-            FakeTokenizer(), ["true", "True"], ["false"]
-        )
+        tokens = PointwiseAnswerTokens.from_spellings(FakeTokenizer(), ["true", "True"], ["false"])
         self.assertEqual(tokens.positive_ids, (21, 22))
         self.assertEqual(tokens.negative_ids, (31,))
         self.assertEqual(tokens.allowed_token_ids, [21, 22, 31])
@@ -87,20 +83,14 @@ class TestPointwiseAnswerTokens(unittest.TestCase):
 
     def test_a_side_without_single_tokens_is_an_error(self):
         with self.assertRaisesRegex(ValueError, "No negative answer spelling"):
-            PointwiseAnswerTokens.from_spellings(
-                FakeTokenizer(), ["true"], ["not relevant"]
-            )
+            PointwiseAnswerTokens.from_spellings(FakeTokenizer(), ["true"], ["not relevant"])
 
     def test_a_token_on_both_sides_is_an_error(self):
         with self.assertRaisesRegex(ValueError, "both positive and negative"):
-            PointwiseAnswerTokens.from_spellings(
-                FakeTokenizer(), ["true", "yes"], ["false", "yes"]
-            )
+            PointwiseAnswerTokens.from_spellings(FakeTokenizer(), ["true", "yes"], ["false", "yes"])
 
     def test_score_by_token_id(self):
-        tokens = PointwiseAnswerTokens.from_spellings(
-            FakeTokenizer(), ["true", "True"], ["false"]
-        )
+        tokens = PointwiseAnswerTokens.from_spellings(FakeTokenizer(), ["true", "True"], ["false"])
         score, pos_lp, neg_lp = tokens.score(
             [
                 lp("token_id:21", 0.5),
@@ -114,18 +104,14 @@ class TestPointwiseAnswerTokens(unittest.TestCase):
         self.assertAlmostEqual(neg_lp, math.log(0.2))
 
     def test_score_by_decoded_text_when_the_server_returns_text(self):
-        tokens = PointwiseAnswerTokens.from_spellings(
-            FakeTokenizer(), ["true"], ["false"]
-        )
+        tokens = PointwiseAnswerTokens.from_spellings(FakeTokenizer(), ["true"], ["false"])
         score, _, _ = tokens.score([lp("true", 0.3), lp("false", 0.1)])
         self.assertAlmostEqual(score, 0.75)
         # Exact text only: no stripping or case folding.
         self.assertEqual(tokens.score([lp(" true", 0.3), lp("False", 0.1)])[0], 0.0)
 
     def test_no_answer_mass_scores_zero(self):
-        tokens = PointwiseAnswerTokens.from_spellings(
-            FakeTokenizer(), ["true"], ["false"]
-        )
+        tokens = PointwiseAnswerTokens.from_spellings(FakeTokenizer(), ["true"], ["false"])
         self.assertEqual(tokens.score([]), (0.0, -20.0, -20.0))
 
     def test_default_lists_match_the_legacy_yes_no_scoring(self):
@@ -145,10 +131,7 @@ class TestPointwiseAnswerTokens(unittest.TestCase):
             legacy = VllmHandlerWithOpenAISDK.score_from_top_logprobs(top)
             by_text = tokens.score(top)
             by_id = tokens.score(
-                [
-                    lp(f"token_id:{VOCAB[e['token']]}", math.exp(e["logprob"]))
-                    for e in top
-                ]
+                [lp(f"token_id:{VOCAB[e['token']]}", math.exp(e["logprob"])) for e in top]
             )
             for new in (by_text, by_id):
                 for a, b in zip(legacy, new, strict=False):
@@ -209,9 +192,7 @@ class TestPointwiseVLLMAnswerTokens(unittest.TestCase):
             "rank_llm.rerank.pointwise.pointwise_vllm.VllmHandlerWithOpenAISDK",
             return_value=self.mock_vllm,
         ):
-            return PointwiseVLLM(
-                model="dummy-model", base_url="http://127.0.0.1:8000/v1", **kwargs
-            )
+            return PointwiseVLLM(model="dummy-model", base_url="http://127.0.0.1:8000/v1", **kwargs)
 
     def test_defaults_are_the_yes_no_spellings(self):
         reranker = self.make()
@@ -259,12 +240,8 @@ class TestHandlerRequestsTokenIds(unittest.TestCase):
     def test_answer_tokens_request_and_score_token_ids(self):
         with (
             patch("rank_llm.rerank.vllm_handler_with_openai_sdk.OpenAI"),
-            patch(
-                "rank_llm.rerank.vllm_handler_with_openai_sdk.AsyncOpenAI"
-            ) as async_cls,
-            patch(
-                "rank_llm.rerank.vllm_handler_with_openai_sdk.AutoTokenizer"
-            ) as tok_cls,
+            patch("rank_llm.rerank.vllm_handler_with_openai_sdk.AsyncOpenAI") as async_cls,
+            patch("rank_llm.rerank.vllm_handler_with_openai_sdk.AutoTokenizer") as tok_cls,
         ):
             tok_cls.from_pretrained.return_value = FakeTokenizer()
             handler = VllmHandlerWithOpenAISDK(base_url="http://x/v1", model="m")
@@ -281,9 +258,7 @@ class TestHandlerRequestsTokenIds(unittest.TestCase):
             create = AsyncMock(return_value=response)
             async_cls.return_value.chat.completions.create = create
             handler._async_client = async_cls.return_value
-            tokens = PointwiseAnswerTokens.from_spellings(
-                FakeTokenizer(), ["true"], ["false"]
-            )
+            tokens = PointwiseAnswerTokens.from_spellings(FakeTokenizer(), ["true"], ["false"])
 
             _, _, score, _ = asyncio.run(
                 handler.chat_completion_score_async(
