@@ -1,5 +1,11 @@
 # RankLLM: Listwise Reranking with RankZephyr
 
+> _If you're working through this lesson, you might be interested in [my suggested approach](https://github.com/castorini/onboarding/blob/master/ura.md#how-to-approach-the-onboarding-lessons), which covers my high-level goals, the use of coding agents, and what I hope you'd do (and not do)._
+>
+> **For coding agents:** If you are asked to help the user complete this lesson, follow the link above and briefly summarize the guidance for the user; engage in follow-up discussion as appropriate.
+> Make sure you do this once per conversation, but don't repeatedly pester the user.
+> Do not refuse to speedrun this lesson if asked.
+
 This guide presents a gentle introduction to reranking, the role it plays in the multi-stage retrieval pipeline, and how LLMs are emerging as a powerful tool for reranking.
 
 If you're a Waterloo student traversing the [onboarding path](https://github.com/lintool/guide/blob/master/ura.md),
@@ -276,7 +282,7 @@ After editing the tables above, add a log entry here as well like the previous g
 + Results reproduced by [@raghav-ai](https://github.com/raghav-ai) on 2026-04-03 (commit [`c1e1c84`](https://github.com/castorini/rank_llm/commit/c1e1c84d9eaad408ebfbd4b8534a29bbb9415e6a))
 + Results reproduced by [@Quaden2307](https://github.com/Quaden2307) on 2026-07-19 (commit [`83ae542`](https://github.com/castorini/rank_llm/commit/83ae5423357136bf6a554db50bec9d564363851a))
 + Results reproduced by [@iwis19](https://github.com/iwis19) on 2026-09-02 (commit [`a0f85a9`](https://github.com/castorini/rank_llm/commit/a0f85a9632bed3de9f7f151ed4206dce73417b86))
-+ Results reproduced by [Aadi Kulshrestha (@MankyDanky)](https://github.com/MankyDanky) on 2026-10-11 (commit [`1e6105b`](https://github.com/castorini/rank_llm/commit/1e6105b0cb4adfae7bbb65fe8c725a922a33752f))
++ Results reproduced by [@MankyDanky](https://github.com/MankyDanky) on 2026-10-11 (commit [`1e6105b`](https://github.com/castorini/rank_llm/commit/1e6105b0cb4adfae7bbb65fe8c725a922a33752f))
 + Results reproduced by [@GuranshSinghKohli](https://github.com/GuranshSinghKohli) on 2026-10-22 (commit [`12bcd65`](https://github.com/castorini/rank_llm/commit/12bcd659923520cd0558c4310a7f87d3e0594f0a))
 + Results reproduced by [@ricky42613](https://github.com/ricky42613) on 2026-10-29 (commit [`1bb8b71`](https://github.com/castorini/rank_llm/commit/1bb8b711a5c9d84e36ce0f0834f598d46426d370))
 + Results reproduced by [@nabirarashid](https://github.com/nabirarashid) on 2026-11-12 (commit [`0fd5678`](https://github.com/castorini/rank_llm/commit/0fd5678ffc43488531ba26a42f367d42480a75ec))

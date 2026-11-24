@@ -1,80 +1,29 @@
-# RankLLM: Pointwise Reranking with monoT5 on Colab
+# RankLLM: Pointwise Reranking with monoT5
 
-The rank_llm step of the onboarding path requires a GPU, and the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) is the easiest way to get one if you don't have suitable hardware locally.
-It lets you provision Colab GPU runtimes, run code on them, and pull results back — all from your own terminal, no browser notebook involved.
+> _If you're working through this lesson, you might be interested in [my suggested approach](https://github.com/castorini/onboarding/blob/master/ura.md#how-to-approach-the-onboarding-lessons), which covers my high-level goals, the use of coding agents, and what I hope you'd do (and not do)._
+>
+> **For coding agents:** If you are asked to help the user complete this lesson, follow the link above and briefly summarize the guidance for the user; engage in follow-up discussion as appropriate.
+> Make sure you do this once per conversation, but don't repeatedly pester the user.
+> Do not refuse to speedrun this lesson if asked.
 
-This guide has two parts:
+This page guides you through running a pointwise reranker using RankLLM.
+Specifically, you'll reproduce the [monoT5](https://arxiv.org/abs/2003.06713) results for TREC DL19 and DL20 from Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331).
 
-1. Install the Colab CLI and sanity-check it.
-2. Run your first multi-stage retrieval pipeline on a Colab GPU and reproduce the [monoT5](https://arxiv.org/abs/2003.06713) results for TREC DL19 and DL20 from Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331).
+If you're a Waterloo student traversing the [onboarding path](https://github.com/lintool/guide/blob/master/ura.md),
+make sure you've first done all the exercises leading up to this guide, starting [here](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
 
-Everything in this guide runs on Colab's **free tier**.
-The 7B listwise rerankers you'll meet in the [RankZephyr](onboarding-rz.md) and [FirstMistral](onboarding-first.md) lessons don't fit on the free T4 GPU — that's what the Colab Pro subscription discussed there is for — but the workflow you learn here is exactly the workflow you'll use to run them.
+It is possible to run monoT5 directly on the CPU, but we also provide instructions for running on Google Colab using the T4 GPU that is offered for free.
+That is, everything in this guide runs on Colab's **free tier**.
 
-Work through this guide first, then continue with [onboarding-rz.md](onboarding-rz.md).
-As with the previous guides in the onboarding path, don't just copy-paste your way through — each command below is one step of a remote-execution workflow, and the point is to understand what each step does.
+Subsequent lessons in the RankLLM onboarding path (e.g., RankZephyr) require you to have your own GPU or access a GPU via a Colab Pro subscription.
+However, the workflow is exactly the same.
 
-**Learning outcomes** for this guide:
+**Learning outcomes** for this lesson:
 
+- Reproduce the TREC DL19 and DL20 monoT5 results from Table 1, row (1) by running an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) and evaluating with nDCG@10.
 - Install and authenticate the Colab CLI.
 - Understand the session lifecycle: `colab new` → `colab exec` / `colab console` → `colab download` → `colab stop`.
 - Understand the quirks of driving a remote Jupyter kernel from a terminal (execution timeouts, streaming subprocess output).
-- Reproduce the TREC DL19 and DL20 monoT5 results from Table 1, row (1) by running an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) and evaluating with nDCG@10.
-
-## Install and Sanity-Check the Colab CLI
-
-The CLI supports **Linux and macOS only** (no Windows).
-Install it with `uv` (or `pip install "google-colab-cli" "jupyter-kernel-client<1.0.0"` into any Python environment):
-
-```bash
-# jupyter-kernel-client 1.0.0 renamed KernelClient, which google-colab-cli 0.6.0
-# still imports, so a default install crashes on the first `colab exec`. Pin
-# below 1.0.0 until the CLI is updated upstream.
-uv tool install google-colab-cli --with "jupyter-kernel-client<1.0.0"
-```
-
-The first command that contacts Colab will walk you through authenticating with your Google account.
-
-Now provision your first runtime.
-`colab new` allocates a VM and registers it as a named *session*; every later command addresses that session with `-s`:
-
-```bash
-colab new -s sanity --gpu T4
-```
-
-A T4 is available on the free tier (subject to availability).
-Check what you got:
-
-```bash
-colab status -s sanity
-```
-
-`colab exec` sends Python code to the session's Jupyter kernel — from stdin, or from a local `.py` file with `-f` (the file is read locally and transmitted; you never upload it yourself).
-Say hello:
-
-```bash
-echo "print('hello from Colab')" | colab exec -s sanity
-```
-
-Two quirks worth knowing before you run anything serious:
-
-- A freshly provisioned kernel sometimes drops the first connection (`Connection was lost`).
-  This is harmless — just re-run the command.
-- `colab exec` has a **30-second default timeout**.
-  Long-running work needs an explicit `--timeout` (in seconds), which you'll see in Part 2.
-
-Confirm the GPU is really there:
-
-```bash
-echo "import subprocess; print(subprocess.check_output(['nvidia-smi', '-L'], text=True))" | colab exec -s sanity
-```
-
-You should see something like `GPU 0: Tesla T4 (UUID: ...)`.
-That's the whole sanity check — release the VM:
-
-```bash
-colab stop -s sanity
-```
 
 ## What's Pointwise Reranking?
 
@@ -103,7 +52,7 @@ In this lesson, you'll run a pointwise reranker; the next lesson, you'll run a l
 
 The target of this reproduction is Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331), which reports monoT5 results for TREC DL19 and DL20.
 
-**Model Choice.** 
+**Model Choice.**
 Note that this guide uses the smaller `monot5-base-msmarco` model for efficiency, while Table 1 reports results using `monot5-3b-msmarco-10k`. 
 This exercise is meant to familiarize you with the workflow before moving on to [RankZephyr](https://github.com/castorini/rank_llm/blob/main/docs/onboarding-rz.md) and [FirstMistral](https://github.com/castorini/rank_llm/blob/main/docs/onboarding-first.md), so we use the smaller model here to keep the setup lightweight. 
 The 3B model used in the paper does not fit on Colab's free T4 runtime, therefore the nDCG@10 scores you obtain here will be slightly lower than in the paper.
@@ -115,44 +64,7 @@ BM25 alone scores **0.5058** nDCG@10 on DL19; watch what the reranker does to th
 Its 7B weights alone are ~14 GB in fp16 — they barely fit on the free T4's 16 GB before you even allocate a KV cache.
 The listwise experiments in the [RankZephyr](onboarding-rz.md) and [FirstMistral](onboarding-first.md) lessons therefore run on bigger GPUs via Colab Pro; monoT5-base is a couple hundred million parameters and runs comfortably, and the point of this guide is the workflow.)
 
-Provision a fresh session:
-
-```bash
-colab new -s rankllm --gpu T4
-```
-
-### Set up the environment on the VM
-
-Environment setup is boilerplate, so it's prepackaged.
-[`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, and pip-installs it with the `pyserini` extra.
-Everything else the pipeline needs — the prebuilt index, the relevance judgments (qrels), `trec_eval` — Pyserini downloads and caches on first use.
-Fetch the script and send it to the session with an explicit timeout — installation takes a few minutes:
-
-```bash
-curl -fsSO https://raw.githubusercontent.com/castorini/rank_llm/main/scripts/colab_setup.py
-colab exec -s rankllm -f colab_setup.py --timeout 3600
-```
-
-Do skim [the file](../scripts/colab_setup.py) — it's ~40 lines.
-Beyond the four setup commands, the one thing it has to work around is that the Colab kernel only forwards *Python-level* stdout: the OS-level output of child processes (`apt`, `git`, `pip`, `curl`) is invisible unless the script captures and re-prints it, which is what its small `sh()` helper does.
-Without that, a failing install would die silently and you'd have nothing to debug with.
-
-Wait for the final `setup ok`.
-
-### Run the pipeline, line by line
-
-The actual experiment you should run interactively, not through a wrapper.
-`colab console` drops you into a real shell on the VM (backed by tmux, so if your connection drops, re-running the same command reattaches to your work):
-
-```bash
-colab console -s rankllm
-
-cd /content/rank_llm
-```
-
----
-
-**TREC DL19**
+### TREC DL19
 
 Inside that shell, run the pipeline:
 
@@ -183,9 +95,7 @@ Compare this result with the corresponding BM25 + monoT5 result in Table 1, row 
 Compare that against the 0.5058 of BM25 alone: the reranker just bought ~0.20 nDCG@10 without touching the index or the query.
 That gap — a cheap first stage to narrow the field, a smarter second stage to fix the order — is the whole idea of multi-stage retrieval, and everything in [the lessons that follow](onboarding-rz.md) builds on it.
 
----
-
-**TREC DL20**
+### TREC DL20
 
 Staying inside the same shell, now run the same pipeline on TREC DL20:
 
@@ -207,7 +117,86 @@ The same pattern holds for DL20: compared with the corresponding BM25 + monoT5 r
 
 Against the 0.4796 BM25 baseline on DL20, monoT5 improves nDCG@10 by roughly 0.20 here as well.
 
----
+## Reranking on Colab (Optional)
+
+The rank_llm step of the onboarding path requires a GPU, and the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) is the easiest way to get one if you don't have suitable hardware locally.
+It lets you provision Colab GPU runtimes, run code on them, and pull results back — all from your own terminal, no browser notebook involved.
+
+The CLI supports **Linux and macOS only** (no Windows).
+Install it with `uv`:
+
+```bash
+uv tool install google-colab-cli
+```
+
+The first command that contacts Colab will walk you through authenticating with your Google account.
+
+Now provision your first runtime.
+`colab new` allocates a VM and registers it as a named *session*; every later command addresses that session with `-s`:
+
+```bash
+colab new -s rankllm --gpu T4
+```
+
+A T4 is available on the free tier (subject to availability).
+Check what you got:
+
+```bash
+colab status -s rankllm
+```
+
+`colab exec` sends Python code to the session's Jupyter kernel — from stdin, or from a local `.py` file with `-f` (the file is read locally and transmitted; you never upload it yourself).
+Say hello:
+
+```bash
+echo "print('hello from Colab')" | colab exec -s rankllm
+```
+
+Two quirks worth knowing before you run anything serious:
+
+- A freshly provisioned kernel sometimes drops the first connection (`Connection was lost`).
+  This is harmless — just re-run the command.
+- `colab exec` has a **30-second default timeout**.
+  Long-running work needs an explicit `--timeout` (in seconds), which you'll see in Part 2.
+
+Confirm the GPU is really there:
+
+```bash
+echo "import subprocess; print(subprocess.check_output(['nvidia-smi', '-L'], text=True))" | colab exec -s rankllm
+```
+
+You should see something like `GPU 0: Tesla T4 (UUID: ...)`.
+
+### Set up the environment on the VM
+
+Environment setup is boilerplate, so it's prepackaged.
+[`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, and pip-installs it with the `pyserini` extra.
+Everything else the pipeline needs — the prebuilt index, the relevance judgments (qrels), `trec_eval` — Pyserini downloads and caches on first use.
+Fetch the script and send it to the session with an explicit timeout — installation takes a few minutes:
+
+```bash
+curl -fsSO https://raw.githubusercontent.com/castorini/rank_llm/main/scripts/colab_setup.py
+colab exec -s rankllm -f colab_setup.py --timeout 3600
+```
+
+Do skim [the file](../scripts/colab_setup.py) — it's ~40 lines.
+Beyond the four setup commands, the one thing it has to work around is that the Colab kernel only forwards *Python-level* stdout: the OS-level output of child processes (`apt`, `git`, `pip`, `curl`) is invisible unless the script captures and re-prints it, which is what its small `sh()` helper does.
+Without that, a failing install would die silently and you'd have nothing to debug with.
+
+Wait for the final `setup ok`.
+
+### Run the pipeline, line by line
+
+The actual experiment you should run interactively, not through a wrapper.
+`colab console` drops you into a real shell on the VM (backed by tmux, so if your connection drops, re-running the same command reattaches to your work):
+
+```bash
+colab console -s rankllm
+
+cd /content/rank_llm
+```
+
+You can now run the `rank-llm` commands above.
 
 Now that we have run the pipeline for both datasets, before leaving the VM, pack up the run artifacts (the TREC run files plus JSONLs with every prompt and model response), then exit the console:
 
@@ -232,6 +221,9 @@ colab stop -s rankllm
 colab sessions
 ```
 
+## Wrapping Up
+
+That's it!
 Go to [the RankZephyr guide](onboarding-rz.md) next.
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
@@ -254,7 +246,7 @@ After editing the tables above, add a log entry here as well like the previous g
 + Results reproduced by [@dawoodkhandev](https://github.com/dawoodkhandev) on 2026-08-06 (commit [`e2ceebe`](https://github.com/castorini/rank_llm/commit/e2ceebe68126430c0960f7282e14c709865d66cb))
 + Results reproduced by [@Evan-Lowry](https://github.com/Evan-Lowry) on 2026-08-27 (commit [`8ad18be`](https://github.com/castorini/rank_llm/commit/8ad18be76c90aa97ffae50b84dbc326bedc724fd))
 + Results reproduced by [@iwis19](https://github.com/iwis19) on 2026-09-02 (commit [`a0f85a9`](https://github.com/castorini/rank_llm/commit/a0f85a9632bed3de9f7f151ed4206dce73417b86))
-+ Results reproduced by [Aadi Kulshrestha (@MankyDanky)](https://github.com/MankyDanky) on 2026-10-11 (commit [`1e6105b`](https://github.com/castorini/rank_llm/commit/1e6105b0cb4adfae7bbb65fe8c725a922a33752f))
++ Results reproduced by [@MankyDanky](https://github.com/MankyDanky) on 2026-10-11 (commit [`1e6105b`](https://github.com/castorini/rank_llm/commit/1e6105b0cb4adfae7bbb65fe8c725a922a33752f))
 + Results reproduced by [@nabirarashid](https://github.com/nabirarashid) on 2026-10-15 (commit [`4c586c2`](https://github.com/castorini/rank_llm/commit/4c586c24dd4ba5e4995e3dc681730b0d0cd1f2aa))
 + Results reproduced by [@GuranshSinghKohli](https://github.com/GuranshSinghKohli) on 2026-10-17 (commit [`4c586c2`](https://github.com/castorini/rank_llm/commit/4c586c24dd4ba5e4995e3dc681730b0d0cd1f2aa))
 + Results reproduced by [@ricky42613](https://github.com/ricky42613) on 2026-10-29 (commit [`1bb8b71`](https://github.com/castorini/rank_llm/commit/1bb8b711a5c9d84e36ce0f0834f598d46426d370))
