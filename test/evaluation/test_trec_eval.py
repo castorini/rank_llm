@@ -28,7 +28,9 @@ class TestEvalFunction(unittest.TestCase):
                 data_class=Result,
                 data={
                     "query": {"text": "Query2", "qid": "q2"},
-                    "candidates": [{"doc": {"text": "Doc3"}, "docid": "D3", "score": 0.85}],
+                    "candidates": [
+                        {"doc": {"text": "Doc3"}, "docid": "D3", "score": 0.85}
+                    ],
                 },
             ),
         ]
@@ -94,7 +96,10 @@ class TestEvalCommandArgs(unittest.TestCase):
         original = list(args)
         captured = StringIO()
         with (
-            patch("src.rank_llm.evaluation.trec_eval._require_trec_eval", return_value=evaluate),
+            patch(
+                "src.rank_llm.evaluation.trec_eval._require_trec_eval",
+                return_value=evaluate,
+            ),
             redirect_stdout(captured),
         ):
             result = EvalFunction.eval(args, trunc=False)
@@ -112,7 +117,9 @@ class TestEvalCommandArgs(unittest.TestCase):
         self.assertTrue(self.qrels.exists())
 
     def test_failure_cleans_temporary_run(self):
-        with patch.object(EvalFunction, "eval", side_effect=RuntimeError("failed")) as evaluate:
+        with patch.object(
+            EvalFunction, "eval", side_effect=RuntimeError("failed")
+        ) as evaluate:
             with self.assertRaisesRegex(RuntimeError, "failed"):
                 EvalFunction.from_results([], str(self.qrels))
         self.assertFalse(Path(evaluate.call_args.args[0][-1]).exists())
