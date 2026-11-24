@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from rank_llm.cli.introspection import validate_rerank_payload
 from rank_llm.cli.operations import normalize_direct_rerank_input
 from rank_llm.data import DataWriter, Query, Result
 
@@ -44,6 +45,27 @@ class TestExtraFieldsPassthrough(unittest.TestCase):
     def test_non_object_extra_fields_is_rejected(self):
         with self.assertRaises(ValueError):
             normalize({"text": "q", "qid": "q1", "extra_fields": "not-an-object"})
+
+
+class TestExtraFieldsPayloadValidation(unittest.TestCase):
+    """The shared validator (also used by --validate-only and --dry-run) checks extra_fields."""
+
+    def validate(self, extra_fields):
+        return validate_rerank_payload(
+            {
+                "query": {"text": "q", "qid": "q1", "extra_fields": extra_fields},
+                "candidates": CANDIDATES,
+            }
+        )
+
+    def test_object_of_strings_or_nulls_is_valid(self):
+        self.assertTrue(
+            self.validate({"global_query": "g", "reasoning": None})["valid"]
+        )
+
+    def test_non_object_or_non_string_values_are_invalid(self):
+        for bad in ("bad", ["g"], {"global_query": 3}, {"reasoning": {"nested": "x"}}):
+            self.assertFalse(self.validate(bad)["valid"], msg=repr(bad))
 
 
 class TestExtraFieldsSerialisation(unittest.TestCase):

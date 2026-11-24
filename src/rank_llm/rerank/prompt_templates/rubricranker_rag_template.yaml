@@ -9,6 +9,9 @@
 # Serve with temperature 0.7, top_p 0.8, top_k 20, min_p 0 and thinking off,
 # and set window_size to the candidate depth so the set is judged in one pass.
 method: "singleturn_listwise"
+# RubricRanker returns a subset of the window ("[4] [2] [7]", at most ten), not
+# a full permutation, so a backend must let it stop after one token.
+min_output_tokens: 1
 system_message: |-
   You are a high-quality document set selector for a retrieval-augmented QA system. Given a user question and a list of retrieved passages, select the best subset that jointly answers the question, then rank the selected passages from most to least useful.
 

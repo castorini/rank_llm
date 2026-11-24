@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import unittest
+from importlib.resources import files
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -373,6 +374,35 @@ class TestRankListwiseOSLLM(unittest.TestCase):
         )
         self.mock_vllm_handler_instance.generate_output_async.assert_awaited_once()
         self.mock_vllm_handler_instance.generate_logprobs_async.assert_not_awaited()
+
+    def test_in_process_min_tokens_is_a_full_permutation_by_default(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/rank_zephyr_7b_v1_full", window_size=20
+        )
+        self.assertEqual(
+            model_coordinator._get_min_output_tokens(20),
+            model_coordinator.num_output_tokens(20),
+        )
+
+    def test_template_min_output_tokens_lets_a_subset_selector_stop(self):
+        model_coordinator = RankListwiseOSLLM(
+            model="castorini/rank_zephyr_7b_v1_full",
+            window_size=20,
+            prompt_template_path=str(
+                files("rank_llm.rerank.prompt_templates") / "rubricranker_template.yaml"
+            ),
+        )
+        self.mock_vllm_handler_instance.generate_output_async = AsyncMock(
+            return_value=("[4] [2]", 12, 3)
+        )
+        asyncio.run(
+            model_coordinator.run_llm_async("rendered prompt", current_window_size=20)
+        )
+        kwargs = self.mock_vllm_handler_instance.generate_output_async.call_args.kwargs
+        self.assertEqual(kwargs["min_tokens"], 1)
+        self.assertEqual(
+            kwargs["max_tokens"], model_coordinator._get_max_output_tokens(20)
+        )
 
     def test_use_logits_numeric_ids_respect_current_window(self):
         model_coordinator = RankListwiseOSLLM(

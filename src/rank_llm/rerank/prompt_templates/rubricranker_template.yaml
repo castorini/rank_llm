@@ -16,6 +16,9 @@
 # top_p 0.8, top_k 20, min_p 0, and thinking disabled. Set window_size to the
 # rerank depth so the whole candidate set is judged in a single pass.
 method: "singleturn_listwise"
+# RubricRanker returns a subset of the window ("[4] [2] [7]", at most ten), not
+# a full permutation, so a backend must let it stop after one token.
+min_output_tokens: 1
 extra_fields: ["query_intent"]
 system_message: |-
   You are a high-quality document set selector for a deep-research agent. Given a search query from the agent, the agent's reasoning as query intent, and a list of retrieved documents (including title, url, search snippet and full text), select the best subset that jointly answers the query.

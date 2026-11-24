@@ -62,6 +62,9 @@ class TemplateSectionConfig:
     required: bool
     required_placeholders: set[str]
     allowed_placeholders: set[str]
+    # Whether the renderer fills this section with the query's extra_fields
+    # values, so a template may use its declared extra fields here.
+    accepts_extra_fields: bool = False
 
 
 def read_requests_from_file(file_path: str) -> list[Request]:

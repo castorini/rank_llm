@@ -19,6 +19,7 @@ from rank_llm.rerank.sampling_kwargs import (
 )
 
 from .listwise_rankllm import ListwiseRankLLM
+from .singleturn_listwise_inference_handler import MIN_OUTPUT_TOKENS_KEY
 
 try:
     import vllm
@@ -289,6 +290,18 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         logits = output.outputs[0].logprobs[effective_location]
         return self._evaluate_logits(logits, total)
 
+    def _get_min_output_tokens(self, window_size: int) -> int:
+        """Tokens the in-process backend must generate before it may stop.
+
+        A complete permutation of the window, unless the template's
+        `min_output_tokens` lets the model stop sooner: a selector that returns
+        a subset of the window would otherwise be forced past its selection.
+        """
+        full = self.num_output_tokens(window_size)
+        handler = getattr(self, "_inference_handler", None)
+        declared = handler.template.get(MIN_OUTPUT_TOKENS_KEY) if handler else None
+        return min(declared, full) if declared else full
+
     def _get_max_output_tokens(self, window_size: int) -> int:
         min_tok = self.num_output_tokens(window_size)
         return self._reasoning_token_budget + min_tok if self._is_thinking else min_tok
@@ -352,7 +365,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 },
             )
 
-        min_tok = self.num_output_tokens(current_window_size)
+        min_tok = self._get_min_output_tokens(current_window_size)
         max_tok = self._get_max_output_tokens(current_window_size)
 
         if self._base_url:

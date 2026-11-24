@@ -202,6 +202,16 @@ def validate_rerank_payload(payload: Any) -> dict[str, Any]:
                 or not isinstance(query["qid"], str | int)
             ):
                 errors.append("query.qid must be a string or integer")
+            extra_fields = query.get("extra_fields")
+            if extra_fields is not None:
+                if not isinstance(extra_fields, dict):
+                    errors.append("query.extra_fields must be an object")
+                else:
+                    for name, value in extra_fields.items():
+                        if value is not None and not isinstance(value, str):
+                            errors.append(
+                                f"query.extra_fields.{name} must be a string or null"
+                            )
         elif not isinstance(query, str):
             errors.append("query must be a string or an object with text")
 

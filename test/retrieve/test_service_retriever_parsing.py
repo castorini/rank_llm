@@ -14,7 +14,7 @@ class TestServiceRetrieverPyseriniParsing(unittest.TestCase):
     call so they need neither a running server nor a JDK.
     """
 
-    def _retrieve(self, mock_get, first_doc="first passage"):
+    def _retrieve(self, mock_get, first_doc="first passage", extra_fields=None):
         """Run retrieve() against a mocked Pyserini search response."""
         payload = {
             "api": "v1",
@@ -31,7 +31,9 @@ class TestServiceRetrieverPyseriniParsing(unittest.TestCase):
         )
         return retriever.retrieve(
             dataset="msmarco-v2.1-doc",
-            request=Request(query=Query(text="hello", qid="1234")),
+            request=Request(
+                query=Query(text="hello", qid="1234", extra_fields=extra_fields or {})
+            ),
             k=2,
             host="http://localhost:8081",
         )
@@ -70,6 +72,13 @@ class TestServiceRetrieverPyseriniParsing(unittest.TestCase):
         result = self._retrieve(mock_get, first_doc=None)
 
         self.assertEqual(result.candidates[0].doc, {"contents": ""})
+
+    @patch("rank_llm.retrieve.service_retriever.requests.get")
+    def test_extra_fields_survive_retrieval(self, mock_get):
+        # The reranker that follows may need the request's context.
+        result = self._retrieve(mock_get, extra_fields={"reasoning": "a trace"})
+
+        self.assertEqual(result.query.extra_fields, {"reasoning": "a trace"})
 
 
 if __name__ == "__main__":
