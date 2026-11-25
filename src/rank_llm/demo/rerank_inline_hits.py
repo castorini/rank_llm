@@ -170,9 +170,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         writer.write_in_jsonl_format(str(out_path / "rerank.jsonl"))
         writer.write_in_trec_eval_format(str(out_path / "rerank.txt"))
         if args.populate_invocations_history:
-            writer.write_inference_invocations_history(
-                str(out_path / "invocations.json")
-            )
+            writer.write_inference_invocations_history(str(out_path / "invocations.json"))
         else:
             (out_path / "invocations.json").unlink(missing_ok=True)
 

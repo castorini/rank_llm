@@ -99,9 +99,7 @@ def main():
     if args.with_tracking:
         experiment_config = vars(args)
         # Convert scheduler type to string for wandb
-        experiment_config["lr_scheduler_type"] = experiment_config[
-            "lr_scheduler_type"
-        ].value
+        experiment_config["lr_scheduler_type"] = experiment_config["lr_scheduler_type"].value
         accelerator.init_trackers("rank_llm", experiment_config)
 
         total_batch_size = (
@@ -112,20 +110,14 @@ def main():
         logger.info("***** Running training *****")
         logger.info(f"  Num examples = {len(train_dataset)}")
         logger.info(f"  Num Epochs = {args.num_train_epochs}")
-        logger.info(
-            f"  Instantaneous batch size per device = {args.per_device_train_batch_size}"
-        )
+        logger.info(f"  Instantaneous batch size per device = {args.per_device_train_batch_size}")
         logger.info(
             f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}"
         )
-        logger.info(
-            f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}"
-        )
+        logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
         logger.info(f"  Total optimization steps = {args.max_train_steps}")
 
-    logger.info(
-        "Starting accelerator.prepare() - this may take a while with DeepSpeed ZeRO-3"
-    )
+    logger.info("Starting accelerator.prepare() - this may take a while with DeepSpeed ZeRO-3")
     train_dataloader, model, optimizer, lr_scheduler = accelerator.prepare(
         train_dataloader, model, optimizer, lr_scheduler
     )
@@ -144,9 +136,7 @@ def main():
         model.no_sync = types.MethodType(_null_no_sync, model)
         logger.info("Patched DeepSpeedEngine.no_sync → nullcontext for ZeRO-3")
 
-    progress_bar = tqdm(
-        range(args.max_train_steps), disable=not accelerator.is_local_main_process
-    )
+    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
     progress_bar.update(completed_steps)
 
     model.train()

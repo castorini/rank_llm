@@ -62,9 +62,7 @@ class EvalFunction:
             str: Evaluation results as a string.
         """
         # Convert the list of Result objects to a temporary run file format
-        temp_run_file = tempfile.NamedTemporaryFile(
-            delete=False, mode="w", suffix=".txt"
-        ).name
+        temp_run_file = tempfile.NamedTemporaryFile(delete=False, mode="w", suffix=".txt").name
         with open(temp_run_file, "w") as file:
             for result in results:
                 qid = result.query.qid

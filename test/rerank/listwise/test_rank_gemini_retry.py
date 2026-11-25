@@ -24,9 +24,7 @@ class TestGeminiInferenceRetry(unittest.TestCase):
                     raise response
                 return SimpleNamespace(text=response)
 
-            return SimpleNamespace(
-                models=SimpleNamespace(generate_content=generate_content)
-            )
+            return SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
 
         self.patches = (
             patch.object(rank_gemini, "genai", SimpleNamespace(Client=make_client)),
@@ -53,9 +51,7 @@ class TestGeminiInferenceRetry(unittest.TestCase):
     def test_retries_transient_error_then_succeeds(self):
         self.responses = [FakeAPIError(503), "ranking"]
 
-        self.assertEqual(
-            self.reranker._call_inference("prompt", return_text=True), "ranking"
-        )
+        self.assertEqual(self.reranker._call_inference("prompt", return_text=True), "ranking")
         self.assertEqual([key for key, _ in self.calls], ["first", "second"])
         self.sleep.assert_called_once_with(1.0)
 

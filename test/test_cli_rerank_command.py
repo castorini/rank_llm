@@ -155,9 +155,7 @@ class TestCLIRerankCommand(unittest.TestCase):
 
     def test_rerank_stdin_mode_uses_inline_handler(self):
         stdout = io.StringIO()
-        stdin = io.StringIO(
-            '{"query":{"text":"cats","qid":"q1"},"candidates":[{"text":"doc"}]}'
-        )
+        stdin = io.StringIO('{"query":{"text":"cats","qid":"q1"},"candidates":[{"text":"doc"}]}')
         with (
             patch(
                 "rank_llm.cli.main.run_mcp_rerank",
@@ -170,9 +168,7 @@ class TestCLIRerankCommand(unittest.TestCase):
                 stdin,
             ),
         ):
-            exit_code = main(
-                ["--output", "json", "rerank", "--model-path", "model", "--stdin"]
-            )
+            exit_code = main(["--output", "json", "rerank", "--model-path", "model", "--stdin"])
         self.assertEqual(exit_code, 0)
         self.assertEqual(mocked.call_args.kwargs["query_id"], "q1")
         self.assertEqual(mocked.call_args.kwargs["candidates"][0]["doc"], "doc")

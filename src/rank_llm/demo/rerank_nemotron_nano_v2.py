@@ -81,15 +81,9 @@ def run_mode(
     thinking: bool,
 ) -> list[Result]:
     mode_name = "thinking" if thinking else "nothink"
-    template_path = (
-        args.thinking_template if thinking else args.nothinking_template
-    ) or str(
+    template_path = (args.thinking_template if thinking else args.nothinking_template) or str(
         TEMPLATES
-        / (
-            "nemotron_thinking_template.yaml"
-            if thinking
-            else "nemotron_nonthinking_template.yaml"
-        )
+        / ("nemotron_thinking_template.yaml" if thinking else "nemotron_nonthinking_template.yaml")
     )
 
     print("\n=========================================================")
@@ -214,8 +208,7 @@ def main() -> None:
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",

@@ -80,12 +80,8 @@ def run_script_rerank(
     if args.dataset and not args.retrieval_method:
         parser_error("--retrieval_method is required when --dataset is provided")
 
-    top_k_rerank = (
-        args.top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
-    )
-    retrieval_mode = (
-        RetrievalMode.DATASET if args.dataset else RetrievalMode.CACHED_FILE
-    )
+    top_k_rerank = args.top_k_candidates if args.top_k_rerank == -1 else args.top_k_rerank
+    retrieval_mode = RetrievalMode.DATASET if args.dataset else RetrievalMode.CACHED_FILE
     options = {
         "model_path": args.model_path,
         "query": "",
@@ -194,9 +190,7 @@ def run_mcp_rerank(
                 Candidate(
                     docid=c["docid"],
                     score=c["score"],
-                    doc={"contents": c["doc"]}
-                    if isinstance(c["doc"], str)
-                    else c["doc"],
+                    doc={"contents": c["doc"]} if isinstance(c["doc"], str) else c["doc"],
                 )
                 for c in candidates
             ],
@@ -379,9 +373,7 @@ def run_response_analysis_files(
         return {
             "files": files,
             "verbose": verbose,
-            "metrics": _run_with_captured_stdout(
-                capture_stdout, analyzer.count_errors, verbose
-            ),
+            "metrics": _run_with_captured_stdout(capture_stdout, analyzer.count_errors, verbose),
         }
     return _run_with_captured_stdout(capture_stdout, runner, files, verbose)
 

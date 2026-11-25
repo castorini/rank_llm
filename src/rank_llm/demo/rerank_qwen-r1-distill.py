@@ -69,9 +69,7 @@ def load_sampling_kw_dict(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def main():
-    p = argparse.ArgumentParser(
-        description="Listwise DeepSeek-R1 Qwen3 distill reranking demo."
-    )
+    p = argparse.ArgumentParser(description="Listwise DeepSeek-R1 Qwen3 distill reranking demo.")
     p.add_argument(
         "--dataset",
         default="dl19",
@@ -145,8 +143,7 @@ def main():
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",

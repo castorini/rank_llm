@@ -136,9 +136,7 @@ class MultiTurnListwiseInferenceHandler(ListwiseInferenceHandler):
 
             if is_conversational:
                 assistant_fmt_values = {"rank": identifier}
-                assistant_text = self._format_template(
-                    "body_assistant", assistant_fmt_values
-                )
+                assistant_text = self._format_template("body_assistant", assistant_fmt_values)
                 body_prompt.extend(
                     [
                         {

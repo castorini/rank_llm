@@ -39,9 +39,7 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
 
         # Validate the method value
         if template["method"] != "rankfid":
-            raise ValueError(
-                f'Incorrect method type, expected "rankfid", got {template["method"]}'
-            )
+            raise ValueError(f'Incorrect method type, expected "rankfid", got {template["method"]}')
 
         self._general_validation(
             template=template,
@@ -53,9 +51,7 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
     def _generate_query(self, query: str) -> str:
         query_fmt_values = {"query": query}
 
-        query_string = self._format_template(
-            template_key="query", fmt_values=query_fmt_values
-        )
+        query_string = self._format_template(template_key="query", fmt_values=query_fmt_values)
 
         return query_string
 
@@ -85,9 +81,7 @@ class RankFIDInferenceHandler(BaseInferenceHandler):
             passage = self._convert_doc_to_prompt_content(cand.doc, max_tokens)
 
             fmt_values = {"query": query, "passage": passage, "index": rank}
-            single_text = self._format_template(
-                template_key="text", fmt_values=fmt_values
-            )
+            single_text = self._format_template(template_key="text", fmt_values=fmt_values)
 
             if self.template.get("query"):
                 prompts.append({"query": query_string, "text": single_text})

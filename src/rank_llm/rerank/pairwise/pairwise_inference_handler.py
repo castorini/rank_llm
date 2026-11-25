@@ -71,9 +71,7 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
                     "doc1": example_doc0,
                     "doc2": example_doc1,
                 }
-                fewshot_text = self._format_template(
-                    template_key="body", fmt_values=fmt_values
-                )
+                fewshot_text = self._format_template(template_key="body", fmt_values=fmt_values)
 
                 keyword = "Relevant"
                 if "Relevance" in fewshot_text:
@@ -110,12 +108,8 @@ class PairwiseInferenceHandler(BaseInferenceHandler):
             result.candidates[index2].doc, max_length=single_doc_max_token
         )
 
-        doc1_tokens = tokenizer.encode(
-            doc1_raw, truncation=True, max_length=single_doc_max_token
-        )
-        doc2_tokens = tokenizer.encode(
-            doc2_raw, truncation=True, max_length=single_doc_max_token
-        )
+        doc1_tokens = tokenizer.encode(doc1_raw, truncation=True, max_length=single_doc_max_token)
+        doc2_tokens = tokenizer.encode(doc2_raw, truncation=True, max_length=single_doc_max_token)
 
         query = self._replace_number(result.query.text)
         doc1 = tokenizer.decode(doc1_tokens, skip_special_tokens=True)

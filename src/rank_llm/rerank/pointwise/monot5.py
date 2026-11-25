@@ -46,22 +46,17 @@ class MonoT5(PointwiseRankLLM):
         self._true_id = self._tokenizer.encode("true", add_special_tokens=False)[0]
         self._false_id = self._tokenizer.encode("false", add_special_tokens=False)[0]
 
-    def run_llm_batched(
-        self, prompts: list[str]
-    ) -> tuple[list[str], list[int], list[float]]:
+    def run_llm_batched(self, prompts: list[str]) -> tuple[list[str], list[int], list[float]]:
         all_outputs, all_output_token_counts, all_scores = [], [], []
 
         token_prompts = self._tokenizer(
             prompts, padding=True, truncation=True, return_tensors="pt"
         ).to(self._device)
 
-        # transformers>=5 only infers a missing attention mask for decoder-only
-        # models, so pass it explicitly; otherwise the encoder attends to the
-        # padding of shorter prompts in the batch and their scores degrade.
-        token_prompts, attention_mask = (
-            token_prompts["input_ids"],
-            token_prompts["attention_mask"],
-        )
+        # transformers>=5 only infers a missing attention mask for decoder-only models, so pass it
+        # explicitly; otherwise the encoder attends to the padding of shorter prompts in the batch
+        # and their scores degrade.
+        token_prompts, attention_mask = token_prompts["input_ids"], token_prompts["attention_mask"]
 
         batch_outputs = self._llm.generate(
             token_prompts,
@@ -88,9 +83,7 @@ class MonoT5(PointwiseRankLLM):
         for logit_tensor in batch_logits[0]:
             truth_logit = logit_tensor[self._true_id]
             false_logit = logit_tensor[self._false_id]
-            score = math.exp(truth_logit) / (
-                math.exp(truth_logit) + math.exp(false_logit)
-            )
+            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
             all_scores.append(score)
             all_output_token_counts.append(self.num_output_tokens())
 
@@ -105,9 +98,8 @@ class MonoT5(PointwiseRankLLM):
     def create_prompt(self, result: Result, index: int) -> tuple[str, int]:
         query = result.query.text
 
-        reserved_for_output = (
-            64  # might need to change depending on what the actual output look like
-        )
+        # Might need to change depending on what the actual output looks like.
+        reserved_for_output = 64
         query_tokens = self.get_num_tokens(f"Query: {query} Document:  Relevant: ")
 
         few_shot_section = self._inference_handler._generate_fewshot_prompt(
@@ -115,9 +107,7 @@ class MonoT5(PointwiseRankLLM):
         )
         few_shot_tokens = self.get_num_tokens(few_shot_section)
 
-        max_doc_tokens = (
-            self._context_size - few_shot_tokens - query_tokens - reserved_for_output
-        )
+        max_doc_tokens = self._context_size - few_shot_tokens - query_tokens - reserved_for_output
 
         prompt = self._inference_handler.generate_prompt(
             result=result,

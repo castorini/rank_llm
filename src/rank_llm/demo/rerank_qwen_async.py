@@ -81,11 +81,7 @@ async def rerank_requests_concurrently(
     requests: list[Request],
     **kwargs,
 ) -> list[Result]:
-    return list(
-        await asyncio.gather(
-            *(reranker.rerank_async(req, **kwargs) for req in requests)
-        )
-    )
+    return list(await asyncio.gather(*(reranker.rerank_async(req, **kwargs) for req in requests)))
 
 
 def load_sampling_kw_dict(args: argparse.Namespace) -> dict[str, Any]:
@@ -109,9 +105,7 @@ def load_sampling_kw_dict(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(
-        description="Async listwise reranking demo with a vLLM server."
-    )
+    p = argparse.ArgumentParser(description="Async listwise reranking demo with a vLLM server.")
     p.add_argument(
         "--dataset",
         default="dl19",
@@ -157,8 +151,7 @@ def main() -> None:
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",
@@ -228,9 +221,7 @@ def main() -> None:
     }
 
     print(f"\n--- Async concurrent reranking ({len(requests)} queries) ---")
-    rerank_results = asyncio.run(
-        rerank_requests_concurrently(reranker, requests, **kwargs)
-    )
+    rerank_results = asyncio.run(rerank_requests_concurrently(reranker, requests, **kwargs))
     print(f"Reranked {len(rerank_results)} results.")
     _print_sample(rerank_results)
 

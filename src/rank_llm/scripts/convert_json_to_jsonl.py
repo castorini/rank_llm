@@ -41,11 +41,7 @@ def convert_json_to_jsonl(input_file, output_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert JSON file to JSONL format.")
-    parser.add_argument(
-        "--input_file", type=str, required=True, help="Input JSON file name"
-    )
-    parser.add_argument(
-        "--output_file", type=str, required=True, help="Output JSONL file name"
-    )
+    parser.add_argument("--input_file", type=str, required=True, help="Input JSON file name")
+    parser.add_argument("--output_file", type=str, required=True, help="Output JSONL file name")
     args = parser.parse_args()
     convert_json_to_jsonl(args.input_file, args.output_file)

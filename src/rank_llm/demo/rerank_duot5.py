@@ -62,9 +62,7 @@ def _print_eval(results: list[Result], qrels: str) -> None:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(
-        description="Pairwise DuoT5 reranking on BM25 first-stage results."
-    )
+    p = argparse.ArgumentParser(description="Pairwise DuoT5 reranking on BM25 first-stage results.")
     p.add_argument(
         "--dataset",
         default="dl20",
@@ -108,8 +106,7 @@ def main() -> None:
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",

@@ -24,9 +24,7 @@ class TestListwiseCoordinatorSampling(unittest.TestCase):
             return mock.call_args.kwargs
 
     def test_sampling_kwargs_are_forwarded(self):
-        self.assertEqual(
-            self._build(sampling_kwargs=SAMPLING)["sampling_kwargs"], SAMPLING
-        )
+        self.assertEqual(self._build(sampling_kwargs=SAMPLING)["sampling_kwargs"], SAMPLING)
 
     def test_absent_sampling_kwargs_stays_none(self):
         self.assertIsNone(self._build()["sampling_kwargs"])

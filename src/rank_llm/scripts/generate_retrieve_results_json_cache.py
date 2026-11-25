@@ -81,9 +81,7 @@ def load_trec_file(file_path, topk=100, qrels=None):
                 continue
             if int(rank) > topk:
                 continue
-            data[qid].append(
-                {"qid": qid, "docid": docid, "rank": int(rank), "score": float(score)}
-            )
+            data[qid].append({"qid": qid, "docid": docid, "rank": int(rank), "score": float(score)})
     print(f"Loaded run for {len(data)} queries from {file_path}")
     return data
 

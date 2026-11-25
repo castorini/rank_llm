@@ -134,24 +134,18 @@ class JinaReranker(PointwiseRankLLM):
 
     def _estimate_per_doc_total_tokens(self, avg_doc_words: int) -> int:
         per_doc_word_tokens = int(avg_doc_words * TOKENS_PER_WORD_RATIO)
-        per_doc_overhead_tokens = (
-            PER_DOC_INPUT_OVERHEAD_TOKENS + PER_DOC_OUTPUT_OVERHEAD_TOKENS
-        )
+        per_doc_overhead_tokens = PER_DOC_INPUT_OVERHEAD_TOKENS + PER_DOC_OUTPUT_OVERHEAD_TOKENS
         return max(per_doc_word_tokens + per_doc_overhead_tokens, 1)
 
     def _available_context_tokens(self) -> int:
-        available_tokens = (
-            self._context_size - QUERY_OVERHEAD_TOKENS - BASE_OUTPUT_RESERVE_TOKENS
-        )
+        available_tokens = self._context_size - QUERY_OVERHEAD_TOKENS - BASE_OUTPUT_RESERVE_TOKENS
         return max(available_tokens, 1)
 
     def _compute_effective_max_words(self, num_docs: int) -> int:
         """Derive a context-aware per-document word limit."""
         safe_num_docs = max(num_docs, 1)
         available_tokens = self._available_context_tokens()
-        per_doc_overhead_tokens = (
-            PER_DOC_INPUT_OVERHEAD_TOKENS + PER_DOC_OUTPUT_OVERHEAD_TOKENS
-        )
+        per_doc_overhead_tokens = PER_DOC_INPUT_OVERHEAD_TOKENS + PER_DOC_OUTPUT_OVERHEAD_TOKENS
         per_doc_content_tokens = max(
             (available_tokens // safe_num_docs) - per_doc_overhead_tokens, 1
         )
@@ -182,13 +176,10 @@ class JinaReranker(PointwiseRankLLM):
 
         available_tokens = self._available_context_tokens()
         while (
-            safe_num_docs * self._estimate_per_doc_total_tokens(max_words)
-            > available_tokens
+            safe_num_docs * self._estimate_per_doc_total_tokens(max_words) > available_tokens
             and max_words > min_words
         ):
-            total_tokens = safe_num_docs * self._estimate_per_doc_total_tokens(
-                max_words
-            )
+            total_tokens = safe_num_docs * self._estimate_per_doc_total_tokens(max_words)
             scaled_words = max(
                 int(max_words * available_tokens / max(total_tokens, 1)),
                 min_words,
@@ -212,9 +203,7 @@ class JinaReranker(PointwiseRankLLM):
             return sum(len(ids) for ids in token_ids)
         return len(token_ids)
 
-    def _compute_chunk_input_tokens(
-        self, query_text: str, chunk_docs: list[str]
-    ) -> int:
+    def _compute_chunk_input_tokens(self, query_text: str, chunk_docs: list[str]) -> int:
         input_text = (
             "Query: "
             + query_text
@@ -232,9 +221,7 @@ class JinaReranker(PointwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> list[Result]:
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
 
         rerank_results = [
             Result(
@@ -245,9 +232,7 @@ class JinaReranker(PointwiseRankLLM):
             for request in requests
         ]
 
-        with tqdm(
-            total=len(rerank_results), desc="Jina reranking queries"
-        ) as progress_bar:
+        with tqdm(total=len(rerank_results), desc="Jina reranking queries") as progress_bar:
             # Run the reranking in batches of size self._batch_size sequentially since the Jina reranker does not support batching.
             for batch_start in range(0, len(rerank_results), self._batch_size):
                 batch_end = min(batch_start + self._batch_size, len(rerank_results))

@@ -19,9 +19,7 @@ class TestVllmHandler(unittest.TestCase):
         self.mock_engine_instance = self.mock_engine_class.from_engine_args.return_value
         self.mock_tokenizer = MagicMock()
         # get_tokenizer() on AsyncLLMEngine is a coroutine
-        self.mock_engine_instance.get_tokenizer = AsyncMock(
-            return_value=self.mock_tokenizer
-        )
+        self.mock_engine_instance.get_tokenizer = AsyncMock(return_value=self.mock_tokenizer)
 
         from rank_llm.rerank.vllm_handler import VllmHandler
 
@@ -91,9 +89,7 @@ class TestVllmHandler(unittest.TestCase):
             with patch.object(vllm_handler_module, "AutoTokenizer", mock_auto):
                 out = self.handler.get_tokenizer()
             self.assertIs(out, mock_tok)
-            mock_auto.from_pretrained.assert_called_once_with(
-                "test-model", trust_remote_code=True
-            )
+            mock_auto.from_pretrained.assert_called_once_with("test-model", trust_remote_code=True)
             self.mock_engine_instance.get_tokenizer.assert_not_called()
 
         asyncio.run(inner())

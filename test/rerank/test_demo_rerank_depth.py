@@ -54,9 +54,7 @@ class DemoRerankDepthTest(unittest.TestCase):
                 (200, 0, 0, False),
                 (0, 0, None, False),
             ):
-                with self.subTest(
-                    demo=name, args=args, depth=depth, start=start, end=end
-                ):
+                with self.subTest(demo=name, args=args, depth=depth, start=start, end=end):
                     model = Mock()
                     model.rerank_batch.return_value = [request]
                     model.rerank_batch_async = AsyncMock(return_value=[request])
@@ -80,9 +78,7 @@ class DemoRerankDepthTest(unittest.TestCase):
                         )
                         if hasattr(demo, symbol)
                     }
-                    argv = [name, *args] + (
-                        [] if depth is None else ["--k", str(depth)]
-                    )
+                    argv = [name, *args] + ([] if depth is None else ["--k", str(depth)])
                     if start:
                         argv += ["--rank-start", str(start)]
                     if end is not None:
@@ -120,9 +116,7 @@ class DemoRerankDepthTest(unittest.TestCase):
                                 call.kwargs["rank_end"],
                                 end if end is not None else depth or 100,
                             )
-                            self.assertEqual(
-                                call.kwargs["top_k_retrieve"], depth or 100
-                            )
+                            self.assertEqual(call.kwargs["top_k_retrieve"], depth or 100)
                             self.assertTrue(call.kwargs["populate_invocations_history"])
                         if method != "rerank_batch":
                             self.assertEqual(getattr(model, method).await_count, count)
@@ -146,19 +140,13 @@ class DemoRerankDepthTest(unittest.TestCase):
                     window,
                     stride,
                 )
-                model.permutation_pipeline = Mock(
-                    side_effect=lambda result, *args, **kw: result
-                )
+                model.permutation_pipeline = Mock(side_effect=lambda result, *args, **kw: result)
                 model.rerank_batch([request], rank_end=200, top_k_retrieve=200)
-                ranges = [
-                    call.args[1:3] for call in model.permutation_pipeline.call_args_list
-                ]
+                ranges = [call.args[1:3] for call in model.permutation_pipeline.call_args_list]
                 self.assertEqual(ranges[0], (200 - window, 200))
                 self.assertEqual(ranges[-1][0], 0)
                 self.assertEqual(len(ranges), count)
-                self.assertEqual(
-                    set().union(*(set(range(*r)) for r in ranges)), set(range(200))
-                )
+                self.assertEqual(set().union(*(set(range(*r)) for r in ranges)), set(range(200)))
 
     def test_short_requests_process_one_window_without_redundant_passes(self):
         for model_type in (SafeGenai, SafeOpenai):
@@ -175,14 +163,11 @@ class DemoRerankDepthTest(unittest.TestCase):
                 with self.subTest(model=model_type.__name__, size=size, start=start):
                     model = object.__new__(model_type)
                     model._batch_size, model._window_size, model._stride = 32, 20, 10
-                    model.permutation_pipeline = Mock(
-                        side_effect=lambda result, *a, **kw: result
-                    )
+                    model.permutation_pipeline = Mock(side_effect=lambda result, *a, **kw: result)
                     request = Request(
                         query=Query(text="query", qid="1"),
                         candidates=[
-                            Candidate(docid=str(i), score=1.0, doc={})
-                            for i in range(size)
+                            Candidate(docid=str(i), score=1.0, doc={}) for i in range(size)
                         ],
                     )
                     model.rerank_batch(
@@ -192,10 +177,7 @@ class DemoRerankDepthTest(unittest.TestCase):
                         top_k_retrieve=depth,
                     )
                     self.assertEqual(
-                        [
-                            call.args[1:3]
-                            for call in model.permutation_pipeline.call_args_list
-                        ],
+                        [call.args[1:3] for call in model.permutation_pipeline.call_args_list],
                         expected,
                     )
 
@@ -218,8 +200,7 @@ class DemoRerankDepthTest(unittest.TestCase):
             request = Request(
                 query=Query(text="query", qid="1"),
                 candidates=[
-                    Candidate(docid=str(i), score=float(size - i), doc={})
-                    for i in range(size)
+                    Candidate(docid=str(i), score=float(size - i), doc={}) for i in range(size)
                 ],
             )
             original = copy.deepcopy(request)
@@ -256,18 +237,11 @@ class DemoRerankDepthTest(unittest.TestCase):
                 for call in sample.call_args_list + [evaluate.call_args]:
                     result = call.args[0][0]
                     self.assertEqual([c.docid for c in result.candidates], expected_ids)
-                    self.assertEqual(
-                        [c.score for c in result.candidates], expected_scores
-                    )
+                    self.assertEqual([c.score for c in result.candidates], expected_scores)
                 folder = Path(output) / "test" / "dl19"
                 record = json.loads((folder / "rerank.jsonl").read_text())
-                self.assertEqual(
-                    [c["docid"] for c in record["candidates"]], expected_ids
-                )
-                rows = [
-                    row.split()
-                    for row in (folder / "rerank.txt").read_text().splitlines()
-                ]
+                self.assertEqual([c["docid"] for c in record["candidates"]], expected_ids)
+                rows = [row.split() for row in (folder / "rerank.txt").read_text().splitlines()]
                 self.assertEqual([row[2] for row in rows], expected_ids)
                 ordered_rows = sorted(rows, key=lambda row: float(row[4]), reverse=True)
                 self.assertEqual([row[2] for row in ordered_rows], expected_ids)

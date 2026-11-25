@@ -205,9 +205,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         multiturn_listwise_inference_handler_2 = MultiTurnListwiseInferenceHandler(
             VALID_MULTITURN_TEMPLATE_2
         )
-        self.assertEqual(
-            singleturn_listwise_inference_handler.template, VALID_SINGLETURN_TEMPLATE
-        )
+        self.assertEqual(singleturn_listwise_inference_handler.template, VALID_SINGLETURN_TEMPLATE)
         self.assertEqual(
             multiturn_listwise_inference_handler_1.template, VALID_MULTITURN_TEMPLATE_1
         )
@@ -235,18 +233,12 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         (
             singleturn_prefix_text,
             _,
-        ) = singleturn_listwise_inference_handler._generate_prefix_suffix(
-            1, "test query"
-        )
+        ) = singleturn_listwise_inference_handler._generate_prefix_suffix(1, "test query")
         (
             multiturn_prefix_text,
             _,
-        ) = multiturn_listwise_inference_handler._generate_prefix_suffix(
-            1, "test query"
-        )
-        expected_prefix_singleturn = (
-            "Sample prefix: Rank these 1 passages for query: test query"
-        )
+        ) = multiturn_listwise_inference_handler._generate_prefix_suffix(1, "test query")
+        expected_prefix_singleturn = "Sample prefix: Rank these 1 passages for query: test query"
         expected_prefix_multiturn = [
             {
                 "role": "user",
@@ -269,21 +261,15 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         (
             _,
             singleturn_suffix_text,
-        ) = singleturn_listwise_inference_handler._generate_prefix_suffix(
-            1, "test query"
-        )
+        ) = singleturn_listwise_inference_handler._generate_prefix_suffix(1, "test query")
         _, lrl_suffix_text = lrl_inference_handler._generate_prefix_suffix(
             1, "test query", rank_start=0, rank_end=2
         )
         (
             _,
             multiturn_suffix_text,
-        ) = multiturn_listwise_inference_handler._generate_prefix_suffix(
-            1, "test query"
-        )
-        expected_suffix = (
-            "Sample suffix: Rank the provided 1 passages based on query: test query"
-        )
+        ) = multiturn_listwise_inference_handler._generate_prefix_suffix(1, "test query")
+        expected_suffix = "Sample suffix: Rank the provided 1 passages based on query: test query"
         expected_lrl_suffix = "Sample suffix: [PASSAGE1, PASSAGE2]"
 
         self.assertEqual(singleturn_suffix_text, expected_suffix)
@@ -291,9 +277,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(multiturn_suffix_text, expected_suffix)
 
     def test_body_generation_singleturn(self):
-        listwise_inference_handler = SingleTurnListwiseInferenceHandler(
-            VALID_SINGLETURN_TEMPLATE
-        )
+        listwise_inference_handler = SingleTurnListwiseInferenceHandler(VALID_SINGLETURN_TEMPLATE)
         body_text_num = listwise_inference_handler._generate_body(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
@@ -306,9 +290,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(body_text_alpha, expected_body_alpha)
 
     def test_body_generation_multiturn(self):
-        listwise_inference_handler = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE_1
-        )
+        listwise_inference_handler = MultiTurnListwiseInferenceHandler(VALID_MULTITURN_TEMPLATE_1)
         body_text_singleturn = listwise_inference_handler._generate_body(
             r,
             rank_start=0,
@@ -336,9 +318,7 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(body_text_multiturn, expected_body_multiturn)
 
     def test_generate_prompt_singleturn(self):
-        listwise_inference_handler = SingleTurnListwiseInferenceHandler(
-            VALID_SINGLETURN_TEMPLATE
-        )
+        listwise_inference_handler = SingleTurnListwiseInferenceHandler(VALID_SINGLETURN_TEMPLATE)
         num_prompt = listwise_inference_handler.generate_prompt(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
@@ -363,12 +343,8 @@ class TestListwiseInferenceHandler(unittest.TestCase):
         self.assertEqual(alpha_prompt, expected_prompt_alpha)
 
     def test_generate_prompt_multiturn(self):
-        listwise_inference_handler_1 = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE_1
-        )
-        listwise_inference_handler_2 = MultiTurnListwiseInferenceHandler(
-            VALID_MULTITURN_TEMPLATE_2
-        )
+        listwise_inference_handler_1 = MultiTurnListwiseInferenceHandler(VALID_MULTITURN_TEMPLATE_1)
+        listwise_inference_handler_2 = MultiTurnListwiseInferenceHandler(VALID_MULTITURN_TEMPLATE_2)
         prompt_1 = listwise_inference_handler_1.generate_prompt(
             r, rank_start=0, rank_end=2, max_length=6000, use_alpha=False
         )
@@ -425,9 +401,7 @@ class TestRankFIDInferenceHandler(unittest.TestCase):
         self.assertEqual(query, expected_query)
 
     def test_text_generation(self):
-        rankfid_listwise_inference_handler = RankFIDInferenceHandler(
-            VALID_RANKFID_TEMPLATE
-        )
+        rankfid_listwise_inference_handler = RankFIDInferenceHandler(VALID_RANKFID_TEMPLATE)
         prompts = rankfid_listwise_inference_handler.generate_prompt(
             result=r, rank_start=0, rank_end=2, max_tokens=6000
         )

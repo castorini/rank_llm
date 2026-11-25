@@ -65,12 +65,8 @@ class ResponseAnalyzer:
         """
         num_passages = []
         responses = []
-        output_validation_regex = (
-            self._data[0].invocations_history[0].output_validation_regex
-        )
-        output_extraction_regex = (
-            self._data[0].invocations_history[0].output_extraction_regex
-        )
+        output_validation_regex = self._data[0].invocations_history[0].output_validation_regex
+        output_extraction_regex = self._data[0].invocations_history[0].output_extraction_regex
         for result in self._data:
             for inference_invocation in result.invocations_history:
                 responses.append(inference_invocation.response)
@@ -91,12 +87,12 @@ class ResponseAnalyzer:
         responses = []
         with open(self._data[0]) as f:
             invocations_histories = json.load(f)
-            output_validation_regex = invocations_histories[0]["invocations_history"][
-                0
-            ]["output_validation_regex"]
-            output_extraction_regex = invocations_histories[0]["invocations_history"][
-                0
-            ]["output_extraction_regex"]
+            output_validation_regex = invocations_histories[0]["invocations_history"][0][
+                "output_validation_regex"
+            ]
+            output_extraction_regex = invocations_histories[0]["invocations_history"][0][
+                "output_extraction_regex"
+            ]
         for result in self._data:
             with open(result) as f:
                 invocations_histories = json.load(f)
@@ -121,9 +117,7 @@ class ResponseAnalyzer:
         elif all(isinstance(item, Result) for item in self._data):
             return self.read_results_responses()
         else:
-            raise ValueError(
-                "Input data must be a list of file paths or a list of Result objects."
-            )
+            raise ValueError("Input data must be a list of file paths or a list of Result objects.")
 
     def _validate_format(self, response: str, output_validation_regex: str) -> bool:
         output_validation_regex = ast.literal_eval(output_validation_regex)
@@ -278,32 +272,24 @@ class ResponseAnalyzer:
 
 def main(args):
     if args.files:
-        response_analyzer = ResponseAnalyzer.from_stored_files(
-            args.files, use_alpha=args.use_alpha
-        )
+        response_analyzer = ResponseAnalyzer.from_stored_files(args.files, use_alpha=args.use_alpha)
     else:
         print("Error: Please specify the files containing ranking summaries.")
         sys.exit(1)
 
-    error_counts = response_analyzer.count_errors(
-        verbose=args.verbose, normalize=args.normalize
-    )
+    error_counts = response_analyzer.count_errors(verbose=args.verbose, normalize=args.normalize)
     print("Normalized scores:", error_counts)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--files", nargs="+", help="Filenames of ranking summaries", required=False
-    )
+    parser.add_argument("--files", nargs="+", help="Filenames of ranking summaries", required=False)
     parser.add_argument(
         "--use-alpha",
         action="store_true",
         help="Use alphabetical identifiers instead of the numerical ids",
     )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Verbose output of errors"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Verbose output of errors")
     parser.add_argument(
         "--normalize",
         action="store_true",

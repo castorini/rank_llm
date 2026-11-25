@@ -63,9 +63,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             ),
             "body": TemplateSectionConfig(
                 required=not is_reranker,
-                required_placeholders=(
-                    set() if is_reranker else {"query", "doc_content"}
-                ),
+                required_placeholders=(set() if is_reranker else {"query", "doc_content"}),
                 allowed_placeholders=(
                     {"instruction", "query", "doc_content"} if is_reranker else set()
                 ),
@@ -149,15 +147,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         max_passage_words: int | None = None,
     ) -> str:
         query = self._replace_number(result.query.text)
-        word_limit = (
-            max_passage_words if max_passage_words is not None else max_doc_tokens
-        )
+        word_limit = max_passage_words if max_passage_words is not None else max_doc_tokens
         doc_raw = self._convert_doc_to_prompt_content(
             result.candidates[index].doc, max_length=word_limit
         )
-        doc_tokens = tokenizer.encode(
-            doc_raw, truncation=True, max_length=max_doc_tokens
-        )
+        doc_tokens = tokenizer.encode(doc_raw, truncation=True, max_length=max_doc_tokens)
         doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         fmt_values = {"query": query, "doc_content": doc}
@@ -190,9 +184,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         )
         return prompt.replace("<unk>", "")
 
-    def generate_chat_messages(
-        self, result: Result, **kwargs: Any
-    ) -> list[dict[str, str]]:
+    def generate_chat_messages(self, result: Result, **kwargs: Any) -> list[dict[str, str]]:
         """Build chat messages for pointwise VLLM backends.
 
         When ``message_roles`` is ``"reranker"`` in the template, emits separate
@@ -211,15 +203,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             raise ValueError(f"Missing required parameter: {err}") from err
 
         query = self._replace_number(result.query.text)
-        word_limit = (
-            max_passage_words if max_passage_words is not None else max_doc_tokens
-        )
+        word_limit = max_passage_words if max_passage_words is not None else max_doc_tokens
         doc_raw = self._convert_doc_to_prompt_content(
             result.candidates[index].doc, max_length=word_limit
         )
-        doc_tokens = tokenizer.encode(
-            doc_raw, truncation=True, max_length=max_doc_tokens
-        )
+        doc_tokens = tokenizer.encode(doc_raw, truncation=True, max_length=max_doc_tokens)
         doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         if self.template.get("message_roles") == "reranker":

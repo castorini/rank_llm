@@ -14,9 +14,7 @@ START_IDX = ord("A")
 IGNORE_INDEX = -100
 
 
-def _tokenize_fn(
-    strings: Sequence[str], tokenizer: transformers.PreTrainedTokenizer
-) -> dict:
+def _tokenize_fn(strings: Sequence[str], tokenizer: transformers.PreTrainedTokenizer) -> dict:
     """Tokenize a list of strings."""
     tokenized_list = [
         tokenizer(
@@ -29,8 +27,7 @@ def _tokenize_fn(
     ]
     input_ids = labels = [tokenized.input_ids[0] for tokenized in tokenized_list]
     input_ids_lens = labels_lens = [
-        tokenized.input_ids.ne(tokenizer.pad_token_id).sum().item()
-        for tokenized in tokenized_list
+        tokenized.input_ids.ne(tokenizer.pad_token_id).sum().item() for tokenized in tokenized_list
     ]
     return dict(
         input_ids=input_ids,
@@ -52,9 +49,7 @@ def preprocess(
     ]
     input_ids = examples_tokenized["input_ids"]
     labels = copy.deepcopy(input_ids)
-    for label, source_len in zip(
-        labels, sources_tokenized["input_ids_lens"], strict=True
-    ):
+    for label, source_len in zip(labels, sources_tokenized["input_ids_lens"], strict=True):
         label[:source_len] = IGNORE_INDEX
     return input_ids, labels, sources_tokenized["input_ids_lens"]
 
@@ -101,9 +96,7 @@ class RankingDataset(Dataset):
                     label_map[token] = label_rank
                     label_rank += 1
 
-            label = [
-                label_map[chr(c)] for c in range(START_IDX, START_IDX + len(label_map))
-            ]
+            label = [label_map[chr(c)] for c in range(START_IDX, START_IDX + len(label_map))]
 
         elif self.type == "eval":
             label = (
@@ -112,9 +105,7 @@ class RankingDataset(Dataset):
                 + self.raw_data[index]["scores"]
             )
         else:
-            raise Exception(
-                "Invalid run type specified for Dataset. Choose from ['train', 'eval']"
-            )
+            raise Exception("Invalid run type specified for Dataset. Choose from ['train', 'eval']")
         return prompt, label
 
     def __len__(self):
@@ -156,9 +147,7 @@ class GenerationDataset(Dataset):
                     label_map[token] = label_rank
                     label_rank += 1
 
-            rank_label = [
-                label_map[chr(c)] for c in range(START_IDX, START_IDX + len(label_map))
-            ]
+            rank_label = [label_map[chr(c)] for c in range(START_IDX, START_IDX + len(label_map))]
             return prompt, label, rank_label
         else:
             return prompt, label
@@ -170,9 +159,7 @@ class GenerationDataset(Dataset):
 def ranking_collate_fn(data, tokenizer):
     """Collate function for ranking datasets."""
     prompts, labels = list(zip(*data, strict=True))
-    tokenized_inputs = tokenizer(
-        prompts, padding="longest", truncation=False, return_tensors="pt"
-    )
+    tokenized_inputs = tokenizer(prompts, padding="longest", truncation=False, return_tensors="pt")
     return tokenized_inputs, labels
 
 
@@ -183,9 +170,7 @@ def generation_collate_fn(data, tokenizer):
     tokenized_inputs = torch.nn.utils.rnn.pad_sequence(
         tokenized_inputs, batch_first=True, padding_value=tokenizer.pad_token_id
     )
-    labels = torch.nn.utils.rnn.pad_sequence(
-        labels, batch_first=True, padding_value=IGNORE_INDEX
-    )
+    labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX)
     return tokenized_inputs, labels
 
 
@@ -196,9 +181,7 @@ def combined_collate_fn(data, tokenizer):
     tokenized_inputs = torch.nn.utils.rnn.pad_sequence(
         tokenized_inputs, batch_first=True, padding_value=tokenizer.pad_token_id
     )
-    labels = torch.nn.utils.rnn.pad_sequence(
-        labels, batch_first=True, padding_value=IGNORE_INDEX
-    )
+    labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX)
     return tokenized_inputs, labels, rank_labels, source_lens
 
 

@@ -22,9 +22,7 @@ class TestOptionalDependencies(unittest.TestCase):
     def test_listwise_lazy_imports_safe_openai(self):
         module = SimpleNamespace(SafeOpenai="fake-safe-openai")
 
-        with patch(
-            "rank_llm.rerank.listwise.import_module", return_value=module
-        ) as importer:
+        with patch("rank_llm.rerank.listwise.import_module", return_value=module) as importer:
             value = listwise.__getattr__("SafeOpenai")
 
         self.assertEqual(value, "fake-safe-openai")

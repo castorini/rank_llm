@@ -41,9 +41,7 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
         mock_response.choices = [mock_choice]
         mock_response.usage.model_dump.return_value = {"prompt_tokens": 10}
 
-        self.mock_async_client.chat.completions.create = AsyncMock(
-            return_value=mock_response
-        )
+        self.mock_async_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         messages = [{"role": "user", "content": "hello"}]
         text, reasoning, usage = asyncio.run(
@@ -63,9 +61,7 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
         )
 
         messages = [{"role": "user", "content": "hello"}]
-        text, reasoning, usage = asyncio.run(
-            self.handler.chat_completion_async(messages)
-        )
+        text, reasoning, usage = asyncio.run(self.handler.chat_completion_async(messages))
 
         self.assertEqual(text, "API Error")
         self.assertEqual(reasoning, "")
@@ -94,9 +90,7 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
         ]
 
         async def run():
-            return await asyncio.gather(
-                *[self.handler.chat_completion_async(p) for p in prompts]
-            )
+            return await asyncio.gather(*[self.handler.chat_completion_async(p) for p in prompts])
 
         results = asyncio.run(run())
 
@@ -127,9 +121,7 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
         ]
 
         async def run():
-            return await asyncio.gather(
-                *[self.handler.chat_completion_async(p) for p in prompts]
-            )
+            return await asyncio.gather(*[self.handler.chat_completion_async(p) for p in prompts])
 
         results = asyncio.run(run())
 
@@ -177,9 +169,7 @@ class TestVllmHandlerWithOpenAISDK(unittest.TestCase):
             "prompt_tokens": 3,
             "completion_tokens": 1,
         }
-        self.mock_async_client.chat.completions.create = AsyncMock(
-            return_value=mock_resp
-        )
+        self.mock_async_client.chat.completions.create = AsyncMock(return_value=mock_resp)
 
         async def run():
             return await self.handler.chat_completion_score_async(

@@ -62,8 +62,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
         prompt_mode_warnings = [
             w
             for w in caught
-            if issubclass(w.category, DeprecationWarning)
-            and "prompt_mode" in str(w.message)
+            if issubclass(w.category, DeprecationWarning) and "prompt_mode" in str(w.message)
         ]
         self.assertEqual(len(prompt_mode_warnings), 1)
         # The deprecated flag is still accepted but never forwarded to the CLI.
@@ -94,8 +93,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
         prompt_mode_warnings = [
             w
             for w in caught
-            if issubclass(w.category, DeprecationWarning)
-            and "prompt_mode" in str(w.message)
+            if issubclass(w.category, DeprecationWarning) and "prompt_mode" in str(w.message)
         ]
         self.assertEqual(len(prompt_mode_warnings), 1)
 
@@ -189,9 +187,7 @@ class TestCLILegacyWrappers(unittest.TestCase):
         )
 
     def test_mcp_legacy_entrypoint_delegates_to_serve_mcp(self):
-        with patch(
-            "rank_llm.server.mcp.mcp_rankllm.cli_main", return_value=0
-        ) as mocked:
+        with patch("rank_llm.server.mcp.mcp_rankllm.cli_main", return_value=0) as mocked:
             exit_code = mcp_rankllm.main(["--transport", "http", "--port", "9000"])
 
         self.assertEqual(exit_code, 0)

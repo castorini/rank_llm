@@ -167,10 +167,7 @@ def main() -> None:
     parser.add_argument(
         "--requests-file",
         default=None,
-        help=(
-            "Optional JSON/JSONL requests file for a single dataset. "
-            "When set, skips retrieval."
-        ),
+        help=("Optional JSON/JSONL requests file for a single dataset. When set, skips retrieval."),
     )
     parser.add_argument(
         "--k",
@@ -238,12 +235,8 @@ def main() -> None:
                 writer = DataWriter(rerank_results)
                 output_path_prefix = Path(args.output_dir) / dataset / key
                 output_path_prefix.mkdir(parents=True, exist_ok=True)
-                writer.write_in_jsonl_format(
-                    str(output_path_prefix / "rerank_results.jsonl")
-                )
-                writer.write_in_trec_eval_format(
-                    str(output_path_prefix / "rerank_results.txt")
-                )
+                writer.write_in_jsonl_format(str(output_path_prefix / "rerank_results.jsonl"))
+                writer.write_in_trec_eval_format(str(output_path_prefix / "rerank_results.txt"))
                 if not args.no_history:
                     writer.write_inference_invocations_history(
                         str(output_path_prefix / "inference_invocations_history.json")
@@ -275,12 +268,7 @@ def main() -> None:
     for model in analysis_rerankers:
         use_alpha = model == "mistral"
         paths = [
-            str(
-                Path(args.output_dir)
-                / dataset
-                / model
-                / "inference_invocations_history.json"
-            )
+            str(Path(args.output_dir) / dataset / model / "inference_invocations_history.json")
             for dataset in datasets
         ]
         try:

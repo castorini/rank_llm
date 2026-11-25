@@ -18,9 +18,7 @@ class TestInvocationHistory(unittest.TestCase):
             "output_validation_regex": r'r"^\[\d+\]( > \[\d+\])*$"',
             "output_extraction_regex": r'r"\[(\d+)\]"',
         }
-        self.reranker.receive_permutation = MagicMock(
-            side_effect=lambda result, *_: result
-        )
+        self.reranker.receive_permutation = MagicMock(side_effect=lambda result, *_: result)
         self.result = Result(query=Query(text="query", qid="q1"))
 
     def assert_legacy_history(self):
@@ -53,9 +51,7 @@ class TestInvocationHistory(unittest.TestCase):
     def test_default_history_is_independent_empty_list_and_serializable(self):
         another_result = Result(query=Query(text="another", qid="q2"))
         self.assertEqual(self.result.invocations_history, [])
-        self.assertIsNot(
-            self.result.invocations_history, another_result.invocations_history
-        )
+        self.assertIsNot(self.result.invocations_history, another_result.invocations_history)
 
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "history.json"
