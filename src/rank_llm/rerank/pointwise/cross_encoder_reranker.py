@@ -50,10 +50,7 @@ class CrossEncoderReranker(PointwiseRankLLM):
                     str(TEMPLATES / "cross_encoder_template.yaml")
                 ).resolve()
                 target_resolved = Path(str(prompt_template_path)).resolve()
-                if (
-                    default_resolved == target_resolved
-                    or target_resolved.name == "cross_encoder_template.yaml"
-                ):
+                if default_resolved == target_resolved:
                     is_default = True
             except Exception:
                 pass

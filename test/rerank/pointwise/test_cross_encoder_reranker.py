@@ -190,6 +190,25 @@ class TestCrossEncoderReranker(unittest.TestCase):
                 device="cpu",
             )
 
+    def test_custom_template_same_basename_rejected(self, mock_tok, mock_model):
+        import tempfile
+        from pathlib import Path
+
+        mock_tok.from_pretrained.return_value = MagicMock()
+        mock_model_inst = MagicMock()
+        mock_model_inst.to.return_value = mock_model_inst
+        mock_model.from_pretrained.return_value = mock_model_inst
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fake_template = Path(tmpdir) / "cross_encoder_template.yaml"
+            fake_template.write_text("method: pointwise\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                CrossEncoderReranker(
+                    model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+                    prompt_template_path=str(fake_template),
+                    device="cpu",
+                )
+
     def test_single_logit_shape(self, mock_tok, mock_model):
         mock_tokenizer_inst = MagicMock()
         mock_tokenizer_inst.return_value = {
