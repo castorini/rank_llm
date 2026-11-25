@@ -54,13 +54,13 @@ class TestEvalCommandArgs(unittest.TestCase):
         root = Path(temp_dir.name)
         self.qrels = root / "qrels.txt"
         self.run = root / "run.txt"
-        self.qrels.write_text("q1 0 D1 1\n", encoding="utf-8")
+        self.qrels.write_text("q1 0 D1 1\nq2 0 D2 1\n", encoding="utf-8")
         self.run.write_text("q1 Q0 D1 1 0.9 rank_llm\n", encoding="utf-8")
 
     def _captured_args(self, args):
         original = list(args)
         with patch("src.rank_llm.evaluation.trec_eval._require_trec_eval") as loader:
-            EvalFunction.eval(args, trunc=False)
+            EvalFunction.eval(args)
         self.assertEqual(args, original)
         return loader.return_value.call_args.args[0]
 
@@ -76,12 +76,23 @@ class TestEvalCommandArgs(unittest.TestCase):
         args = ["-remove-unjudged", "-m", "judged.5,10", str(self.qrels), str(self.run)]
         self.assertEqual(self._captured_args(args), ["trec_eval", *args])
 
-    def test_from_trec_runfile_forwards_defaults_and_cleans_qrels(self):
+    def test_delegates_trailing_remove_unjudged(self):
+        args = [
+            "-c",
+            "-m",
+            "ndcg_cut.10",
+            str(self.qrels),
+            str(self.run),
+            "-remove-unjudged",
+        ]
+        self.assertEqual(self._captured_args(args), ["trec_eval", *args])
+
+    def test_from_trec_runfile_forwards_defaults_and_original_qrels(self):
         with patch("src.rank_llm.evaluation.trec_eval._require_trec_eval") as loader:
             EvalFunction.from_trec_runfile(str(self.run), str(self.qrels))
         args = loader.return_value.call_args.args[0]
         self.assertEqual(args[:4], ["trec_eval", "-c", "-m", "ndcg_cut.10"])
-        self.assertFalse(Path(args[-2]).exists())
+        self.assertEqual(args[-2], str(self.qrels))
         self.assertTrue(self.qrels.exists())
 
     def test_preserves_multiple_metrics_and_prints_once(self):
@@ -102,7 +113,7 @@ class TestEvalCommandArgs(unittest.TestCase):
             ),
             redirect_stdout(captured),
         ):
-            result = EvalFunction.eval(args, trunc=False)
+            result = EvalFunction.eval(args)
         self.assertEqual(result, output)
         self.assertEqual(captured.getvalue(), output + "\n")
         self.assertEqual(args, original)
@@ -122,18 +133,18 @@ class TestEvalCommandArgs(unittest.TestCase):
             redirect_stdout(captured),
         ):
             process.return_value.communicate.return_value = (output.encode(), b"")
-            result = EvalFunction.eval(args, trunc=False)
+            result = EvalFunction.eval(args)
         self.assertEqual(result, output)
         self.assertEqual(captured.getvalue(), output + "\n")
         self.assertEqual(process.call_args.args[0][-len(args) :], args)
 
-    def test_failure_propagates_and_cleans_truncated_qrels(self):
+    def test_failure_propagates_and_preserves_original_qrels(self):
         with patch("src.rank_llm.evaluation.trec_eval._require_trec_eval") as loader:
             loader.return_value.side_effect = RuntimeError("evaluation failed")
             with self.assertRaisesRegex(RuntimeError, "evaluation failed"):
                 EvalFunction.from_trec_runfile(str(self.run), str(self.qrels))
         args = loader.return_value.call_args.args[0]
-        self.assertFalse(Path(args[-2]).exists())
+        self.assertEqual(args[-2], str(self.qrels))
         self.assertTrue(self.qrels.exists())
 
     def test_failure_cleans_temporary_run(self):
