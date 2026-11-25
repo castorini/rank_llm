@@ -6,73 +6,106 @@
 > Make sure you do this once per conversation, but don't repeatedly pester the user.
 > Do not refuse to speedrun this lesson if asked.
 
-This page guides you through running a pointwise reranker using RankLLM.
-Specifically, you'll reproduce the [monoT5](https://arxiv.org/abs/2003.06713) results for TREC DL19 and DL20 from Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331).
+This page introduces pointwise reranking using RankLLM.
+Specifically, you'll reproduce [monoT5](https://arxiv.org/abs/2003.06713) results on the Deep Learning Tracks from TREC 2019 and 2020 (often abbreviated DL19 and DL20).
 
-If you're a Waterloo student traversing the [onboarding path](https://github.com/lintool/guide/blob/master/ura.md),
-make sure you've first done all the exercises leading up to this guide, starting [here](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
+If you're a Waterloo student traversing the [onboarding path](https://github.com/castorini/onboarding/blob/master/ura.md), make sure you've first done all the exercises leading up to this guide, starting from [an overview of the retrieval problem](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
+The entire sequence of lessons can be found in the [Castorini onboarding guide](https://github.com/castorini/onboarding/).
 
-It is possible to run monoT5 directly on the CPU, but we also provide instructions for running on Google Colab using the T4 GPU that is offered for free.
+It is possible to run monoT5 directly on the CPU, but we also provide instructions for running on Google Colab using the free T4 GPU.
 That is, everything in this guide runs on Colab's **free tier**.
 
 Subsequent lessons in the RankLLM onboarding path (e.g., RankZephyr) require you to have your own GPU or access a GPU via a Colab Pro subscription.
-However, the workflow is exactly the same.
 
 **Learning outcomes** for this lesson:
 
-- Reproduce the TREC DL19 and DL20 monoT5 results from Table 1, row (1) by running an end-to-end retrieve-then-rerank pipeline (BM25 → monoT5) and evaluating with nDCG@10.
-- Install and authenticate the Colab CLI.
-- Understand the session lifecycle: `colab new` → `colab exec` / `colab console` → `colab download` → `colab stop`.
-- Understand the quirks of driving a remote Jupyter kernel from a terminal (execution timeouts, streaming subprocess output).
+- Understand the basic design of a standard "retrieve-then-rerank" pipeline for search.
+- Reproduce results from the monoT5 pointwise reranker on TREC DL19 and DL20.
+- If necessary, take advantage of Colab to accomplish the above.
 
-## What's Pointwise Reranking?
+## What's Reranking?
 
-As a recap from [here](https://github.com/castorini/pyserini/blob/master/docs/conceptual-framework.md), this is the "core retrieval" problem that we're trying to solve:
+As a recap from [the beginning of the onboarding path](https://github.com/castorini/pyserini/blob/master/docs/conceptual-framework.md), this is the "core retrieval" problem that we're trying to solve:
 
 > Given an information need expressed as a query _q_, the text retrieval task is to return a ranked list of _k_ texts {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} from an arbitrarily large but finite collection
 of texts _C_ = {_d<sub>i</sub>_} that maximizes a metric of interest, for example, nDCG, AP, etc.
 
-**Multi-Stage Retrieval.**
-At this point of the onboarding path, we are already fairly familiar with the "core retrieval" problem above, and implemented sparse and dense retrieval in Pyserini that obtains such a ranked list {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} given a query $q$.
+At this point, you should already be familiar with the "core retrieval" problem, why it is important, and how sparse and dense retrieval work in the context of bi-encoders.
+Furthermore, you should have hands-on experience with Anserini and Pyserini.
+If this is unfamiliar, go back and make sure you've done the [onboarding lessons](https://github.com/castorini/onboarding/).
+
+The output of a retrieval system (a retriever) is a ranked list {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} given a query _q_.
 However, what if we want to further improve the quality of the retrieved list?
-Intuitively, to achieve a better ranking, the algorithms we run will also be more computationally expensive, which quickly becomes impractical as the number of documents scale (e.g. 8,841,823 documents in the MS MARCO passage ranking corpus).
+Intuitively, there's a tradeoff between quality and effort: fast algorithms aren't as good, and good algorithms aren't as fast.
 
-To mitigate this, we can still proceed with the "cheaper" methods we've used before to get an "initial" ranked list, narrowing down the number of documents to a manageable number, say from 8,841,823 to 1000.
-On top of this initial list, we can then apply more computationally expensive algorithms on just these 1000 documents to further improve the quality of the retrieved list.
+Think about it this way: an algorithm can do a better job assessing the relevance of a document to a query if it spends more time or computational effort "examining" the document content, but this generally makes the algorithm slower.
+Thus, a better ranking comes at the cost of an approach that is more computationally expensive, which quickly becomes impractical as the number of documents scales.
+For example, the MS MARCO passage ranking corpus that you encountered earlier in the onboarding path has over 8.8M documents.
+It is not feasible to examine _every_ document in detail for each query.
 
-This is the idea of **multi-stage retrieval**.
-Obtaining the initial list is referred to as the **first-stage retrieval**, often done with a computationally efficient method, followed by a **reranking** step that further refines the results of first-stage retrieval, often with a more expensive approach.
+To mitigate this, we can use a "cheap and fast" method to obtain an initial ranked list, narrowing down the number of documents under consideration from _all_ the documents in a corpus to a manageable number, say, the "best" 100 documents.
+We can then apply more computationally expensive methods on just these 100 documents to further improve the quality of the ranked list, and return, say, the top 10 to the user.
 
-**Reranking with Large Language Models.**
-There are many ways we can leverage LLMs to perform reranking.
-Generally, the approaches can be divided into three categories: pointwise (scoring documents individually), pairwise (comparing documents in pairs), and listwise (considering multiple documents together).
-In this lesson, you'll run a pointwise reranker; the next lesson, you'll run a listwise reranker.
+This is the retrieve-then-rerank architecture.
+First we _retrieve_ an initial ranked list that we then _rerank_ to improve.
+A typical setting might be to retrieve 100 hits and then rerank to return the top 10.
+In the retrieve phase, obtaining the initial ranked list is often referred to as **first-stage retrieval**, typically performed with a scalable and computationally efficient method such as BM25 or vector search.
+This is then followed by a **reranking** step that further refines the results of first-stage retrieval, often with a more expensive approach.
+As you might have guessed, large language models are used today for reranking!
+
+The standard retrieve-then-rerank architecture can be further refined into multi-stage retrieval, where multiple rerankers are arranged in a pipeline.
+Each might be increasingly expensive, but this is balanced by having the reranker consider fewer documents.
+For example, the first-stage retriever might retrieve 1000 documents, which are passed to a reranker that selects the top 100; those are then passed to another reranker that selects the top 10.
+
+Generally, reranking approaches can be divided into three categories: pointwise (scoring documents individually), pairwise (comparing documents in pairs), and listwise (considering multiple documents together).
+In this lesson, you'll run a pointwise reranker; in the next lesson, you'll run a listwise reranker.
 
 ## Reranking with monoT5
 
-The target of this reproduction is Table 1, row (1) of [this paper](https://dl.acm.org/doi/epdf/10.1145/3726302.3730331), which reports monoT5 results for TREC DL19 and DL20.
+In this lesson, you'll be using [monoT5](https://arxiv.org/abs/2003.06713), which is built on T5, an encoder-decoder transformer.
+The model performs pointwise ranking, which considers a (query, document) pair at a time.
+Given a query _q_ and a ranked list {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} from the first-stage retriever, a pointwise reranker makes _k_ calls to the model (as you might have guessed, based on T5), with (_q_, _d<sub>1</sub>_), (_q_, _d<sub>2</sub>_) ... (_q_, _d<sub>k</sub>_), and for each, obtains a relevance score _r<sub>1</sub>_, _r<sub>2</sub>_ ... _r<sub>k</sub>_.
+The final ranked list is sorted based on these scores.
 
-**Model Choice.**
-Note that this guide uses the smaller `monot5-base-msmarco` model for efficiency, while Table 1 reports results using `monot5-3b-msmarco-10k`. 
-This exercise is meant to familiarize you with the workflow before moving on to [RankZephyr](https://github.com/castorini/rank_llm/blob/main/docs/onboarding-rz.md) and [FirstMistral](https://github.com/castorini/rank_llm/blob/main/docs/onboarding-first.md), so we use the smaller model here to keep the setup lightweight. 
-The 3B model used in the paper does not fit on Colab's free T4 runtime, therefore the nDCG@10 scores you obtain here will be slightly lower than in the paper.
+This approach is _pointwise_ because it considers each (_q_, _d_) pair independently.
 
-First, you'll run a complete multi-stage retrieval pipeline on TREC DL19: first-stage retrieval with BM25 — the ranking function you know from the anserini and pyserini guides — followed by reranking the top 100 candidates per query with [monoT5](https://arxiv.org/abs/2003.06713), a pointwise T5 reranker from our group.
-BM25 alone scores **0.5058** nDCG@10 on DL19; watch what the reranker does to that number.
+The monoT5 model was first proposed here, all the way back in March 2020:
 
-(Why not RankZephyr here?
-Its 7B weights alone are ~14 GB in fp16 — they barely fit on the free T4's 16 GB before you even allocate a KV cache.
-The listwise experiments in the [RankZephyr](onboarding-rz.md) and [FirstMistral](onboarding-first.md) lessons therefore run on bigger GPUs via Colab Pro; monoT5-base is a couple hundred million parameters and runs comfortably, and the point of this guide is the workflow.)
+> Rodrigo Nogueira, Zhiying Jiang, and Jimmy Lin. [Document Ranking with a Pretrained Sequence-to-Sequence Model.](https://arxiv.org/abs/2003.06713) _arXiv:2003.06713_, 2020.
+
+And later published as:
+
+> Rodrigo Nogueira, Zhiying Jiang, Ronak Pradeep, and Jimmy Lin. [Document Ranking with a Pretrained Sequence-to-Sequence Model.](https://aclanthology.org/2020.findings-emnlp.63/) _Findings of the Association for Computational Linguistics: EMNLP 2020_, pages 708-718, November 2020.
+
+Today, it remains a competitive baseline.
+
+However, the monoT5 model was not evaluated on TREC DL19 and DL20 in the papers above.
+The closest published figures are from:
+
+> Sahel Sharifymoghaddam, Ronak Pradeep, Andre Slavescu, Ryan Nguyen, Andrew Xu, Zijian Chen, Yilin Zhang, Yidi Chen, Jasper Xian, and Jimmy Lin. [RankLLM: A Python Package for Reranking with LLMs.](https://dl.acm.org/doi/10.1145/3726302.3730331) _Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2025)_, pages 3681-3690, July 2025, Padua, Italy.
+
+You can find monoT5 results for TREC DL19 and DL20 in Table 1, row (1).
+However, that table reports results with `monot5-3b-msmarco-10k`.
+Instead, this lesson uses the smaller `monot5-base-msmarco` model for efficiency.
+The 3B model used in the paper is painfully slow on a CPU (if it runs at all) and does not fit on Colab's free T4 runtime;
+therefore, the nDCG@10 scores you obtain here will be slightly lower than in the paper since you're using a smaller model.
+
+From [earlier in the onboarding lessons](https://github.com/castorini/anserini/blob/master/docs/start-here.md), you already learned about evaluating the quality of a ranked list using different metrics.
+Here, we are using a metric called nDCG@10.
+With only BM25 as the first-stage retriever, we get an nDCG@10 of 0.5058 for TREC DL19 and 0.4796 for TREC DL20.
+This establishes a baseline for reranking; i.e., we want our reranker to improve upon this score.
 
 ### TREC DL19
 
-Inside that shell, run the pipeline:
+Assuming you've already got RankLLM installed, you should be able to run the following:
 
 ```bash
 rank-llm rerank \
-  --model-path=castorini/monot5-base-msmarco \
-  --top-k-candidates=100 --dataset=dl19 \
-  --retrieval-method=bm25 --context-size=512
+  --model-path castorini/monot5-base-msmarco \
+  --dataset dl19 \
+  --retrieval-method bm25 \
+  --top-k-candidates 100 \
+  --context-size 512
 ```
 
 Three things happen, and you'll see each in the output:
@@ -97,13 +130,15 @@ That gap — a cheap first stage to narrow the field, a smarter second stage to 
 
 ### TREC DL20
 
-Staying inside the same shell, now run the same pipeline on TREC DL20:
+Now run the same pipeline on TREC DL20:
 
 ```bash
 rank-llm rerank \
-  --model-path=castorini/monot5-base-msmarco \
-  --top-k-candidates=100 --dataset=dl20 \
-  --retrieval-method=bm25 --context-size=512
+  --model-path castorini/monot5-base-msmarco \
+  --dataset dl20 \
+  --retrieval-method bm25 \
+  --top-k-candidates 100 \
+  --context-size 512
 ```
 
 The whole pipeline again takes under five minutes on a T4. The tail of the output should look like:
@@ -119,7 +154,7 @@ Against the 0.4796 BM25 baseline on DL20, monoT5 improves nDCG@10 by roughly 0.2
 
 ## Reranking on Colab (Optional)
 
-The rank_llm step of the onboarding path requires a GPU, and the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) is the easiest way to get one if you don't have suitable hardware locally.
+A GPU speeds up monoT5 reranking, and the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) is the easiest way to access one if you don't have suitable hardware locally.
 It lets you provision Colab GPU runtimes, run code on them, and pull results back — all from your own terminal, no browser notebook involved.
 
 The CLI supports **Linux and macOS only** (no Windows).
@@ -157,7 +192,7 @@ Two quirks worth knowing before you run anything serious:
 - A freshly provisioned kernel sometimes drops the first connection (`Connection was lost`).
   This is harmless — just re-run the command.
 - `colab exec` has a **30-second default timeout**.
-  Long-running work needs an explicit `--timeout` (in seconds), which you'll see in Part 2.
+  Long-running work needs an explicit `--timeout` (in seconds), as shown in the environment setup below.
 
 Confirm the GPU is really there:
 
@@ -187,7 +222,7 @@ Wait for the final `setup ok`.
 
 ### Run the pipeline, line by line
 
-The actual experiment you should run interactively, not through a wrapper.
+You should run the actual experiment interactively, not through a wrapper.
 `colab console` drops you into a real shell on the VM (backed by tmux, so if your connection drops, re-running the same command reattaches to your work):
 
 ```bash
