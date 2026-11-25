@@ -75,14 +75,7 @@ class TestEvalCommandArgs(unittest.TestCase):
         self.assertEqual(self._captured_args(args), ["trec_eval", *args])
 
     def test_delegates_trailing_remove_unjudged(self):
-        args = [
-            "-c",
-            "-m",
-            "ndcg_cut.10",
-            str(self.qrels),
-            str(self.run),
-            "-remove-unjudged",
-        ]
+        args = ["-c", "-m", "ndcg_cut.10", str(self.qrels), str(self.run), "-remove-unjudged"]
         self.assertEqual(self._captured_args(args), ["trec_eval", *args])
 
     def test_from_trec_runfile_forwards_defaults_and_original_qrels(self):
@@ -105,10 +98,7 @@ class TestEvalCommandArgs(unittest.TestCase):
         original = list(args)
         captured = StringIO()
         with (
-            patch(
-                "src.rank_llm.evaluation.trec_eval._require_trec_eval",
-                return_value=evaluate,
-            ),
+            patch("src.rank_llm.evaluation.trec_eval._require_trec_eval", return_value=evaluate),
             redirect_stdout(captured),
         ):
             result = EvalFunction.eval(args)
@@ -123,10 +113,7 @@ class TestEvalCommandArgs(unittest.TestCase):
         args = ["-q", "-n", "-m", "ndcg_cut.10", str(self.qrels), str(self.run)]
         captured = StringIO()
         with (
-            patch(
-                "src.rank_llm.evaluation.trec_eval._require_trec_eval",
-                return_value=trec_eval,
-            ),
+            patch("src.rank_llm.evaluation.trec_eval._require_trec_eval", return_value=trec_eval),
             patch("pyserini.eval.trec_eval.subprocess.Popen") as process,
             redirect_stdout(captured),
         ):
@@ -146,9 +133,7 @@ class TestEvalCommandArgs(unittest.TestCase):
         self.assertTrue(self.qrels.exists())
 
     def test_failure_cleans_temporary_run(self):
-        with patch.object(
-            EvalFunction, "eval", side_effect=RuntimeError("failed")
-        ) as evaluate:
+        with patch.object(EvalFunction, "eval", side_effect=RuntimeError("failed")) as evaluate:
             with self.assertRaisesRegex(RuntimeError, "failed"):
                 EvalFunction.from_results([], str(self.qrels))
         self.assertFalse(Path(evaluate.call_args.args[0][-1]).exists())
