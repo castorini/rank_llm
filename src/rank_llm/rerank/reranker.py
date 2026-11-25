@@ -459,7 +459,7 @@ class Reranker:
             # using monot5
             from rank_llm.rerank.pointwise.monot5 import MonoT5
 
-            print(f"Loading {model_path} ...")
+            print(f"Loading {model_path}...")
 
             model_full_paths = {"monot5": "castorini/monot5-3b-msmarco-10k"}
 

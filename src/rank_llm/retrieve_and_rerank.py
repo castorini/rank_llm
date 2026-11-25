@@ -83,7 +83,8 @@ def retrieve_and_rerank(
     else:
         # Reranker is of type RankLLM
         for pass_ct in range(num_passes):
-            print(f"Pass {pass_ct + 1} of {num_passes}:")
+            if num_passes > 1:
+                print(f"Pass {pass_ct + 1} of {num_passes}:")
             rerank_results = reranker.rerank_batch(
                 requests,
                 rank_end=top_k_retrieve,
