@@ -309,7 +309,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         if self._use_logits:
             if not isinstance(prompt, str):
                 raise TypeError("FIRST logit reranking requires a rendered string prompt.")
-            logger.info("Async VLLM Logit Generating!")
+
             sampling_extra = {
                 **sanitize_sampling_kwargs(self._sampling_kwargs),
                 "temperature": 0.0,
@@ -356,7 +356,6 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 **direct_kw,
             )
 
-        logger.info("Async VLLM Generating!")
         (
             text,
             prompt_tokens,
