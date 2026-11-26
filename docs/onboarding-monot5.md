@@ -23,6 +23,10 @@ Subsequent lessons in the RankLLM onboarding path (e.g., RankZephyr) require you
 - Reproduce results from the monoT5 pointwise reranker on TREC DL19 and DL20.
 - If necessary, take advantage of Colab to accomplish the above.
 
+_Note_: As of late 2026, we are in the process of rewriting the onboarding guides for RankLLM.
+The lessons are still "doable", but may require a bit of debugging.
+Please bear with us as we proceed through this "renovation".
+
 ## What's Reranking?
 
 As a recap from [the beginning of the onboarding path](https://github.com/castorini/pyserini/blob/master/docs/conceptual-framework.md), this is the "core retrieval" problem that we're trying to solve:
@@ -116,6 +120,8 @@ Three things happen, and you'll see each in the output:
 Here, to minimize dependencies, RankLLM fetches cached results from a [Hugging Face dataset](https://huggingface.co/datasets/castorini/rank_llm_data).
 2. **Rerank** — the driver performs reranking with monoT5, as described above.
 3. **Evaluate** — the driver finally invokes `trec_eval` to compute nDCG using the DL19 relevance judgments.
+
+The actual prompt template used for each call is stored in [`monot5_template.yaml`](../src/rank_llm/rerank/prompt_templates/monot5_template.yaml).
 
 The tail of the output should look like:
 
