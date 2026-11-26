@@ -115,8 +115,7 @@ class SafeGenai(ListwiseRankLLM):
         content = message.get("content") or message.get("parts") or ""
         if isinstance(content, list):
             return "\n".join(
-                part.get("text", "") if isinstance(part, dict) else str(part)
-                for part in content
+                part.get("text", "") if isinstance(part, dict) else str(part) for part in content
             )
         return str(content)
 
@@ -145,9 +144,7 @@ class SafeGenai(ListwiseRankLLM):
     ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         results = []
         for request in tqdm(requests):
             result = self.sliding_windows(
@@ -176,9 +173,7 @@ class SafeGenai(ListwiseRankLLM):
                         config=self._request_config,
                         history=self._to_genai_history(history),
                     )
-                    completion = chat_session.send_message(
-                        self._message_content(chat_message)
-                    )
+                    completion = chat_session.send_message(self._message_content(chat_message))
                 else:
                     completion = self.client.models.generate_content(
                         model=self._model,
@@ -212,9 +207,7 @@ class SafeGenai(ListwiseRankLLM):
         return response, self._count_tokens(response)
 
     # TODO (issue #256): Need to modify gemini implementation to use OpenAI's API and then add fewshot examples
-    def create_prompt(
-        self, result: Result, rank_start: int, rank_end: int
-    ) -> tuple[str, int]:
+    def create_prompt(self, result: Result, rank_start: int, rank_end: int) -> tuple[str, int]:
         current_window_size = rank_end - rank_start
 
         def render_prompt(max_length: int) -> tuple[str, int]:
@@ -233,9 +226,7 @@ class SafeGenai(ListwiseRankLLM):
             current_window_size = self._window_size
         if current_window_size not in self._output_token_estimates:
             self._output_token_estimates[current_window_size] = (
-                self._count_tokens(
-                    " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
-                )
+                self._count_tokens(" > ".join([f"[{i + 1}]" for i in range(current_window_size)]))
                 - 1
             )
         return self._output_token_estimates[current_window_size]

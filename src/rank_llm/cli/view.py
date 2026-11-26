@@ -50,9 +50,7 @@ def detect_artifact_type(path: Path) -> str:
         first_record = _first_jsonl_record(path)
         if "query" in first_record and "candidates" in first_record:
             candidates = first_record["candidates"]
-            if any(
-                not _looks_like_ranked_candidate(candidate) for candidate in candidates
-            ):
+            if any(not _looks_like_ranked_candidate(candidate) for candidate in candidates):
                 return "request-input"
             return "rerank-output"
     raise ViewError(f"could not detect artifact type for: {path}")
@@ -62,9 +60,7 @@ def load_records(path: Path, artifact_type: str) -> list[Any]:
     if artifact_type == "invocations-history":
         return json.loads(path.read_text(encoding="utf-8"))
     return [
-        json.loads(line)
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
@@ -86,9 +82,7 @@ def summarize_records(records: list[Any], artifact_type: str) -> dict[str, Any]:
         candidate_total = sum(len(record.get("candidates", [])) for record in records)
         return {"record_count": len(records), "candidate_total": candidate_total}
     if artifact_type == "invocations-history":
-        invocation_total = sum(
-            len(record.get("invocations_history", [])) for record in records
-        )
+        invocation_total = sum(len(record.get("invocations_history", [])) for record in records)
         return {"record_count": len(records), "invocation_total": invocation_total}
     return {"record_count": len(records)}
 

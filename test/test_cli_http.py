@@ -114,9 +114,7 @@ class TestCLIHTTP(unittest.TestCase):
             patch("rank_llm.api.app.create_app", return_value=object()) as create_app,
             patch("uvicorn.run") as uvicorn_run,
         ):
-            return_code = main(
-                ["serve", "http", "--model-path", "model", "--use-litellm"]
-            )
+            return_code = main(["serve", "http", "--model-path", "model", "--use-litellm"])
 
         self.assertEqual(return_code, 0)
         self.assertTrue(create_app.call_args.args[0].use_litellm)
@@ -149,9 +147,7 @@ class TestCLIHTTP(unittest.TestCase):
         uvicorn_run.assert_not_called()
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["status"], "validation_error")
-        self.assertIn(
-            "backend selectors cannot be combined", payload["errors"][0]["message"]
-        )
+        self.assertIn("backend selectors cannot be combined", payload["errors"][0]["message"])
 
     def test_rerank_route_reuses_initialized_reranker(self):
         reranker = Mock()
@@ -162,12 +158,8 @@ class TestCLIHTTP(unittest.TestCase):
             reranker_class.create_model_coordinator.return_value = object()
             reranker_class.return_value = reranker
             client = TestClient(create_app(ServerConfig(model_path="model")))
-            first = client.post(
-                "/v1/rerank", json={"query": "cats", "candidates": ["doc one"]}
-            )
-            second = client.post(
-                "/v1/rerank", json={"query": "dogs", "candidates": ["doc two"]}
-            )
+            first = client.post("/v1/rerank", json={"query": "cats", "candidates": ["doc one"]})
+            second = client.post("/v1/rerank", json={"query": "dogs", "candidates": ["doc two"]})
 
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)
@@ -187,9 +179,7 @@ class TestCLIHTTP(unittest.TestCase):
             reranker_class.create_model_coordinator.side_effect = [object(), object()]
             reranker_class.side_effect = [reranker, alternate_reranker]
             client = TestClient(create_app(ServerConfig(model_path="model")))
-            first = client.post(
-                "/v1/rerank", json={"query": "cats", "candidates": ["doc one"]}
-            )
+            first = client.post("/v1/rerank", json={"query": "cats", "candidates": ["doc one"]})
             second = client.post(
                 "/v1/rerank",
                 json={
@@ -198,9 +188,7 @@ class TestCLIHTTP(unittest.TestCase):
                     "overrides": {"model_path": "other-model"},
                 },
             )
-            third = client.post(
-                "/v1/rerank", json={"query": "mice", "candidates": ["doc three"]}
-            )
+            third = client.post("/v1/rerank", json={"query": "mice", "candidates": ["doc three"]})
 
         self.assertEqual(first.status_code, 200)
         self.assertEqual(second.status_code, 200)

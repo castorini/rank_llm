@@ -130,16 +130,12 @@ class SafeOpenai(ListwiseRankLLM):
     ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         if not requests:
             return []
 
         worker_cap = (
-            self._batch_size
-            if self._batch_size and self._batch_size > 0
-            else len(requests)
+            self._batch_size if self._batch_size and self._batch_size > 0 else len(requests)
         )
         max_workers = min(len(requests), max(worker_cap, 1))
         if max_workers <= 1:
@@ -264,9 +260,7 @@ class SafeOpenai(ListwiseRankLLM):
             if getattr(item, "type", None) == "reasoning":
                 summaries = getattr(item, "summary", None)
                 if summaries:
-                    reasoning = "\n".join(
-                        s.text for s in summaries if hasattr(s, "text")
-                    )
+                    reasoning = "\n".join(s.text for s in summaries if hasattr(s, "text"))
 
         # Extract usage details
         usage = {}
@@ -287,17 +281,10 @@ class SafeOpenai(ListwiseRankLLM):
                 encoder = tiktoken.get_encoding("cl100k_base")
 
             _output_token_estimate = (
-                len(
-                    encoder.encode(
-                        " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
-                    )
-                )
+                len(encoder.encode(" > ".join([f"[{i + 1}]" for i in range(current_window_size)])))
                 - 1
             )
-            if (
-                self._output_token_estimate is None
-                and self._window_size == current_window_size
-            ):
+            if self._output_token_estimate is None and self._window_size == current_window_size:
                 self._output_token_estimate = _output_token_estimate
             return _output_token_estimate
 
@@ -328,9 +315,7 @@ class SafeOpenai(ListwiseRankLLM):
     def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         """Returns the number of tokens used by a list of messages in prompt."""
         if self._model in ["gpt-3.5-turbo-0301", "gpt-3.5-turbo"]:
-            tokens_per_message = (
-                4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
-            )
+            tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
             tokens_per_name = -1  # if there's a name, the role is omitted
         elif self._model in ["gpt-4-0314", "gpt-4"]:
             tokens_per_message = 3

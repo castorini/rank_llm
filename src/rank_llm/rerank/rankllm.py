@@ -65,9 +65,7 @@ class RankLLM(ABC):
 
         try:
             if not isinstance(prompt_template_path, str | os.PathLike):
-                raise TypeError(
-                    f"Expected str or PathLike, got {type(prompt_template_path)}"
-                )
+                raise TypeError(f"Expected str or PathLike, got {type(prompt_template_path)}")
 
             with open(prompt_template_path) as file:
                 data = yaml.safe_load(file)
@@ -321,6 +319,4 @@ class RankLLM(ABC):
         except FileNotFoundError as err:
             raise ValueError(f"Few-shot examples file not found: {file_path}") from err
         except json.JSONDecodeError as err:
-            raise ValueError(
-                f"Invalid JSON format in few-shot examples file: {file_path}"
-            ) from err
+            raise ValueError(f"Invalid JSON format in few-shot examples file: {file_path}") from err

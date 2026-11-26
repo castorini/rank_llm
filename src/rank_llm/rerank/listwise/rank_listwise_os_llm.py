@@ -165,9 +165,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 VllmHandlerWithOpenAISDK,
             )
 
-            self._vllm_handler = VllmHandlerWithOpenAISDK(
-                model=model, base_url=base_url
-            )
+            self._vllm_handler = VllmHandlerWithOpenAISDK(model=model, base_url=base_url)
             self._tokenizer = self._vllm_handler.get_tokenizer()
         else:
             # Preload the tokenizer because the engine capacity calculation
@@ -177,9 +175,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                     "local",
                     "Open-source listwise reranking requires transformers.",
                 )
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                model, trust_remote_code=True
-            )
+            self._tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
             self._vllm_handler = VllmHandler(
                 model=model,
                 download_dir=os.getenv("HF_HOME"),
@@ -210,9 +206,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         return self.sliding_windows_batched(
             requests,
             rank_start=max(rank_start, 0),
@@ -235,9 +229,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 if (
                     len(token) == 1
                     and token.isalpha()
-                    and ALPH_START_IDX + total[0]
-                    <= ord(token)
-                    <= ALPH_START_IDX + total[1]
+                    and ALPH_START_IDX + total[0] <= ord(token) <= ALPH_START_IDX + total[1]
                 ):
                     idx = ord(token)
                     prev = evaluations.get(idx, float("-inf"))
@@ -316,9 +308,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
 
         if self._use_logits:
             if not isinstance(prompt, str):
-                raise TypeError(
-                    "FIRST logit reranking requires a rendered string prompt."
-                )
+                raise TypeError("FIRST logit reranking requires a rendered string prompt.")
             logger.info("Async VLLM Logit Generating!")
             sampling_extra = {
                 **sanitize_sampling_kwargs(self._sampling_kwargs),
@@ -336,12 +326,8 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 sampling_extra=sampling_extra,
             )
             if not token_logprobs or token_logprobs[0] is None:
-                raise RuntimeError(
-                    "vLLM did not return first-token logprobs for FIRST reranking."
-                )
-            permutation, _ = self._evaluate_logits(
-                token_logprobs[0], (1, current_window_size)
-            )
+                raise RuntimeError("vLLM did not return first-token logprobs for FIRST reranking.")
+            permutation, _ = self._evaluate_logits(token_logprobs[0], (1, current_window_size))
             return (
                 permutation,
                 "",
@@ -443,14 +429,9 @@ class RankListwiseOSLLM(ListwiseRankLLM):
         else:
             token_str = " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
 
-        _output_token_estimate = len(
-            self._tokenizer.encode(token_str, add_special_tokens=False)
-        )
+        _output_token_estimate = len(self._tokenizer.encode(token_str, add_special_tokens=False))
 
-        if (
-            self._output_token_estimate is None
-            and self._window_size == current_window_size
-        ):
+        if self._output_token_estimate is None and self._window_size == current_window_size:
             self._output_token_estimate = _output_token_estimate
 
         return _output_token_estimate
@@ -501,9 +482,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
     def get_num_tokens(self, prompt: str | list[dict[str, str]]) -> int:
         text = prompt
         if isinstance(prompt, list):
-            text = "".join(
-                f"{message['role']}: {message['content']}\n" for message in prompt
-            )
+            text = "".join(f"{message['role']}: {message['content']}\n" for message in prompt)
         return len(self._tokenizer.encode(text))
 
     def cost_per_1k_token(self, input_token: bool) -> float:

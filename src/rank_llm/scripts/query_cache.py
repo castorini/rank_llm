@@ -21,9 +21,7 @@ def parse_file_info(file_name, file_url, save_dir):
         raise missing_extra_error("pyserini")
 
     # download file
-    local_file_path = download_url(
-        file_url, save_dir, local_filename=file_name, verbose=True
-    )
+    local_file_path = download_url(file_url, save_dir, local_filename=file_name, verbose=True)
 
     # Compute MD5
     md5 = compute_md5(local_file_path)

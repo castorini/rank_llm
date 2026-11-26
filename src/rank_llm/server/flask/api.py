@@ -119,9 +119,7 @@ def create_app(model, port, use_azure_openai=False):
         # number of passes reranker goes through
         num_passes = request.args.get("num_passes", default=1, type=int)
         # retrieval method to use
-        retrieval_method = request.args.get(
-            "retrieval_method", default="bm25", type=str
-        )
+        retrieval_method = request.args.get("retrieval_method", default="bm25", type=str)
 
         if "bm25" in retrieval_method.lower():
             _retrieval_method = RetrievalMethod.BM25
@@ -135,9 +133,7 @@ def create_app(model, port, use_azure_openai=False):
             and model_path != default_model_coordinator.get_name()
         ):
             # Delete the old model_coordinator to clear up the CUDA cache
-            del (
-                default_model_coordinator
-            )  # this line is required for clearing the cache
+            del default_model_coordinator  # this line is required for clearing the cache
             torch.cuda.empty_cache()
             default_model_coordinator = None
         try:
@@ -180,9 +176,7 @@ def main(argv=None):
     parser.add_argument(
         "--port", type=int, default=8082, help="The port to run the Flask server on."
     )
-    parser.add_argument(
-        "--use_azure_openai", action="store_true", help="Use Azure OpenAI API."
-    )
+    parser.add_argument("--use_azure_openai", action="store_true", help="Use Azure OpenAI API.")
     args = parser.parse_args(argv)
 
     app, port = create_app(args.model, args.port, args.use_azure_openai)

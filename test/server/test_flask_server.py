@@ -14,7 +14,9 @@ from rank_llm.server.flask.api import create_app
 
 
 class TestAPI(unittest.TestCase):
-    BASE_URL = "http://localhost:8082/api/model/{model_name}/index/{index_name}/{anserini_host_addr}"
+    BASE_URL = (
+        "http://localhost:8082/api/model/{model_name}/index/{index_name}/{anserini_host_addr}"
+    )
 
     def setUp(self):
         # rank zephyr mock

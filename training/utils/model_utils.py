@@ -63,9 +63,7 @@ def parse_args():
         default=5e-6,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
-    parser.add_argument(
-        "--weight_decay", type=float, default=0.0, help="Weight decay to use."
-    )
+    parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument(
         "--noisy_embedding_alpha",
         type=int,
@@ -97,9 +95,7 @@ def parse_args():
         help="Ranking loss to use",
         choices=["lambda", "listnet", "ranknet"],
     )
-    parser.add_argument(
-        "--weighted", action="store_true", help="Use weighting with Ranknet"
-    )
+    parser.add_argument("--weighted", action="store_true", help="Use weighting with Ranknet")
     parser.add_argument(
         "--objective",
         type=str,
@@ -130,9 +126,7 @@ def parse_args():
     parser.add_argument(
         "--output_dir", type=str, default=None, help="Where to store the final model."
     )
-    parser.add_argument(
-        "--seed", type=int, default=None, help="A seed for reproducible training."
-    )
+    parser.add_argument("--seed", type=int, default=None, help="A seed for reproducible training.")
     parser.add_argument(
         "--model_type",
         type=str,
@@ -206,9 +200,7 @@ def NEFTune(model, noise_alpha=5):
                 embed_init = orig_embed(x)
                 dims = torch.tensor(embed_init.size(1) * embed_init.size(2))
                 mag_norm = noise_alpha / torch.sqrt(dims)
-                return embed_init + torch.zeros_like(embed_init).uniform_(
-                    -mag_norm, mag_norm
-                )
+                return embed_init + torch.zeros_like(embed_init).uniform_(-mag_norm, mag_norm)
             else:
                 return orig_embed(x)
 
@@ -314,9 +306,7 @@ def initialize_model_and_tokenizer(args):
     logger.info("Checking tokenizer and model compatibility...")
     embedding_size = model.get_input_embeddings().weight.shape[0]
     if len(tokenizer) > embedding_size:
-        logger.info(
-            f"Resizing token embeddings from {embedding_size} to {len(tokenizer)}"
-        )
+        logger.info(f"Resizing token embeddings from {embedding_size} to {len(tokenizer)}")
         model.resize_token_embeddings(len(tokenizer))
 
     logger.info("Model and tokenizer initialization completed successfully!")
@@ -335,9 +325,7 @@ def initialize_optimizer(model, weight_decay, learning_rate):
             "weight_decay": weight_decay,
         },
         {
-            "params": [
-                p for n, p in model.named_parameters() if n not in decay_parameters
-            ],
+            "params": [p for n, p in model.named_parameters() if n not in decay_parameters],
             "weight_decay": 0.0,
         },
     ]

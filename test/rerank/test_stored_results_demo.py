@@ -20,19 +20,15 @@ class StoredResultsDemoTest(unittest.TestCase):
             {
                 "query": {"text": "query", "qid": str(i)},
                 "candidates": [
-                    {"docid": str(j), "score": 1.0, "doc": {"text": str(j)}}
-                    for j in range(count)
+                    {"docid": str(j), "score": 1.0, "doc": {"text": str(j)}} for j in range(count)
                 ],
             }
             for i, count in enumerate((120, 3, 140))
         ]
-        self.input_file.write_text(
-            "\n".join(json.dumps(record) for record in self.records)
-        )
+        self.input_file.write_text("\n".join(json.dumps(record) for record in self.records))
         self.model = self.enterContext(patch.object(demo, "ZephyrReranker"))
         self.model.return_value.rerank_batch.side_effect = lambda requests, **kw: [
-            Result(query=request.query, candidates=request.candidates)
-            for request in requests
+            Result(query=request.query, candidates=request.candidates) for request in requests
         ]
         self.enterContext(redirect_stdout(io.StringIO()))
 
@@ -69,10 +65,7 @@ class StoredResultsDemoTest(unittest.TestCase):
             [["0", "1", "2", "3"], ["0", "1", "2"]],
         )
         folder = self.root / "output" / "rank_zephyr_7b_v1_full"
-        rows = [
-            json.loads(line)
-            for line in (folder / "rerank.jsonl").read_text().splitlines()
-        ]
+        rows = [json.loads(line) for line in (folder / "rerank.jsonl").read_text().splitlines()]
         self.assertEqual([len(row["candidates"]) for row in rows], [4, 3])
 
     def test_nonpositive_numeric_arguments_fail_before_loading_input(self):

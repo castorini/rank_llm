@@ -66,10 +66,7 @@ def classify_exception(error: Exception) -> ErrorDescriptor:
             details={},
         )
 
-    if (
-        isinstance(error, ImportError | ModuleNotFoundError)
-        or assertion_is_prerequisite
-    ):
+    if isinstance(error, ImportError | ModuleNotFoundError) or assertion_is_prerequisite:
         return ErrorDescriptor(
             message=message,
             status="validation_error",

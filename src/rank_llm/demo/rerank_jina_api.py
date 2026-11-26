@@ -145,9 +145,7 @@ def _call_jina_rerank(
             continue
 
         if resp.status_code == 429:
-            retry_after = float(
-                resp.headers.get("Retry-After", RETRY_BACKOFF_BASE**attempt)
-            )
+            retry_after = float(resp.headers.get("Retry-After", RETRY_BACKOFF_BASE**attempt))
             logger.warning(
                 "Rate limited (429) – sleeping %.1fs (attempt %d/%d)",
                 retry_after,
@@ -207,9 +205,7 @@ def _candidate_comparator(x, y) -> int:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(
-        description="Rerank with Jina Reranker v3 via REST API."
-    )
+    p = argparse.ArgumentParser(description="Rerank with Jina Reranker v3 via REST API.")
     p.add_argument(
         "--dataset",
         default="dl19",
@@ -259,8 +255,7 @@ def main() -> None:
     ]
 
     total_api_calls = sum(
-        (len(r.candidates) + args.window_size - 1) // args.window_size
-        for r in rerank_results
+        (len(r.candidates) + args.window_size - 1) // args.window_size for r in rerank_results
     )
     print(f"\n--- Reranking via API ({args.model}) ---")
     print(f"  window_size={args.window_size}, top_n={args.window_size}")
@@ -274,8 +269,7 @@ def main() -> None:
             candidates = result.candidates
             num_candidates = len(candidates)
             doc_texts = [
-                _extract_doc_text(c.doc, max_words=args.max_passage_words)
-                for c in candidates
+                _extract_doc_text(c.doc, max_words=args.max_passage_words) for c in candidates
             ]
 
             all_scores: list[float] = [0.0] * num_candidates
@@ -298,9 +292,7 @@ def main() -> None:
                 last_request_time = time.monotonic()
 
                 for item in api_results:
-                    all_scores[chunk_start + item["index"]] = float(
-                        item["relevance_score"]
-                    )
+                    all_scores[chunk_start + item["index"]] = float(item["relevance_score"])
 
                 result.invocations_history.append(
                     InferenceInvocation(
@@ -310,8 +302,7 @@ def main() -> None:
                             f"({len(chunk_docs)} docs)"
                         ),
                         response=", ".join(
-                            f"[{chunk_start + item['index']}]="
-                            f"{item['relevance_score']:.4f}"
+                            f"[{chunk_start + item['index']}]={item['relevance_score']:.4f}"
                             for item in sorted(api_results, key=lambda x: x["index"])
                         ),
                         input_token_count=0,

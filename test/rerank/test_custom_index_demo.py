@@ -17,18 +17,14 @@ class CustomIndexDemoTest(unittest.TestCase):
         request = Request(query=Query(text="query", qid="1"))
         with (
             patch.object(demo, "_prepare_data"),
-            patch.object(
-                demo.Retriever, "from_custom_index", return_value=[request]
-            ) as retrieve,
+            patch.object(demo.Retriever, "from_custom_index", return_value=[request]) as retrieve,
             patch.object(demo, "VicunaReranker") as model,
             patch.object(demo, "DataWriter"),
             tempfile.TemporaryDirectory() as output,
         ):
             demo.main(["--output-dir", output])
             self.assertEqual(retrieve.call_args.kwargs["k"], 100)
-            self.assertEqual(
-                model.return_value.rerank_batch.call_args.kwargs["rank_end"], 100
-            )
+            self.assertEqual(model.return_value.rerank_batch.call_args.kwargs["rank_end"], 100)
             model.return_value.close.assert_called_once()
 
     def test_limits_queries_candidates_and_writes_outputs(self):
@@ -190,9 +186,7 @@ class CustomIndexDemoTest(unittest.TestCase):
                 ]
             )
             demo._prepare_data(args)
-            self.assertEqual(
-                (Path(args.index_path) / "segments").read_text(), "index fixture"
-            )
+            self.assertEqual((Path(args.index_path) / "segments").read_text(), "index fixture")
             self.assertEqual(Path(args.topics_path).read_text(), "1\tquery\n")
             with patch.object(demo, "urlretrieve") as download:
                 demo._prepare_data(args)
@@ -205,9 +199,7 @@ class CustomIndexDemoTest(unittest.TestCase):
             patch.object(demo.Retriever, "from_custom_index", return_value=[request]),
             patch.object(demo, "VicunaReranker") as model,
         ):
-            model.return_value.rerank_batch.side_effect = RuntimeError(
-                "inference failed"
-            )
+            model.return_value.rerank_batch.side_effect = RuntimeError("inference failed")
             with self.assertRaisesRegex(RuntimeError, "inference failed"):
                 demo.main([])
             model.return_value.close.assert_called_once()

@@ -198,8 +198,7 @@ def validate_rerank_payload(payload: Any) -> dict[str, Any]:
             if not isinstance(query.get("text"), str):
                 errors.append("query.text must be a string")
             if "qid" in query and (
-                isinstance(query["qid"], bool)
-                or not isinstance(query["qid"], str | int)
+                isinstance(query["qid"], bool) or not isinstance(query["qid"], str | int)
             ):
                 errors.append("query.qid must be a string or integer")
         elif not isinstance(query, str):
@@ -284,12 +283,8 @@ def doctor_report() -> dict[str, Any]:
         "uvicorn": find_spec("uvicorn") is not None,
         "pyserini": find_spec("pyserini") is not None,
     }
-    serve_http_ready = (
-        optional_dependencies["fastapi"] and optional_dependencies["uvicorn"]
-    )
-    serve_mcp_ready = (
-        optional_dependencies["fastmcp"] and optional_dependencies["pyserini"]
-    )
+    serve_http_ready = optional_dependencies["fastapi"] and optional_dependencies["uvicorn"]
+    serve_mcp_ready = optional_dependencies["fastmcp"] and optional_dependencies["pyserini"]
     command_readiness = {
         "rerank": {"ready": True},
         "evaluate": {"ready": True},

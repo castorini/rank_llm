@@ -93,16 +93,12 @@ class SafeLiteLLM(ListwiseRankLLM):
     ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         if not requests:
             return []
 
         worker_cap = (
-            self._batch_size
-            if self._batch_size and self._batch_size > 0
-            else len(requests)
+            self._batch_size if self._batch_size and self._batch_size > 0 else len(requests)
         )
         max_workers = min(len(requests), max(worker_cap, 1))
         if max_workers <= 1:
@@ -212,13 +208,8 @@ class SafeLiteLLM(ListwiseRankLLM):
             return self._output_token_estimate
 
         output_str = " > ".join([f"[{i + 1}]" for i in range(current_window_size)])
-        _output_token_estimate = litellm.token_counter(
-            model=self._model, text=output_str
-        )
-        if (
-            self._output_token_estimate is None
-            and self._window_size == current_window_size
-        ):
+        _output_token_estimate = litellm.token_counter(model=self._model, text=output_str)
+        if self._output_token_estimate is None and self._window_size == current_window_size:
             self._output_token_estimate = _output_token_estimate
         return _output_token_estimate
 

@@ -30,9 +30,7 @@ logger = logging.getLogger(__name__)
 TEMPLATES = files("rank_llm.rerank.prompt_templates")
 
 
-def _single_token_ids_from_strings(
-    tokenizer: Any, strings: tuple[str, ...]
-) -> list[int]:
+def _single_token_ids_from_strings(tokenizer: Any, strings: tuple[str, ...]) -> list[int]:
     """Token ids for ``allowed_token_ids`` when ``max_tokens=1``.
 
     Only ids where ``encode(s)`` returns exactly one token are included.
@@ -117,21 +115,16 @@ class PointwiseVLLM(PointwiseRankLLM):
         self._llm_concurrency_sem: asyncio.Semaphore | None = None
         self._max_concurrent = max_concurrent_llm_calls or max(batch_size, 1)
 
-        positive, negative, source = self._answer_spellings(
-            positive_tokens, negative_tokens
-        )
+        positive, negative, source = self._answer_spellings(positive_tokens, negative_tokens)
         self._answer_tokens = PointwiseAnswerTokens.from_spellings(
             self._tokenizer, positive, negative, warn_skipped=source != "default"
         )
         self._allowed_token_ids = self._answer_tokens.allowed_token_ids
         # Every allowed token must be able to appear among the top logprobs.
-        self._top_logprobs = max(
-            VLLM_DEFAULT_MAX_LOGPROBS, len(self._allowed_token_ids)
-        )
+        self._top_logprobs = max(VLLM_DEFAULT_MAX_LOGPROBS, len(self._allowed_token_ids))
         if self._top_logprobs > VLLM_DEFAULT_MAX_LOGPROBS:
             logger.warning(
-                "%d answer tokens need top_logprobs=%d; start vLLM with "
-                "--max-logprobs %d or more",
+                "%d answer tokens need top_logprobs=%d; start vLLM with --max-logprobs %d or more",
                 len(self._allowed_token_ids),
                 self._top_logprobs,
                 self._top_logprobs,
@@ -150,9 +143,7 @@ class PointwiseVLLM(PointwiseRankLLM):
     ) -> tuple[tuple[str, ...], tuple[str, ...], str]:
         """(positive, negative, source): arguments, else template, else defaults."""
         if (positive_tokens is None) != (negative_tokens is None):
-            raise ValueError(
-                "positive_tokens and negative_tokens must be given together"
-            )
+            raise ValueError("positive_tokens and negative_tokens must be given together")
 
         def as_tuple(spellings: Sequence[str]) -> tuple[str, ...]:
             return (spellings,) if isinstance(spellings, str) else tuple(spellings)
@@ -190,9 +181,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         query = self._inference_handler._replace_number(result.query.text)
 
         if self._inference_handler.template.get("message_roles") == "reranker":
-            instruction = self._inference_handler.template.get(
-                "instruction", ""
-            ).strip()
+            instruction = self._inference_handler.template.get("instruction", "").strip()
             return [
                 {"role": "system", "content": instruction},
                 {"role": "query", "content": query},
@@ -211,9 +200,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         messages.append({"role": "user", "content": user_content})
         return messages
 
-    def create_prompt(
-        self, result: Result, index: int
-    ) -> tuple[list[dict[str, str]], int]:
+    def create_prompt(self, result: Result, index: int) -> tuple[list[dict[str, str]], int]:
         reserved_for_output = 8
         overhead = self._input_token_count(self._probe_messages(result))
         max_doc_tokens = max(
@@ -268,9 +255,7 @@ class PointwiseVLLM(PointwiseRankLLM):
             answer_tokens=self._answer_tokens,
         )
 
-    def run_llm(
-        self, prompt: str | list[dict[str, str]], **kwargs: Any
-    ) -> tuple[str, int, float]:
+    def run_llm(self, prompt: str | list[dict[str, str]], **kwargs: Any) -> tuple[str, int, float]:
         if not isinstance(prompt, list):
             raise TypeError("PointwiseVLLM expects chat messages (list of dicts).")
 
@@ -319,9 +304,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> list[Result]:
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -337,23 +320,17 @@ class PointwiseVLLM(PointwiseRankLLM):
 
         total_candidates = sum(len(r.candidates) for r in rerank_results)
 
-        with tqdm(
-            total=total_candidates, desc="Progress through (q, d) pairs"
-        ) as progress_bar:
+        with tqdm(total=total_candidates, desc="Progress through (q, d) pairs") as progress_bar:
             index = 0
             while index < total_candidates:
                 prompts, token_counts = self.create_prompt_batched(
                     results=rerank_results, index=index
                 )
 
-                outputs, output_token_counts, scores = self.run_llm_batched(
-                    prompts=prompts
-                )
+                outputs, output_token_counts, scores = self.run_llm_batched(prompts=prompts)
 
                 for i, score in enumerate(scores):
-                    qn, cn = self.get_query_and_candidate_index(
-                        rerank_results, index + i
-                    )
+                    qn, cn = self.get_query_and_candidate_index(rerank_results, index + i)
                     rerank_results[qn].candidates[cn].score = score
                     if populate_invocations_history:
                         rerank_results[qn].invocations_history.append(
@@ -369,9 +346,7 @@ class PointwiseVLLM(PointwiseRankLLM):
                 index += self._batch_size
 
         for result in rerank_results:
-            result.candidates.sort(
-                key=cmp_to_key(self.candidate_comparator), reverse=True
-            )
+            result.candidates.sort(key=cmp_to_key(self.candidate_comparator), reverse=True)
 
         return rerank_results
 
@@ -384,9 +359,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         logging: bool = False,
         **kwargs: Any,
     ) -> list[Result]:
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
         rerank_results = [
             Result(
                 query=copy.deepcopy(request.query),
@@ -411,9 +384,7 @@ class PointwiseVLLM(PointwiseRankLLM):
 
         async def score_one(
             qi: int, ci: int, msgs: list[dict[str, str]], n_tok: int
-        ) -> tuple[
-            int, int, list[dict[str, str]], int, str, int, float, dict[str, Any]
-        ]:
+        ) -> tuple[int, int, list[dict[str, str]], int, str, int, float, dict[str, Any]]:
             async with sem:
                 (
                     text,
@@ -439,9 +410,7 @@ class PointwiseVLLM(PointwiseRankLLM):
         for qi, ci, msgs, n_tok, text, out_tok, score, usage in rows:
             rerank_results[qi].candidates[ci].score = score
             if populate_invocations_history:
-                in_tok = int(
-                    usage.get("prompt_tokens") or usage.get("input_tokens") or n_tok
-                )
+                in_tok = int(usage.get("prompt_tokens") or usage.get("input_tokens") or n_tok)
                 rerank_results[qi].invocations_history.append(
                     InferenceInvocation(
                         msgs,
@@ -453,8 +422,6 @@ class PointwiseVLLM(PointwiseRankLLM):
                 )
 
         for result in rerank_results:
-            result.candidates.sort(
-                key=cmp_to_key(self.candidate_comparator), reverse=True
-            )
+            result.candidates.sort(key=cmp_to_key(self.candidate_comparator), reverse=True)
 
         return rerank_results

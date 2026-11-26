@@ -60,9 +60,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             check_query=True,
         )
 
-    def _generate_prefix_suffix(
-        self, num: int, query: str, **kwargs: Any
-    ) -> tuple[str, str]:
+    def _generate_prefix_suffix(self, num: int, query: str, **kwargs: Any) -> tuple[str, str]:
         suffix_placeholders = [
             name
             for _, name, _, _ in self._formatter.parse(self.template.get("suffix", ""))
@@ -80,12 +78,8 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             psg_ids_str = "[" + ", ".join(psg_ids) + "]"
             suffix_fmt_values["psg_ids"] = psg_ids_str
 
-        prefix_text = self._format_template(
-            template_key="prefix", fmt_values=prefix_fmt_values
-        )
-        suffix_text = self._format_template(
-            template_key="suffix", fmt_values=suffix_fmt_values
-        )
+        prefix_text = self._format_template(template_key="prefix", fmt_values=prefix_fmt_values)
+        suffix_text = self._format_template(template_key="suffix", fmt_values=suffix_fmt_values)
 
         return prefix_text, suffix_text
 
@@ -107,9 +101,7 @@ class SingleTurnListwiseInferenceHandler(ListwiseInferenceHandler):
             score = f"{cand.score:.3f}"
 
             fmt_values = {"rank": identifier, "candidate": content, "score": score}
-            single_text = self._format_template(
-                template_key="body", fmt_values=fmt_values
-            )
+            single_text = self._format_template(template_key="body", fmt_values=fmt_values)
 
             body_text += single_text
 

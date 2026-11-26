@@ -29,39 +29,25 @@ class TestDataWriterAppend(unittest.TestCase):
 
     def test_result_json_append_merges_arrays_in_order(self):
         DataWriter(_result("first")).write_in_json_format(str(self.filename))
-        DataWriter(_result("second"), append=True).write_in_json_format(
-            str(self.filename)
-        )
+        DataWriter(_result("second"), append=True).write_in_json_format(str(self.filename))
 
         records = json.loads(self.filename.read_text())
-        self.assertEqual(
-            [record["query"]["qid"] for record in records], ["first", "second"]
-        )
+        self.assertEqual([record["query"]["qid"] for record in records], ["first", "second"])
         self.assertEqual(records[1]["candidates"][0]["docid"], "doc second")
 
     def test_invocation_history_append_merges_arrays_in_order(self):
-        DataWriter(_result("first")).write_inference_invocations_history(
-            str(self.filename)
-        )
+        DataWriter(_result("first")).write_inference_invocations_history(str(self.filename))
         DataWriter(_result("second"), append=True).write_inference_invocations_history(
             str(self.filename)
         )
 
         records = json.loads(self.filename.read_text())
-        self.assertEqual(
-            [record["query"]["qid"] for record in records], ["first", "second"]
-        )
-        self.assertEqual(
-            records[1]["invocations_history"][0]["response"], "response second"
-        )
+        self.assertEqual([record["query"]["qid"] for record in records], ["first", "second"])
+        self.assertEqual(records[1]["invocations_history"][0]["response"], "response second")
 
     def test_append_creates_new_json_file(self):
-        DataWriter(_result("first"), append=True).write_in_json_format(
-            str(self.filename)
-        )
-        self.assertEqual(
-            json.loads(self.filename.read_text())[0]["query"]["qid"], "first"
-        )
+        DataWriter(_result("first"), append=True).write_in_json_format(str(self.filename))
+        self.assertEqual(json.loads(self.filename.read_text())[0]["query"]["qid"], "first")
 
     def test_append_treats_empty_existing_file_as_new_array(self):
         for contents in ("", " \n\t"):
@@ -82,9 +68,7 @@ class TestDataWriterAppend(unittest.TestCase):
         self.filename.write_text(original)
 
         with self.assertRaisesRegex(ValueError, "Expected a JSON array"):
-            DataWriter(_result("first"), append=True).write_in_json_format(
-                str(self.filename)
-            )
+            DataWriter(_result("first"), append=True).write_in_json_format(str(self.filename))
 
         self.assertEqual(self.filename.read_text(), original)
 
@@ -92,10 +76,7 @@ class TestDataWriterAppend(unittest.TestCase):
         DataWriter(_result("first")).write_in_json_format(str(self.filename))
         DataWriter(_result("second")).write_in_json_format(str(self.filename))
         self.assertEqual(
-            [
-                record["query"]["qid"]
-                for record in json.loads(self.filename.read_text())
-            ],
+            [record["query"]["qid"] for record in json.loads(self.filename.read_text())],
             ["second"],
         )
 

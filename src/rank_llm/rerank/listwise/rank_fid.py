@@ -61,17 +61,13 @@ class RankFiDDistill(ListwiseRankLLM):
         self._tokenizer = T5Tokenizer.from_pretrained(model)
         self._llm = FiD.from_pretrained(model).to(device).eval()
 
-        self._answer_maxlength = len(
-            " > ".join(map(lambda x: f"[{x}]", range(1, window_size + 1)))
-        )
+        self._answer_maxlength = len(" > ".join(map(lambda x: f"[{x}]", range(1, window_size + 1))))
 
         self._output_token_estimate = None
 
         self._post_init()
 
-    def _run_llm_by_length_unified(
-        self, batch_prompts: list[list[str]]
-    ) -> list[tuple[str, int]]:
+    def _run_llm_by_length_unified(self, batch_prompts: list[list[str]]) -> list[tuple[str, int]]:
         if len(batch_prompts) == 0:
             return []
 
@@ -106,9 +102,7 @@ class RankFiDDistill(ListwiseRankLLM):
         ]
 
         # all token size should be equal
-        return [
-            (decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs
-        ]
+        return [(decoded_output, outputs.shape[1]) for decoded_output in decoded_outputs]
 
     def rerank_batch(
         self,
@@ -121,9 +115,7 @@ class RankFiDDistill(ListwiseRankLLM):
     ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
 
         if len(set([len(req.candidates) for req in requests])) != 1:
             raise ValueError("Batched requests must have the same number of candidates")
@@ -200,9 +192,7 @@ class RankFiDDistill(ListwiseRankLLM):
         Run the target language model with a passed in prompt.
         """
 
-        return self._run_llm_by_length_unified(
-            [list(map(lambda x: x["text"], prompts))]
-        )[0]
+        return self._run_llm_by_length_unified([list(map(lambda x: x["text"], prompts))])[0]
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
@@ -228,9 +218,7 @@ class RankFiDDistill(ListwiseRankLLM):
         elif isinstance(prompt, list):
             return sum(len(self._tokenizer.encode(item["text"])) for item in prompt)
         else:
-            raise ValueError(
-                "Prompt must be a string or a list of dictionaries with a 'text' key."
-            )
+            raise ValueError("Prompt must be a string or a list of dictionaries with a 'text' key.")
 
     def cost_per_1k_token(self, input_token: bool) -> float:
         return 0
@@ -238,10 +226,7 @@ class RankFiDDistill(ListwiseRankLLM):
     def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        if (
-            self._output_token_estimate is not None
-            and self._window_size == current_window_size
-        ):
+        if self._output_token_estimate is not None and self._window_size == current_window_size:
             return self._output_token_estimate
         else:
             output_token_estimate = (
@@ -252,10 +237,7 @@ class RankFiDDistill(ListwiseRankLLM):
                 )
                 - 1
             )
-            if (
-                self._output_token_estimate is None
-                and self._window_size == current_window_size
-            ):
+            if self._output_token_estimate is None and self._window_size == current_window_size:
                 self._output_token_estimate = output_token_estimate
 
             return output_token_estimate
@@ -395,9 +377,7 @@ class RankFiDScore(ListwiseRankLLM):
     ) -> list[Result]:
         top_k_retrieve: int = kwargs.get("top_k_retrieve", rank_end)
         rank_end = min(top_k_retrieve, rank_end)
-        populate_invocations_history: bool = kwargs.get(
-            "populate_invocations_history", False
-        )
+        populate_invocations_history: bool = kwargs.get("populate_invocations_history", False)
 
         if len(set([len(req.candidates) for req in requests])) != 1:
             raise ValueError("Batched requests must have the same number of candidates")
@@ -460,9 +440,7 @@ class RankFiDScore(ListwiseRankLLM):
         # unfortunately, we are not allowed to use VLLM on T5. However, we could unify the prompts by passage size
         #   (which is commonly the same) then rerank stuff having same passage sizes
 
-        processed_prompts = [
-            [(x["query"], x["text"]) for x in prmpt] for prmpt in prompts
-        ]
+        processed_prompts = [[(x["query"], x["text"]) for x in prmpt] for prmpt in prompts]
 
         return self._run_llm_by_length_unified(processed_prompts)
 
@@ -473,9 +451,7 @@ class RankFiDScore(ListwiseRankLLM):
 
     def run_llm(self, prompts: list[dict[str, str]], **kwargs) -> tuple[str, int]:
         # get arbitrary query (they should be the same)
-        return self._run_llm_by_length_unified(
-            [[(x["query"], x["text"]) for x in prompts]]
-        )[0]
+        return self._run_llm_by_length_unified([[(x["query"], x["text"]) for x in prompts]])[0]
 
     def create_prompt(
         self, result: Result, rank_start: int, rank_end: int
@@ -501,10 +477,7 @@ class RankFiDScore(ListwiseRankLLM):
     def num_output_tokens(self, current_window_size: int | None = None) -> int:
         if current_window_size is None:
             current_window_size = self._window_size
-        if (
-            self._output_token_estimate is not None
-            and self._window_size == current_window_size
-        ):
+        if self._output_token_estimate is not None and self._window_size == current_window_size:
             return self._output_token_estimate
         else:
             output_token_estimate = (
@@ -515,10 +488,7 @@ class RankFiDScore(ListwiseRankLLM):
                 )
                 - 1
             )
-            if (
-                self._output_token_estimate is None
-                and self._window_size == current_window_size
-            ):
+            if self._output_token_estimate is None and self._window_size == current_window_size:
                 self._output_token_estimate = output_token_estimate
 
             return output_token_estimate

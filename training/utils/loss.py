@@ -60,9 +60,7 @@ def lambdarank(
 
     pos_idxs = torch.arange(1, y_pred.shape[1] + 1).to(device)
     D = torch.log2(1.0 + pos_idxs.float())[None, :]
-    maxDCGs = torch.sum(((torch.pow(2, y_true_sorted) - 1) / D)[:, :k], dim=-1).clamp(
-        min=eps
-    )
+    maxDCGs = torch.sum(((torch.pow(2, y_true_sorted) - 1) / D)[:, :k], dim=-1).clamp(min=eps)
     G = (torch.pow(2, true_sorted_by_preds) - 1) / maxDCGs[:, None]
 
     if weighing_scheme is None:
@@ -70,13 +68,9 @@ def lambdarank(
     else:
         weights = globals()[weighing_scheme](G, D, mu, true_sorted_by_preds)  # type: ignore
 
-    scores_diffs = (y_pred_sorted[:, :, None] - y_pred_sorted[:, None, :]).clamp(
-        min=-1e8, max=1e8
-    )
+    scores_diffs = (y_pred_sorted[:, :, None] - y_pred_sorted[:, None, :]).clamp(min=-1e8, max=1e8)
     scores_diffs.masked_fill(torch.isnan(scores_diffs), 0.0)
-    weighted_probas = (
-        torch.sigmoid(sigma * scores_diffs).clamp(min=eps) ** weights
-    ).clamp(min=eps)
+    weighted_probas = (torch.sigmoid(sigma * scores_diffs).clamp(min=eps) ** weights).clamp(min=eps)
     if reduction_log == "natural":
         losses = torch.log(weighted_probas)
     elif reduction_log == "binary":
@@ -161,9 +155,7 @@ def rank_net(
             abs_diff = torch.abs(true_diffs)
             weight = abs_diff[the_mask]
         elif weight_by_diff_powed:
-            true_pow_diffs = torch.pow(pairs_true[:, :, 0], 2) - torch.pow(
-                pairs_true[:, :, 1], 2
-            )
+            true_pow_diffs = torch.pow(pairs_true[:, :, 0], 2) - torch.pow(pairs_true[:, :, 1], 2)
             abs_diff = torch.abs(true_pow_diffs)
             weight = abs_diff[the_mask]
 
@@ -178,9 +170,7 @@ class ADRMSELoss(nn.Module):
         super().__init__()
         self.eps = eps
 
-    def forward(
-        self, scores: torch.Tensor, reranked_target_loss: float = None
-    ) -> torch.Tensor:
+    def forward(self, scores: torch.Tensor, reranked_target_loss: float = None) -> torch.Tensor:
         """
         Compute the Approx Discounted Rank MSE (ADR-MSE) loss.
         :param scores: Tensor of shape [batch_size, slate_length] containing scores for each passage.

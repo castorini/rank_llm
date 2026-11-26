@@ -73,11 +73,7 @@ class GaggleReranker(PointwiseRankLLM):
         return prompt, self.get_num_tokens(prompt)
 
     def get_num_tokens(self, prompt: dict[str, str]) -> int:
-        return len(
-            self._llm.build_input_ids(
-                self._tokenizer, prompt["query"], prompt["passage"]
-            )
-        )
+        return len(self._llm.build_input_ids(self._tokenizer, prompt["query"], prompt["passage"]))
 
     def num_output_tokens(self) -> int:
         return 0

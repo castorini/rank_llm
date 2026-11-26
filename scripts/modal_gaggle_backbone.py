@@ -62,9 +62,7 @@ def score(model_name: str, prompt: str, continuations: list[str]) -> list[dict]:
         nanochat.__path__.insert(0, os.path.join(path, "code", "nanochat"))
     from nanochat.checkpoint_manager import build_model
 
-    model, tokenizer, _ = build_model(
-        path, step=step, device=torch.device("cuda"), phase="eval"
-    )
+    model, tokenizer, _ = build_model(path, step=step, device=torch.device("cuda"), phase="eval")
     ids = tokenizer.encode(prompt, prepend=tokenizer.get_bos_token_id())
     scores = []
     for continuation in continuations:
@@ -91,16 +89,8 @@ def main(input_path: str, model: str = CAUSAL):
     data = json.loads(Path(input_path).read_text())
     prompt = data["prompt"]
     continuations = data["continuations"]
-    if (
-        not isinstance(prompt, str)
-        or not isinstance(continuations, list)
-        or not continuations
-    ):
-        raise ValueError(
-            "Input must contain a prompt and a nonempty list of continuations"
-        )
-    if not all(
-        isinstance(continuation, str) and continuation for continuation in continuations
-    ):
+    if not isinstance(prompt, str) or not isinstance(continuations, list) or not continuations:
+        raise ValueError("Input must contain a prompt and a nonempty list of continuations")
+    if not all(isinstance(continuation, str) and continuation for continuation in continuations):
         raise ValueError("Every continuation must be a nonempty string")
     print(json.dumps(score.remote(model, prompt, continuations), indent=2))
