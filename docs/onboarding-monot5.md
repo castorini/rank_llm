@@ -62,14 +62,16 @@ In this lesson, you'll run a pointwise reranker; in the next lesson, you'll run 
 
 ## Reranking with monoT5
 
-In this lesson, you'll be using [monoT5](https://arxiv.org/abs/2003.06713), which is built on T5, an encoder-decoder transformer.
-The model performs pointwise ranking, which considers a (query, document) pair at a time.
+In this lesson, you'll be using [monoT5](https://arxiv.org/abs/2003.06713), which is (unsurprisingly) built on T5, an encoder-decoder transformer.
+The model performs pointwise reranking, which considers a (query, document) pair at a time.
 Given a query _q_ and a ranked list {_d<sub>1</sub>_, _d<sub>2</sub>_ ... _d<sub>k</sub>_} from the first-stage retriever, a pointwise reranker makes _k_ calls to the model (as you might have guessed, based on T5), with (_q_, _d<sub>1</sub>_), (_q_, _d<sub>2</sub>_) ... (_q_, _d<sub>k</sub>_), and for each, obtains a relevance score _r<sub>1</sub>_, _r<sub>2</sub>_ ... _r<sub>k</sub>_.
 The final ranked list is sorted based on these scores.
 
 This approach is _pointwise_ because it considers each (_q_, _d_) pair independently.
 
-The monoT5 model was first proposed here, all the way back in March 2020:
+In a bit more detail: monoT5 scores every (_q_, _d_) pair by prompting its underlying (fine-tuned) T5 model with `Query: ... Document: ... Relevant:` and comparing the probability of `true` vs `false` from the first generated token.
+
+The monoT5 model was first proposed all the way back in March 2020:
 
 > Rodrigo Nogueira, Zhiying Jiang, and Jimmy Lin. [Document Ranking with a Pretrained Sequence-to-Sequence Model.](https://arxiv.org/abs/2003.06713) _arXiv:2003.06713_, 2020.
 
@@ -79,16 +81,16 @@ And later published as:
 
 Today, it remains a competitive baseline.
 
-However, the monoT5 model was not evaluated on TREC DL19 and DL20 in the papers above.
+The monoT5 model was not evaluated on TREC DL19 and DL20 in the papers above.
 The closest published figures are from:
 
 > Sahel Sharifymoghaddam, Ronak Pradeep, Andre Slavescu, Ryan Nguyen, Andrew Xu, Zijian Chen, Yilin Zhang, Yidi Chen, Jasper Xian, and Jimmy Lin. [RankLLM: A Python Package for Reranking with LLMs.](https://dl.acm.org/doi/10.1145/3726302.3730331) _Proceedings of the 48th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2025)_, pages 3681-3690, July 2025, Padua, Italy.
 
 You can find monoT5 results for TREC DL19 and DL20 in Table 1, row (1).
-However, that table reports results with `monot5-3b-msmarco-10k`.
-Instead, this lesson uses the smaller `monot5-base-msmarco` model for efficiency.
-The 3B model used in the paper is painfully slow on a CPU (if it runs at all) and does not fit on Colab's free T4 runtime;
-therefore, the nDCG@10 scores you obtain here will be slightly lower than in the paper since you're using a smaller model.
+However, that table reports results with `monot5-3b-msmarco-10k`, which is a larger model.
+This 3B model is painfully slow on a CPU (if it runs at all) and does not fit on Colab's free T4 runtime.
+Instead, this lesson uses the smaller `monot5-base-msmarco` model.
+Therefore, the nDCG@10 scores you obtain here will be slightly lower than in the paper since you're using a smaller model.
 
 From [earlier in the onboarding lessons](https://github.com/castorini/anserini/blob/master/docs/start-here.md), you already learned about evaluating the quality of a ranked list using different metrics.
 Here, we are using a metric called nDCG@10.
@@ -110,23 +112,25 @@ rank-llm rerank \
 
 Three things happen, and you'll see each in the output:
 
-1. **Retrieve** — Pyserini downloads a prebuilt Lucene index of MS MARCO v1 passages (~2 GB; Colab's datacenter network makes quick work of it) and runs BM25 to get the top 100 passages for each DL19 query.
-2. **Rerank** — monoT5 scores every (query, passage) pair independently by asking the T5 model `Query: ... Document: ... Relevant:` and reading the probability of `true` vs `false` from the first generated token.
-   This is *pointwise* reranking — one passage at a time — in contrast to the *listwise* rerankers in [the next lesson](onboarding-rz.md), which see many passages at once.
-3. **Evaluate** — `trec_eval` scores the reranked run against the DL19 relevance judgments.
+1. **Retrieve** — the driver performs first-stage retrieval using BM25, returning 100 documents per query.
+Here, to minimize dependencies, RankLLM fetches cached results from a [Hugging Face dataset](https://huggingface.co/datasets/castorini/rank_llm_data).
+2. **Rerank** — the driver performs reranking with monoT5, as described above.
+3. **Evaluate** — the driver finally invokes `trec_eval` to compute nDCG using the DL19 relevance judgments.
 
-The whole pipeline takes under five minutes on a T4.
 The tail of the output should look like:
 
-```
-Results:
-ndcg_cut_10           	all	0.7043
+```text
+ndcg_cut_1              all     0.7984
+ndcg_cut_5              all     0.7458
+ndcg_cut_10             all     0.7043
 ```
 
-Compare this result with the corresponding BM25 + monoT5 result in Table 1, row (1). With the smaller model used here, the result here is expected to be slightly lower.
+Compare this result with the corresponding BM25 + monoT5 result in Table 1, row (1).
+The nDCG@10 score is a bit lower with the smaller model used here.
 
-Compare that against the 0.5058 of BM25 alone: the reranker just bought ~0.20 nDCG@10 without touching the index or the query.
-That gap — a cheap first stage to narrow the field, a smarter second stage to fix the order — is the whole idea of multi-stage retrieval, and everything in [the lessons that follow](onboarding-rz.md) builds on it.
+However, compare against the nDCG@10 score of 0.5058 with BM25 alone: the reranker improved the quality of the ranked list substantially by just reordering the top 100 documents from BM25.
+This improvement &mdash; a "cheap" first stage to narrow the field, a "smarter" (but more computationally expensive) reranker to improve the ranking &mdash; is the entire point of the retrieve-then-rerank architecture (and multi-stage retrieval in general).
+In subsequent lessons, we'll build on this idea to introduce listwise rerankers.
 
 ### TREC DL20
 
@@ -141,16 +145,16 @@ rank-llm rerank \
   --context-size 512
 ```
 
-The whole pipeline again takes under five minutes on a T4. The tail of the output should look like:
+The tail of the output should look like:
 
-```
-Results:
-ndcg_cut_10            all 0.6771
+```text
+ndcg_cut_1              all     0.8210
+ndcg_cut_5              all     0.7045
+ndcg_cut_10             all     0.6771
 ```
 
 The same pattern holds for DL20: compared with the corresponding BM25 + monoT5 result in Table 1, row (1), the result here is also expected to be slightly lower.
-
-Against the 0.4796 BM25 baseline on DL20, monoT5 improves nDCG@10 by roughly 0.20 here as well.
+However, we've substantively improved over the BM25 baseline, which achieves an nDCG@10 of 0.4796.
 
 ## Reranking on Colab (Optional)
 
@@ -256,10 +260,14 @@ colab stop -s rankllm
 colab sessions
 ```
 
+## Reranking on Modal (Optional)
+
+TBD
+
 ## Wrapping Up
 
 That's it!
-Go to [the RankZephyr guide](onboarding-rz.md) next.
+Follow the instructions below to add an entry to the reproduction log, then go on to [the RankZephyr guide](onboarding-rz.md).
 
 ## Reproduction Log[*](https://github.com/castorini/pyserini/blob/master/docs/reproducibility.md)
 
