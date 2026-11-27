@@ -20,7 +20,7 @@ However, subsequent lessons in the RankLLM onboarding path (e.g., RankZephyr) re
 
 - Understand the basic design of a standard "retrieve-then-rerank" pipeline for search.
 - Reproduce results from the monoT5 pointwise reranker on TREC DL19 and DL20.
-- If necessary, take advantage of Colab (or Modal) to accomplish the above.
+- If necessary, take advantage of Colab or Modal to accomplish the above.
 
 _Note_: As of late 2026, we are in the process of rewriting the onboarding guides for RankLLM.
 The lessons are still "doable", but may require a bit of debugging.
@@ -161,6 +161,32 @@ ndcg_cut_10             all     0.6771
 The same pattern holds for DL20: compared with the corresponding BM25 + monoT5 result in Table 1, row (1), the result here is also expected to be slightly lower.
 However, we've substantively improved over the BM25 baseline, which achieves an nDCG@10 of 0.4796.
 
+## BYOGPU
+
+BYOGPU stands for "Bring Your Own GPU".
+
+You need a GPU to complete the entire RankLLM onboarding sequence.
+
+To be more precise, it is possible to run monoT5 directly on the CPU (or on Google Colab using the free T4 GPU).
+However, subsequent lessons (e.g., RankZephyr) require you to have access to a GPU.
+Unfortunately, there's no reasonable workaround.
+We are not in a position to provide GPUs for everyone who wishes to work through these onboarding lessons or join our research group.
+We simply don't have enough resources.
+
+However, we can offer two alternatives:
+
+- Purchase a [Google Colab Pro](https://colab.research.google.com/) subscription for $13.99 CAD.
+- Start with free credits offered by [Modal](http://modal.com/).
+
+To be clear, for this lesson, monoT5 can be run on Google Colab using the _free_ T4 GPU, but nothing else in the sequence.
+
+Obviously, _free_ (via Modal) is better than having to pay (via Google Colab Pro).
+However, just recognize that Modal is a startup, and terms of the offer might arbitrarily change...
+
+GPUs are a fact of life for every aspiring deep learning researcher.
+In the same way we expect you to have access to a computer when going through these lessons, we expect you to have access to a GPU.
+Instructions for both are provided below.
+
 ## Reranking on Colab (Optional)
 
 A GPU speeds up monoT5 reranking, and the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) is the easiest way to access one if you don't have suitable hardware locally.
@@ -217,6 +243,8 @@ Environment setup is boilerplate, so it's prepackaged.
 [`scripts/colab_setup.py`](../scripts/colab_setup.py) installs JDK 21 (Pyserini sits on Anserini, which is Java), clones rank_llm, and pip-installs it with the `pyserini` extra.
 Everything else the pipeline needs — the prebuilt index, the relevance judgments (qrels), `trec_eval` — Pyserini downloads and caches on first use.
 Fetch the script and send it to the session with an explicit timeout — installation takes a few minutes:
+
+TODO: don't need the `curl` since we're assuming that `rank_llm` has already been checked out?
 
 ```bash
 curl -fsSO https://raw.githubusercontent.com/castorini/rank_llm/main/scripts/colab_setup.py
