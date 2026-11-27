@@ -32,7 +32,9 @@ def load_dataset_topics(dataset: str) -> tuple[dict, dict]:
         raise ValueError(f"Invalid collection name: {dataset} - {err}") from err
 
 
-def validate_cached_queries(requests: list[Request], topics: dict, qrels: dict, dataset: str, source: str) -> list[Request]:
+def validate_cached_queries(
+    requests: list[Request], topics: dict, qrels: dict, dataset: str, source: str
+) -> list[Request]:
     """Validate and order requests by canonical topics.
 
     Query IDs are compared as strings (Pyserini may use integer IDs). Query
@@ -61,5 +63,7 @@ def validate_cached_queries(requests: list[Request], topics: dict, qrels: dict, 
         if ids:
             problems.append(f"{label}: {', '.join(sorted(ids))}")
     if problems:
-        raise CachedQueryValidationError(f"Invalid retrieval cache {source!r} for dataset {dataset!r}: " + "; ".join(problems))
+        raise CachedQueryValidationError(
+            f"Invalid retrieval cache {source!r} for dataset {dataset!r}: " + "; ".join(problems)
+        )
     return [by_id[qid] for qid in expected]

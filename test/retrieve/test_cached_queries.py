@@ -35,7 +35,10 @@ class TestCachedQueries(unittest.TestCase):
             (self.requests[:1], "missing query IDs: 1"),
             (self.requests + [Request(Query("extra", 4))], "extra query IDs: 4"),
             (self.requests + [self.requests[0]], "duplicate query IDs: 2"),
-            ([Request(Query("First query", 1)), self.requests[0]], "mismatched query text for IDs: 1"),
+            (
+                [Request(Query("First query", 1)), self.requests[0]],
+                "mismatched query text for IDs: 1",
+            ),
             ([], "missing query IDs: 1, 2"),
         ]
         for requests, message in cases:
@@ -56,7 +59,9 @@ class TestCachedQueries(unittest.TestCase):
         ):
             with (
                 self.subTest(text=text),
-                self.assertRaisesRegex(CachedQueryValidationError, "mismatched query text for IDs: 1"),
+                self.assertRaisesRegex(
+                    CachedQueryValidationError, "mismatched query text for IDs: 1"
+                ),
             ):
                 self.validate([Request(Query(text, 1)), self.requests[0]])
 
@@ -75,14 +80,18 @@ class TestCachedQueries(unittest.TestCase):
                     cache.write_text("".join(json.dumps(asdict(r)) + "\n" for r in requests))
                     module = "rank_llm.retrieve.retriever"
                     with (
-                        patch(f"{module}.load_dataset_topics", return_value=(self.topics, self.qrels)),
+                        patch(
+                            f"{module}.load_dataset_topics", return_value=(self.topics, self.qrels)
+                        ),
                         patch(f"{module}.get_cache_home", return_value=directory),
                         patch.object(
                             Retriever,
                             "_get_file_with_highest_k",
                             return_value=(str(cache), 100) if local else (None, -1),
                         ),
-                        patch(f"{module}.download_cached_hits", return_value=str(cache)) as download,
+                        patch(
+                            f"{module}.download_cached_hits", return_value=str(cache)
+                        ) as download,
                     ):
                         retriever = Retriever(RetrievalMode.DATASET, "dl19", RetrievalMethod.BM25)
                         if valid:
@@ -115,7 +124,10 @@ class TestCachedQueries(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory(dir="tmp") as directory,
             patch("rank_llm.retrieve_and_rerank.Reranker") as reranker,
-            patch("rank_llm.retrieve.retriever.load_dataset_topics", return_value=(self.topics, self.qrels)),
+            patch(
+                "rank_llm.retrieve.retriever.load_dataset_topics",
+                return_value=(self.topics, self.qrels),
+            ),
             patch.object(Retriever, "_get_file_with_highest_k") as local_cache,
         ):
             cache = Path(directory) / "cache.jsonl"

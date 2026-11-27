@@ -196,7 +196,9 @@ class Retriever:
                         ]
                         for result in results:
                             result.candidates = result.candidates[:k]
-                        results = validate_cached_queries(results, topics, qrels, self._dataset, max_k_file)
+                        results = validate_cached_queries(
+                            results, topics, qrels, self._dataset, max_k_file
+                        )
                         print(f"Successfully loaded {max_k_file} to get top {k} candidates")
                         return results
                 except CachedQueryValidationError:
@@ -211,7 +213,9 @@ class Retriever:
                     results = [from_dict(data_class=Request, data=json.loads(line)) for line in f]
                     for result in results:
                         result.candidates = result.candidates[:k]
-                    results = validate_cached_queries(results, topics, qrels, self._dataset, cached_file)
+                    results = validate_cached_queries(
+                        results, topics, qrels, self._dataset, cached_file
+                    )
                     print(f"Successfully loaded and validated cached results from {cached_file}")
                     return results
             except CachedQueryValidationError:
