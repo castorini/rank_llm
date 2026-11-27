@@ -213,7 +213,19 @@ A reminder that this is just a gentle introduction, and the field is still large
 
 ## Reranking on Modal (Optional)
 
-To be written...
+Use the same Modal shell as in the [monoT5 lesson](onboarding-monot5.md#reranking-on-modal-optional).
+Its image already has the vLLM/CUDA 12.8 pins and JDK 21 from the Colab section above, plus the two vLLM settings in [`scripts/modal_setup.py`](../scripts/modal_setup.py):
+
+```bash
+modal shell scripts/modal_setup.py::shell
+nvidia-smi
+cd /opt/rank_llm
+```
+
+Run the commands above, then copy the results to the volume, exit, and download them as in the monoT5 lesson.
+
+On a Modal A100-SXM4-40GB, these commands gave `ndcg_cut_10` 0.7798 on DL19 and 0.8165 on DL20; for why scores vary, see the [experimental writeup](gpu-variability.md#reranking-effectiveness-with-rankzephyr-20261127).
+The GPU costs $0.000583 per second while the shell is open; a session with all four monoT5 and RankZephyr commands cost $0.56.
 
 ## Wrapping Up
 

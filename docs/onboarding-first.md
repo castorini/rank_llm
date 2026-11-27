@@ -114,7 +114,9 @@ More to be written...
 
 ## Reranking on Modal (Optional)
 
-To be written...
+Use the same Modal shell as in the [monoT5 lesson](onboarding-monot5.md#reranking-on-modal-optional) and run the commands above from `/opt/rank_llm`.
+On a Modal A100-SXM4-40GB, they gave `ndcg_cut_10` 0.7723 on DL19 and 0.7858 on DL20.
+A session with both commands cost $0.27.
 
 ## Wrapping Up
 
