@@ -57,9 +57,7 @@ class VllmHandler:
         self._closed = False
         # Do not register a bound method with atexit: that keeps this handler
         # alive and prevents `del reranker` from releasing the engine process.
-        self._finalizer = weakref.finalize(
-            self, self._shutdown_engine_safely, self._engine
-        )
+        self._finalizer = weakref.finalize(self, self._shutdown_engine_safely, self._engine)
 
     @staticmethod
     def _shutdown_engine_safely(engine: Any) -> None:
@@ -94,9 +92,7 @@ class VllmHandler:
                     raise ImportError(
                         "Tokenizer loading inside a running event loop requires transformers."
                     )
-                self._tokenizer = AutoTokenizer.from_pretrained(
-                    self._model, trust_remote_code=True
-                )
+                self._tokenizer = AutoTokenizer.from_pretrained(self._model, trust_remote_code=True)
             else:
                 result = self._engine.get_tokenizer()
                 if asyncio.iscoroutine(result):
@@ -174,9 +170,7 @@ class VllmHandler:
         }
         sampling_params = vllm.SamplingParams(**sp_kwargs)
         request_id = str(uuid.uuid4())
-        async for request_output in self._engine.generate(
-            prompt, sampling_params, request_id
-        ):
+        async for request_output in self._engine.generate(prompt, sampling_params, request_id):
             if request_output.finished:
                 return request_output
         raise RuntimeError("vLLM generation ended without a finished output.")

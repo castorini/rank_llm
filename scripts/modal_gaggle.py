@@ -9,12 +9,8 @@ image = (
     modal.Image.from_registry("ubuntu:24.04", add_python="3.12")
     .apt_install("openjdk-21-jdk-headless")
     .pip_install("torch==2.9.1", "transformers==5.16.1", "accelerate>=1.0")
-    .add_local_file(
-        str(root / "pyproject.toml"), "/opt/rank_llm/pyproject.toml", copy=True
-    )
-    .add_local_file(
-        str(root / "requirements.txt"), "/opt/rank_llm/requirements.txt", copy=True
-    )
+    .add_local_file(str(root / "pyproject.toml"), "/opt/rank_llm/pyproject.toml", copy=True)
+    .add_local_file(str(root / "requirements.txt"), "/opt/rank_llm/requirements.txt", copy=True)
     .add_local_file(str(root / "README.md"), "/opt/rank_llm/README.md", copy=True)
     .add_local_file(str(root / "LICENSE"), "/opt/rank_llm/LICENSE", copy=True)
     .add_local_dir(str(root / "src"), "/opt/rank_llm/src", copy=True)

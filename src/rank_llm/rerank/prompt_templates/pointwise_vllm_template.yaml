@@ -8,6 +8,17 @@
 #
 # When message_roles is absent or set to "default", the handler falls back to
 # the standard system + user layout using system_message / body.
+#
+# output_tokens (optional) names the tokens the model answers with. The score is
+# the probability of a positive token over that of any answer token, and
+# allowed_token_ids is the union of both lists. Without it (as here), yes / no in
+# three cases, bare or with a leading or trailing space, are used. A prompt that
+# asks for true / false, or exactly the lowercase yes / no of the Qwen3-Reranker
+# model card, declares them; quote leading spaces:
+#   output_tokens:
+#     positive: ["yes"]
+#     negative: ["no"]
+# PointwiseVLLM(positive_tokens=..., negative_tokens=...) overrides the template.
 method: "pointwise"
 message_roles: "reranker"
 instruction: >-

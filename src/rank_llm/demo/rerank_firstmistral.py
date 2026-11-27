@@ -132,8 +132,7 @@ def main() -> None:
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",
@@ -178,9 +177,7 @@ def main() -> None:
     print(f"Reranked {len(rerank_results)} results.")
     _print_sample(rerank_results)
 
-    analyzer = ResponseAnalyzer.from_inline_results(
-        rerank_results, use_alpha=args.use_alpha
-    )
+    analyzer = ResponseAnalyzer.from_inline_results(rerank_results, use_alpha=args.use_alpha)
     error_counts = analyzer.count_errors()
     print(f"\nResponse analysis: {error_counts!r}")
 

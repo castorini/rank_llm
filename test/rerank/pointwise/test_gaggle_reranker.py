@@ -15,9 +15,7 @@ class TestGaggleReranker(unittest.TestCase):
 
     def test_accepts_relative_bundled_prompt_template(self):
         with (
-            patch(
-                "rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification"
-            ),
+            patch("rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification"),
             patch("rank_llm.rerank.pointwise.gaggle_reranker.AutoTokenizer"),
         ):
             GaggleReranker(
@@ -26,22 +24,14 @@ class TestGaggleReranker(unittest.TestCase):
             )
 
     @patch("rank_llm.rerank.pointwise.gaggle_reranker.torch.cuda.is_bf16_supported")
-    @patch(
-        "rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification"
-    )
+    @patch("rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification")
     @patch("rank_llm.rerank.pointwise.gaggle_reranker.AutoTokenizer")
-    def test_uses_fp16_without_bf16_support(
-        self, tokenizer_cls, model_cls, bf16_supported
-    ):
+    def test_uses_fp16_without_bf16_support(self, tokenizer_cls, model_cls, bf16_supported):
         bf16_supported.return_value = False
         GaggleReranker(device="cuda")
-        self.assertEqual(
-            model_cls.from_pretrained.call_args.kwargs["torch_dtype"], torch.float16
-        )
+        self.assertEqual(model_cls.from_pretrained.call_args.kwargs["torch_dtype"], torch.float16)
 
-    @patch(
-        "rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification"
-    )
+    @patch("rank_llm.rerank.pointwise.gaggle_reranker.AutoModelForSequenceClassification")
     @patch("rank_llm.rerank.pointwise.gaggle_reranker.AutoTokenizer")
     def test_factory_scores_and_sorts_pairs(self, tokenizer_cls, model_cls):
         model = MagicMock()
@@ -69,13 +59,9 @@ class TestGaggleReranker(unittest.TestCase):
                 Candidate("c", 0, {"title": "Third", "body": "last"}),
             ],
         )
-        result = coordinator.rerank_batch([request], populate_invocations_history=True)[
-            0
-        ]
+        result = coordinator.rerank_batch([request], populate_invocations_history=True)[0]
 
-        self.assertEqual(
-            [candidate.docid for candidate in result.candidates], ["a", "c", "b"]
-        )
+        self.assertEqual([candidate.docid for candidate in result.candidates], ["a", "c", "b"])
         model.compute_score.assert_called_once_with(
             [
                 ("query with Passage: marker", "first Relevant: text"),

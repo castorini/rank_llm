@@ -83,9 +83,7 @@ class PairwiseRankLLM(RankLLM, ABC):
                     self._enumerated_indices[query_idx].append([i, j])
             num_pairs += len(self._enumerated_indices[query_idx])
 
-        with tqdm(
-            total=num_pairs, desc="Progress through (q, d) pairs"
-        ) as progress_bar:
+        with tqdm(total=num_pairs, desc="Progress through (q, d) pairs") as progress_bar:
             for query_idx, pair_list in enumerate(self._enumerated_indices):
                 index = 0
                 while index < len(pair_list):
@@ -124,9 +122,7 @@ class PairwiseRankLLM(RankLLM, ABC):
         # Build prompts for each pair in [index, end_index)
         for pair_idx in range(index, end_index):
             i, j = pair_list[pair_idx]
-            prompt, tcount = self.create_prompt(
-                result=results[query_idx], index1=i, index2=j
-            )
+            prompt, tcount = self.create_prompt(result=results[query_idx], index1=i, index2=j)
             prompts.append(prompt)
             token_counts.append(tcount)
 

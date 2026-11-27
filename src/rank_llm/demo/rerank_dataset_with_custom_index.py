@@ -93,13 +93,9 @@ def _prepare_data(args: argparse.Namespace) -> None:
     if topics_path.exists() and not topics_path.is_file():
         raise ValueError(f"Topics path is not a file: {topics_path}")
     if not index_path.exists() and not index_url:
-        raise ValueError(
-            "Missing custom index; provide an existing --index-path or --index-url"
-        )
+        raise ValueError("Missing custom index; provide an existing --index-path or --index-url")
     if not topics_path.exists() and not topics_url:
-        raise ValueError(
-            "Missing custom topics; provide an existing --topics-path or --topics-url"
-        )
+        raise ValueError("Missing custom topics; provide an existing --topics-path or --topics-url")
     if not index_path.exists():
         index_path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.TemporaryDirectory(dir=index_path.parent) as temporary:
@@ -112,9 +108,7 @@ def _prepare_data(args: argparse.Namespace) -> None:
                 archive.extractall(extracted, filter="data")
             downloaded_index = extracted / index_path.name
             if not downloaded_index.is_dir() or downloaded_index.is_symlink():
-                raise ValueError(
-                    f"Index archive must contain a directory named {index_path.name}"
-                )
+                raise ValueError(f"Index archive must contain a directory named {index_path.name}")
             downloaded_index.rename(index_path)
     if not topics_path.exists():
         topics_path.parent.mkdir(parents=True, exist_ok=True)

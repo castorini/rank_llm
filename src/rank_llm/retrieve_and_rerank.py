@@ -82,7 +82,8 @@ def retrieve_and_rerank(
     else:
         # Reranker is of type RankLLM
         for pass_ct in range(num_passes):
-            print(f"Pass {pass_ct + 1} of {num_passes}:")
+            if num_passes > 1:
+                print(f"Pass {pass_ct + 1} of {num_passes}:")
             rerank_results = reranker.rerank_batch(
                 requests,
                 rank_end=top_k_retrieve,
@@ -139,8 +140,7 @@ def retrieve_and_rerank(
         else:
             print("Skipping evaluation for single ad-hoc query (no qrels).")
     elif (
-        retrieval_mode == RetrievalMode.CACHED_FILE
-        and reranker.get_model_coordinator() is not None
+        retrieval_mode == RetrievalMode.CACHED_FILE and reranker.get_model_coordinator() is not None
     ):
         writer = DataWriter(rerank_results)
         keys_and_defaults = [
@@ -178,15 +178,9 @@ def retrieve_and_rerank(
             from rank_llm.evaluation.trec_eval import EvalFunction
 
             print("Evaluating:")
-            EvalFunction.from_results(
-                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.1"]
-            )
-            EvalFunction.from_results(
-                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.5"]
-            )
-            EvalFunction.from_results(
-                rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.10"]
-            )
+            EvalFunction.from_results(rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.1"])
+            EvalFunction.from_results(rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.5"])
+            EvalFunction.from_results(rerank_results, qrels_file, ["-c", "-m", "ndcg_cut.10"])
 
     if interactive:
         return (rerank_results, reranker.get_model_coordinator())
@@ -258,13 +252,9 @@ def retrieve(
 
             # Single supplied query: run retrieval for this query against the dataset index
             if not isinstance(dataset, str):
-                raise ValueError(
-                    "When providing a query, dataset must be a single dataset name."
-                )
+                raise ValueError("When providing a query, dataset must be a single dataset name.")
             pyserini = PyseriniRetriever(dataset, retrieval_method)
-            requests = pyserini.retrieve_for_query_text(
-                query, k=top_k_retrieve, qid=qid
-            )
+            requests = pyserini.retrieve_for_query_text(query, k=top_k_retrieve, qid=qid)
         else:
             requests = Retriever.from_dataset_with_prebuilt_index(
                 dataset_name=dataset,
@@ -277,9 +267,7 @@ def retrieve(
             ("topics_path", None),
             ("index_type", None),
         ]
-        [index_path, topics_path, index_type] = extract_kwargs(
-            keys_and_defaults, **kwargs
-        )
+        [index_path, topics_path, index_type] = extract_kwargs(keys_and_defaults, **kwargs)
         requests = Retriever.from_custom_index(
             index_path=index_path, topics_path=topics_path, index_type=index_type
         )

@@ -182,20 +182,15 @@ class Retriever:
             max_k_file, max_k = self._get_file_with_highest_k(
                 retrieve_results_dirname, self._retrieval_method.name, self._dataset
             )
-            if (
-                max_k_file and max_k >= k
-            ):  # try to see if retrieving from local file works
+            if max_k_file and max_k >= k:  # try to see if retrieving from local file works
                 try:
                     with open(max_k_file) as f:
                         results = [
-                            from_dict(data_class=Request, data=json.loads(line))
-                            for line in f
+                            from_dict(data_class=Request, data=json.loads(line)) for line in f
                         ]
                         for result in results:
                             result.candidates = result.candidates[:k]
-                        print(
-                            f"Successfully loaded {max_k_file} to get top {k} candidates"
-                        )
+                        print(f"Successfully loaded {max_k_file} to get top {k} candidates")
                         return results
                 except Exception as local_error:
                     print(f"Local file invalid, attempting HF download: {local_error}")
@@ -204,10 +199,7 @@ class Retriever:
                 cached_file = download_cached_hits(query_name)
                 print(f"Cached file: {cached_file}")
                 with open(cached_file) as f:
-                    results = [
-                        from_dict(data_class=Request, data=json.loads(line))
-                        for line in f
-                    ]
+                    results = [from_dict(data_class=Request, data=json.loads(line)) for line in f]
                     for result in results:
                         result.candidates = result.candidates[:k]
                     print(
@@ -223,9 +215,7 @@ class Retriever:
                 pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
                 return pyserini.retrieve_and_store(k=k)
             except Exception as pyserini_error:
-                raise ValueError(
-                    f"Pyserini error: {pyserini_error}"
-                ) from pyserini_error
+                raise ValueError(f"Pyserini error: {pyserini_error}") from pyserini_error
         elif self._retrieval_mode == RetrievalMode.CUSTOM:
             candidates_file = Path(
                 f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
@@ -248,9 +238,7 @@ class Retriever:
                 print("Reusing existing retrieved results.")
                 with open(candidates_file) as f:
                     loaded_results = json.load(f)
-                retrieved_results = [
-                    from_dict(data_class=Request, data=r) for r in loaded_results
-                ]
+                retrieved_results = [from_dict(data_class=Request, data=r) for r in loaded_results]
         else:
             raise ValueError(f"Invalid retrieval mode: {self._retrieval_mode}")
         return retrieved_results

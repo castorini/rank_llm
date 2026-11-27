@@ -53,14 +53,11 @@ def generate_hits_info(base_path):
                 if method in METHOD_MAPPING:
                     method = METHOD_MAPPING[method]
                 dataset = relative_path.split("/")[2]
-                k = (
-                    dataset[dataset.rfind("_top") + len("_top") :]
-                    .replace(".jsonl", "")
-                    .strip()
-                )
+                k = dataset[dataset.rfind("_top") + len("_top") :].replace(".jsonl", "").strip()
                 dataset = dataset[
-                    dataset.find("retrieve_results_")
-                    + len("retrieve_results_") : dataset.rfind("_top")
+                    dataset.find("retrieve_results_") + len("retrieve_results_") : dataset.rfind(
+                        "_top"
+                    )
                 ]
                 if dataset in DATASET_MAPPING:
                     dataset = DATASET_MAPPING[dataset]
@@ -83,14 +80,9 @@ def generate_hits_info(base_path):
                 if method in METHOD_MAPPING:
                     method = METHOD_MAPPING[method]
                 dataset = relative_path.split("/")[2]
-                k = (
-                    dataset[dataset.rfind("_top") + len("_top") :]
-                    .replace(ending, "")
-                    .strip()
-                )
+                k = dataset[dataset.rfind("_top") + len("_top") :].replace(ending, "").strip()
                 dataset = dataset[
-                    dataset.find("trec_results_")
-                    + len("trec_results_") : dataset.rfind("_top")
+                    dataset.find("trec_results_") + len("trec_results_") : dataset.rfind("_top")
                 ]
                 if dataset in DATASET_MAPPING:
                     dataset = DATASET_MAPPING[dataset]

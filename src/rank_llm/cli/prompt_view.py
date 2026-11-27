@@ -35,9 +35,7 @@ def load_prompt_template(name_or_path: str) -> dict[str, Any]:
     candidate_path = Path(name_or_path)
     path = candidate_path
     if not candidate_path.exists():
-        template_name = (
-            name_or_path if name_or_path.endswith(".yaml") else f"{name_or_path}.yaml"
-        )
+        template_name = name_or_path if name_or_path.endswith(".yaml") else f"{name_or_path}.yaml"
         path = Path(str(TEMPLATES / template_name))
     if not path.exists():
         raise PromptTemplateError(f"Unknown prompt template: {name_or_path}")
@@ -184,9 +182,7 @@ def build_rendered_prompt_view(
 
 
 def render_prompt_catalog_text(catalog: list[dict[str, Any]]) -> str:
-    return "\n".join(
-        f"{entry['name']} [{entry['method']}] {entry['path']}" for entry in catalog
-    )
+    return "\n".join(f"{entry['name']} [{entry['method']}] {entry['path']}" for entry in catalog)
 
 
 def render_prompt_template_text(view: dict[str, Any]) -> str:

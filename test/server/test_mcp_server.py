@@ -92,9 +92,7 @@ class TestMCPServer(unittest.TestCase):
             "cats",
             msg="Supplied query 'cats' was not used in the result",
         )
-        self.assertEqual(
-            len(first["candidates"]), 10, msg="Expected exactly 10 candidates"
-        )
+        self.assertEqual(len(first["candidates"]), 10, msg="Expected exactly 10 candidates")
         os.remove(self.rank_results_trec_file)
 
     def test_02_rerank_tool(self):

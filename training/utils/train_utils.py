@@ -40,9 +40,7 @@ def compute_generation_loss(model_outputs, labels, device):
     return loss, loss  # Return both total loss and generation loss
 
 
-def compute_ranking_loss(
-    model_outputs, rank_labels, source_lens, tokenizer, args, device
-):
+def compute_ranking_loss(model_outputs, rank_labels, source_lens, tokenizer, args, device):
     """Compute the loss for ranking task."""
     rank_losses = torch.zeros(len(rank_labels))
 
@@ -60,13 +58,9 @@ def compute_ranking_loss(
         true_scores = torch.gather(scores_sorted, 0, torch.tensor(true_rank).to(device))
 
         if args.ranking_loss == "lambda":
-            rank_losses[batch_index] = lambdarank(
-                scores.unsqueeze(0), true_scores.unsqueeze(0)
-            )
+            rank_losses[batch_index] = lambdarank(scores.unsqueeze(0), true_scores.unsqueeze(0))
         elif args.ranking_loss == "listnet":
-            rank_losses[batch_index] = listNet(
-                scores.unsqueeze(0), true_scores.unsqueeze(0)
-            )
+            rank_losses[batch_index] = listNet(scores.unsqueeze(0), true_scores.unsqueeze(0))
         elif args.ranking_loss == "ranknet":
             rank_losses[batch_index] = rank_net(
                 scores.unsqueeze(0), true_scores.unsqueeze(0), weighted=args.weighted
@@ -149,14 +143,8 @@ def train_epoch(
             step_rank_loss = 0
             step_generate_loss = 0
 
-    if (
-        args.resume_from_checkpoint
-        and epoch == starting_epoch
-        and resume_step is not None
-    ):
-        active_dataloader = accelerator.skip_first_batches(
-            train_dataloader, resume_step
-        )
+    if args.resume_from_checkpoint and epoch == starting_epoch and resume_step is not None:
+        active_dataloader = accelerator.skip_first_batches(train_dataloader, resume_step)
     else:
         active_dataloader = train_dataloader
 
@@ -197,10 +185,7 @@ def train_epoch(
                 step_loss = 0
             progress_bar.update(1)
 
-        if (
-            isinstance(checkpointing_steps, int)
-            and completed_steps % checkpointing_steps == 0
-        ):
+        if isinstance(checkpointing_steps, int) and completed_steps % checkpointing_steps == 0:
             output_dir = f"step_{completed_steps}"
             if args.output_dir is not None:
                 output_dir = os.path.join(args.output_dir, output_dir)
@@ -216,9 +201,7 @@ def initialize_training_state(train_dataloader, args, accelerator):
     """Initialize training state variables."""
     overrode_max_train_steps = False
     num_update_steps_per_epoch = math.ceil(
-        len(train_dataloader)
-        / args.gradient_accumulation_steps
-        / accelerator.num_processes
+        len(train_dataloader) / args.gradient_accumulation_steps / accelerator.num_processes
     )
 
     if args.max_train_steps is None:
@@ -251,8 +234,7 @@ def resume_from_checkpoint(args, num_update_steps_per_epoch, train_dataloader):
         completed_steps = starting_epoch * num_update_steps_per_epoch
     else:
         resume_step = (
-            int(training_difference.replace("step_", ""))
-            * args.gradient_accumulation_steps
+            int(training_difference.replace("step_", "")) * args.gradient_accumulation_steps
         )
         starting_epoch = resume_step // len(train_dataloader)
         completed_steps = resume_step // args.gradient_accumulation_steps

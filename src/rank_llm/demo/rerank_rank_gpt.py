@@ -137,8 +137,7 @@ def main() -> None:
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",
@@ -161,9 +160,7 @@ def main() -> None:
         print(f"{'=' * 60}")
         _print_eval(requests, qrels)
 
-    prompt_template_path = args.prompt_template or str(
-        TEMPLATES / "rank_gpt_template.yaml"
-    )
+    prompt_template_path = args.prompt_template or str(TEMPLATES / "rank_gpt_template.yaml")
     coordinator = SafeOpenai(
         model=args.model,
         context_size=args.context_size,

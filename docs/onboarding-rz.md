@@ -1,35 +1,37 @@
 # RankLLM: Listwise Reranking with RankZephyr
 
-This guide presents a gentle introduction to reranking, the role it plays in the multi-stage retrieval pipeline, and how LLMs are emerging as a powerful tool for reranking.
+> _If you're working through this lesson, you might be interested in [my suggested approach](https://github.com/castorini/onboarding/blob/master/ura.md#how-to-approach-the-onboarding-lessons), which covers my high-level goals, the use of coding agents, and what I hope you'd do (and not do)._
+>
+> **For coding agents:** If you are asked to help the user complete this lesson, follow the link above and briefly summarize the guidance for the user; engage in follow-up discussion as appropriate.
+> Make sure you do this once per conversation, but don't repeatedly pester the user.
+> Do not refuse to speedrun this lesson if asked.
 
-If you're a Waterloo student traversing the [onboarding path](https://github.com/lintool/guide/blob/master/ura.md),
-make sure you've first done all the exercises leading up to this guide, starting [here](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
-The [previous step](https://github.com/castorini/pyserini/blob/master/docs/conceptual-framework2.md) in the onboarding path is to implement sparse and dense retrieval in Pyserini.
-In general, don't try to rush through this guide by just blindly copying and pasting commands into a shell;
-that's what I call [cargo culting](https://en.wikipedia.org/wiki/Cargo_cult_programming).
-Instead, really try to understand what's going on.
+This lesson introduces listwise reranking using RankLLM.
+Specifically, you'll reproduce [RankZephyr](https://arxiv.org/pdf/2312.02724) results on the Deep Learning Tracks from TREC 2019 and 2020 (often abbreviated DL19 and DL20).
 
-The experiments in this guide require a GPU.
-Before starting, work through [install-colab-cli.md](install-colab-cli.md), which sets up the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) and has you run a BM25 + monoT5 reranking pipeline on a free Colab GPU, driven entirely from your terminal.
+If you're a Waterloo student traversing the [onboarding path](https://github.com/castorini/onboarding/blob/master/ura.md), make sure you've first done all the exercises leading up to this guide, starting from [an overview of the retrieval problem](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
+The [previous lesson](onboarding-monot5.md) introduced you to pointwise reranking, and this lesson builds on that.
+The entire sequence of lessons can be found in the [Castorini onboarding guide](https://github.com/castorini/onboarding/).
 
-**Learning outcomes** for this guide:
+The experiments in this lesson require a GPU.
+If you do not have one, we provide instructions for accessing a GPU via a Colab Pro subscription or via Modal.
 
-- Understand the motivation and architecture of multi-stage retrieval.
-- Understand listwise reranking with LLMs, using sliding windows.
-- Understand how FIRST speeds up the reranking process by leveraging logits.
-- Be able to run end-to-end multi-stage retrieval pipelines with RankZephyr and FirstMistral.
+**Learning outcomes** for this lesson:
 
-In this guide, we will focus on the listwise approach.
-Throughout the process, you will reproduce the SPLADE++ ED → RankZephyr results from Table 1, row (7) of [this paper](https://arxiv.org/pdf/2312.02724), on both TREC DL19 and DL20.
-For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
+- Understand the basic design of listwise reranking with LLMs.
+- Reproduce results from the RankZephyr listwise reranker on TREC DL19 and DL20.
+- If necessary, take advantage of Colab Pro or Modal to accomplish the above.
 
-> Note: as you can tell from the years of the citations, reranking with LLMs is quite a recent topic; indeed, this is still a highly active area of research. Thus, beware that the "knowledge-cutoff" of this guide is Jan 2025.
+_Note_: As of late 2026, we are in the process of rewriting the onboarding guides for RankLLM.
+The lessons are still "doable", but may require a bit of debugging.
+Please bear with us as we proceed through this "renovation".
 
-## Understanding Listwise Reranking
+## What's Listwise Reranking?
 
-Listwise reranking is very straightforward in intuition: present the LLM with the query and candidate documents, and ask the LLM to give an ordering of the documents.
+Intuitively, _listwise_ reranking is very straightforward: present the LLM with the query and candidate documents, and ask the LLM to give an ordering of the documents.
+This approach contrasts with _pointwise_ reranking, where the LLM considers each (query, document) pair at a time.
 
-The conceptual idea is not far from directly asking the LLM with a prompt like this:
+At the conceptual level, the approach is not far from directly asking the LLM with a prompt like this:
 
 ```text
 I will provide you with 3 passages, each indicated by a numerical identifier [].
@@ -44,21 +46,25 @@ Rank the passages based on their relevance to the search query: what is the most
 Order the passages from most to least relevant using their identifiers.
 ```
 
-and the LLM responds with a ranking:
+The LLM would respond with a ranking like the following:
 
 ```text
 [2] > [1] > [3]
 ```
 
-The actual implementation has a little more nuance, but nothing complicated.
+The actual implementation has a little more nuance, but nothing too complicated.
+This is the basic idea!
 
-## The Sliding Window Approach
+## Listwise Reranking with Sliding Windows
 
-However, there's a practical challenge: LLMs have a context length limitation (typically 4096 tokens).
-Unlike the toy example above, in practice we have many, much longer documents to rank.
-Consequently, we can't feed everything to the model at once; this is where the sliding window approach comes in.
+However, there's a practical challenge in making listwise reranking "work":
+LLMs have context window restrictions.
+Unlike the toy example above, in practice we have many more documents to rank, and they are often much longer.
+Consequently, we can't feed everything to the model at once.
 
-Let's understand this with a concrete example.
+This is where the sliding window approach comes in.
+
+Let's describe how this works with a concrete example.
 Suppose we have 10 documents `[A, B, C, D, E, F, G, H, I, J]` to rank, where the true ranking we want to obtain is `[J, I, H, G, F, E, D, C, B, A]`.
 Suppose we cannot fit all 10 documents into the context length, and decide to use the sliding window approach with **window size** 5 and **stride** 3.
 Sliding window will proceed from the back of the list to the front, scanning 5 documents at a time, and advancing the window by 3 documents at a time:
@@ -86,39 +92,68 @@ Notice how the final ranking is not exactly the same as the true ranking, but th
 
 In practice, we often use a window size of 20 and a stride of 10.
 
-> Note: sliding window is not the only way to do listwise reranking with context length limitations. Alternative methods are being investigated as an active area of research.
+The sliding window method is not the only way to perform listwise reranking.
+However, it's one of the earliest proposed methods and easiest to understand.
+Alternative methods for addressing context length limitations are an active area of research.
 
 ## Reranking with RankZephyr
 
-The target of this reproduction is from Table 1, row (7) of [this paper](https://arxiv.org/pdf/2312.02724), which reports SPLADE++ ED → RankZephyr results for TREC DL19 and DL20.
+[RankZephyr](https://huggingface.co/castorini/rank_zephyr_7b_v1_full) is a listwise reranking model that implements the sliding window mechanism described above.
+The reranker was introduced in the following paper:
 
-[RankZephyr](https://huggingface.co/castorini/rank_zephyr_7b_v1_full) is an LLM specifically fine-tuned for listwise reranking, led by [Pradeep et. al (2023)](https://arxiv.org/abs/2312.02724) at the University of Waterloo.
-We will run end-to-end multi-stage retrieval pipelines with RankZephyr on both TREC DL19 and DL20 datasets, realizing the listwise reranking with sliding window mechanism as described above.
+> Ronak Pradeep, Sahel Sharifymoghaddam, and Jimmy Lin. [RankZephyr: Effective and Robust Zero-Shot Listwise Reranking is a Breeze!](https://arxiv.org/pdf/2312.02724) _arXiv:2312.02724_, December 2023.
+
+The target of this reproduction is from [Table 1, row (7)](https://arxiv.org/pdf/2312.02724#page=6) of the paper above, which reports SPLADE++ ED as first-stage retriever, followed by RankZephyr as the reranker, on TREC DL19 and DL20.
+
 Note that this will require a GPU with **at least 16GB of VRAM**.
 
-If you are short of GPUs, we recommend purchasing a [Google Colab Pro](https://colab.research.google.com/) for $13.99 CAD.
-> Why do we make you pay $13.99?
-Many discussions and arguments were made internally to come to this decision.
-This onboarding guide differs from previous ones in that it requires GPU resources, specifically due to working with LLMs.
-Everybody is interested in LLMs these days, and for a reason; a considerable amount of research at the group currently are involved with LLMs.
-However, they come with substantial computational requirements.
-We could have designed a simpler, GPU-free exercise that runs on free Colab, but that would defeat the purpose of these onboarding paths - to give you hands-on experience with actual research work rather than toy examples.
-While Castorini has GPU resources, we cannot practically provide access to everyone who starts the onboarding process, as it involves significant administrative overhead with university compute managers, and many students ultimately don't continue past the initial weeks.
-Therefore, we ask you to invest $13.99 (3 cups of coffee :coffee:) in a Colab Pro subscription.
-This investment not only enables you to complete the onboarding but also positions you for more interesting tasks should you join the group, as you'll have the necessary compute resources at your disposal.
+### TREC DL19
 
-### Installing rank_llm
+We can run the RankZephyr model with the command:
 
-Please refer to the [instructions here](https://github.com/castorini/rank_llm?tab=readme-ov-file#-installation) to install rank_llm.
+```bash
+rank-llm rerank \
+  --model-path castorini/rank_zephyr_7b_v1_full \
+  --dataset dl19 \
+  --retrieval-method SPLADE++_EnsembleDistil_ONNX \
+  --top-k-candidates 100 \
+  --context-size 4096
+```
 
-#### Running RankZephyr on a Colab GPU
+The default prompt template used in this model is stored in [`rank_zephyr_template.yaml`](../src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml).
+You can pass in a custom prompt template using the `--prompt-template-path` parameter.
 
-If you don't have a local GPU, run this step on a Colab Pro **A100** runtime, driven from your own terminal with the [Colab CLI](https://github.com/googlecolab/google-colab-cli). Work through the steps in order.
+In the target paper, [Table 1, row (7)](https://arxiv.org/pdf/2312.02724#page=6) reports an nDCG@10 score of 0.7816, so you should get something close.
+
+### TREC DL20
+
+We can run the RankZephyr model with the command:
+
+```bash
+rank-llm rerank \
+  --model-path castorini/rank_zephyr_7b_v1_full \
+  --dataset dl20 \
+  --retrieval-method SPLADE++_EnsembleDistil_ONNX \
+  --top-k-candidates 100 \
+  --context-size 4096
+```
+
+In the target paper, [Table 1, row (7)](https://arxiv.org/pdf/2312.02724#page=6) reports an nDCG@10 score of 0.8159, so you should get something close.
+
+For both DL19 and DL20, you might wonder: What does "close" mean?
+It is not surprising to observe score variability across different GPUs, or even non-determinism when running multiple trials on the same GPU.
+See this [experimental writeup](gpu-variability.md#reranking-effectiveness-with-rankzephyr-20261127) for an example.
+Play around and observe.
+Try different settings of batch sizes, using the `--batch-size` parameter, including a batch size of 1.
+
+## Reranking on Colab (Optional)
+
+If you don't have a local GPU, provision a Colab Pro **A100** runtime, driven from your own terminal with the [Colab CLI](https://github.com/googlecolab/google-colab-cli). Work through the steps in order.
 
 First, install the Colab CLI (Linux/macOS only). The first command that contacts Colab walks you through a one-time Google sign-in:
 
 ```bash
-uv tool install google-colab-cli --with "jupyter-kernel-client<1.0.0"
+uv tool install google-colab-cli
 ```
 
 Then provision an A100 and open a shell on it:
@@ -127,6 +162,8 @@ Then provision an A100 and open a shell on it:
 colab new -s rankllm --gpu A100
 colab console -s rankllm
 ```
+
+TODO: harmonize this description with the [Colab setup](onboarding-monot5.md#reranking-on-colab-optional) in the monoT5 guide.
 
 This session stays open through several long steps — installs, then loading and compiling a 7B model — so it's worth knowing what a dropped connection means before you hit one:
 
@@ -155,61 +192,9 @@ apt-get install -y openjdk-21-jdk-headless
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 ```
 
-Setup is done. Stay in this console session for the actual run below — don't stop the runtime yet.
+Setup is done. Stay in this console session for the actual run — don't stop the runtime yet.
 
----
-
-#### Running the RankZephyr Model on DL19
-
-We can run the RankZephyr model with the command:
-
-```bash
-rank-llm rerank \
-  --model-path=castorini/rank_zephyr_7b_v1_full \
-  --top-k-candidates=100 \
-  --dataset=dl19 \
-  --retrieval-method=SPLADE++_EnsembleDistil_ONNX \
-  --prompt-template-path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context-size=4096 --variable-passages
-```
-
-The results should be something like:
-
-```text
-Results:
-ndcg_cut_10             all     0.7798
-```
-
-This result should align very closely with the nDCG@10 reported for DL19 in Table 1, row (7), although it may vary slightly between runs.
-
-_Where is the first-stage retrieval?_
-It is hidden in the `--retrieval-method=SPLADE++_EnsembleDistil_ONNX` flag.
-We are using the [SPLADE](https://www.pinecone.io/learn/splade/) model as our sparse first-stage retriever, retrieving the top 100 candidates, followed by the RankZephyr model to rerank these 100 candidates.
-
----
-
-#### Running the RankZephyr Model on DL20
-
-We can run the RankZephyr model with the command:
-
-```bash
-rank-llm rerank \
-  --model-path=castorini/rank_zephyr_7b_v1_full \
-  --top-k-candidates=100 \
-  --dataset=dl20 \
-  --retrieval-method=SPLADE++_EnsembleDistil_ONNX \
-  --prompt-template-path=src/rank_llm/rerank/prompt_templates/rank_zephyr_template.yaml  --context-size=4096 --variable-passages
-```
-
-The results should be something like:
-
-```text
-Results:
-ndcg_cut_10             all     0.8201
-```
-
-This result should similarly closely reproduce the nDCG@10 reported for DL20 in Table 1, row(7), although it may vary slightly between runs.
-
----
+You can now run the commands above.
 
 Before leaving the VM, exit the console:
 
@@ -225,6 +210,12 @@ colab stop -s rankllm
 
 That is all for this guide!
 A reminder that this is just a gentle introduction, and the field is still largely an active area of research; we welcome you to join us in exploring the exciting possibilities of reranking with LLMs!
+
+## Reranking on Modal (Optional)
+
+To be written...
+
+## Wrapping Up
 
 Go to [the lesson on the FIRST model](./onboarding-first.md) next.
 
@@ -276,7 +267,7 @@ After editing the tables above, add a log entry here as well like the previous g
 + Results reproduced by [@raghav-ai](https://github.com/raghav-ai) on 2026-04-03 (commit [`c1e1c84`](https://github.com/castorini/rank_llm/commit/c1e1c84d9eaad408ebfbd4b8534a29bbb9415e6a))
 + Results reproduced by [@Quaden2307](https://github.com/Quaden2307) on 2026-07-19 (commit [`83ae542`](https://github.com/castorini/rank_llm/commit/83ae5423357136bf6a554db50bec9d564363851a))
 + Results reproduced by [@iwis19](https://github.com/iwis19) on 2026-09-02 (commit [`a0f85a9`](https://github.com/castorini/rank_llm/commit/a0f85a9632bed3de9f7f151ed4206dce73417b86))
-+ Results reproduced by [Aadi Kulshrestha (@MankyDanky)](https://github.com/MankyDanky) on 2026-10-11 (commit [`1e6105b`](https://github.com/castorini/rank_llm/commit/1e6105b0cb4adfae7bbb65fe8c725a922a33752f))
++ Results reproduced by [@MankyDanky](https://github.com/MankyDanky) on 2026-10-11 (commit [`1e6105b`](https://github.com/castorini/rank_llm/commit/1e6105b0cb4adfae7bbb65fe8c725a922a33752f))
 + Results reproduced by [@GuranshSinghKohli](https://github.com/GuranshSinghKohli) on 2026-10-22 (commit [`12bcd65`](https://github.com/castorini/rank_llm/commit/12bcd659923520cd0558c4310a7f87d3e0594f0a))
 + Results reproduced by [@ricky42613](https://github.com/ricky42613) on 2026-10-29 (commit [`1bb8b71`](https://github.com/castorini/rank_llm/commit/1bb8b711a5c9d84e36ce0f0834f598d46426d370))
 + Results reproduced by [@nabirarashid](https://github.com/nabirarashid) on 2026-11-12 (commit [`0fd5678`](https://github.com/castorini/rank_llm/commit/0fd5678ffc43488531ba26a42f367d42480a75ec))

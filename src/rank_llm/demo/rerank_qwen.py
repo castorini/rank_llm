@@ -109,9 +109,7 @@ def main():
         default=20,
         help="Sliding-window size over candidates (default: 20).",
     )
-    p.add_argument(
-        "--stride", type=int, default=10, help="Sliding-window stride (default: 10)."
-    )
+    p.add_argument("--stride", type=int, default=10, help="Sliding-window stride (default: 10).")
     p.add_argument(
         "--num-gpus",
         type=int,
@@ -127,8 +125,7 @@ def main():
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",

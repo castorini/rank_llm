@@ -219,14 +219,10 @@ def generate_report(args):
     corpus_type = "passage" if "passage" in args.collection else "doc"
 
     html_template = read_file(
-        pkg_resources.resource_filename(
-            __name__, f"msmarco_html_{version}_{corpus_type}.template"
-        )
+        pkg_resources.resource_filename(__name__, f"msmarco_html_{version}_{corpus_type}.template")
     )
     row_template = read_file(
-        pkg_resources.resource_filename(
-            __name__, f"msmarco_html_row_{version}.template"
-        )
+        pkg_resources.resource_filename(__name__, f"msmarco_html_row_{version}.template")
     )
 
     table = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: 0.0)))
@@ -293,12 +289,8 @@ def generate_report(args):
                         else "BM25"
                     ),
                     "s3": (
-                        re.search(
-                            r"--top_k_candidates=(\d+)", commands[name]["dl19"]
-                        ).group(1)
-                        if re.search(
-                            r"--top_k_candidates=(\d+)", commands[name]["dl19"]
-                        )
+                        re.search(r"--top_k_candidates=(\d+)", commands[name]["dl19"]).group(1)
+                        if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl19"])
                         else "-"
                     ),
                     "s4": (
@@ -331,12 +323,8 @@ def generate_report(args):
                         else "BM25"
                     ),
                     "s3": (
-                        re.search(
-                            r"--top_k_candidates=(\d+)", commands[name]["dl21"]
-                        ).group(1)
-                        if re.search(
-                            r"--top_k_candidates=(\d+)", commands[name]["dl21"]
-                        )
+                        re.search(r"--top_k_candidates=(\d+)", commands[name]["dl21"]).group(1)
+                        if re.search(r"--top_k_candidates=(\d+)", commands[name]["dl21"])
                         else "-"
                     ),
                     "s4": (
@@ -368,11 +356,7 @@ def generate_report(args):
 
     full_name = f"MS MARCO {version.upper()} {corpus_type.capitalize()}"
     with open(args.output, "w") as out:
-        out.write(
-            Template(html_template).substitute(
-                title=full_name, rows="\n".join(html_rows)
-            )
-        )
+        out.write(Template(html_template).substitute(title=full_name, rows="\n".join(html_rows)))
 
 
 def run_conditions(args):
@@ -401,10 +385,7 @@ def run_conditions(args):
                 topic_key = topic_set["topic_key"]
                 eval_key = topic_set["eval_key"]
 
-                if (
-                    args.collection == "msmarco-v1-passage"
-                    or args.collection == "msmarco-v1-doc"
-                ):
+                if args.collection == "msmarco-v1-passage" or args.collection == "msmarco-v1-doc":
                     short_topic_key = find_msmarco_table_topic_set_key_v1(topic_key)
                 else:
                     short_topic_key = find_msmarco_table_topic_set_key_v2(topic_key)
@@ -443,9 +424,7 @@ def run_conditions(args):
                                 run_eval_and_return_metric(
                                     metric,
                                     eval_key,
-                                    trec_eval_metric_definitions[args.collection][
-                                        eval_key
-                                    ][metric],
+                                    trec_eval_metric_definitions[args.collection][eval_key][metric],
                                     runfile,
                                 )
                             )
@@ -560,9 +539,7 @@ def run_conditions(args):
                             ):
                                 result_str = okish_str
                             else:
-                                result_str = (
-                                    fail_str + f" expected {expected[metric]:.4f}"
-                                )
+                                result_str = fail_str + f" expected {expected[metric]:.4f}"
                             print(f"    {metric:7}: {score:.4f} {result_str}")
                             table[name][short_topic_key][metric] = score
                         else:
@@ -572,13 +549,8 @@ def run_conditions(args):
                     print("")
 
     if args.collection == "msmarco-v1-passage" or args.collection == "msmarco-v1-doc":
-        print(
-            " " * 74 + "TREC 2019" + " " * 16 + "TREC 2020" + " " * 12 + "MS MARCO dev"
-        )
-        print(
-            " " * 67
-            + "MAP    nDCG@10    R@1K       MAP nDCG@10    R@1K    MRR@10    R@1K"
-        )
+        print(" " * 74 + "TREC 2019" + " " * 16 + "TREC 2020" + " " * 12 + "MS MARCO dev")
+        print(" " * 67 + "MAP    nDCG@10    R@1K       MAP nDCG@10    R@1K    MRR@10    R@1K")
         print(" " * 67 + "-" * 22 + "    " + "-" * 22 + "    " + "-" * 14)
 
         if args.condition:
@@ -631,17 +603,9 @@ def run_conditions(args):
                     + f"{table[name]['dl23']['nDCG@10']:8.4f}"
                 )
     else:
+        print(" " * 77 + "TREC 2021" + " " * 18 + "MS MARCO dev" + " " * 6 + "MS MARCO dev2")
         print(
-            " " * 77
-            + "TREC 2021"
-            + " " * 18
-            + "MS MARCO dev"
-            + " " * 6
-            + "MS MARCO dev2"
-        )
-        print(
-            " " * 62
-            + "MAP@100 nDCG@10 MRR@100 R@100   R@1K     MRR@100   R@1K    MRR@100   R@1K"
+            " " * 62 + "MAP@100 nDCG@10 MRR@100 R@100   R@1K     MRR@100   R@1K    MRR@100   R@1K"
         )
         print(" " * 62 + "-" * 38 + "    " + "-" * 14 + "    " + "-" * 14)
 
@@ -680,9 +644,7 @@ def run_conditions(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate regression matrix for MS MARCO corpora."
-    )
+    parser = argparse.ArgumentParser(description="Generate regression matrix for MS MARCO corpora.")
     parser.add_argument(
         "--collection",
         type=str,
@@ -700,19 +662,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--generate-report", action="store_true", default=False, help="Generate report."
     )
-    parser.add_argument(
-        "--output", type=str, help="File to store report.", required=False
-    )
+    parser.add_argument("--output", type=str, help="File to store report.", required=False)
     # For actually running the experimental conditions
-    parser.add_argument(
-        "--all", action="store_true", default=False, help="Run all conditions."
-    )
-    parser.add_argument(
-        "--condition", type=str, help="Condition to run.", required=False
-    )
-    parser.add_argument(
-        "--directory", type=str, help="Base directory.", default="", required=False
-    )
+    parser.add_argument("--all", action="store_true", default=False, help="Run all conditions.")
+    parser.add_argument("--condition", type=str, help="Condition to run.", required=False)
+    parser.add_argument("--directory", type=str, help="Base directory.", default="", required=False)
     parser.add_argument(
         "--dry-run",
         action="store_true",

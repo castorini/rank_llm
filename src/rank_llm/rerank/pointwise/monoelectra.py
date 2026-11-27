@@ -35,9 +35,7 @@ class MonoELECTRA(PointwiseRankLLM):
         )
 
         self._tokenizer = AutoTokenizer.from_pretrained(model)
-        self._llm = AutoModelForSequenceClassification.from_pretrained(model).to(
-            self._device
-        )
+        self._llm = AutoModelForSequenceClassification.from_pretrained(model).to(self._device)
         self._llm.eval()
         self._context_size = context_size
 
@@ -126,9 +124,7 @@ class MonoELECTRA(PointwiseRankLLM):
         # Truncate document if needed
         # We need to account for query + document + special tokens
         query_tokens = self.get_num_tokens(query)
-        max_doc_tokens = (
-            self._context_size - query_tokens - 10
-        )  # Reserve for special tokens
+        max_doc_tokens = self._context_size - query_tokens - 10  # Reserve for special tokens
 
         if self.get_num_tokens(doc_text) > max_doc_tokens:
             doc_tokens = self._tokenizer.encode(doc_text, add_special_tokens=False)

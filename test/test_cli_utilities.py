@@ -14,9 +14,7 @@ class TestCLIUtilities(unittest.TestCase):
         with (
             patch(
                 "rank_llm.cli.main.run_evaluate_aggregate",
-                return_value={
-                    "output_file": "trec_eval_aggregated_results_model.jsonl"
-                },
+                return_value={"output_file": "trec_eval_aggregated_results_model.jsonl"},
             ) as mocked,
             contextlib.redirect_stdout(stdout),
         ):

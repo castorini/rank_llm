@@ -63,10 +63,7 @@ def read_requests_from_file(file_path: str) -> list[Request]:
     elif extension == "json":
         with open(file_path) as f:
             request_dicts = json.load(f)
-        return [
-            from_dict(data_class=Request, data=request_dict)
-            for request_dict in request_dicts
-        ]
+        return [from_dict(data_class=Request, data=request_dict) for request_dict in request_dicts]
     else:
         raise ValueError(f"Expected json or jsonl file format, got {extension}")
 
@@ -91,9 +88,7 @@ class DataWriter:
             values = []
             for info in d.invocations_history:
                 values.append(info.__dict__)
-            aggregated_history.append(
-                {"query": d.query.__dict__, "invocations_history": values}
-            )
+            aggregated_history.append({"query": d.query.__dict__, "invocations_history": values})
         self._write_json_array(filename, aggregated_history)
 
     def _write_json_array(self, filename: str, records: list[dict[str, Any]]):

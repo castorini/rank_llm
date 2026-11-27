@@ -1,4 +1,9 @@
+import asyncio
+import logging
 import math
+import random
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 try:
@@ -53,6 +58,120 @@ POINTWISE_NO_ALLOWED_TOKEN_SPELLINGS: tuple[str, ...] = (
     " NO",
 )
 
+logger = logging.getLogger(__name__)
+
+# With vLLM's per-request ``return_tokens_as_token_ids``, logprob entries name
+# their token as ``token_id:<id>`` instead of its text.
+TOKEN_ID_PREFIX = "token_id:"
+
+
+def single_token_ids(tokenizer: Any, spellings: Sequence[str]) -> tuple[list[int], list[str]]:
+    """Token ids of the spellings that encode to exactly one token, and the skipped ones.
+
+    A pointwise judge answers with one token, so a spelling that the tokenizer
+    splits into several pieces cannot be its answer and is skipped.
+    """
+    ids: list[int] = []
+    skipped: list[str] = []
+    for spelling in spellings:
+        encoded = tokenizer.encode(spelling, add_special_tokens=False)
+        if len(encoded) != 1:
+            skipped.append(spelling)
+        elif encoded[0] not in ids:
+            ids.append(encoded[0])
+    return ids, skipped
+
+
+@dataclass(frozen=True)
+class PointwiseAnswerTokens:
+    """The tokens a pointwise judge may answer with, split into positive and negative.
+
+    Configured as spellings, e.g. ``("yes",)`` / ``("no",)`` for the published
+    Qwen3-Reranker recipe or ``("true",)`` / ``("false",)`` for a model prompted
+    to answer true or false, and resolved once to token ids with the served
+    model's tokenizer. ``allowed_token_ids`` is the union of both sides, and a
+    score is the probability mass on positive ids over the mass on both, read
+    from the first completion token's top logprobs. Matching is by token id, so
+    no case or whitespace rule is applied to the server's token strings: the
+    spellings alone decide what counts.
+    """
+
+    positive_ids: tuple[int, ...]
+    negative_ids: tuple[int, ...]
+    # Logprob token string -> id: "token_id:<id>" (what vLLM returns when the
+    # request sets return_tokens_as_token_ids), plus each id's decoded text as
+    # a fallback for servers that ignore that field.
+    lookup: Mapping[str, int] = field(repr=False, compare=False)
+
+    @classmethod
+    def from_spellings(
+        cls,
+        tokenizer: Any,
+        positive: Sequence[str],
+        negative: Sequence[str],
+        *,
+        warn_skipped: bool = True,
+    ) -> "PointwiseAnswerTokens":
+        sides = {}
+        for name, spellings in (("positive", positive), ("negative", negative)):
+            ids, skipped = single_token_ids(tokenizer, spellings)
+            if skipped:
+                log = logger.warning if warn_skipped else logger.debug
+                log(
+                    "Skipping %s answer spellings that are not a single token: %s",
+                    name,
+                    skipped,
+                )
+            if not ids:
+                raise ValueError(
+                    f"No {name} answer spelling is a single token for this "
+                    f"tokenizer: {list(spellings)}"
+                )
+            sides[name] = ids
+        overlap = set(sides["positive"]) & set(sides["negative"])
+        if overlap:
+            raise ValueError(f"Token ids {sorted(overlap)} are both positive and negative answers")
+        answer_ids = sides["positive"] + sides["negative"]
+        lookup: dict[str, int] = {f"{TOKEN_ID_PREFIX}{i}": i for i in answer_ids}
+        decode = getattr(tokenizer, "decode", None)
+        if decode is not None:
+            texts: dict[str, set[int]] = {}
+            for i in answer_ids:
+                texts.setdefault(decode([i]), set()).add(i)
+            for text, ids in texts.items():
+                if len(ids) == 1:  # an ambiguous text cannot name an id
+                    lookup.setdefault(text, next(iter(ids)))
+        return cls(tuple(sides["positive"]), tuple(sides["negative"]), lookup)
+
+    @property
+    def allowed_token_ids(self) -> list[int]:
+        return [*self.positive_ids, *self.negative_ids]
+
+    def score(
+        self,
+        top_logprobs: list[dict[str, Any]] | None,
+        fallback_lp: float = -20.0,
+    ) -> tuple[float, float, float]:
+        """(score, positive logprob, negative logprob) from the first token's top logprobs."""
+        positive = set(self.positive_ids)
+        negative = set(self.negative_ids)
+        positive_prob = negative_prob = 0.0
+        for entry in top_logprobs or []:
+            token_id = self.lookup.get(entry.get("token") or "")
+            lp = entry.get("logprob")
+            if token_id is None or lp is None:
+                continue
+            if token_id in positive:
+                positive_prob += math.exp(float(lp))
+            elif token_id in negative:
+                negative_prob += math.exp(float(lp))
+        if positive_prob == 0.0 and negative_prob == 0.0:
+            return 0.0, fallback_lp, fallback_lp
+        score = positive_prob / (positive_prob + negative_prob)
+        positive_lp = math.log(positive_prob) if positive_prob > 0 else fallback_lp
+        negative_lp = math.log(negative_prob) if negative_prob > 0 else fallback_lp
+        return score, positive_lp, negative_lp
+
 
 class VllmHandlerWithOpenAISDK:
     """
@@ -68,6 +187,9 @@ class VllmHandlerWithOpenAISDK:
     running (e.g. building ``RankListwiseOSLLM`` from inside an async task).
     """
 
+    MAX_ATTEMPTS = 3
+    RETRY_BACKOFF_S = 0.5
+
     def __init__(
         self,
         base_url: str,
@@ -76,7 +198,9 @@ class VllmHandlerWithOpenAISDK:
         if any(dep is None for dep in (OpenAI, AsyncOpenAI, AutoTokenizer)):
             raise ImportError("OpenAI-compatible vLLM support requires rank-llm[vllm].")
         sync_client = OpenAI(api_key="EMPTY", base_url=base_url)
+        self._base_url = base_url
         self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=base_url)
+        self._async_client_loop: asyncio.AbstractEventLoop | None = None
 
         if model is None:
             models = sync_client.models.list()
@@ -91,6 +215,66 @@ class VllmHandlerWithOpenAISDK:
         """Return the tokenizer loaded in ``__init__`` (always sync, loop-safe)."""
         return self._tokenizer
 
+    def _async_client_for_current_loop(self) -> Any:
+        """The async client bound to the running event loop.
+
+        Callers drive each batch with ``asyncio.run``, which closes its loop on
+        return. The client's pooled HTTP connections belong to the loop they
+        were opened on, so reusing the client from the next loop fails with
+        "Event loop is closed" whenever a connection is still alive in the
+        pool, i.e. whenever batches arrive faster than the keep-alive expiry.
+        """
+        loop = asyncio.get_running_loop()
+        if self._async_client is None:
+            self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
+            self._async_client_loop = loop
+        elif self._async_client_loop is None:
+            self._async_client_loop = loop
+        elif self._async_client_loop is not loop:
+            # The previous loop is gone without aclose() having been awaited on
+            # it; the old client's sockets are released by garbage collection.
+            self._async_client = AsyncOpenAI(api_key="EMPTY", base_url=self._base_url)
+            self._async_client_loop = loop
+        return self._async_client
+
+    async def aclose(self) -> None:
+        """Release the async client's pooled connections.
+
+        Await this on the loop the client was used on, before that loop ends:
+        a client that outlives its loop can neither be closed nor reused, and
+        keeping it referenced pins ~100 sockets per batch until the process
+        runs out of file descriptors. The next batch opens a fresh client.
+        """
+        client, self._async_client, self._async_client_loop = (
+            self._async_client,
+            None,
+            None,
+        )
+        if client is not None:
+            try:
+                await client.close()
+            except Exception:
+                pass
+
+    async def _create_with_retry(self, *, messages: list[dict[str, str]], **body: Any) -> Any:
+        """One chat completion, retried on transient failures.
+
+        A batch fans out ~100 concurrent requests; a dropped connection on any
+        one of them used to fail that candidate silently, and a caller that
+        treats a failed call as a failed batch loses the whole rerank.
+        """
+        for attempt in range(self.MAX_ATTEMPTS):
+            try:
+                return await self._async_client_for_current_loop().chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    **body,
+                )
+            except Exception:
+                if attempt + 1 == self.MAX_ATTEMPTS:
+                    raise
+                await asyncio.sleep(self.RETRY_BACKOFF_S * 2**attempt * (0.5 + random.random()))
+
     async def chat_completion_async(
         self, messages: list[dict[str, str]], **kwargs: Any
     ) -> tuple[str, str, dict[str, Any]]:
@@ -102,11 +286,7 @@ class VllmHandlerWithOpenAISDK:
         for callers that pass no extras.
         """
         try:
-            response = await self._async_client.chat.completions.create(
-                model=self._model,
-                messages=messages,
-                **kwargs,
-            )
+            response = await self._create_with_retry(messages=messages, **kwargs)
             text = response.choices[0].message.content
             reasoning = response.choices[0].message.reasoning
             usage = response.usage.model_dump(mode="json")
@@ -153,9 +333,14 @@ class VllmHandlerWithOpenAISDK:
         logprobs: bool = True,
         top_logprobs: int = 20,
         extra_body: dict[str, Any] | None = None,
+        answer_tokens: PointwiseAnswerTokens | None = None,
         **kwargs: Any,
     ) -> tuple[str, int, float, dict[str, Any]]:
-        """Single-token chat completion with logprobs; returns (text, out_tokens, score, usage)."""
+        """Single-token chat completion with logprobs; returns (text, out_tokens, score, usage).
+
+        With ``answer_tokens`` the logprobs are requested as token ids and scored
+        by them; without, the yes/no spellings above are matched as stripped text.
+        """
         body = dict(kwargs)
         body.setdefault("max_tokens", max_tokens)
         body.setdefault("temperature", temperature)
@@ -163,13 +348,14 @@ class VllmHandlerWithOpenAISDK:
         body.setdefault("top_logprobs", top_logprobs)
         if extra_body is not None:
             body["extra_body"] = {**(body.get("extra_body") or {}), **extra_body}
+        if answer_tokens is not None:
+            body["extra_body"] = {
+                **(body.get("extra_body") or {}),
+                "return_tokens_as_token_ids": True,
+            }
 
         try:
-            response = await self._async_client.chat.completions.create(
-                model=self._model,
-                messages=messages,
-                **body,
-            )
+            response = await self._create_with_retry(messages=messages, **body)
         except Exception as e:
             print(f"Error during async score inference: {e}")
             return str(e), 0, -1.0, {}
@@ -177,14 +363,15 @@ class VllmHandlerWithOpenAISDK:
         usage = response.usage.model_dump(mode="json") if response.usage else {}
         choice = response.choices[0]
         text = (choice.message.content or "").strip()
-        out_tokens = int(
-            usage.get("completion_tokens") or usage.get("output_tokens") or 0
-        )
+        out_tokens = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
 
         top_lp: list[dict[str, Any]] = []
         if choice.logprobs and choice.logprobs.content:
             token_lps = choice.logprobs.content[0].top_logprobs or []
             top_lp = [{"token": lp.token, "logprob": lp.logprob} for lp in token_lps]
 
-        score, _, _ = self.score_from_top_logprobs(top_lp)
+        if answer_tokens is not None:
+            score, _, _ = answer_tokens.score(top_lp)
+        else:
+            score, _, _ = self.score_from_top_logprobs(top_lp)
         return text, out_tokens, float(score), usage

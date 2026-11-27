@@ -141,8 +141,7 @@ def main() -> None:
     p.add_argument(
         "--output-dir",
         default=None,
-        help="Output directory. When set, outputs go to "
-        "{output_dir}/{model_tag}/{dataset}/.",
+        help="Output directory. When set, outputs go to {output_dir}/{model_tag}/{dataset}/.",
     )
     p.add_argument(
         "--skip-eval",
@@ -202,9 +201,7 @@ def main() -> None:
             if args.async_sample_queries <= 0:
                 return
             sample = requests[: args.async_sample_queries]
-            print(
-                f"\n--- Async rerank_batch_async (first {len(sample)} queries only) ---"
-            )
+            print(f"\n--- Async rerank_batch_async (first {len(sample)} queries only) ---")
             async_out = await reranker.rerank_batch_async(sample, **kwargs)
             _restore_candidates(sample, async_out, args.rank_start, args.rank_end)
             print(f"Async sample: {len(async_out)} results.")

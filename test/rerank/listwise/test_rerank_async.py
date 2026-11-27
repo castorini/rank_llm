@@ -41,9 +41,7 @@ class TestRerankAsyncSharedConcurrency(unittest.IsolatedAsyncioTestCase):
         ):
             mock_torch.cuda.is_available.return_value = True
             mock_torch.cuda.device_count.return_value = 1
-            with patch(
-                "rank_llm.rerank.listwise.rank_listwise_os_llm.vllm", new=MagicMock()
-            ):
+            with patch("rank_llm.rerank.listwise.rank_listwise_os_llm.vllm", new=MagicMock()):
                 with patch("rank_llm.rerank.vllm_handler.VllmHandler") as vh:
                     with patch(
                         "rank_llm.rerank.vllm_handler_with_openai_sdk.VllmHandlerWithOpenAISDK"
@@ -52,9 +50,7 @@ class TestRerankAsyncSharedConcurrency(unittest.IsolatedAsyncioTestCase):
                             "rank_llm.rerank.listwise.rank_listwise_os_llm.AutoTokenizer"
                         ) as at:
                             mock_tok = MagicMock()
-                            mock_tok.apply_chat_template.side_effect = lambda m, **k: (
-                                str(m)
-                            )
+                            mock_tok.apply_chat_template.side_effect = lambda m, **k: str(m)
                             mock_tok.encode.side_effect = lambda x, **k: [0] * 4
                             vh.return_value.get_tokenizer.return_value = mock_tok
                             oa.return_value.get_tokenizer.return_value = mock_tok

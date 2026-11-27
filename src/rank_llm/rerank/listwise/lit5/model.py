@@ -44,9 +44,7 @@ class FiDStack(T5Stack):
     ):
         if not self.is_decoder:
             input_ids = input_ids.view(input_ids.size(0) * self._n_passages, -1)
-            attention_mask = attention_mask.view(
-                attention_mask.size(0) * self._n_passages, -1
-            )
+            attention_mask = attention_mask.view(attention_mask.size(0) * self._n_passages, -1)
 
         output = super().forward(
             input_ids=input_ids,
@@ -68,9 +66,7 @@ class FiDStack(T5Stack):
             bsz = input_ids.size(0) // self._n_passages
             if not return_dict:
                 last_hidden_states = output[0]
-                last_hidden_state = last_hidden_states.view(
-                    bsz, -1, last_hidden_states.size(-1)
-                )
+                last_hidden_state = last_hidden_states.view(bsz, -1, last_hidden_states.size(-1))
                 output = tuple(
                     last_hidden_state,
                     *output[1:],
@@ -215,9 +211,7 @@ class FiD(T5ForConditionalGeneration):
 
         return output
 
-    def get_woquery_score(
-        self, scores, mask_query, mask, n_layers, output_sequence_lengths
-    ):
+    def get_woquery_score(self, scores, mask_query, mask, n_layers, output_sequence_lengths):
         if scores.size(-1) > mask_query.size(-1):
             zero_padding = torch.zeros(
                 [mask_query.size(0), scores.size(-1) - mask_query.size(-1)],
@@ -274,9 +268,7 @@ class FiDStackCrossAttentionScore(T5StackCrossAttentionScore):
     ):
         if not self.is_decoder:
             input_ids = input_ids.view(input_ids.size(0) * n_passages, -1)
-            attention_mask = attention_mask.view(
-                attention_mask.size(0) * n_passages, -1
-            )
+            attention_mask = attention_mask.view(attention_mask.size(0) * n_passages, -1)
 
         output = super().forward(
             input_ids=input_ids,
@@ -297,9 +289,7 @@ class FiDStackCrossAttentionScore(T5StackCrossAttentionScore):
             bsz = input_ids.size(0) // n_passages
             if not return_dict:
                 last_hidden_states = output[0]
-                last_hidden_state = last_hidden_states.view(
-                    bsz, -1, last_hidden_states.size(-1)
-                )
+                last_hidden_state = last_hidden_states.view(bsz, -1, last_hidden_states.size(-1))
                 output = tuple(
                     last_hidden_state,
                     *output[1:],
@@ -440,9 +430,7 @@ class FiDCrossAttentionScore(T5ConditionalGenerationCrossAttentionScore):
 
         return output
 
-    def get_woquery_score(
-        self, scores, mask_query, mask, n_layers, output_sequence_lengths
-    ):
+    def get_woquery_score(self, scores, mask_query, mask, n_layers, output_sequence_lengths):
         if scores.size(-1) > mask_query.size(-1):
             zero_padding = torch.zeros(
                 [mask_query.size(0), scores.size(-1) - mask_query.size(-1)],
@@ -504,19 +492,13 @@ def cross_attention_forward(
         assert len(past_key_value) == 2, (
             f"past_key_value should have 2 past states: keys and values. Got {len(past_key_value)} past states"
         )
-        real_seq_length += (
-            past_key_value[0].shape[2] if query_length is None else query_length
-        )
+        real_seq_length += past_key_value[0].shape[2] if query_length is None else query_length
 
-    key_length = (
-        real_seq_length if key_value_states is None else key_value_states.shape[1]
-    )
+    key_length = real_seq_length if key_value_states is None else key_value_states.shape[1]
 
     def shape(states):
         """projection"""
-        return states.view(
-            batch_size, -1, self.n_heads, self.key_value_proj_dim
-        ).transpose(1, 2)
+        return states.view(batch_size, -1, self.n_heads, self.key_value_proj_dim).transpose(1, 2)
 
     def unshape(states):
         """reshape"""
@@ -544,9 +526,7 @@ def cross_attention_forward(
         return hidden_states
 
     # get query states
-    query_states = shape(
-        self.q(hidden_states)
-    )  # (batch_size, n_heads, seq_length, dim_per_head)
+    query_states = shape(self.q(hidden_states))  # (batch_size, n_heads, seq_length, dim_per_head)
 
     # get key/value states
     key_states = project(
@@ -585,9 +565,7 @@ def cross_attention_forward(
             position_bias = position_bias[:, :, -hidden_states.size(1) :, :]
 
         if mask is not None:
-            position_bias = (
-                position_bias + mask
-            )  # (batch_size, n_heads, seq_length, key_length)
+            position_bias = position_bias + mask  # (batch_size, n_heads, seq_length, key_length)
 
     scores += position_bias
 
@@ -609,9 +587,7 @@ def cross_attention_forward(
     if layer_head_mask is not None:
         attn_weights = attn_weights * layer_head_mask
 
-    attn_output = unshape(
-        torch.matmul(attn_weights, value_states)
-    )  # (batch_size, seq_length, dim)
+    attn_output = unshape(torch.matmul(attn_weights, value_states))  # (batch_size, seq_length, dim)
     attn_output = self.o(attn_output)
 
     present_key_value_state = (

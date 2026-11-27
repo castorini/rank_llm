@@ -97,9 +97,7 @@ class DuoT5(PairwiseRankLLM):
         for logit_tensor in logits[0]:
             truth_logit = logit_tensor[self._true_id].item()
             false_logit = logit_tensor[self._false_id].item()
-            score = math.exp(truth_logit) / (
-                math.exp(truth_logit) + math.exp(false_logit)
-            )
+            score = math.exp(truth_logit) / (math.exp(truth_logit) + math.exp(false_logit))
             all_scores.append(score)
             all_output_token_counts.append(self.num_output_tokens())
 
@@ -109,17 +107,13 @@ class DuoT5(PairwiseRankLLM):
         ret = self.run_llm_batched([prompt])
         return ret[0][0], ret[1][0], ret[2][0]
 
-    def create_prompt(
-        self, result: Result, index1: int, index2: int
-    ) -> tuple[str, int]:
+    def create_prompt(self, result: Result, index1: int, index2: int) -> tuple[str, int]:
         query = re.sub(r"\[(\d+)\]", r"(\1)", result.query.text)
 
         reserved_for_output = (
             64  # might need to change depending on what the actual output look like
         )
-        query_tokens = self.get_num_tokens(
-            f"Query: {query} Document0:  Document1:  Relevant: "
-        )
+        query_tokens = self.get_num_tokens(f"Query: {query} Document0:  Document1:  Relevant: ")
 
         few_shot_prompt = self._inference_handler._generate_fewshot_prompt(
             num_examples=self._num_few_shot_examples,
@@ -127,9 +121,7 @@ class DuoT5(PairwiseRankLLM):
         )
         few_shot_tokens = self.get_num_tokens(few_shot_prompt)
 
-        max_token = (
-            self._context_size - reserved_for_output - query_tokens - few_shot_tokens
-        )
+        max_token = self._context_size - reserved_for_output - query_tokens - few_shot_tokens
 
         prompt = self._inference_handler.generate_prompt(
             result=result,

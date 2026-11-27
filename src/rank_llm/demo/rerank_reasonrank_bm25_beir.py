@@ -47,9 +47,7 @@ def main():
         path = Path("./rerank_results/reasonrank-32b")
         path.mkdir(parents=True, exist_ok=True)
         writer.write_in_jsonl_format(os.path.join(path, f"{dataset}_bm25_top100.jsonl"))
-        writer.write_in_trec_eval_format(
-            os.path.join(path, f"{dataset}_bm25_top100.txt")
-        )
+        writer.write_in_trec_eval_format(os.path.join(path, f"{dataset}_bm25_top100.txt"))
         writer.write_inference_invocations_history(
             os.path.join(path, f"{dataset}_bm25_top100_invocations.json")
         )

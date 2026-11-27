@@ -88,9 +88,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             request.candidates = request.candidates[: args.k]
 
     rank_end = (
-        args.k
-        if args.k is not None
-        else max(len(request.candidates) for request in requests)
+        args.k if args.k is not None else max(len(request.candidates) for request in requests)
     )
     reranker = ZephyrReranker(
         model_path=args.model,

@@ -78,9 +78,7 @@ class TestCLIIntrospection(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             config_path = root / ".rank-llm.toml"
-            config_path.write_text(
-                'base_url = "http://localhost:9000"\n', encoding="utf-8"
-            )
+            config_path.write_text('base_url = "http://localhost:9000"\n', encoding="utf-8")
             old_cwd = Path.cwd()
             try:
                 os.chdir(root)
@@ -94,9 +92,7 @@ class TestCLIIntrospection(unittest.TestCase):
             payload["artifacts"][0]["value"]["config_file"],
             ".rank-llm.toml",
         )
-        self.assertEqual(
-            payload["resolved"]["config"]["base_url"], "http://localhost:9000"
-        )
+        self.assertEqual(payload["resolved"]["config"]["base_url"], "http://localhost:9000")
 
 
 if __name__ == "__main__":

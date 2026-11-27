@@ -89,8 +89,12 @@ class TestPointwiseInferenceHandler(unittest.TestCase):
         body_text_2 = inference_handler._generate_body(
             result=r, index=1, max_doc_tokens=6000, tokenizer=tokenizer
         )
-        expected_body_1 = "Query: Sample Query Document: Title1: Sample Title1 Content1: Sample Text1 Relevance: "
-        expected_body_2 = "Query: Sample Query Document: Title2: Sample Title2 Content2: Sample Text2 Relevance: "
+        expected_body_1 = (
+            "Query: Sample Query Document: Title1: Sample Title1 Content1: Sample Text1 Relevance: "
+        )
+        expected_body_2 = (
+            "Query: Sample Query Document: Title2: Sample Title2 Content2: Sample Text2 Relevance: "
+        )
 
         self.assertEqual(body_text_1, expected_body_1)
         self.assertEqual(body_text_2, expected_body_2)
@@ -103,8 +107,12 @@ class TestPointwiseInferenceHandler(unittest.TestCase):
         prompt_text_2 = inference_handler.generate_prompt(
             result=r, index=1, max_doc_tokens=6000, tokenizer=tokenizer
         )
-        expected_prompt_1 = "Query: Sample Query Document: Title1: Sample Title1 Content1: Sample Text1 Relevance: "
-        expected_prompt_2 = "Query: Sample Query Document: Title2: Sample Title2 Content2: Sample Text2 Relevance: "
+        expected_prompt_1 = (
+            "Query: Sample Query Document: Title1: Sample Title1 Content1: Sample Text1 Relevance: "
+        )
+        expected_prompt_2 = (
+            "Query: Sample Query Document: Title2: Sample Title2 Content2: Sample Text2 Relevance: "
+        )
 
         self.assertEqual(prompt_text_1, expected_prompt_1)
         self.assertEqual(prompt_text_2, expected_prompt_2)

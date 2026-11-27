@@ -33,9 +33,7 @@ class TestCLIValidation(unittest.TestCase):
                         ]
                     )
                 self.assertEqual(exit_code, 5)
-                self.assertEqual(
-                    json.loads(stdout.getvalue())["status"], "validation_error"
-                )
+                self.assertEqual(json.loads(stdout.getvalue())["status"], "validation_error")
                 mocked.assert_not_called()
 
     def test_validate_rerank_checks_nested_direct_input(self):
@@ -111,9 +109,7 @@ class TestCLIValidation(unittest.TestCase):
         self.assertEqual(rerank.call_args.kwargs["query_text"], "cats")
         self.assertEqual(rerank.call_args.kwargs["query_id"], 1)
         self.assertEqual(len(rerank.call_args.kwargs["candidates"]), 5)
-        self.assertEqual(
-            rerank.call_args.kwargs["candidates"][2]["doc"], "preferred text"
-        )
+        self.assertEqual(rerank.call_args.kwargs["candidates"][2]["doc"], "preferred text")
 
     def test_validate_rerank_accepts_valid_direct_payload(self):
         stdout = io.StringIO()

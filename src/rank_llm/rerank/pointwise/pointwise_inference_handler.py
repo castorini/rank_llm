@@ -12,12 +12,45 @@ from rank_llm.rerank.inference_handler import (
     render_reranker_messages,
 )
 
+# Optional template key naming the tokens a pointwise judge answers with:
+#   output_tokens:
+#     positive: ["yes"]
+#     negative: ["no"]
+# The prompt tells the model how to answer, so the answer tokens are declared
+# beside it. Spellings are matched as token ids (quote leading spaces in YAML,
+# e.g. " yes"); see PointwiseAnswerTokens.
+OUTPUT_TOKENS_KEY = "output_tokens"
+
+
+def validate_output_tokens(value: Any) -> None:
+    """Raise unless ``value`` maps positive and negative to non-empty lists of strings."""
+    if not isinstance(value, dict) or set(value) != {"positive", "negative"}:
+        raise ValueError(
+            f"'{OUTPUT_TOKENS_KEY}' must have exactly the keys 'positive' and "
+            f"'negative', each a list of answer token spellings; got {value!r}"
+        )
+    for side in ("positive", "negative"):
+        spellings = value[side]
+        if (
+            not isinstance(spellings, list)
+            or not spellings
+            or not all(isinstance(s, str) and s for s in spellings)
+        ):
+            raise ValueError(
+                f"'{OUTPUT_TOKENS_KEY}.{side}' must be a non-empty list of "
+                f"non-empty strings; got {spellings!r}"
+            )
+
 
 class PointwiseInferenceHandler(BaseInferenceHandler):
     def __init__(self, template: dict[str, str]):
         super().__init__(template)
 
     def _validate_template(self, template: dict[str, str], strict: bool = False):
+        if OUTPUT_TOKENS_KEY in template:
+            # Structured, not a format string: checked here, not as a section.
+            validate_output_tokens(template[OUTPUT_TOKENS_KEY])
+            template = {k: v for k, v in template.items() if k != OUTPUT_TOKENS_KEY}
         is_reranker = template.get("message_roles") == "reranker"
 
         TEMPLATE_SECTIONS = {
@@ -33,9 +66,7 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             ),
             "body": TemplateSectionConfig(
                 required=not is_reranker,
-                required_placeholders=(
-                    set() if is_reranker else {"query", "doc_content"}
-                ),
+                required_placeholders=(set() if is_reranker else {"query", "doc_content"}),
                 allowed_placeholders=(
                     {"instruction", "query", "doc_content"} if is_reranker else set()
                 ),
@@ -119,15 +150,11 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         max_passage_words: int | None = None,
     ) -> str:
         query = self._replace_number(result.query.text)
-        word_limit = (
-            max_passage_words if max_passage_words is not None else max_doc_tokens
-        )
+        word_limit = max_passage_words if max_passage_words is not None else max_doc_tokens
         doc_raw = self._convert_doc_to_prompt_content(
             result.candidates[index].doc, max_length=word_limit
         )
-        doc_tokens = tokenizer.encode(
-            doc_raw, truncation=True, max_length=max_doc_tokens
-        )
+        doc_tokens = tokenizer.encode(doc_raw, truncation=True, max_length=max_doc_tokens)
         doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         fmt_values = {"query": query, "doc_content": doc}
@@ -160,10 +187,8 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         )
         return prompt.replace("<unk>", "")
 
-    def generate_chat_messages(
-        self, result: Result, **kwargs: Any
-    ) -> list[dict[str, str]]:
-        """Build structured messages for pointwise rerankers.
+    def generate_chat_messages(self, result: Result, **kwargs: Any) -> list[dict[str, str]]:
+        """Build chat messages for pointwise VLLM backends.
 
         When ``message_roles`` is ``"reranker"`` in the template, emits separate
         ``query`` / ``document`` role messages expected by models like
@@ -183,18 +208,12 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
             raise ValueError(f"Missing required parameter: {err}") from err
 
         query = self._replace_number(result.query.text)
-        word_limit = (
-            max_passage_words if max_passage_words is not None else max_doc_tokens
-        )
+        word_limit = max_passage_words if max_passage_words is not None else max_doc_tokens
         doc_raw = self._convert_doc_to_prompt_content(
             result.candidates[index].doc, max_length=word_limit
         )
-        doc = doc_raw
-        if max_doc_tokens is not None:
-            doc_tokens = tokenizer.encode(
-                doc_raw, truncation=True, max_length=max_doc_tokens
-            )
-            doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
+        doc_tokens = tokenizer.encode(doc_raw, truncation=True, max_length=max_doc_tokens)
+        doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         if self.template.get("message_roles") == "reranker":
             return render_reranker_messages(self.template["instruction"], query, doc)
