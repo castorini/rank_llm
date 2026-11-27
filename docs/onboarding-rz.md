@@ -20,7 +20,7 @@ If you do not have one, we provide instructions for accessing a GPU via a Colab 
 
 - Understand the basic design of listwise reranking with LLMs.
 - Reproduce results from the RankZephyr listwise reranker on TREC DL19 and DL20.
-- If necessary, take advantage of Colab Pro (or Modal) to accomplish the above.
+- If necessary, take advantage of Colab Pro or Modal to accomplish the above.
 
 _Note_: As of late 2026, we are in the process of rewriting the onboarding guides for RankLLM.
 The lessons are still "doable", but may require a bit of debugging.
@@ -140,23 +140,11 @@ rank-llm rerank \
 
 In the target paper, [Table 1, row (7)](https://arxiv.org/pdf/2312.02724#page=6) reports an nDCG@10 score of 0.8159, so you should get something close.
 
-## BYOGPU
-
-BYOGPU stands for "Bring Your Own GPU".
-
-You need a GPU to complete this onboarding lesson: there's no reasonable workaround.
-We are unfortunately not in a position to provide GPUs for everyone who wishes to work through these onboarding lessons or join our research group.
-We simply don't have enough resources.
-
-However, we can offer two alternatives:
-
-- Purchase a [Google Colab Pro](https://colab.research.google.com/) subscription for $13.99 CAD.
-- Start with free credits offered by [Modal](http://modal.com/).
-
-Instructions for both are provided below.
-
-Unfortunately, GPUs are a fact of life for every aspiring deep learning researcher.
-In the same way we expect you to have access to a computer when going through these lessons, we expect you to have access to a GPU.
+For both DL19 and DL20, you might wonder: What does "close" mean?
+It is not surprising to observe score variability across different GPUs, or even non-determinism when running multiple trials on the same GPU.
+See this [experimental writeup](gpu-variability.md#reranking-effectiveness-with-rankzephyr-20261127) for an example.
+Play around and observe.
+Try different settings of batch sizes, using the `--batch-size` parameter, including a batch size of 1.
 
 ## Reranking on Colab (Optional)
 
