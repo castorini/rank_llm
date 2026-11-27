@@ -4747,7 +4747,7 @@ provides-extras = ["openai", "genai", "litellm", "cloud", "gemini", "local", "vl
 dev = [
     { name = "pre-commit", specifier = ">=3.8.0" },
     { name = "pytest", specifier = ">=8.4.2" },
-    { name = "ruff", specifier = ">=0.12.0" },
+    { name = "ruff", specifier = "==0.15.12" },
 ]
 
 [[package]]

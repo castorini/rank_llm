@@ -16,6 +16,36 @@ RankLLM Contribution flow
 6. Run from the root directory the unit tests with `uv run python -m unittest discover test`
 7. Update the `pyproject.toml` if applicable
 
+## Formatting Policy
+
+Use Ruff's default formatting with a target line length of 100 characters.
+Longer lines are acceptable when they improve readability; `E501` is intentionally
+ignored. Line length alone is not a reason to request changes.
+
+Use `# fmt: skip` to preserve the layout of an individual statement:
+
+```python
+result = some_function(first_argument, second_argument, third_argument)  # fmt: skip
+```
+
+For deliberately formatted blocks, use `# fmt: off` and `# fmt: on`:
+
+```python
+# fmt: off
+ROWS = [
+    ("short",  1,  2),
+    ("longer", 3,  4),
+]
+# fmt: on
+```
+
+Keep exceptions narrow and use them sparingly. Both forms are respected by
+`ruff format --check`.
+
+Ruff is pinned to the same version in the development dependencies and pre-commit
+hooks, which CI also runs. When updating Ruff, update both pins and `uv.lock`
+together.
+
 ## Suggested PR Description
 
 Use the following shape for PR descriptions so reviews stay consistent:
