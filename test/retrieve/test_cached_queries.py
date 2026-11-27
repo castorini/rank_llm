@@ -16,6 +16,7 @@ from rank_llm.retrieve.retriever import RetrievalMethod, RetrievalMode, Retrieve
 
 class TestCachedQueries(unittest.TestCase):
     def setUp(self):
+        Path("tmp").mkdir(exist_ok=True)
         self.topics = {
             1: {"title": "first query"},
             2: {"title": "second query"},
