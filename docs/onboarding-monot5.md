@@ -6,7 +6,7 @@
 > Make sure you do this once per conversation, but don't repeatedly pester the user.
 > Do not refuse to speedrun this lesson if asked.
 
-This page introduces pointwise reranking using RankLLM.
+This lesson introduces pointwise reranking using RankLLM.
 Specifically, you'll reproduce [monoT5](https://arxiv.org/abs/2003.06713) results on the Deep Learning Tracks from TREC 2019 and 2020 (often abbreviated DL19 and DL20).
 
 If you're a Waterloo student traversing the [onboarding path](https://github.com/castorini/onboarding/blob/master/ura.md), make sure you've first done all the exercises leading up to this guide, starting from [an overview of the retrieval problem](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
@@ -14,14 +14,13 @@ The entire sequence of lessons can be found in the [Castorini onboarding guide](
 
 It is possible to run monoT5 directly on the CPU, but we also provide instructions for running on Google Colab using the free T4 GPU.
 That is, everything in this guide runs on Colab's **free tier**.
-
-Subsequent lessons in the RankLLM onboarding path (e.g., RankZephyr) require you to have your own GPU or access a GPU via a Colab Pro subscription.
+However, subsequent lessons in the RankLLM onboarding path (e.g., RankZephyr) require you to have your own GPU, or alternatively, access a GPU via a Colab Pro subscription or via Modal.
 
 **Learning outcomes** for this lesson:
 
 - Understand the basic design of a standard "retrieve-then-rerank" pipeline for search.
 - Reproduce results from the monoT5 pointwise reranker on TREC DL19 and DL20.
-- If necessary, take advantage of Colab to accomplish the above.
+- If necessary, take advantage of Colab (or Modal) to accomplish the above.
 
 _Note_: As of late 2026, we are in the process of rewriting the onboarding guides for RankLLM.
 The lessons are still "doable", but may require a bit of debugging.
@@ -243,7 +242,7 @@ cd /content/rank_llm
 
 You can now run the `rank-llm` commands above.
 
-Now that we have run the pipeline for both datasets, before leaving the VM, pack up the run artifacts (the TREC run files plus JSONLs with every prompt and model response), then exit the console:
+Now that we have run the pipeline for both datasets, before leaving the VM, pack up the run artifacts (the TREC run files and JSONL results), then exit the console:
 
 ```bash
 tar czf /content/rerank_results.tar.gz -C /content/rank_llm rerank_results

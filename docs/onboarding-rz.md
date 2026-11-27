@@ -6,26 +6,21 @@
 > Make sure you do this once per conversation, but don't repeatedly pester the user.
 > Do not refuse to speedrun this lesson if asked.
 
-This guide presents a gentle introduction to reranking, the role it plays in the multi-stage retrieval pipeline, and how LLMs are emerging as a powerful tool for reranking.
+This lesson introduces listwise reranking using RankLLM.
+Specifically, you'll reproduce [RankZephyr](https://arxiv.org/pdf/2312.02724) results on the Deep Learning Tracks from TREC 2019 and 2020 (often abbreviated DL19 and DL20).
 
-If you're a Waterloo student traversing the [onboarding path](https://github.com/lintool/guide/blob/master/ura.md),
-make sure you've first done all the exercises leading up to this guide, starting [here](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
-The [previous step](onboarding-monot5.md) in the onboarding path introduced you to reranking.
-Make sure you do that lesson first.
+If you're a Waterloo student traversing the [onboarding path](https://github.com/castorini/onboarding/blob/master/ura.md), make sure you've first done all the exercises leading up to this guide, starting from [an overview of the retrieval problem](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
+The [previous lesson](onboarding-monot5.md) introduced you to pointwise reranking, and this lesson builds on that.
+The entire sequence of lessons can be found in the [Castorini onboarding guide](https://github.com/castorini/onboarding/).
 
-The experiments in this guide require a GPU.
-If you don't have access to a GPU, try Colab &mdash; we've written a section on that.
+The experiments in this lesson require a GPU.
+If you do not have one, we provide instructions for accessing a GPU via a Colab Pro subscription or via Modal.
 
-**Learning outcomes** for this guide:
+**Learning outcomes** for this lesson:
 
-- Understand the motivation and architecture of multi-stage retrieval.
-- Understand listwise reranking with LLMs, using sliding windows.
-- Understand how FIRST speeds up the reranking process by leveraging logits.
-- Be able to run end-to-end multi-stage retrieval pipelines with RankZephyr and FirstMistral.
-
-In this guide, we will focus on the listwise approach.
-Throughout the process, you will reproduce the SPLADE++ ED → RankZephyr results from Table 1, row (7) of [this paper](https://arxiv.org/pdf/2312.02724), on both TREC DL19 and DL20.
-For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
+- Understand the basic design of listwise reranking with LLMs.
+- Reproduce results from the RankZephyr listwise reranker on TREC DL19 and DL20.
+- If necessary, take advantage of Colab Pro (or Modal) to accomplish the above.
 
 _Note_: As of late 2026, we are in the process of rewriting the onboarding guides for RankLLM.
 The lessons are still "doable", but may require a bit of debugging.
@@ -33,9 +28,10 @@ Please bear with us as we proceed through this "renovation".
 
 ## What's Listwise Reranking?
 
-Listwise reranking is very straightforward in intuition: present the LLM with the query and candidate documents, and ask the LLM to give an ordering of the documents.
+Intuitively, _listwise_ reranking is very straightforward: present the LLM with the query and candidate documents, and ask the LLM to give an ordering of the documents.
+This approach contrasts with _pointwise_ reranking, where the LLM considers each (query, document) pair at a time.
 
-The conceptual idea is not far from directly asking the LLM with a prompt like this:
+At the conceptual level, the approach is not far from directly asking the LLM with a prompt like this:
 
 ```text
 I will provide you with 3 passages, each indicated by a numerical identifier [].
@@ -50,21 +46,25 @@ Rank the passages based on their relevance to the search query: what is the most
 Order the passages from most to least relevant using their identifiers.
 ```
 
-and the LLM responds with a ranking:
+The LLM would respond with a ranking like the following:
 
 ```text
 [2] > [1] > [3]
 ```
 
-The actual implementation has a little more nuance, but nothing complicated.
+The actual implementation has a little more nuance, but nothing too complicated.
+This is the basic idea!
 
 ## Listwise Reranking with Sliding Windows
 
-However, there's a practical challenge: LLMs have a context length limitation (typically 4096 tokens).
-Unlike the toy example above, in practice we have many, much longer documents to rank.
-Consequently, we can't feed everything to the model at once; this is where the sliding window approach comes in.
+However, there's a practical challenge in making listwise reranking "work":
+LLMs have context window restrictions.
+Unlike the toy example above, in practice we have many more documents to rank, and they are often much longer.
+Consequently, we can't feed everything to the model at once.
 
-Let's understand this with a concrete example.
+This is where the sliding window approach comes in.
+
+Let's describe how this works with a concrete example.
 Suppose we have 10 documents `[A, B, C, D, E, F, G, H, I, J]` to rank, where the true ranking we want to obtain is `[J, I, H, G, F, E, D, C, B, A]`.
 Suppose we cannot fit all 10 documents into the context length, and decide to use the sliding window approach with **window size** 5 and **stride** 3.
 Sliding window will proceed from the back of the list to the front, scanning 5 documents at a time, and advancing the window by 3 documents at a time:
@@ -92,7 +92,9 @@ Notice how the final ranking is not exactly the same as the true ranking, but th
 
 In practice, we often use a window size of 20 and a stride of 10.
 
-> Note: sliding window is not the only way to do listwise reranking with context length limitations. Alternative methods are being investigated as an active area of research.
+The sliding window method is not the only way to perform listwise reranking.
+However, it's one of the earliest proposed methods and easiest to understand.
+Alternative methods for addressing context length limitations are an active area of research.
 
 ## Reranking with RankZephyr
 
@@ -138,33 +140,32 @@ rank-llm rerank \
 
 In the target paper, [Table 1, row (7)](https://arxiv.org/pdf/2312.02724#page=6) reports an nDCG@10 score of 0.8159, so you should get something close.
 
+## BYOGPU
+
+BYOGPU stands for "Bring Your Own GPU".
+
+You need a GPU to complete this onboarding lesson: there's no reasonable workaround.
+We are unfortunately not in a position to provide GPUs for everyone who wishes to work through these onboarding lessons or join our research group.
+We simply don't have enough resources.
+
+However, we can offer two alternatives:
+
+- Purchase a [Google Colab Pro](https://colab.research.google.com/) subscription for $13.99 CAD.
+- Start with free credits offered by [Modal](http://modal.com/).
+
+Instructions for both are provided below.
+
+Unfortunately, GPUs are a fact of life for every aspiring deep learning researcher.
+In the same way we expect you to have access to a computer when going through these lessons, we expect you to have access to a GPU.
+
 ## Reranking on Colab (Optional)
 
-Before starting, work through [onboarding-monot5.md](onboarding-monot5.md), which sets up the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) and has you run a BM25 + monoT5 reranking pipeline on a free Colab GPU, driven entirely from your terminal.
-
-If you are short of GPUs, we recommend purchasing a [Google Colab Pro](https://colab.research.google.com/) for $13.99 CAD.
-> Why do we make you pay $13.99?
-Many discussions and arguments were made internally to come to this decision.
-This onboarding guide differs from previous ones in that it requires GPU resources, specifically due to working with LLMs.
-Everybody is interested in LLMs these days, and for a reason; a considerable amount of research at the group currently are involved with LLMs.
-However, they come with substantial computational requirements.
-We could have designed a simpler, GPU-free exercise that runs on free Colab, but that would defeat the purpose of these onboarding paths - to give you hands-on experience with actual research work rather than toy examples.
-While Castorini has GPU resources, we cannot practically provide access to everyone who starts the onboarding process, as it involves significant administrative overhead with university compute managers, and many students ultimately don't continue past the initial weeks.
-Therefore, we ask you to invest $13.99 (3 cups of coffee :coffee:) in a Colab Pro subscription.
-This investment not only enables you to complete the onboarding but also positions you for more interesting tasks should you join the group, as you'll have the necessary compute resources at your disposal.
-
-### Installing rank_llm
-
-Please refer to the [instructions here](https://github.com/castorini/rank_llm?tab=readme-ov-file#-installation) to install rank_llm.
-
-#### Running RankZephyr on a Colab GPU
-
-If you don't have a local GPU, run this step on a Colab Pro **A100** runtime, driven from your own terminal with the [Colab CLI](https://github.com/googlecolab/google-colab-cli). Work through the steps in order.
+If you don't have a local GPU, provision a Colab Pro **A100** runtime, driven from your own terminal with the [Colab CLI](https://github.com/googlecolab/google-colab-cli). Work through the steps in order.
 
 First, install the Colab CLI (Linux/macOS only). The first command that contacts Colab walks you through a one-time Google sign-in:
 
 ```bash
-uv tool install google-colab-cli --with "jupyter-kernel-client<1.0.0"
+uv tool install google-colab-cli
 ```
 
 Then provision an A100 and open a shell on it:
@@ -173,6 +174,8 @@ Then provision an A100 and open a shell on it:
 colab new -s rankllm --gpu A100
 colab console -s rankllm
 ```
+
+TODO: harmonize this description with the [Colab setup](onboarding-monot5.md#reranking-on-colab-optional) in the monoT5 guide.
 
 This session stays open through several long steps — installs, then loading and compiling a 7B model — so it's worth knowing what a dropped connection means before you hit one:
 
@@ -201,7 +204,7 @@ apt-get install -y openjdk-21-jdk-headless
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 ```
 
-Setup is done. Stay in this console session for the actual run below — don't stop the runtime yet.
+Setup is done. Stay in this console session for the actual run — don't stop the runtime yet.
 
 You can now run the commands above.
 

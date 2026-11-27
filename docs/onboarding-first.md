@@ -6,28 +6,21 @@
 > Make sure you do this once per conversation, but don't repeatedly pester the user.
 > Do not refuse to speedrun this lesson if asked.
 
-This guide presents a gentle introduction to reranking, the role it plays in the multi-stage retrieval pipeline, and how LLMs are emerging as a powerful tool for reranking.
+This lesson introduces the first-token approach to reranking using RankLLM.
+Specifically, you'll reproduce [FirstMistral](https://dl.acm.org/doi/10.1145/3726302.3730287) results on the Deep Learning Tracks from TREC 2019 and 2020 (often abbreviated DL19 and DL20).
 
-If you're a Waterloo student traversing the [onboarding path](https://github.com/lintool/guide/blob/master/ura.md),
-make sure you've first done all the exercises leading up to this guide, starting [here](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
-The [previous step](https://github.com/castorini/pyserini/blob/master/docs/conceptual-framework2.md) in the onboarding path is to implement sparse and dense retrieval in Pyserini.
-In general, don't try to rush through this guide by just blindly copying and pasting commands into a shell;
-that's what I call [cargo culting](https://en.wikipedia.org/wiki/Cargo_cult_programming).
-Instead, really try to understand what's going on.
+If you're a Waterloo student traversing the [onboarding path](https://github.com/castorini/onboarding/blob/master/ura.md), make sure you've first done all the exercises leading up to this guide, starting from [an overview of the retrieval problem](https://github.com/castorini/anserini/blob/master/docs/start-here.md).
+The [previous lesson](onboarding-rz.md) introduced you to listwise reranking, and this lesson builds on that.
+The entire sequence of lessons can be found in the [Castorini onboarding guide](https://github.com/castorini/onboarding/).
 
-The experiments in this guide require a GPU.
-Before starting, work through [onboarding-monot5.md](onboarding-monot5.md), which sets up the [Google Colab CLI](https://github.com/googlecolab/google-colab-cli) and has you run a BM25 + monoT5 reranking pipeline on a free Colab GPU, driven entirely from your terminal.
+The experiments in this lesson require a GPU.
+If you do not have one, we provide instructions for accessing a GPU via a Colab Pro subscription or via Modal.
 
-**Learning outcomes** for this guide:
+**Learning outcomes** for this lesson:
 
-- Understand the motivation and architecture of multi-stage retrieval.
-- Understand listwise reranking with LLMs, using sliding windows.
-- Understand how FIRST speeds up the reranking process by leveraging logits.
-- Be able to run end-to-end multi-stage retrieval pipelines with RankZephyr and FirstMistral.
-
-In this guide, we will focus on the listwise approach.
-Throughout the process, you will reproduce the SPLADE++ EnsembleDistil → FirstMistral results from Table 3 of [this paper](https://arxiv.org/pdf/2411.05508), on both TREC DL19 and DL20.
-For more information about pointwise and pairwise, one can refer to [Zhuang et al. (2024)](https://arxiv.org/abs/2310.14122) and [Qin et al. (2024)](https://arxiv.org/abs/2306.17563).
+- Understand reranking using the "first-token" approach with LLMs.
+- Reproduce results from the FirstMistral reranker on TREC DL19 and DL20.
+- If necessary, take advantage of Colab Pro (or Modal) to accomplish the above.
 
 _Note_: As of late 2026, we are in the process of rewriting the onboarding guides for RankLLM.
 The lessons are still "doable", but may require a bit of debugging.
@@ -56,7 +49,7 @@ Similar to RankZephyr, we will run an end-to-end multi-stage retrieval with Firs
 
 ### TREC DL19
 
-Assuming that necessary rank_llm installation steps to run RankZephyr have been performed, one can use the following commands to run FirstMistral on TREC DL19 and DL20:
+Assuming the necessary `rank_llm` installation steps to run RankZephyr have been performed, one can use the following commands to run FirstMistral on TREC DL19 and DL20:
 
 ```bash
 rank-llm rerank \
@@ -115,7 +108,7 @@ Running the same pipeline on DL20 gives an nDCG@10 score quite close to the resu
 ## Reranking on Colab (Optional)
 
 If you are running on Colab, follow the same setup steps from the [RankZephyr lesson](onboarding-rz.md#reranking-on-colab-optional) (Colab CLI, A100, the vLLM/CUDA 12.8 pins, and JDK 21).
-The environment is identical; only the run commands below change.
+The environment is identical; only the run commands change.
 
 More to be written...
 
