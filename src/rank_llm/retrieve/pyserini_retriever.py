@@ -32,6 +32,7 @@ except ImportError:
 from tqdm import tqdm
 
 from rank_llm.data import Candidate, DataWriter, Query, Request
+from rank_llm.retrieve.dataset_topics import load_dataset_topics
 from rank_llm.retrieve.indices_dict import INDICES
 from rank_llm.retrieve.retrieval_method import RetrievalMethod
 from rank_llm.retrieve.topics_dict import TOPICS
@@ -252,28 +253,7 @@ class PyseriniRetriever:
         self._init_custom_index_reader(index_path, topics_path)
 
     def _init_topics_from_dict(self, dataset: str):
-        if get_qrels is None or get_topics is None:
-            raise ImportError(PYSERINI_INSTALL_HINT)
-        if dataset not in TOPICS:
-            if (
-                dataset.startswith("beir-v1.0.0-")
-                and dataset.endswith(".flat")
-                or dataset.endswith(".multifield")
-            ):
-                dataset = dataset.replace(".flat", "").replace(".multifield", "")
-            try:
-                self._topics = get_topics(dataset)
-                self._qrels = get_qrels(dataset)
-            except Exception as err:
-                raise ValueError(f"Invalid collection name: {dataset} - {err}") from err
-        else:
-            if dataset in ["dl20", "dl21", "dl22", "dl23"]:
-                topics_key = dataset
-            else:
-                topics_key = TOPICS[dataset]
-
-            self._topics = get_topics(topics_key)
-            self._qrels = get_qrels(TOPICS[dataset])
+        self._topics, self._qrels = load_dataset_topics(dataset)
 
         if LuceneIndexReader is None:
             raise ImportError(PYSERINI_INSTALL_HINT)

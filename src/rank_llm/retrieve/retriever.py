@@ -9,6 +9,11 @@ from typing import Any
 from dacite import from_dict
 
 from rank_llm.data import Request
+from rank_llm.retrieve.dataset_topics import (
+    CachedQueryValidationError,
+    load_dataset_topics,
+    validate_cached_queries,
+)
 from rank_llm.retrieve.utils import download_cached_hits, get_cache_home
 
 from .retrieval_method import RetrievalMethod
@@ -179,6 +184,7 @@ class Retriever:
         retrieve_results_dirname = get_cache_home()
 
         if self._retrieval_mode == RetrievalMode.DATASET:
+            topics, qrels = load_dataset_topics(self._dataset)
             max_k_file, max_k = self._get_file_with_highest_k(
                 retrieve_results_dirname, self._retrieval_method.name, self._dataset
             )
@@ -190,8 +196,11 @@ class Retriever:
                         ]
                         for result in results:
                             result.candidates = result.candidates[:k]
+                        results = validate_cached_queries(results, topics, qrels, self._dataset, max_k_file)
                         print(f"Successfully loaded {max_k_file} to get top {k} candidates")
                         return results
+                except CachedQueryValidationError:
+                    raise
                 except Exception as local_error:
                     print(f"Local file invalid, attempting HF download: {local_error}")
             try:  # fallback #1: download from HF repo
@@ -202,10 +211,11 @@ class Retriever:
                     results = [from_dict(data_class=Request, data=json.loads(line)) for line in f]
                     for result in results:
                         result.candidates = result.candidates[:k]
-                    print(
-                        f"Successfully downloaded cached results to {retrieve_results_dirname}/{cached_file}"
-                    )
+                    results = validate_cached_queries(results, topics, qrels, self._dataset, cached_file)
+                    print(f"Successfully loaded and validated cached results from {cached_file}")
                     return results
+            except CachedQueryValidationError:
+                raise
             except Exception as hf_error:
                 print(f"HF download failed, using Pyserini: {hf_error}")
             try:  # fallback #2: retrieve on the spot with pyserini

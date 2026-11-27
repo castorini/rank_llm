@@ -42,6 +42,7 @@ class TestPyseriniRetriever(unittest.TestCase):
         self.enterContext(patch(f"{module}.QueryEncoder", new=MagicMock()))
         self.enterContext(patch(f"{module}.LuceneIndexReader", new=MagicMock()))
         self.enterContext(patch(f"{module}.get_topics", return_value={}))
+        self.enterContext(patch(f"{module}.load_dataset_topics", return_value=({}, {})))
         self.enterContext(patch(f"{module}.get_qrels", return_value={}))
 
     def test_valid_inputs(self):
@@ -142,14 +143,17 @@ class TestPyseriniRetriever(unittest.TestCase):
         mock_json_loads.reset_mock()
         retriever._searcher.search.reset_mock()
 
-    @patch("rank_llm.retrieve.pyserini_retriever.get_topics")
+    @patch("rank_llm.retrieve.pyserini_retriever.load_dataset_topics")
     def test_num_queries(self, mock_get_topics):
         # Mocking get_topics method to return a predefined number of queries
-        mock_get_topics.return_value = {
-            "query1": {"title": "Sample Title 1"},
-            "query2": {"title": "Sample Title 2"},
-            "query3": {"title": "Sample Title 3"},
-        }
+        mock_get_topics.return_value = (
+            {
+                "query1": {"title": "Sample Title 1"},
+                "query2": {"title": "Sample Title 2"},
+                "query3": {"title": "Sample Title 3"},
+            },
+            {},
+        )
 
         # Creating PyseriniRetriever instance
         retriever = PyseriniRetriever("dl19", RetrievalMethod.BM25)
