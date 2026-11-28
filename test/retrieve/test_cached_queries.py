@@ -36,12 +36,9 @@ class TestCachedQueries(unittest.TestCase):
             (self.requests[:1], "missing query IDs: 1"),
             (self.requests + [Request(Query("extra", 4))], "extra query IDs: 4"),
             (self.requests + [self.requests[0]], "duplicate query IDs: 2"),
-            (
-                [Request(Query("First query", 1)), self.requests[0]],
-                "mismatched query text for IDs: 1",
-            ),
+            ([Request(Query("First query", 1)), self.requests[0]], "mismatched query text for IDs: 1"),
             ([], "missing query IDs: 1, 2"),
-        ]
+        ]  # fmt: skip
         for requests, message in cases:
             with (
                 self.subTest(message=message),
@@ -50,30 +47,18 @@ class TestCachedQueries(unittest.TestCase):
                 self.validate(requests)
 
     def test_query_text_requires_exact_match(self):
-        for text in (
-            " first query",
-            "first query ",
-            "first  query",
-            "first query\n",
-            "First query",
-            "first query.",
-        ):
+        for text in (" first query", "first query ", "first  query", "first query\n", "First query", "first query."):  # fmt: skip
             with (
                 self.subTest(text=text),
-                self.assertRaisesRegex(
-                    CachedQueryValidationError, "mismatched query text for IDs: 1"
-                ),
-            ):
+                self.assertRaisesRegex(CachedQueryValidationError, "mismatched query text for IDs: 1"),
+            ):  # fmt: skip
                 self.validate([Request(Query(text, 1)), self.requests[0]])
 
     def test_local_and_downloaded_caches(self):
         # Validation errors must escape both fallback handlers, before any reranking.
         for local in (True, False):
             for valid in (True, False):
-                with (
-                    self.subTest(local=local, valid=valid),
-                    tempfile.TemporaryDirectory(dir="tmp") as directory,
-                ):
+                with self.subTest(local=local, valid=valid), tempfile.TemporaryDirectory(dir="tmp") as directory:  # fmt: skip
                     cache = Path(directory) / "cache.jsonl"
                     requests = self.requests if valid else self.requests[:1]
                     for request in requests:
@@ -81,19 +66,11 @@ class TestCachedQueries(unittest.TestCase):
                     cache.write_text("".join(json.dumps(asdict(r)) + "\n" for r in requests))
                     module = "rank_llm.retrieve.retriever"
                     with (
-                        patch(
-                            f"{module}.load_dataset_topics", return_value=(self.topics, self.qrels)
-                        ),
+                        patch(f"{module}.load_dataset_topics", return_value=(self.topics, self.qrels)),
                         patch(f"{module}.get_cache_home", return_value=directory),
-                        patch.object(
-                            Retriever,
-                            "_get_file_with_highest_k",
-                            return_value=(str(cache), 100) if local else (None, -1),
-                        ),
-                        patch(
-                            f"{module}.download_cached_hits", return_value=str(cache)
-                        ) as download,
-                    ):
+                        patch.object(Retriever, "_get_file_with_highest_k", return_value=(str(cache), 100) if local else (None, -1)),
+                        patch(f"{module}.download_cached_hits", return_value=str(cache)) as download,
+                    ):  # fmt: skip
                         retriever = Retriever(RetrievalMode.DATASET, "dl19", RetrievalMethod.BM25)
                         if valid:
                             results = retriever.retrieve(k=1)
@@ -125,12 +102,9 @@ class TestCachedQueries(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory(dir="tmp") as directory,
             patch("rank_llm.retrieve_and_rerank.Reranker") as reranker,
-            patch(
-                "rank_llm.retrieve.retriever.load_dataset_topics",
-                return_value=(self.topics, self.qrels),
-            ),
+            patch("rank_llm.retrieve.retriever.load_dataset_topics", return_value=(self.topics, self.qrels)),
             patch.object(Retriever, "_get_file_with_highest_k") as local_cache,
-        ):
+        ):  # fmt: skip
             cache = Path(directory) / "cache.jsonl"
             # The first query is valid, but the complete cache is missing query 2.
             cache.write_text(json.dumps(asdict(self.requests[1])) + "\n")
