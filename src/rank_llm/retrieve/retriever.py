@@ -9,6 +9,11 @@ from typing import Any
 from dacite import from_dict
 
 from rank_llm.data import Request
+from rank_llm.retrieve.dataset_topics import (
+    CachedQueryValidationError,
+    load_dataset_topics,
+    validate_cached_queries,
+)
 from rank_llm.retrieve.utils import download_cached_hits, get_cache_home
 
 from .retrieval_method import RetrievalMethod
@@ -69,14 +74,14 @@ class Retriever:
         if not dataset_name:
             raise ValueError("Please provide name of the dataset.")
         if retrieval_method == RetrievalMethod.UNSPECIFIED:
-            raise ValueError(
-                f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method."
-            )
+            raise ValueError(f"Invalid retrieval method: {retrieval_method}. Please provide a specific retrieval method.")  # fmt: skip
+
         retriever = Retriever(
             RetrievalMode.DATASET,
             dataset=dataset_name,
             retrieval_method=retrieval_method,
         )
+
         return retriever.retrieve(k=k)
 
     @staticmethod
@@ -126,6 +131,7 @@ class Retriever:
             encoder=encoder,
             onnx=onnx,
         )
+
         return retriever.retrieve(k=k)
 
     def _get_file_with_highest_k(
@@ -164,6 +170,7 @@ class Retriever:
             return int(match.group(1))
 
         file_with_max_k = max(matching_files, key=_extract_k)
+
         return file_with_max_k, _extract_k(file_with_max_k)
 
     def retrieve(self, k: int = 100) -> list[Request]:
@@ -179,21 +186,23 @@ class Retriever:
         retrieve_results_dirname = get_cache_home()
 
         if self._retrieval_mode == RetrievalMode.DATASET:
-            max_k_file, max_k = self._get_file_with_highest_k(
-                retrieve_results_dirname, self._retrieval_method.name, self._dataset
-            )
+            topics, qrels = load_dataset_topics(self._dataset)
+            max_k_file, max_k = self._get_file_with_highest_k(retrieve_results_dirname, self._retrieval_method.name, self._dataset)  # fmt: skip
+
             if max_k_file and max_k >= k:  # try to see if retrieving from local file works
                 try:
                     with open(max_k_file) as f:
-                        results = [
-                            from_dict(data_class=Request, data=json.loads(line)) for line in f
-                        ]
+                        results = [from_dict(data_class=Request, data=json.loads(line)) for line in f]  # fmt: skip
                         for result in results:
                             result.candidates = result.candidates[:k]
+                        results = validate_cached_queries(results, topics, qrels, self._dataset, max_k_file)  # fmt: skip
                         print(f"Successfully loaded {max_k_file} to get top {k} candidates")
                         return results
+                except CachedQueryValidationError:
+                    raise
                 except Exception as local_error:
                     print(f"Local file invalid, attempting HF download: {local_error}")
+
             try:  # fallback #1: download from HF repo
                 query_name = f"{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{100 if k <= 100 else 1000}.jsonl"
                 cached_file = download_cached_hits(query_name)
@@ -202,24 +211,29 @@ class Retriever:
                     results = [from_dict(data_class=Request, data=json.loads(line)) for line in f]
                     for result in results:
                         result.candidates = result.candidates[:k]
-                    print(
-                        f"Successfully downloaded cached results to {retrieve_results_dirname}/{cached_file}"
-                    )
+
+                    results = validate_cached_queries(results, topics, qrels, self._dataset, cached_file)  # fmt: skip
+                    print(f"Successfully loaded and validated cached results from {cached_file}")
+
                     return results
+            except CachedQueryValidationError:
+                raise
             except Exception as hf_error:
                 print(f"HF download failed, using Pyserini: {hf_error}")
+
             try:  # fallback #2: retrieve on the spot with pyserini
                 print(f"Using Pyserini to retrieve with dataset {self._dataset}")
                 from .pyserini_retriever import PyseriniRetriever
 
                 pyserini = PyseriniRetriever(self._dataset, self._retrieval_method)
+
                 return pyserini.retrieve_and_store(k=k)
             except Exception as pyserini_error:
                 raise ValueError(f"Pyserini error: {pyserini_error}") from pyserini_error
+
         elif self._retrieval_mode == RetrievalMode.CUSTOM:
-            candidates_file = Path(
-                f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json"
-            )
+            candidates_file = Path(f"{retrieve_results_dirname}/{self._retrieval_method.name}/retrieve_results_{self._dataset}_top{k}.json")  # fmt: skip
+
             if not candidates_file.is_file():
                 print(f"Retrieving with dataset {self._dataset}")
                 from .pyserini_retriever import PyseriniRetriever
@@ -233,12 +247,15 @@ class Retriever:
                     encoder=self._encoder,
                     onnx=self._onnx,
                 )
+
                 retrieved_results = pyserini.retrieve_and_store(k=k)
             else:
                 print("Reusing existing retrieved results.")
                 with open(candidates_file) as f:
                     loaded_results = json.load(f)
+
                 retrieved_results = [from_dict(data_class=Request, data=r) for r in loaded_results]
         else:
             raise ValueError(f"Invalid retrieval mode: {self._retrieval_mode}")
+
         return retrieved_results

@@ -242,6 +242,13 @@ JSONL and TREC output append lines as usual.
 # End-to-end Run and 2CR
 If you are interested in running retrieval and reranking end-to-end or reproducing the results from the [reference papers](#✨-references), `rank-llm rerank` is the canonical command. `run_rank_llm.py` remains available as a compatibility wrapper for older automation.
 
+For named datasets, cached retrieval queries are validated against Pyserini topics and qrels before reranking, requiring the `pyserini` extra even when candidates are cached.
+The query set includes topics whose IDs occur in the dataset's qrels, matching live retrieval.
+Missing, extra, duplicate, or mismatched queries cause an error identifying the cache and affected query IDs.
+Query IDs are compared as strings; query text must match exactly, including whitespace, case, and punctuation.
+Validated requests follow canonical topic order before `--max-queries` is applied.
+Explicit `--requests-file` input continues to define its own query set.
+
 The comperehensive list of our two-click reproduction commands are available on [MS MARCO V1](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v1-passage.html) and [MS MARCO V2](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v2-passage.html) webpages for DL19 and DL20 and DL21-23 datasets, respectively. Moving forward, we plan to cover more datasets and retrievers in our 2CR pages. The rest of this session provides some sample e2e runs. 
 ## RankZephyr
 
