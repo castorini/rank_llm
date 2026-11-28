@@ -295,7 +295,89 @@ colab sessions
 
 ## Reranking on Modal (Optional)
 
-TBD
+[Modal](https://modal.com) rents GPUs by the second, driven entirely from your terminal.
+Its Starter plan includes $30 of credits per month.
+Modal requires a payment method on file, and A100s do not start without one.
+In your workspace's billing settings, set the spend limit to $0, so nothing is billed past your credits.
+
+Install the Modal CLI with `uv` and log in:
+
+```bash
+uv tool install modal
+modal setup
+```
+
+On Intel Macs, the CLI currently needs a cbor2 pin: `uv tool install --python 3.12 --with "cbor2<6" modal` (reported by [@GuranshSinghKohli](https://github.com/GuranshSinghKohli)).
+
+### Set up the environment
+
+Environment setup is prepackaged in [`scripts/modal_setup.py`](../scripts/modal_setup.py).
+From the root of your rank_llm clone, run the setup check:
+
+```bash
+modal run scripts/modal_setup.py
+```
+
+The first run builds the image, which takes a few minutes; later runs reuse it.
+The build prints a pip `dependency resolver` ERROR: Pyserini declares torch>=2.9 and transformers>=5, and the script's pins override that on purpose.
+Wait for the final `setup ok`.
+
+Do skim [the file](../scripts/modal_setup.py); it's about 100 lines.
+The vLLM parts matter in the later lessons, not for monoT5:
+
+- The pins (vllm 0.11.0, torch 2.8.0 from the cu128 index, transformers 4.55.4) are the same as in the [RankZephyr Colab section](onboarding-rz.md#reranking-on-colab-optional), so your numbers compare.
+- `build-essential` is there because Triton compiles a small C stub at runtime.
+- `VLLM_WORKER_MULTIPROC_METHOD=spawn`: vLLM starts its engine process after CUDA is initialized, and a forked process cannot re-initialize CUDA.
+- `VLLM_USE_FLASHINFER_SAMPLER=0`: the FlashInfer sampler JIT-compiles with `nvcc`, which the image lacks, and at temperature 0, which the guide commands use, vLLM never calls it.
+- The Modal Volume `rank-llm-onboarding-cache`, mounted at `/cache`, keeps model weights and indexes across sessions, so they download once.
+- The image copies your clone's `src/`, so the commit for your reproduction log entry is your local HEAD; commit or stash any changes under `src/` first.
+
+### Run the pipeline, line by line
+
+Open a shell on an A100 with that image and volume:
+
+```bash
+modal shell scripts/modal_setup.py::shell
+```
+
+Inside the shell, confirm the GPU is really there, then move to the repo:
+
+```bash
+nvidia-smi
+cd /opt/rank_llm
+```
+
+The `nvidia-smi` output names the card and the driver version.
+Note them alongside your results, since scores can differ across GPUs (see [GPU variability](gpu-variability.md#reranking-effectiveness-with-rankzephyr-20261127)).
+
+You can now run the `rank-llm` commands above.
+The first run of each command downloads the model and index into the volume; later sessions reuse them.
+
+The shell bills for the A100 for as long as it is open, so exit when you are done.
+It also closes after 1 hour; re-running `modal shell` gives you a fresh one with the volume intact.
+
+Before leaving, copy the run artifacts (the TREC run files and JSONL results) to the volume, then exit:
+
+```bash
+cp -r rerank_results /cache/
+exit
+```
+
+### Download the results and clean up
+
+Back on your machine, pull the results from the volume and poke around:
+
+```bash
+modal volume get rank-llm-onboarding-cache /rerank_results .
+```
+
+Then confirm nothing is left running and see what you spent.
+The shell shows up as an app named `modal shell` in both:
+
+```bash
+modal app list
+modal billing report --for today
+```
 
 ## Wrapping Up
 
