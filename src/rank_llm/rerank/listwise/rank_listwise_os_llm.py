@@ -145,7 +145,7 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 "remove base_url to use FIRST logit reranking."
             )
 
-        if self._device == "cuda":
+        if not self._base_url and self._device == "cuda":
             if torch is None:
                 raise missing_extra_error(
                     "local",
@@ -153,21 +153,16 @@ class RankListwiseOSLLM(ListwiseRankLLM):
                 )
             assert torch.cuda.is_available() and torch.cuda.device_count() >= num_gpus
 
-        if vllm is None:
-            raise missing_extra_error(
-                "vllm",
-                "Open-source listwise reranking requires vLLM.",
-            )
-        from rank_llm.rerank.vllm_handler import VllmHandler
-
         if self._base_url:
-            from rank_llm.rerank.vllm_handler_with_openai_sdk import (
-                VllmHandlerWithOpenAISDK,
-            )
+            from rank_llm.rerank.vllm_handler_with_openai_sdk import VllmHandlerWithOpenAISDK
 
             self._vllm_handler = VllmHandlerWithOpenAISDK(model=model, base_url=base_url)
             self._tokenizer = self._vllm_handler.get_tokenizer()
         else:
+            if vllm is None:
+                raise missing_extra_error("vllm", "Open-source listwise reranking requires vLLM.")
+            from rank_llm.rerank.vllm_handler import VllmHandler
+
             # Preload the tokenizer because the engine capacity calculation
             # needs the ranking output-token estimate.
             if AutoTokenizer is None:
