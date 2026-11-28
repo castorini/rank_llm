@@ -27,9 +27,9 @@ for idx, text in enumerate(texts):
     text.metadata["id"] = idx
 
 embedding = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-small-en", # or any model of your choice
-    model_kwargs={'device': 'cuda'},
-    encode_kwargs={'normalize_embeddings': True}
+    model_name="BAAI/bge-small-en",  # or any model of your choice
+    model_kwargs={"device": "cuda"},
+    encode_kwargs={"normalize_embeddings": True},
 )
 
 retriever = FAISS.from_documents(texts, embedding).as_retriever(search_kwargs={"k": 20})
@@ -101,9 +101,11 @@ use_azure_openai: bool = False,
 ```python
 from rerankers import Reranker
 
-ranker = Reranker('rank_zephyr', model_type="rankllm")
+ranker = Reranker("rank_zephyr", model_type="rankllm")
 
-results = ranker.rank(query="I love you", docs=["I hate you", "I really like you"], doc_ids=[0,1])
+results = ranker.rank(
+    query="I love you", docs=["I hate you", "I really like you"], doc_ids=[0, 1]
+)
 print(results)
 ```
 
@@ -237,9 +239,7 @@ def get_retrieved_nodes(
         reranker = RankLLMRerank(
             model=model, top_n=reranker_top_n, window_size=window_size
         )
-        retrieved_nodes = reranker.postprocess_nodes(
-            retrieved_nodes, query_bundle
-        )
+        retrieved_nodes = reranker.postprocess_nodes(retrieved_nodes, query_bundle)
 
         # clear cache, rank_zephyr uses 16GB of GPU VRAM
         del reranker
