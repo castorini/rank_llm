@@ -8,6 +8,8 @@ try:
 except ImportError:
     JinaReranker = None
 
+from .kalm_reranker import KaLMReranker
+
 try:
     from .monoelectra import MonoELECTRA
 except ImportError:
@@ -23,6 +25,6 @@ try:
 except ImportError:
     PointwiseVLLM = None
 
-__all__ = ["GaggleReranker", "JinaReranker", "MonoT5", "MonoELECTRA"]
+__all__ = ["GaggleReranker", "JinaReranker", "KaLMReranker", "MonoT5", "MonoELECTRA"]
 if PointwiseVLLM is not None:
     __all__.append("PointwiseVLLM")

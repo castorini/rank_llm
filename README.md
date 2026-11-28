@@ -243,6 +243,10 @@ JSONL and TREC output append lines as usual.
 If you are interested in running retrieval and reranking end-to-end or reproducing the results from the [reference papers](#✨-references), `rank-llm rerank` is the canonical command. `run_rank_llm.py` remains available as a compatibility wrapper for older automation.
 
 The comperehensive list of our two-click reproduction commands are available on [MS MARCO V1](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v1-passage.html) and [MS MARCO V2](https://castorini.github.io/rank_llm/src/rank_llm/2cr/msmarco-v2-passage.html) webpages for DL19 and DL20 and DL21-23 datasets, respectively. Moving forward, we plan to cover more datasets and retrievers in our 2CR pages. The rest of this session provides some sample e2e runs. 
+## KaLM-Reranker
+
+RankLLM supports KaLM's pointwise encoder–decoder scorer using `--model-path KaLM-Embedding/KaLM-Reranker-V1-Nano-R2` or a local checkpoint. [KaLM usage and TREC DL19 reproduction](docs/kalm-reranker.md)
+
 ## RankZephyr
 
 We can run the RankZephyr model with the following command:

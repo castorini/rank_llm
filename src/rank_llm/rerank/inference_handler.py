@@ -8,6 +8,16 @@ from ftfy import fix_text
 from rank_llm.data import Result, TemplateSectionConfig
 
 
+def render_reranker_messages(
+    instruction: str, query: str, document: str
+) -> list[dict[str, str]]:
+    return [
+        {"role": "system", "content": instruction.strip()},
+        {"role": "query", "content": query},
+        {"role": "document", "content": document},
+    ]
+
+
 class BaseInferenceHandler(ABC):
     def __init__(self, template: dict[str, str]):
         self._formatter = Formatter()
