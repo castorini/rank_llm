@@ -212,8 +212,10 @@ class PointwiseInferenceHandler(BaseInferenceHandler):
         doc_raw = self._convert_doc_to_prompt_content(
             result.candidates[index].doc, max_length=word_limit
         )
-        doc_tokens = tokenizer.encode(doc_raw, truncation=True, max_length=max_doc_tokens)
-        doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
+        doc = doc_raw
+        if max_doc_tokens is not None:
+            doc_tokens = tokenizer.encode(doc_raw, truncation=True, max_length=max_doc_tokens)
+            doc = tokenizer.decode(doc_tokens, skip_special_tokens=True)
 
         if self.template.get("message_roles") == "reranker":
             return render_reranker_messages(self.template["instruction"], query, doc)
